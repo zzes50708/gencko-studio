@@ -3,11 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="mobile-web-app-capable" content="yes">
     <title>Gencko Studio｜守宮工作室</title>
     <meta name="description" content="Gencko 提供守宮飼養與繁育知識，展示高品質豹紋守宮與肥尾守宮個體。">
-    <meta name="apple-mobile-web-app-capable" content="yes">
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700;900&family=Black+Ops+One&display=swap" rel="stylesheet">
-    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
 
     <style>
     [v-cloak] { display: none !important; }
@@ -251,6 +251,384 @@
 </head>
 <body>
 <!-- Loader Failsafe -->
+<script>
+    setTimeout(function() {
+        var l = document.getElementById('loader');
+        if(l) { l.classList.remove('active'); l.style.opacity = '0'; l.style.pointerEvents = 'none'; setTimeout(function(){ l.style.display='none'; },500); }
+    }, 2500);
+</script>
+<div id="loader" class="loader-overlay active">
+    <div class="loader"></div>
+</div>
+<div id="app" class="cont" v-cloak>
+    <!-- Lightbox -->
+    <div v-if="lightboxItem" class="lightbox-overlay" @click="closeLightbox">
+        <div class="lightbox-close" @click.stop="closeLightbox">✕</div>
+        <img :src="convertLink(lightboxItem.ImageURL)" class="lightbox-img" @click.stop>
+        <div class="lightbox-info" @click.stop>
+            <h2 style="color:#fff;margin:10px 0;">{{lightboxItem.Morph}}</h2>
+            <a v-if="lightboxItem.Status==='ForSale'" :href="lineLink" target="_blank" class="btn-buy" style="font-size:1.2rem;padding:12px 30px;display:inline-block;margin-top:10px;position:relative;z-index:100001;">立即私訊購買</a>
+        </div>
+    </div>
+
+    <div v-if="showToast" class="toast">ID 已複製</div>
+<div class="back-top" :class="{show: showBackTop}" @click="scrollToTop">↑</div>
+
+<div class="marquee-container" @click="openLineGroup">
+    <div class="marquee-content">
+        <span v-for="(item, i) in marqueeList" :key="i" class="marquee-item">
+            <a v-if="item.url" :href="item.url" target="_blank" class="marquee-link">{{ item.text }}</a>
+            <span v-else>{{ item.text }}</span>
+            <span style="margin: 0 80px; opacity: 0.3;">◆</span>
+        </span>
+    </div>
+</div>
+
+<header>
+    <div class="logo-wrap">
+        <img v-if="logoUrl" :src="logoUrl" class="logo-img" alt="Gencko Logo">
+        <div class="brand-text">
+            GENCKO
+            <span class="brand-sub">BREEDING STUDIO</span>
+        </div>
+    </div>
+    
+    <div class="header-right">
+        <a href="https://lin.ee/A7LklH4" target="_blank" class="nav-link">LINE 官方</a>
+        <a href="https://line.me/ti/g2/x4QpkWPJTXYr87U_jHyxSrBLTeVYMdwwlPF9qg?utm_source=invitation&utm_medium=link_copy&utm_campaign=default" target="_blank" class="nav-link">社群</a>
+        <a href="https://myship.7-11.com.tw/general/detail/GM2509175195515" target="_blank" class="nav-link">賣貨便</a>
+        <a href="https://www.instagram.com/gencko_breeding" target="_blank" class="nav-link">IG</a>
+        <a href="https://www.facebook.com/profile.php?id=61579393505049&locale=zh_TW" target="_blank" class="nav-link">FB</a>
+        <a href="https://www.threads.com/@gencko_breeding" target="_blank" class="nav-link">Threads</a>
+        <a href="https://portaly.cc/genckogreeding?utm_source=ig&utm_medium=social&utm_content=link_in_bio&fbclid=PAZXh0bgNhZW0CMTEAc3J0YwZhcHBfaWQMMjU2MjgxMDQwNTU4AAGnmo-fO1DIxw-MuNDdxARHZF8EagQeCnkOkSjcQPkLpf0jb5VtBomCGGtqLrM_aem_HQc6h6IpEWX6xcRrh2usqQ" target="_blank" class="nav-link">Portaly</a>
+        <button class="nav-link" v-if="admin" @click="admin=false" style="background:none;border:none;cursor:pointer;">登出</button>
+    </div>
+</header>
+
+<nav class="main-nav" v-if="!admin">
+    <div class="nav-item" :class="{active: curTab==='about'}" @click="curTab='about'">關於我們</div>
+    <div class="nav-item" :class="{active: curTab==='care'}" @click="curTab='care'">飼養方式</div>
+    <div class="nav-item" :class="{active: curTab==='articles'}" @click="toArticles">專欄文章</div>
+    <div class="nav-item" :class="{active: curTab==='qs'}" @click="curTab='qs'">新手快篩</div>
+    <div class="nav-item" :class="{active: curTab==='genes'}" @click="curTab='genes'">基因圖鑑</div>
+    <div class="nav-item" :class="{active: curTab==='calculator'}" @click="curTab='calculator'">基因計算</div>
+    <div class="nav-item" :class="{active: curTab==='breeders'}" @click="curTab='breeders'">種群展示</div>
+    <div class="nav-item" :class="{active: curTab==='shop'}" @click="toShop">選購守宮</div>
+    <div class="nav-item" :class="{active: curTab==='merch'}" @click="curTab='merch'">周邊商品</div>
+    <div class="nav-item" :class="{active: curTab==='faq'}" @click="curTab='faq'">常見問題</div>
+</nav>
+
+<!-- CONTENT (v-show restored) -->
+<div v-if="!admin">
+    <!-- 1. About -->
+    <div v-show="curTab==='about'">
+        <div class="page-text-box">
+            <div class="page-title">BRAND STORY</div>
+            <div class="about-layout">
+                <img v-if="aboutImg" :src="convertLink(aboutImg)" alt="Gencko 豹紋守宮成體" class="about-img" title="點擊加入社群" onclick="window.open('https://line.me/ti/g2/x4QpkWPJTXYr87U_jHyxSrBLTeVYMdwwlPF9qg?utm_source=invitation&utm_medium=link_copy&utm_campaign=default')">
+                <div class="about-text">
+                    <p>Gencko 以細緻的生命照護為核心理念。</p>
+                    <p>我們重視每一個成長環節，從環境、營養到日常照護皆以最高標準執行，確保個體呈現穩定的狀態與良好的體質。</p>
+                    <p>秉持誠實、透明與負責的原則，我們提供實際照片展示、24 小時健康疑慮受理與完善的售後服務，並致力推廣正確飼養知識，讓每位飼主在準備充分的前提下迎接一個新的生命。</p>
+                    <p>對我們而言，守宮不是商品，而是需要被理解與尊重的夥伴。希望能成為您踏入爬寵世界的堅實起點，也願以專業與熱忱陪伴您走過每段飼養旅程。</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="page-text-box">
+            <div class="page-title">CLIENT REVIEWS</div>
+            <div class="review-grid">
+                <div class="review-card" v-for="r in reviewsList">
+                    <img v-if="r.img" :src="r.img" class="review-img" style="display:block;">
+                    <div class="review-text">"{{r.text}}"</div>
+                    <div class="review-author">- {{r.author}}</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. Care -->
+    <div v-show="curTab==='care'" class="page-text-box">
+        <div class="page-title">HUSBANDRY GUIDE</div>
+        <img v-if="careImg" :src="convertLink(careImg)" alt="守宮環境" class="care-top-img">
+        <table class="care-table">
+            <tr><td class="care-label">飼養箱</td><td class="care-value">至少40×30×20公分起（視個體大小調整），可選玻璃或壓克力材質。若空間允許，提供較大空間效果更佳。</td></tr>
+            <tr><td class="care-label">底材</td><td class="care-value">使用易清潔、無碎屑及誤食風險的底材，如廚房紙巾、椰纖土、大顆赤玉土等。避免使用沙粒或細碎底材，以防吞入造成腸胃阻塞。</td></tr>
+            <tr><td class="care-label">躲避處</td><td class="care-value">至少準備一處：為避免守宮因環境造成緊迫，提供遮蔽物可以提升守宮的安全感，同時可幫助脫皮。</td></tr>
+            <tr><td class="care-label">加熱與溫度</td><td class="care-value">提供底部加熱墊，創造熱區與冷區。建議熱區約 30–32°C，冷區約 24–26°C。守宮可依需求自行選擇合適區域。</td></tr>
+            <tr><td class="care-label">濕度</td><td class="care-value">整體環境維持乾燥，但濕區濕度略高，以協助脫皮。濕度控制與乾燥底材與乾燥環境並存是地棲守宮的最佳選擇。</td></tr>
+            <tr><td class="care-label">飲水</td><td class="care-value">每日提供乾淨水源，使用淺水碟即可，並每天更換水以確保衛生。</td></tr>
+        </table>
+        <div class="care-section">
+            <div class="care-h">飲食與營養管理</div>
+            <div class="care-p">地棲守宮為標準食蟲性動物，均衡的營養與定期補充對健康至關重要。</div>
+            <div class="care-p">● 主要餌料：蟋蟀、杜比亞蟑螂為主。依個體需求搭配，避免單一餵食。</div>
+            <div class="care-p">● 補充營養：建議定期為餌料裹鈣粉與維生素（含 D₃），防止鈣質缺乏、代謝性骨病與脫皮異常。</div>
+            <div class="care-p">● 餵食頻率與份量：幼體建議每日或隔日餵食；成體則每隔 2–3 天餵食一次。餵食份量以不超過守宮頭部寬度為上限。</div>
+        </div>
+        <div class="care-section">
+            <div class="care-h">常見飼養注意事項</div>
+            <div class="care-p">● 脫皮期間：在脫皮期間，務必維持濕躲區濕潤，並提供可摩擦的粗糙表面（如木塊或岩石），可協助守宮順利脫皮。若腳趾或尾巴出現卡皮情形，請立即協助移除以免造成阻塞或傷害。</div>
+            <div class="care-p">● 單獨飼養：地棲守宮具有領域性，不適合混養。建議一缸一隻，以避免爭鬥、壓力或健康問題。</div>
+            <div class="care-p">● 避免過度干擾：過度頻繁把玩、搬動、抓取，或環境劇烈變動，都可能導致守宮緊張，甚至出現自我防衛（如斷尾）行為。</div>
+        </div>
+        <div class="care-section">
+            <div class="care-h">為何選擇豹紋／肥尾守宮</div>
+            <div class="care-p">● 容易飼養：對環境要求彈性，適合首次接觸爬蟲的飼主。</div>
+            <div class="care-p">● 健康穩定：只要環境、飲食、溫濕度控制得宜，守宮能展現良好食慾、脫皮與活動狀態。</div>
+            <div class="care-p">● 相對友善：地棲習性、安靜性格、體型適中，適合室內飼養，照顧相對簡便。</div>
+        </div>
+        <div class="care-quote">
+            我們將守宮視為需被妥善照護的生命，而非一般商品。本指南旨在協助飼主以正確、全面的知識理解守宮的行為與需求，並依據其生理特性提供安全、穩定且適宜的環境。需要特別強調的是，守宮在個體性格、反應模式與適應能力上皆存在差異，環境配置與照護方式亦無絕對標準，應根據個體狀況進行調整。
+        </div>
+    </div>
+
+    <!-- 3. Articles (v-show) -->
+    <div v-show="curTab==='articles'">
+        <div v-show="!readingArticle">
+            <div class="page-title">NEWS & BLOG</div>
+            
+            <div style="margin-bottom:20px; display:flex; gap:10px; align-items:center;">
+                <label style="color:#aaa;">分類：</label>
+                <select v-model="artCat" style="background:#111; color:#fff; padding:8px; border:1px solid #333; border-radius:4px;">
+                    <option value="All">全部文章</option>
+                    <option v-for="c in articleCats" :value="c">{{ c }}</option>
+                </select>
+            </div>
+
+            <div v-if="filteredArticles.length===0" style="text-align:center;padding:50px;color:#666;font-size:1.2rem;">
+                {{ loading ? '載入文章中...' : '此分類尚無文章' }}
+            </div>
+            <div class="grid" v-else>
+                <div class="card article-card" v-for="item in filteredArticles" :key="item.ID" @click="openArticle(item)">
+                    <div style="position:relative; overflow:hidden;">
+                        <img v-if="item.ImageURL" :src="convertLink(item.ImageURL)" class="card-img" style="height:180px;" loading="lazy">
+                        <div v-else class="card-img" style="height:180px;display:flex;align-items:center;justify-content:center;font-size:3rem;background:#1a1a1a;">📝</div>
+                        <div class="art-cat-tag">{{ item.Category }}</div>
+                    </div>
+                    <div class="card-body">
+                        <div style="font-size:0.8rem;color:#888;margin-bottom:5px;">{{ fmtDate(item.PublishDate) }}</div>
+                        <div class="morph-title" style="font-size:1.1rem;margin-bottom:8px;line-height:1.4;">{{ item.Title }}</div>
+                        <div class="art-summary">{{ item.Summary }}</div>
+                        <div style="margin-top:15px;text-align:right;">
+                            <span style="color:var(--pri);font-size:0.9rem;font-weight:bold;">閱讀更多 &rarr;</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div v-if="readingArticle">
+            <button @click="closeArticle" class="btn-back">← 返回列表</button>
+            <div class="reader-container">
+                <h1 style="color:#fff;font-size:2rem;margin-bottom:15px;">{{ readingArticle.Title }}</h1>
+                <div style="color:#666;font-size:0.9rem;margin-bottom:20px;">
+                    <span>📅 {{ fmtDate(readingArticle.PublishDate) }}</span>
+                    <span style="margin-left:15px;">👤 {{ readingArticle.Author }}</span>
+                    <span style="margin-left:15px;">📂 {{ readingArticle.Category }}</span>
+                </div>
+                <hr style="border-color:rgba(255,255,255,0.1); margin: 20px 0;">
+                <div class="reader-content" v-html="readingArticle.Content"></div>
+            </div>
+            <button @click="closeArticle" class="btn-back" style="margin-top:30px;">← 返回列表</button>
+        </div>
+    </div>
+
+    <!-- 3. QS (1.5x Height) -->
+    <div v-show="curTab==='qs'" class="tab-content">
+        <div class="page-text-box">
+            <div class="page-title">新手快篩</div>
+            <iframe src="https://graceful-pony-262819.netlify.app/" class="qs-iframe"></iframe>
+        </div>
+    </div>
+
+    <!-- 3. Gene Guide -->
+    <div v-show="curTab==='genes'">
+        <div class="page-title">GENETIC GUIDE</div>
+        <h2 style="color:#fff;margin-top:40px;">豹紋守宮</h2>
+        <div v-for="(list, cat) in db['豹紋守宮']" class="gene-section">
+            <div class="gene-cat-title">{{cat}}</div>
+            <div class="gene-grid">
+                <div v-for="g in list" class="gene-item" :class="{active: openGene===g}">
+                    <div class="gene-head" @click="toggleGene(g)">{{g}} <span>{{openGene===g ? '▲' : '▼'}}</span></div>
+                    <div class="gene-body-wrapper"><div class="gene-body-inner"><div class="gene-desc-box">{{ getGeneInfo(g) }}<div v-if="['川普白化', '貝爾白化', '雨水白化'].includes(g)" class="warn-box">⚠️ 警語：不同的白化基因無法彼此相容</div><img v-if="getGeneImg(g)" :src="getGeneImg(g)" class="gene-img" loading="lazy"></div></div></div>
+                </div>
+            </div>
+        </div>
+        <h2 style="color:#fff;margin-top:40px;">肥尾守宮</h2>
+        <div v-for="(list, cat) in db['肥尾守宮']" class="gene-section">
+            <div class="gene-cat-title">{{cat}}</div>
+            <div class="gene-grid"><div v-for="g in list" class="gene-item" :class="{active: openGene===g}"><div class="gene-head" @click="toggleGene(g)">{{g}} <span>{{openGene===g ? '▲' : '▼'}}</span></div><div class="gene-body-wrapper"><div class="gene-body-inner"><div class="gene-desc-box">{{ getGeneInfo(g) }}<img v-if="getGeneImg(g)" :src="getGeneImg(g)" class="gene-img" loading="lazy"></div></div></div></div></div>
+        </div>
+    </div>
+
+    <!-- 4. Calculator -->
+    <div v-show="curTab==='calculator'">
+         <div class="calc-wrapper-crop" style="margin-bottom: 50px;">
+             <iframe src="https://gencko-calculator.netlify.app/" class="calc-iframe"></iframe>
+         </div>
+    </div>
+
+    <!-- 5. Shop -->
+    <div v-show="curTab==='shop'">
+        <div class="tabs">
+            <div class="tab" :class="{active:sp==='豹紋守宮'}" @click="changeSpecies('豹紋守宮')">豹紋守宮</div>
+            <div class="tab" :class="{active:sp==='肥尾守宮'}" @click="changeSpecies('肥尾守宮')">肥尾守宮</div>
+        </div>
+        <div class="inp-wrap">
+            <span class="search-icon">🔍</span>
+            <input class="inp" v-model="kw" placeholder="搜尋品系、基因、ID..." @change="logSearch">
+        </div>
+        
+        <div class="controls-row">
+            <select v-model="sortOrder" class="sort-select">
+                <option value="default">預設排序</option>
+                <option value="price_asc">價格由低到高</option>
+                <option value="price_desc">價格由高到低</option>
+            </select>
+            <div class="history-toggle" :class="{active: showOnlyHistory}" @click="toggleHistoryMode"><span>🕒 最近瀏覽</span></div>
+            <div class="fav-toggle" :class="{active: showOnlyFav}" @click="showOnlyFav=!showOnlyFav"><span>❤ 只看最愛</span></div>
+        </div>
+        <div class="tags">
+            <span v-for="t in tags[sp]" class="tag" :class="{sel:kw===t}" @click="toggleTag(t)">{{t}}</span>
+        </div>
+        <div class="grid">
+            <div v-if="shopList.length===0" style="grid-column:1/-1;text-align:center;padding:50px;color:#666;font-size:1.2rem;">
+                {{ loading ? '資料讀取中...' : '唉呀～這個守宮好像躲起來了，暫時找不到符合的守宮喔！' }}
+            </div>
+            <div class="card" v-for="i in shopList" :key="i.ID">
+                <div v-if="i.Status==='Sold'" class="sold-stamp">SOLD OUT</div>
+                <div style="position:absolute;top:10px;right:10px;z-index:5;">
+                    <span class="fav-btn" :class="{active: wishlist.includes(i.ID)}" @click.stop="toggleWishlist(i.ID)">❤</span>
+                </div>
+                <div style="position:relative; cursor:pointer;" @click="openLightbox(i)">
+                    <img v-if="i.ImageURL" :src="convertLink(i.ImageURL)" class="card-img" loading="lazy">
+                    <div v-else class="card-img" style="display:flex;align-items:center;justify-content:center;color:#333;font-size:3rem;background:#000;">🦎</div>
+                    <div v-if="i.Status==='ForSale'" class="trust-badge">🛡️ 100% HEALTH</div>
+                </div>
+                <div class="card-body">
+                    <div class="head">
+                        <div class="morph-title">{{i.Morph}} <span v-if="isNew(i.CreatedDate)" class="b-new">NEW</span></div>
+                        <div class="id-group"><span class="copy-icon" @click="copy(i.ID)" title="複製 ID">📋</span><span class="id-text">{{i.ID}}</span></div>
+                    </div>
+                    <div class="gene-box">{{fmtG(i.Genes)}}</div>
+                    <div class="meta-row"><span :class="getSexCls(i)">{{fmtSex(i)}}</span> <span style="color:#444">|</span> <span>{{i.Birthday}}</span></div>
+                    <div class="price-row">
+                        <div v-if="i.Status!=='ForSale'">
+                            <span v-if="i.Status==='Sold'" class="status-badge s-sold">已售出</span>
+                            <span v-else-if="i.Status==='Reserved'" class="status-badge s-res">已預訂</span>
+                            <span v-else-if="i.Status==='NotForSale'" class="status-badge s-nfs">自留/非賣</span>
+                        </div>
+                        <div v-else class="price">NT$ {{i.ListingPrice}}</div>
+                        <a v-if="i.Status==='ForSale'" :href="lineLink" target="_blank" class="btn-buy">私訊</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 6. Breeders -->
+    <div v-show="curTab==='breeders'">
+        <div class="page-title">BREEDERS GALLERY</div>
+        <div class="tabs">
+            <div class="tab" :class="{active:sp==='豹紋守宮'}" @click="changeSpecies('豹紋守宮')">豹紋守宮</div>
+            <div class="tab" :class="{active:sp==='肥尾守宮'}" @click="changeSpecies('肥尾守宮')">肥尾守宮</div>
+        </div>
+        <div class="grid">
+            <div v-if="breedersList.length===0" style="grid-column:1/-1;text-align:center;padding:50px;color:#666;font-size:1.2rem;">目前無展示個體</div>
+            <div class="card" v-for="i in breedersList" :key="i.ID">
+                <div style="position:relative;cursor:pointer;" @click="openLightbox(i)">
+                    <img v-if="i.ImageURL" :src="convertLink(i.ImageURL)" class="card-img" loading="lazy">
+                    <div v-else class="card-img" style="display:flex;align-items:center;justify-content:center;color:#333;font-size:3rem;background:#000;">🦎</div>
+                </div>
+                <div class="card-body" style="text-align:center;">
+                    <div class="morph-title">{{i.Morph}}</div>
+                    <div class="gene-box" style="margin-top:5px;">{{fmtG(i.Genes)}}</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 7. Merch -->
+    <div v-show="curTab==='merch'" class="coming-soon">
+        <div style="font-size:3rem;margin-bottom:10px;">📦</div>
+        <h2>MERCHANDISE</h2>
+        <p>精選周邊商品籌備中，敬請期待。</p>
+    </div>
+
+    <!-- 8. FAQ -->
+    <div v-show="curTab==='faq'" class="page-text-box">
+        <div class="page-title">FAQ</div>
+        <div v-for="(q, idx) in faqList" :key="idx" class="faq-item">
+            <div class="faq-q" @click="q.open = !q.open">{{q.title}} <span>{{q.open?'-':'+'}}</span></div>
+            <div class="faq-a" :class="{show: q.open}" v-html="q.ans.replace(/\n/g, '<br>')"></div>
+        </div>
+    </div>
+</div>
+
+
+<!-- Floating Button -->
+<a :href="lineLink" target="_blank" class="fab-line">
+    <img src="https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/line.png" style="width:100%;height:100%;object-fit:contain;">
+</a>
+
+<!-- Admin -->
+<div v-if="admin" class="admin-box">
+    <h2 style="color:var(--pri);border-bottom:1px solid #333;padding-bottom:10px;margin-bottom:20px;">🛠️ 後台管理</h2>
+    <div class="dash">
+        <div class="d-item"><div style="font-size:0.8rem;color:#888">庫存總成本</div><div class="d-val">${{dash.cost}}</div></div>
+        <div class="d-item"><div style="font-size:0.8rem;color:#888">營業額</div><div class="d-val" style="color:var(--pri)">${{dash.val}}</div></div>
+        <div class="d-item"><div style="font-size:0.8rem;color:#888">在庫數</div><div class="d-val" style="color:#2196F3">{{dash.count}}</div></div>
+    </div>
+    <h3 id="form-top" style="color:#eee">{{ editMode ? '編輯模式: ' + newI.ID : '新增個體' }}</h3>
+    <div class="tabs">
+        <div class="tab" :class="{active:newI.Species==='豹紋守宮'}" @click="newI.Species='豹紋守宮'">豹紋守宮</div>
+        <div class="tab" :class="{active:newI.Species==='肥尾守宮'}" @click="newI.Species='肥尾守宮'">肥尾守宮</div>
+    </div>
+    <label style="color:#aaa">品系名稱</label><input class="inp" v-model="newI.Morph" list="his">
+    <datalist id="his"><option v-for="m in morphHis" :value="m"></option></datalist>
+    <label style="color:#aaa">基因標籤</label>
+    <div v-for="(l,c) in db[newI.Species]" :key="c">
+        <div style="padding:10px;background:#222;border:1px solid #444;color:#ccc;font-weight:bold;margin-top:5px;">{{c}}</div>
+        <div style="padding:10px;border:1px solid #333;display:flex;flex-wrap:wrap;gap:10px;">
+            <label v-for="g in l" style="display:inline-block;padding:5px 10px;background:#000;border:1px solid #333;color:#ddd;cursor:pointer;">
+                <input type="checkbox" :value="g" v-model="newI.Genes"> {{g}}
+            </label>
+        </div>
+    </div>
+    <label style="margin-top:10px;color:#aaa">性別</label>
+    <div style="display:flex;gap:15px;margin-bottom:10px;color:#fff"><label><input type="radio" value="公" v-model="newI.GenderType"> 公</label><label><input type="radio" value="母" v-model="newI.GenderType"> 母</label><label><input type="radio" value="溫度" v-model="newI.GenderType"> 溫度</label></div>
+    <input v-if="newI.GenderType==='溫度'" type="number" class="inp" v-model="newI.GenderValue" placeholder="攝氏溫度">
+    <div style="display:flex;gap:10px;">
+        <div style="flex:1"><label style="color:#aaa">生日</label><input type="date" class="inp" v-model="newI.Birthday"></div>
+        <div style="flex:1"><label style="color:#aaa">進價</label><input type="number" class="inp" v-model="newI.CostPrice"></div>
+        <div style="flex:1"><label style="color:#aaa">售價</label><input type="number" class="inp" v-model="newI.ListingPrice"></div>
+    </div>
+    <label style="color:#aaa">圖片連結 (URL)</label><input class="inp" v-model="newI.ImageURL" placeholder="https://...">
+    <div style="display:flex;gap:10px;margin-top:20px;">
+        <button class="tab active" style="flex:3;background:var(--pri);border:none;" @click="submit" :disabled="loading">{{loading?'處理中...':(editMode?'儲存修改':'確認上架')}}</button>
+        <button class="tab" v-if="editMode" style="flex:1;background:#444" @click="cancelEdit">取消</button>
+    </div>
+    <h3 style="margin-top:40px;border-bottom:1px solid #333;padding-bottom:10px;color:#eee">庫存列表</h3>
+    <div style="display:flex;gap:10px;margin-bottom:10px;">
+        <input class="inp" v-model="aKw" placeholder="搜尋 ID...">
+        <select class="inp" v-model="aFil" style="width:150px"><option value="All">全部</option><option value="ForSale">販售中</option><option value="Sold">已售出</option><option value="Trash">垃圾桶</option></select>
+    </div>
+    <div style="overflow-x:auto;">
+        <table>
+            <tr><th>ID</th><th>品系</th><th>價格</th><th>狀態</th><th>操作</th></tr>
+            <tr v-for="i in adminList" :key="i.ID">
+                <td>{{i.ID}}</td>
+                <td><b style="color:#fff">{{i.Morph}}</b><br><small style="color:#888">{{fmtSex(i)}}</small></td>
+                <td><input type="number" v-model.lazy="i.ListingPrice" @change="upd(i)" style="width:80px;background:#000;color:#fff;border:1px solid #444;padding:5px;"></td>
+                <td><select v-model="i.Status" @change="chkStat(i)" style="background:#000;color:#fff;border:1px solid #444;padding:5px;"><option value="ForSale">販售中</option><option value="Sold">已售出</option><option value="Reserved">已預訂</option><option value="NotForSale">自留</option><option value="Trash">垃圾桶</option></select></td>
+                <td style="display:flex;gap:5px;"><button class="btn b-edit" style="padding:4px 8px;" @click="edit(i)">修</button><button class="btn b-dup" style="padding:4px 8px;" @click="dup(i)">複</button><button class="btn b-del" style="padding:4px 8px;" @click="del(i)">刪</button></td>
+            </tr>
+        </table>
+    </div>
+</div>
+<footer @click="login">© 2025 Gencko Studio. 版權所有</footer>
+
+</div>
 <script>
 // ★★★ 設定區：已填入你的 GAS 網址 ★★★
 const API_URL = "https://script.google.com/macros/s/AKfycbza_jIAv8zK2HuW19BXc6Z4UtO0CJqxoNr-r7NoNw-miConxKDDuwVIkD2XbGXIflSfkg/exec";
@@ -627,6 +1005,4 @@ window.addEventListener('load', function() {
 });
 </script>
 </body>
-
 </html>
-
