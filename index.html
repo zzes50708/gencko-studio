@@ -631,6 +631,19 @@
 </div>
 <script>
 window.addEventListener('load', function() {
+    // 【修改點 1】填入你的 GAS Web App 網址
+const API_URL = "https://script.google.com/macros/s/AKfycbza_jIAv8zK2HuW19BXc6Z4UtO0CJqxoNr-r7NoNw-miConxKDDuwVIkD2XbGXIflSfkg/exec"; 
+
+// 【修改點 2】封裝 fetch 函式，取代 google.script.run
+// 這會發送 POST 請求給 GAS 的 doPost
+async function callGAS(data) {
+    // 使用 text/plain 避免 CORS 預檢請求 (Preflight) 失敗
+    const response = await fetch(API_URL, {
+        method: "POST",
+        body: JSON.stringify(data)
+    });
+    return await response.json();
+}
     const {createApp} = Vue;
     createApp({
         data(){return{
@@ -810,16 +823,15 @@ window.addEventListener('load', function() {
             },
             loadArticles() {
                 this.loading = true;
-                google.script.run.withSuccessHandler(res => {
-                    try {
-                        const r = JSON.parse(res);
-                        if (r.status === 'success') {
-                            this.articlesList = r.data;
-                            this.articlesLoaded = true;
-                        }
-                    } catch(e) {}
-                    this.loading = false;
-                }).withFailureHandler(() => this.loading = false).getArticles();
+                callGAS({ action: 'getArticles' }).then(r => {
+    try {
+        if (r.status === 'success') {
+            this.articlesList = r.data;
+            this.articlesLoaded = true;
+        }
+    } catch(e) {}
+    this.loading = false;
+}).catch(() => this.loading = false);
             },
             openArticle(item) {
                 this.readingArticle = item;
@@ -883,48 +895,65 @@ window.addEventListener('load', function() {
 
             load(){
                 this.loading=true;
-                google.script.run.withSuccessHandler(res=>{
-                    const r=JSON.parse(res);
-                    if(r.status==='success') this.inv=r.data.map(i=>{try{i.Genes=JSON.parse(i.Genes)}catch(e){i.Genes=[]} return i;});
-                    this.loading=false;
-                    const loader = document.getElementById('loader');
-                    if(loader) { loader.style.opacity='0'; setTimeout(()=>loader.style.display='none', 500); }
-                }).getInventory();
+                callGAS({ action: 'getInventory' }).then(r => {
+    // 移除 JSON.parse(res)，直接使用 r
+    if(r.status==='success') this.inv=r.data.map(i=>{try{i.Genes=JSON.parse(i.Genes)}catch(e){i.Genes=[]} return i;});
+    this.loading=false;
+    const loader = document.getElementById('loader');
+    if(loader) { loader.style.opacity='0'; setTimeout(()=>loader.style.display='none', 500); }
+});
             },
             loadConfig() {
-                google.script.run.withSuccessHandler(res => {
-                    try {
-                        const r = JSON.parse(res);
-                        if(r.status === 'success' && r.list) this.marqueeList = r.list;
-                    } catch(e){}
-                }).getAnnouncement();
-            },
+                callGAS({ action: 'getAnnouncement' }).then(r => {
+    try {
+        // 移除 JSON.parse(res)
+        if(r.status === 'success' && r.list) this.marqueeList = r.list;
+    } catch(e){}
+});
 
             submit(){
                 if(!this.newI.Morph)return alert('請填寫品系');
                 this.loading=true;
                 const payload = JSON.parse(JSON.stringify(this.newI));
                 if(this.editMode) {
-                    google.script.run.withSuccessHandler(res=>{ this.loading=false; alert('修改成功'); this.load(); this.cancelEdit(); }).updateProduct(payload);
+                    callGAS({ action: 'updateProduct', payload: payload }).then(r => { 
+    this.loading=false; 
+    alert('修改成功'); 
+    this.load(); 
+    this.cancelEdit(); 
+});
                 } else {
-                    google.script.run.withSuccessHandler(res=>{ const r=JSON.parse(res); this.loading=false; alert('上架成功 ID:'+r.id); this.load(); this.resetForm(); }).addProduct(payload);
+                    // 注意：後端 doPost 預期參數名稱為 payload
+callGAS({ action: 'addProduct', payload: payload }).then(r => { 
+    this.loading=false; 
+    alert('上架成功 ID:'+r.id); 
+    this.load(); 
+    this.resetForm(); 
+});
                 }
             },
             edit(i) { this.newI = JSON.parse(JSON.stringify(i)); this.editMode = true; document.getElementById('form-top').scrollIntoView({behavior: 'smooth'}); },
             cancelEdit() { this.editMode = false; this.resetForm(); },
             resetForm() { this.newI = {Species:'豹紋守宮',Morph:'',Genes:[],GenderType:'公',GenderValue:'',Birthday:new Date().toISOString().split('T')[0],CostPrice:'',ListingPrice:'',ImageURL:''}; },
-            upd(i){ google.script.run.updateProduct(i); },
+            upd(i){ callGAS({ action: 'updateProduct', payload: i }); },
             chkStat(i){
                 if(i.Status==='Sold'){
                     const p = prompt('請輸入成交價格', i.ListingPrice);
                     if(p){ 
                         i.SoldPrice=p; const c=prompt('客戶資料'); i.CustomerInfo=c; 
-                        if(c){ google.script.run.withSuccessHandler(res=>{ const r=JSON.parse(res); if(r.isBlacklisted)alert('⚠️ 黑名單警告！\n原因：'+r.reason); }).checkBlacklist(c); }
+                        if(c){ // 後端 doPost 預期參數為 phone，但原本 checkBlacklist(c) 是傳字串
+// 根據 code.gs: checkBlacklist(data.phone)
+callGAS({ action: 'checkBlacklist', phone: c }).then(r => { 
+    if(r.isBlacklisted) alert('⚠️ 黑名單警告！\n原因：'+r.reason); 
+}); }
                     } else { i.Status='ForSale'; }
                 }
                 this.upd(i);
             },
-            dup(i){ if(confirm('複製?')){let c=JSON.parse(JSON.stringify(i)); delete c.ID; delete c.CreatedDate; google.script.run.withSuccessHandler(r=>{const res=JSON.parse(r);alert('新ID:'+res.id);this.load()}).addProduct(c);} },
+            callGAS({ action: 'addProduct', payload: c }).then(res => {
+    alert('新ID:'+res.id);
+    this.load();
+});} },
             del(i){ if(confirm('移入垃圾桶?')){i.Status='Trash'; this.upd(i);} },
             login(){ if(prompt('密碼')==='8888') this.admin=true; },
             
@@ -934,7 +963,8 @@ window.addEventListener('load', function() {
                     setTimeout(() => this.showToast = false, 2000);
                 }); 
             },
-            logSearch(){ if(this.kw) google.script.run.logSearch(this.kw); },
+            // 根據 code.gs: logSearch(data.keyword)
+logSearch(){ if(this.kw) callGAS({ action: 'logSearch', keyword: this.kw }); },
             fmtG(g){ return Array.isArray(g)?g.join(' + '):g; },
             isNew(d){ return (new Date()-new Date(d))/86400000 < 7; },
             fmtSex(i){
@@ -956,4 +986,5 @@ window.addEventListener('load', function() {
 });
 </script>
 </body>
+
 </html>
