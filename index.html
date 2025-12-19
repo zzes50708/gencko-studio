@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="mobile-web-app-capable" content="yes">
     <title>Gencko Studio｜守宮工作室</title>
+    <!-- Force Vercel Update: v2.0 -->
     <meta name="description" content="Gencko 提供守宮飼養與繁育知識，展示高品質豹紋守宮與肥尾守宮個體。">
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700;900&family=Black+Ops+One&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
@@ -633,28 +634,15 @@
 // ★★★ 設定區：已填入你的 GAS 網址 ★★★
 const API_URL = "https://script.google.com/macros/s/AKfycbza_jIAv8zK2HuW19BXc6Z4UtO0CJqxoNr-r7NoNw-miConxKDDuwVIkD2XbGXIflSfkg/exec";
 
-// ★★★ 修復版通訊核心 ★★★
+// ★★★ 通訊核心：用 fetch 取代 google.script.run ★★★
 async function callGAS(data) {
+    // 這裡發送請求給 GAS
     const response = await fetch(API_URL, {
         method: "POST",
-        // 1. 強制設定為 text/plain，避免瀏覽器發送 OPTIONS 預檢請求 (Preflight)
-        headers: {
-            "Content-Type": "text/plain;charset=utf-8"
-        },
-        // 2. 確保不傳送 Cookies，避免多帳號登入干擾
-        credentials: "omit",
         body: JSON.stringify(data)
     });
-
-    // 3. 增加錯誤檢查：如果回傳的不是 JSON，跳出警告
-    const text = await response.text();
-    try {
-        return JSON.parse(text);
-    } catch (e) {
-        console.error("GAS 回傳錯誤 (非 JSON):", text);
-        alert("讀取失敗，請檢查 Console 錯誤訊息");
-        return { status: 'error', message: text };
-    }
+    // 直接回傳 JSON 物件
+    return await response.json();
 }
 
 window.addEventListener('load', function() {
@@ -1019,4 +1007,3 @@ window.addEventListener('load', function() {
 </script>
 </body>
 </html>
-
