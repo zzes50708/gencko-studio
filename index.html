@@ -3,10 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <meta name="mobile-web-app-capable" content="yes">
     <title>Gencko Studio｜守宮工作室</title>
-    <!-- Force Vercel Update: v2.0 -->
     <meta name="description" content="Gencko 提供守宮飼養與繁育知識，展示高品質豹紋守宮與肥尾守宮個體。">
+    <meta name="mobile-web-app-capable" content="yes">
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700;900&family=Black+Ops+One&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
 
@@ -636,9 +635,9 @@ const API_URL = "https://script.google.com/macros/s/AKfycbza_jIAv8zK2HuW19BXc6Z4
 
 // ★★★ 通訊核心：用 fetch 取代 google.script.run ★★★
 async function callGAS(data) {
-    // 這裡發送請求給 GAS
     const response = await fetch(API_URL, {
         method: "POST",
+        headers: { "Content-Type": "text/plain;charset=utf-8" },
         body: JSON.stringify(data)
     });
     // 直接回傳 JSON 物件
