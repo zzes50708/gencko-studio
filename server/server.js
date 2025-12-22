@@ -19,9 +19,12 @@ app.get('*', (req, res) => {
     res.sendFile(path.join(__dirname, '../public/index.html'));
 });
 
-app.listen(PORT, () => {
-    console.log(`Server running at http://localhost:${PORT}`);
-});
+// 僅在本地開發時啟動 Port 監聽 (Vercel 會自動處理請求，不需要 app.listen)
+if (require.main === module) {
+    app.listen(PORT, () => {
+        console.log(`Server running at http://localhost:${PORT}`);
+    });
+}
 
-// 為了 Vercel Serverless
+// 必須匯出 app 供 Vercel (api/index.js) 使用
 module.exports = app;
