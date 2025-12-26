@@ -3,13 +3,15 @@ window.addEventListener('load', function() {
     createApp({
         data(){return{
             showToast: false,
+            isDayMode: true, /* Default Day Mode */
             lightboxItem: null,
             careImg: 'https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/%E7%92%B0%E5%A2%83.png', 
             aboutImg: 'https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/324500%20(1).png',
             
-            curTab: 'about',
+            curTab: 'home',
+            mobileMenuOpen: false,
             openGene: null,
-            logoUrl: 'https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/%E5%8E%BB%E8%83%8C.png', 
+            logoUrl: 'https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/%E6%AD%A3%E9%9D%A2.png', 
             admin:false, loading:false, kw:'', sp:'豹紋守宮', editMode:false,
             aKw:'', aFil:'All',
             lineLink:'https://line.me/R/ti/p/@219abdzn', 
@@ -29,7 +31,14 @@ window.addEventListener('load', function() {
             articlesLoaded: false,
             artCat: 'All',
 
+            // 請在此填入新的 GAS Web App 部署網址，並確保 load() 與 loadMerch() 皆使用此網址
+            gasApiUrl: 'https://script.google.com/macros/s/AKfycbyP4hSSOIUdA4ZytyMU9_rZL7qvfBU1z_1_DL3psx9COklZiarhVgp848UU8nf1CFQkhQ/exec', 
+            merchList: [],
+            merchLoaded: false,
+
             inv:[],
+            hotList: [], // 熱門精選清單
+            geneSpecies: '豹紋守宮', // 基因圖鑑目前物種
             newI:{Species:'豹紋守宮',Morph:'',Genes:[],GenderType:'公',GenderValue:'',Birthday:new Date().toISOString().split('T')[0],CostPrice:'',ListingPrice:'',ImageURL:''},
             db:{
                 '豹紋守宮':{'顯性':['白黃','奧本雪花','寶石雪花','謎','蠟筆'],'隱性':['川普白化','貝爾白化','雨水白化','日蝕','暴風雪','莫菲無紋','慾望黑眼','超級巨人'],'共顯性':['馬克雪花','檸檬霜'],'多遺傳':['土匪','反直線','直線','亂紋','高黃','橘化','黑夜','薰衣草']},
@@ -87,6 +96,11 @@ window.addEventListener('load', function() {
                 {text: '', author: '', img: ''}
             ]
         }},
+        watch: {
+            curTab(val) {
+                if(val === 'merch' && !this.merchLoaded) this.loadMerch();
+            }
+        },
         computed:{
             articleCats() {
                 if(!this.articlesList.length) return [];
@@ -146,8 +160,27 @@ window.addEventListener('load', function() {
             },
             morphHis(){ return [...new Set(this.inv.map(i=>i.Morph))]; }
         },
+
         mounted(){ 
+            // Theme Init
+            const savedTheme = localStorage.getItem('gencko_theme');
+            if(savedTheme === 'dark') { 
+                this.isDayMode = false; 
+                document.body.classList.remove('day-mode'); 
+            } else { 
+                this.isDayMode = true; 
+                document.body.classList.add('day-mode'); 
+            }
+            // Iframe Theme Sync (Wait a bit for iframes to load)
+            setTimeout(() => {
+                const mode = this.isDayMode ? 'light' : 'dark';
+                document.querySelectorAll('iframe').forEach(f => {
+                    f.contentWindow.postMessage({ type: 'THEME_CHANGE', mode: mode }, '*');
+                });
+            }, 2000);
+
             this.load(); 
+            this.loadArticles(); // 提前載入文章供首頁使用
             const savedWish = localStorage.getItem('gencko_wishlist');
             if(savedWish) this.wishlist = JSON.parse(savedWish);
             const savedHist = localStorage.getItem('gencko_history');
@@ -164,6 +197,7 @@ window.addEventListener('load', function() {
                 this.showBackTop = window.scrollY > 300;
             });
         },
+
         methods:{
             // API Helper
             async api(url, method = 'GET', body = null) {
@@ -195,6 +229,21 @@ window.addEventListener('load', function() {
                         this.articlesLoaded = true;
                     }
                 } catch(e) {}
+                this.loading = false;
+            },
+            async loadMerch() {
+                this.loading = true;
+                try {
+                    const res = await fetch(this.gasApiUrl, {
+                        method: 'POST',
+                        body: JSON.stringify({ action: 'getMerchandise' })
+                    });
+                    const r = await res.json();
+                    if (r.status === 'success') {
+                        this.merchList = r.data;
+                        this.merchLoaded = true;
+                    }
+                } catch(e) { console.error('Merch Load Error:', e); }
                 this.loading = false;
             },
             openArticle(item) {
@@ -256,20 +305,46 @@ window.addEventListener('load', function() {
             
             scrollToTop() { window.scrollTo({ top: 0, behavior: 'smooth' }); },
 
+            toggleTheme() {
+                this.isDayMode = !this.isDayMode;
+                if(this.isDayMode) document.body.classList.add('day-mode');
+                else document.body.classList.remove('day-mode');
+                localStorage.setItem('gencko_theme', this.isDayMode ? 'light' : 'dark');
+                
+                // Sync to Iframes
+                const mode = this.isDayMode ? 'light' : 'dark';
+                document.querySelectorAll('iframe').forEach(f => {
+                    f.contentWindow.postMessage({ type: 'THEME_CHANGE', mode: mode }, '*');
+                });
+            },
+
             async load(){
+
                 this.loading=true;
                 try {
-                    const r = await this.api('/api/inventory');
+                    // 修正：改用 gasApiUrl 確保呼叫到新部署的 GAS
+                    const res = await fetch(this.gasApiUrl, {
+                        method: 'POST',
+                        body: JSON.stringify({ action: 'getInventory' })
+                    });
+                    const r = await res.json();
+
                     if(r.status==='success') {
                         this.inv = r.data.map(i => {
                             try { i.Genes = JSON.parse(i.Genes) } catch(e) { i.Genes = [] } 
                             return i;
                         });
+                        this.initHotPicks();
                     }
-                } catch(e) { console.error(e); }
+                } catch(e) { console.error('Inv Load Error:', e); }
                 this.loading=false;
                 const loader = document.getElementById('loader');
                 if(loader) { loader.style.opacity='0'; setTimeout(()=>loader.style.display='none', 500); }
+            },
+            initHotPicks() {
+                // 依據 Q 欄 (IsHot) === 'Hot' 進行篩選
+                let h = this.inv.filter(i => i.IsHot === 'Hot');
+                this.hotList = h;
             },
             async loadConfig() {
                 try {
@@ -356,7 +431,11 @@ window.addEventListener('load', function() {
                 if(i.GenderType==='公'||(i.GenderType==='溫度'&& +i.GenderValue>=30))return 'male';
                 if(i.GenderType==='母'||(i.GenderType==='溫度'&& +i.GenderValue<=27))return 'female';
                 return 'mix';
+            },
+            openLineGroup(){
+                window.open('https://line.me/ti/g2/x4QpkWPJTXYr87U_jHyxSrBLTeVYMdwwlPF9qg', '_blank');
             }
         }
+
     }).mount('#app');
 });

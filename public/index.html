@@ -35,7 +35,7 @@
         <div v-if="showToast" class="toast">ID 已複製</div>
         <div class="back-top" :class="{show: showBackTop}" @click="scrollToTop">↑</div>
 
-        <div class="marquee-container" @click="openLineGroup">
+        <div class="marquee-container">
             <div class="marquee-content">
                 <span v-for="(item, i) in marqueeList" :key="i" class="marquee-item">
                     <a v-if="item.url" :href="item.url" target="_blank" class="marquee-link">{{ item.text }}</a>
@@ -45,42 +45,136 @@
             </div>
         </div>
 
-        <header>
-            <div class="logo-wrap">
-                <img v-if="logoUrl" :src="logoUrl" class="logo-img" alt="Gencko Logo">
-                <div class="brand-text">
-                    GENCKO
-                    <span class="brand-sub">BREEDING STUDIO</span>
+        <!-- New Sticky Nav -->
+        <div class="sticky-nav">
+            <div class="nav-container">
+                <div class="nav-left" @click="curTab='home';window.scrollTo(0,0)" style="cursor:pointer; display:flex; align-items:center; gap:10px;">
+                    <img v-if="logoUrl" :src="logoUrl" style="height:40px; width:auto; display:block;">
+                    <div style="font-weight:900; font-size:1.2rem; color:var(--pri); letter-spacing:1px; line-height:1;">GENCKO</div>
+                </div>
+
+                <div class="dt-nav" v-if="!admin">
+                    <div class="nav-item-dt" :class="{active: curTab==='about'}" @click="curTab='about'">關於我們</div>
+                    <div class="nav-item-dt dropdown-hover">
+                        守宮百科 ▾
+                        <div class="dt-dropdown">
+                            <div @click="curTab='care'">飼養方式</div>
+                            <div @click="toArticles">專欄文章</div>
+                            <div @click="curTab='qs'">新手快篩</div>
+                        </div>
+                    </div>
+                    <div class="nav-item-dt dropdown-hover">
+                        基因導覽 ▾
+                        <div class="dt-dropdown">
+                            <div @click="curTab='genes'">基因圖鑑</div>
+                            <div @click="curTab='calculator'">基因計算</div>
+                        </div>
+                    </div>
+                    <div class="nav-item-dt" :class="{active: curTab==='breeders'}" @click="curTab='breeders'">種群展示</div>
+                    <div class="nav-item-dt" :class="{active: curTab==='shop'}" @click="toShop">選購守宮</div>
+                    <div class="nav-item-dt" :class="{active: curTab==='merch'}" @click="curTab='merch'">周邊商品</div>
+                    <div class="nav-item-dt" :class="{active: curTab==='faq'}" @click="curTab='faq'">常見問題</div>
+                </div>
+
+                <div class="nav-right">
+                    <!-- 日夜切換按鈕 -->
+                    <div class="theme-toggle" @click="toggleTheme" style="cursor:pointer;font-size:1rem;font-weight:bold;margin-right:15px;color:var(--txt);display:flex;align-items:center;border:1px solid var(--bd);padding:4px 10px;border-radius:20px;">{{ isDayMode ? '夜間' : '日間' }}</div>
+                    <div class="hamburger" v-if="!admin" @click="mobileMenuOpen=!mobileMenuOpen">☰</div>
+                    <button v-if="admin" @click="admin=false" class="nav-btn-logout">登出</button>
                 </div>
             </div>
-            
-            <div class="header-right">
-                <a href="https://lin.ee/A7LklH4" target="_blank" class="nav-link">LINE 官方</a>
-                <a href="https://line.me/ti/g2/x4QpkWPJTXYr87U_jHyxSrBLTeVYMdwwlPF9qg?utm_source=invitation&utm_medium=link_copy&utm_campaign=default" target="_blank" class="nav-link">社群</a>
-                <a href="https://myship.7-11.com.tw/general/detail/GM2509175195515" target="_blank" class="nav-link">賣貨便</a>
-                <a href="https://www.instagram.com/gencko_breeding" target="_blank" class="nav-link">IG</a>
-                <a href="https://www.facebook.com/profile.php?id=61579393505049&locale=zh_TW" target="_blank" class="nav-link">FB</a>
-                <a href="https://www.threads.com/@gencko_breeding" target="_blank" class="nav-link">Threads</a>
-                <a href="https://portaly.cc/genckogreeding?utm_source=ig&utm_medium=social&utm_content=link_in_bio&fbclid=PAZXh0bgNhZW0CMTEAc3J0YwZhcHBfaWQMMjU2MjgxMDQwNTU4AAGnmo-fO1DIxw-MuNDdxARHZF8EagQeCnkOkSjcQPkLpf0jb5VtBomCGGtqLrM_aem_HQc6h6IpEWX6xcRrh2usqQ" target="_blank" class="nav-link">Portaly</a>
-                <button class="nav-link" v-if="admin" @click="admin=false" style="background:none;border:none;cursor:pointer;">登出</button>
+
+            <!-- Mobile Menu -->
+            <div class="mobile-menu-overlay" :class="{open: mobileMenuOpen}" v-if="!admin">
+                <div class="mm-item" @click="curTab='home';mobileMenuOpen=false">首頁</div>
+                <div class="mm-item" @click="curTab='about';mobileMenuOpen=false">關於我們</div>
+                
+                <details class="mm-details">
+                    <summary class="mm-summary">守宮百科 ▾</summary>
+                    <div class="mm-dropdown-content">
+                        <div class="mm-sub" @click="curTab='care';mobileMenuOpen=false">飼養方式</div>
+                        <div class="mm-sub" @click="toArticles();mobileMenuOpen=false">專欄文章</div>
+                        <div class="mm-sub" @click="curTab='qs';mobileMenuOpen=false">新手快篩</div>
+                    </div>
+                </details>
+
+                <details class="mm-details">
+                    <summary class="mm-summary">基因導覽 ▾</summary>
+                    <div class="mm-dropdown-content">
+                        <div class="mm-sub" @click="curTab='genes';mobileMenuOpen=false">基因圖鑑</div>
+                        <div class="mm-sub" @click="curTab='calculator';mobileMenuOpen=false">基因計算</div>
+                    </div>
+                </details>
+
+                <div class="mm-item" @click="curTab='breeders';mobileMenuOpen=false">種群展示</div>
+                <div class="mm-item" @click="toShop();mobileMenuOpen=false">選購守宮</div>
+                <div class="mm-item" @click="curTab='merch';mobileMenuOpen=false">周邊商品</div>
+                <div class="mm-item" @click="curTab='faq';mobileMenuOpen=false">常見問題</div>
             </div>
-        </header>
+        </div>
+<!-- Vue Content Areas -->
+        <div v-if="!admin" style="padding-top: 0;">
+            <!-- Home -->
+            <div v-show="curTab==='home'">
+                <div class="hero-box" :style="'background-image: linear-gradient(rgba(0,0,0,0.3), rgba(0,0,0,0.8)), url(https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/%E5%AE%98%E7%B6%B2%E8%83%8C%E6%99%AF.png)'">
+                    <div class="hero-content">
+                        <h1>GENCKO STUDIO</h1>
+                        <p>專業豹紋守宮與肥尾守宮繁育工作室</p>
+                        <button class="btn-hero" @click="toShop">立即選購</button>
+                    </div>
+                </div>
 
-        <nav class="main-nav" v-if="!admin">
-            <div class="nav-item" :class="{active: curTab==='about'}" @click="curTab='about'">關於我們</div>
-            <div class="nav-item" :class="{active: curTab==='care'}" @click="curTab='care'">飼養方式</div>
-            <div class="nav-item" :class="{active: curTab==='articles'}" @click="toArticles">專欄文章</div>
-            <div class="nav-item" :class="{active: curTab==='qs'}" @click="curTab='qs'">新手快篩</div>
-            <div class="nav-item" :class="{active: curTab==='genes'}" @click="curTab='genes'">基因圖鑑</div>
-            <div class="nav-item" :class="{active: curTab==='calculator'}" @click="curTab='calculator'">基因計算</div>
-            <div class="nav-item" :class="{active: curTab==='breeders'}" @click="curTab='breeders'">種群展示</div>
-            <div class="nav-item" :class="{active: curTab==='shop'}" @click="toShop">選購守宮</div>
-            <div class="nav-item" :class="{active: curTab==='merch'}" @click="curTab='merch'">周邊商品</div>
-            <div class="nav-item" :class="{active: curTab==='faq'}" @click="curTab='faq'">常見問題</div>
-        </nav>
+                <!-- Social Icons -->
+                <div class="social-row">
+                    <a href="https://www.instagram.com/gencko_breeding" target="_blank" class="soc-btn">IG</a>
+                    <a href="https://www.facebook.com/profile.php?id=61579393505049&locale=zh_TW" target="_blank" class="soc-btn">FB</a>
+                    <a href="https://line.me/ti/g2/x4QpkWPJTXYr87U_jHyxSrBLTeVYMdwwlPF9qg?utm_source=invitation&utm_medium=link_copy&utm_campaign=default" target="_blank" class="soc-btn">社群</a>
+                    <a href="https://myship.7-11.com.tw/general/detail/GM2509175195515" target="_blank" class="soc-btn">賣貨便</a>
+                </div>
+                
+                <div class="home-section">
+                    <div class="section-head">
+                        <div class="sec-title">熱門精選</div>
+                        <div class="sec-more" @click="toShop">查看更多 &rarr;</div>
+                    </div>
+                    <div class="hot-marquee-mask">
+                        <div class="hot-track">
+                            <div class="hot-card-item" v-for="(i, idx) in [...hotList, ...hotList]" :key="idx">
+                                <div style="position:relative; cursor:pointer;" @click="openLightbox(i)">
+                                    <img v-if="i.ImageURL" :src="convertLink(i.ImageURL)" class="card-img" loading="lazy">
+                                    <div v-else class="card-img" style="display:flex;align-items:center;justify-content:center;color:#333;font-size:3rem;background:#000;">🦎</div>
+                                    <div v-if="i.Status==='ForSale'" class="trust-badge">🛡️ 100% HEALTH</div>
+                                </div>
+                                <div class="card-body" style="padding:15px; text-align:center;">
+                                    <div class="morph-title" style="margin:0; font-size:1.1rem;">{{i.Morph}}</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
 
-        <!-- Vue Content Areas -->
-        <div v-if="!admin">
+                <div class="home-section" style="background:rgba(255,255,255,0.02);">
+                    <div class="section-head">
+                        <div class="sec-title">最新文章</div>
+                        <div class="sec-more" @click="toArticles">專欄文章 &rarr;</div>
+                    </div>
+                    <div class="grid">
+                        <div class="card article-card" v-for="item in articlesList.slice(0, 3)" :key="item.ID" @click="openArticle(item)">
+                            <div style="position:relative; overflow:hidden;">
+                                <img v-if="item.ImageURL" :src="convertLink(item.ImageURL)" class="card-img" style="height:180px;" loading="lazy">
+                                <div v-else class="card-img" style="height:180px;display:flex;align-items:center;justify-content:center;font-size:3rem;background:#1a1a1a;">📝</div>
+                                <div class="art-cat-tag">{{ item.Category }}</div>
+                            </div>
+                            <div class="card-body">
+                                <div style="font-size:0.8rem;color:#888;margin-bottom:5px;">{{ fmtDate(item.PublishDate) }}</div>
+                                <div class="morph-title" style="font-size:1.1rem;margin-bottom:8px;">{{ item.Title }}</div>
+                                <div class="art-summary">{{ item.Summary }}</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- About -->
             <div v-show="curTab==='about'">
                 <div class="page-text-box">
@@ -195,35 +289,41 @@
             <!-- QS -->
             <div v-show="curTab==='qs'" class="tab-content">
                 <div class="page-text-box">
-                    <div class="page-title">新手快篩</div>
-                    <iframe src="https://graceful-pony-262819.netlify.app/" class="qs-iframe"></iframe>
+                    <iframe src="https://geckoeval.netlify.app/" class="qs-iframe"></iframe>
                 </div>
             </div>
 
             <!-- Genes -->
             <div v-show="curTab==='genes'">
                 <div class="page-title">GENETIC GUIDE</div>
-                <h2 style="color:#fff;margin-top:40px;">豹紋守宮</h2>
-                <div v-for="(list, cat) in db['豹紋守宮']" class="gene-section">
+                <div class="tabs" style="margin-bottom: 20px;">
+                    <div class="tab" :class="{active: geneSpecies==='豹紋守宮'}" @click="geneSpecies='豹紋守宮'">豹紋守宮</div>
+                    <div class="tab" :class="{active: geneSpecies==='肥尾守宮'}" @click="geneSpecies='肥尾守宮'">肥尾守宮</div>
+                </div>
+                
+                <div v-for="(list, cat) in db[geneSpecies]" class="gene-section">
                     <div class="gene-cat-title">{{cat}}</div>
                     <div class="gene-grid">
                         <div v-for="g in list" class="gene-item" :class="{active: openGene===g}">
                             <div class="gene-head" @click="toggleGene(g)">{{g}} <span>{{openGene===g ? '▲' : '▼'}}</span></div>
-                            <div class="gene-body-wrapper"><div class="gene-body-inner"><div class="gene-desc-box">{{ getGeneInfo(g) }}<div v-if="['川普白化', '貝爾白化', '雨水白化'].includes(g)" class="warn-box">⚠️ 警語：不同的白化基因無法彼此相容</div><img v-if="getGeneImg(g)" :src="getGeneImg(g)" class="gene-img" loading="lazy"></div></div></div>
+                            <div class="gene-body-wrapper">
+                                <div class="gene-body-inner">
+                                    <div class="gene-desc-box">
+                                        {{ getGeneInfo(g) }}
+                                        <div v-if="['川普白化', '貝爾白化', '雨水白化'].includes(g)" class="warn-box">⚠️ 警語：不同的白化基因無法彼此相容</div>
+                                        <img v-if="getGeneImg(g)" :src="getGeneImg(g)" class="gene-img" loading="lazy">
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
-                </div>
-                <h2 style="color:#fff;margin-top:40px;">肥尾守宮</h2>
-                <div v-for="(list, cat) in db['肥尾守宮']" class="gene-section">
-                    <div class="gene-cat-title">{{cat}}</div>
-                    <div class="gene-grid"><div v-for="g in list" class="gene-item" :class="{active: openGene===g}"><div class="gene-head" @click="toggleGene(g)">{{g}} <span>{{openGene===g ? '▲' : '▼'}}</span></div><div class="gene-body-wrapper"><div class="gene-body-inner"><div class="gene-desc-box">{{ getGeneInfo(g) }}<img v-if="getGeneImg(g)" :src="getGeneImg(g)" class="gene-img" loading="lazy"></div></div></div></div></div>
                 </div>
             </div>
 
             <!-- Calculator -->
             <div v-show="curTab==='calculator'">
                  <div class="calc-wrapper-crop" style="margin-bottom: 50px;">
-                     <iframe src="https://gencko-calculator.netlify.app/" class="calc-iframe"></iframe>
+                     <iframe src="https://genckocalculator.netlify.app/" class="calc-iframe"></iframe>
                  </div>
             </div>
 
@@ -308,10 +408,33 @@
             </div>
 
             <!-- Merch -->
-            <div v-show="curTab==='merch'" class="coming-soon">
-                <div style="font-size:3rem;margin-bottom:10px;">📦</div>
-                <h2>MERCHANDISE</h2>
-                <p>精選周邊商品籌備中，敬請期待。</p>
+            <div v-show="curTab==='merch'">
+                <div class="page-title">MERCHANDISE</div>
+                <div v-if="merchList.length===0" style="text-align:center;padding:50px;color:#666;font-size:1.2rem;">
+                    {{ loading ? '載入商品中...' : '目前沒有上架的周邊商品' }}
+                </div>
+                <div class="grid" v-else>
+                    <div class="card" v-for="m in merchList" :key="m.ItemID">
+                        <div style="position:relative; cursor:pointer;" @click="openLightbox({ImageURL: m.ImageURL, Morph: m.Name})">
+                            <!-- 邏輯修正：只要不是 Yes，就視為售完 -->
+                            <img v-if="m.ImageURL" :src="convertLink(m.ImageURL)" class="card-img" loading="lazy" :style="m.Available!=='Yes' ? 'filter:grayscale(100%);opacity:0.6' : ''">
+                            <div v-else class="card-img" style="display:flex;align-items:center;justify-content:center;color:#333;font-size:3rem;background:#000;">🎁</div>
+                            <div v-if="m.Available!=='Yes'" class="sold-stamp">SOLD OUT</div>
+                        </div>
+                        <div class="card-body">
+                            <div class="head">
+                                <div class="morph-title">{{m.Name}}</div>
+                            </div>
+                            <div style="color:#aaa;font-size:0.9rem;margin-bottom:10px;min-height:3em;">{{m.Description}}</div>
+                            <div class="price-row">
+                                <div class="price">NT$ {{m.Price}}</div>
+                                <!-- 邏輯修正：顯示按鈕或售完標籤 -->
+                                <span v-if="m.Available!=='Yes'" class="status-badge s-sold">已售完</span>
+                                <a v-else :href="m.ExternalLink || lineLink" target="_blank" class="btn-buy">購買</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <!-- FAQ -->

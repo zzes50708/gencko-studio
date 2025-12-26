@@ -1,10 +1,16 @@
 const { google } = require('googleapis');
 require('dotenv').config();
 
-// 處理 Private Key 的換行問題
+// ★ 關鍵修正：更強健的私鑰處理邏輯
+// Vercel 介面上有時會把 \n 轉義，這裡將其還原為真正的換行符號
 const privateKey = process.env.GOOGLE_PRIVATE_KEY
   ? process.env.GOOGLE_PRIVATE_KEY.replace(/\\n/g, '\n')
   : undefined;
+
+// 檢查點：若沒有私鑰，印出錯誤 (不會洩漏金鑰，只報錯)
+if (!privateKey) {
+  console.error('❌ Fatal Error: GOOGLE_PRIVATE_KEY is missing or invalid.');
+}
 
 const auth = new google.auth.GoogleAuth({
   credentials: {
