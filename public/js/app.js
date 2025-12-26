@@ -173,10 +173,26 @@ window.addEventListener('load', function() {
             }
             // Iframe Theme Sync (Wait a bit for iframes to load)
             setTimeout(() => {
-                const mode = this.isDayMode ? 'light' : 'dark';
-                document.querySelectorAll('iframe').forEach(f => {
-                    f.contentWindow.postMessage({ type: 'THEME_CHANGE', mode: mode }, '*');
+                // 1. 同步一般子頁面 (發送當前狀態)
+                const payload = {
+                    type: 'THEME_CHANGE',
+                    mode: this.isDayMode ? 'light' : 'dark',
+                    theme: this.isDayMode ? 'day' : 'night'
+                };
+                ['iframe-qs', 'iframe-calc', 'iframe-health'].forEach(id => {
+                    const el = document.getElementById(id);
+                    if(el && el.contentWindow) el.contentWindow.postMessage(payload, '*');
                 });
+
+                // 2. 同步特寵醫院 (特殊邏輯)
+                // 該頁面預設為 Day。如果父頁面是 Night，我們需要發送一次切換訊號讓它變黑。
+                // 如果父頁面是 Day，則不需要動作 (因為它預設就是 Day)。
+                if (!this.isDayMode) {
+                    const hospitalFrame = document.getElementById('iframe-hospital');
+                    if(hospitalFrame && hospitalFrame.contentWindow) {
+                        hospitalFrame.contentWindow.postMessage({ type: 'TOGGLE_THEME' }, '*');
+                    }
+                }
             }, 2000);
 
             this.load(); 
@@ -311,11 +327,22 @@ window.addEventListener('load', function() {
                 else document.body.classList.remove('day-mode');
                 localStorage.setItem('gencko_theme', this.isDayMode ? 'light' : 'dark');
                 
-                // Sync to Iframes
-                const mode = this.isDayMode ? 'light' : 'dark';
-                document.querySelectorAll('iframe').forEach(f => {
-                    f.contentWindow.postMessage({ type: 'THEME_CHANGE', mode: mode }, '*');
+                // 1. 一般子頁面 (支援指定模式：計算機、評估、健康)
+                const payload = {
+                    type: 'THEME_CHANGE',
+                    mode: this.isDayMode ? 'light' : 'dark',
+                    theme: this.isDayMode ? 'day' : 'night'
+                };
+                ['iframe-qs', 'iframe-calc', 'iframe-health'].forEach(id => {
+                    const el = document.getElementById(id);
+                    if(el && el.contentWindow) el.contentWindow.postMessage(payload, '*');
                 });
+
+                // 2. 特寵醫院 (只支援切換 TOGGLE_THEME)
+                const hospitalFrame = document.getElementById('iframe-hospital');
+                if(hospitalFrame && hospitalFrame.contentWindow) {
+                    hospitalFrame.contentWindow.postMessage({ type: 'TOGGLE_THEME' }, '*');
+                }
             },
 
             async load(){

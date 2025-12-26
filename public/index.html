@@ -60,7 +60,9 @@
                         <div class="dt-dropdown">
                             <div @click="curTab='care'">飼養方式</div>
                             <div @click="toArticles">專欄文章</div>
-                            <div @click="curTab='qs'">新手快篩</div>
+                            <div @click="curTab='qs'">飼養評估</div>
+                            <div @click="curTab='health'">健康評估</div>
+                            <div @click="curTab='hospital'">特寵醫院</div>
                         </div>
                     </div>
                     <div class="nav-item-dt dropdown-hover">
@@ -94,7 +96,9 @@
                     <div class="mm-dropdown-content">
                         <div class="mm-sub" @click="curTab='care';mobileMenuOpen=false">飼養方式</div>
                         <div class="mm-sub" @click="toArticles();mobileMenuOpen=false">專欄文章</div>
-                        <div class="mm-sub" @click="curTab='qs';mobileMenuOpen=false">新手快篩</div>
+                        <div class="mm-sub" @click="curTab='qs';mobileMenuOpen=false">飼養評估</div>
+                        <div class="mm-sub" @click="curTab='health';mobileMenuOpen=false">健康評估</div>
+                        <div class="mm-sub" @click="curTab='hospital';mobileMenuOpen=false">特寵醫院</div>
                     </div>
                 </details>
 
@@ -286,10 +290,31 @@
                 </div>
             </div>
 
-            <!-- QS -->
+            <!-- QS (Husbandry Assessment) -->
             <div v-show="curTab==='qs'" class="tab-content">
                 <div class="page-text-box">
-                    <iframe src="https://geckoeval.netlify.app/" class="qs-iframe"></iframe>
+                    <iframe src="https://papaya-malasada-67a47f.netlify.app/" class="qs-iframe" id="iframe-qs"></iframe>
+                </div>
+            </div>
+
+            <!-- Health Assessment -->
+            <div v-show="curTab==='health'" class="tab-content">
+                <div class="page-text-box">
+                    <iframe src="https://unique-capybara-43a330.netlify.app/" class="qs-iframe" id="iframe-health"></iframe>
+                </div>
+            </div>
+
+            <!-- Hospital Map (Wrapped like Calculator) -->
+            <div v-show="curTab==='hospital'">
+                 <div class="calc-wrapper-crop" style="margin-bottom: 50px;">
+                     <iframe src="https://dynamic-flan-790f25.netlify.app/" class="calc-iframe" id="iframe-hospital"></iframe>
+                 </div>
+            </div>
+
+            <!-- Hospital Map -->
+            <div v-show="curTab==='hospital'">
+                <div class="calc-wrapper-crop" style="margin-bottom: 50px;">
+                    <iframe src="https://taiwan-exotic-pet-hospital-map.netlify.app/" class="calc-iframe" id="iframe-hospital"></iframe>
                 </div>
             </div>
 
@@ -320,10 +345,10 @@
                 </div>
             </div>
 
-            <!-- Calculator -->
+           <!-- Calculator -->
             <div v-show="curTab==='calculator'">
                  <div class="calc-wrapper-crop" style="margin-bottom: 50px;">
-                     <iframe src="https://genckocalculator.netlify.app/" class="calc-iframe"></iframe>
+                     <iframe src="https://fluffy-syrniki-9b56f5.netlify.app/" class="calc-iframe" id="iframe-calc"></iframe>
                  </div>
             </div>
 
