@@ -162,13 +162,20 @@ window.addEventListener('load', function() {
         },
 
         mounted(){ 
-            // 1. URL Hash Routing (Deep Linking)
-            const hash = window.location.hash.replace('#', '');
-            const validTabs = ['home', 'about', 'care', 'articles', 'qs', 'health', 'hospital', 'genes', 'calculator', 'shop', 'breeders', 'merch', 'faq'];
-            if (hash && validTabs.includes(hash)) {
-                this.curTab = hash;
-                if (hash === 'merch') this.loadMerch();
-            }
+            // 1. Enhanced URL Hash Routing (Event Listener)
+            const handleHashChange = () => {
+                const hash = window.location.hash.replace('#', '');
+                const validTabs = ['home', 'about', 'care', 'articles', 'qs', 'health', 'hospital', 'genes', 'calculator', 'shop', 'breeders', 'merch', 'faq'];
+                if (hash && validTabs.includes(hash)) {
+                    this.curTab = hash;
+                    if (hash === 'merch') this.loadMerch();
+                    window.scrollTo(0,0);
+                }
+            };
+            
+            // Execute immediately and listen for changes
+            handleHashChange();
+            window.addEventListener('hashchange', handleHashChange);
 
             // Theme Init & Iframe Sync
             const savedTheme = localStorage.getItem('gencko_theme');
