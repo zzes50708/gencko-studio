@@ -139,11 +139,12 @@
                 <div class="home-section">
                     <div class="section-head">
                         <div class="sec-title">熱門精選</div>
-                        <div class="sec-more" @click="toShop">查看更多 &rarr;</div>
-                    </div>
-                    <div class="hot-marquee-mask">
+                    <div class="sec-more" @click="toShop">查看更多 &rarr;</div>
+                </div>
+                <div class="hot-marquee-mask">
                         <div class="hot-track">
-                            <div class="hot-card-item" v-for="(i, idx) in [...hotList, ...hotList]" :key="idx">
+                            <!-- Duplicate list 4 times to ensure 2-row grid fills up nicely -->
+                            <div class="hot-card-item" v-for="(i, idx) in [...hotList, ...hotList, ...hotList, ...hotList]" :key="idx">
                                 <div style="position:relative; cursor:pointer;" @click="openLightbox(i)">
                                     <img v-if="i.ImageURL" :src="convertLink(i.ImageURL)" class="card-img" loading="lazy">
                                     <div v-else class="card-img" style="display:flex;align-items:center;justify-content:center;color:#333;font-size:3rem;background:#000;">🦎</div>
@@ -180,7 +181,20 @@
             </div>
 
             <!-- About -->
+            <!-- About -->
             <div v-show="curTab==='about'">
+                <!-- Breeding Standard Block -->
+                <div class="breeding-std-box">
+                    <div class="std-img-placeholder">
+                        <!-- 待補圖片: 請在此放入 <img src="..." style="width:100%;height:100%;object-fit:cover;border-radius:8px;"> -->
+                        餵食照待補
+                    </div>
+                    <div class="std-content">
+                        <div class="std-title">Gencko 繁育標準</div>
+                        <div class="std-desc">我們相信，健康的個體源自於每日的投入。Gencko 全場採用高蛋白杜比亞蟑螂作為主食，雖成本為一般麵包蟲的 20 倍，但能確保個體擁有更佳的肌肉量與成長曲線。</div>
+                    </div>
+                </div>
+
                 <div class="page-text-box">
                     <div class="page-title">BRAND STORY</div>
                     <div class="about-layout">
@@ -293,6 +307,7 @@
             <!-- QS (Husbandry Assessment) -->
             <div v-show="curTab==='qs'" class="tab-content">
                 <div class="page-text-box">
+                    <div class="page-title">飼養評估</div>
                     <iframe src="https://papaya-malasada-67a47f.netlify.app/" class="qs-iframe" id="iframe-qs"></iframe>
                 </div>
             </div>
@@ -300,12 +315,14 @@
             <!-- Health Assessment -->
             <div v-show="curTab==='health'" class="tab-content">
                 <div class="page-text-box">
+                    <div class="page-title">健康評估</div>
                     <iframe src="https://unique-capybara-43a330.netlify.app/" class="qs-iframe" id="iframe-health"></iframe>
                 </div>
             </div>
 
-            <!-- Hospital Map (Wrapped like Calculator) -->
+            <!-- Hospital Map -->
             <div v-show="curTab==='hospital'">
+                 <div class="seo-hint">Gencko 整理製作，歡迎分享給你的爬友</div>
                  <div class="calc-wrapper-crop" style="margin-bottom: 50px;">
                      <iframe src="https://dynamic-flan-790f25.netlify.app/" class="calc-iframe" id="iframe-hospital"></iframe>
                  </div>
@@ -347,6 +364,7 @@
 
            <!-- Calculator -->
             <div v-show="curTab==='calculator'">
+                 <div class="seo-hint">Gencko 整理製作，歡迎分享給你的爬友</div>
                  <div class="calc-wrapper-crop" style="margin-bottom: 50px;">
                      <iframe src="https://fluffy-syrniki-9b56f5.netlify.app/" class="calc-iframe" id="iframe-calc"></iframe>
                  </div>

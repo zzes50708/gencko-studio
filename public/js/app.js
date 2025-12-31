@@ -162,8 +162,17 @@ window.addEventListener('load', function() {
         },
 
         mounted(){ 
-            // Theme Init
+            // 1. URL Hash Routing (Deep Linking)
+            const hash = window.location.hash.replace('#', '');
+            const validTabs = ['home', 'about', 'care', 'articles', 'qs', 'health', 'hospital', 'genes', 'calculator', 'shop', 'breeders', 'merch', 'faq'];
+            if (hash && validTabs.includes(hash)) {
+                this.curTab = hash;
+                if (hash === 'merch') this.loadMerch();
+            }
+
+            // Theme Init & Iframe Sync
             const savedTheme = localStorage.getItem('gencko_theme');
+            // Set initial mode based on localStorage or default to Day
             if(savedTheme === 'dark') { 
                 this.isDayMode = false; 
                 document.body.classList.remove('day-mode'); 
@@ -171,25 +180,25 @@ window.addEventListener('load', function() {
                 this.isDayMode = true; 
                 document.body.classList.add('day-mode'); 
             }
-            // Iframe Theme Sync (Wait a bit for iframes to load)
+
+            // Sync theme to iframes after a short delay
             setTimeout(() => {
-                // 1. 同步一般子頁面 (發送當前狀態)
                 const payload = {
                     type: 'THEME_CHANGE',
-                    mode: this.isDayMode ? 'light' : 'dark',
-                    theme: this.isDayMode ? 'day' : 'night'
+                    mode: this.isDayMode ? 'light' : 'dark', // For 'light'/'dark' apps
+                    theme: this.isDayMode ? 'day' : 'night'  // For 'day'/'night' apps
                 };
+                // Sync to most iframes expecting THEME_CHANGE
                 ['iframe-qs', 'iframe-calc', 'iframe-health'].forEach(id => {
                     const el = document.getElementById(id);
                     if(el && el.contentWindow) el.contentWindow.postMessage(payload, '*');
                 });
 
-                // 2. 同步特寵醫院 (特殊邏輯)
-                // 該頁面預設為 Day。如果父頁面是 Night，我們需要發送一次切換訊號讓它變黑。
-                // 如果父頁面是 Day，則不需要動作 (因為它預設就是 Day)。
-                if (!this.isDayMode) {
-                    const hospitalFrame = document.getElementById('iframe-hospital');
-                    if(hospitalFrame && hospitalFrame.contentWindow) {
+                // Special sync for Hospital (only sends TOGGLE_THEME)
+                const hospitalFrame = document.getElementById('iframe-hospital');
+                if(hospitalFrame && hospitalFrame.contentWindow) {
+                    // If parent is night mode, send toggle to make hospital iframe night mode
+                    if (!this.isDayMode) {
                         hospitalFrame.contentWindow.postMessage({ type: 'TOGGLE_THEME' }, '*');
                     }
                 }
@@ -327,7 +336,7 @@ window.addEventListener('load', function() {
                 else document.body.classList.remove('day-mode');
                 localStorage.setItem('gencko_theme', this.isDayMode ? 'light' : 'dark');
                 
-                // 1. 一般子頁面 (支援指定模式：計算機、評估、健康)
+                // 1. Send THEME_CHANGE to Calc, Eval, Health
                 const payload = {
                     type: 'THEME_CHANGE',
                     mode: this.isDayMode ? 'light' : 'dark',
@@ -338,7 +347,7 @@ window.addEventListener('load', function() {
                     if(el && el.contentWindow) el.contentWindow.postMessage(payload, '*');
                 });
 
-                // 2. 特寵醫院 (只支援切換 TOGGLE_THEME)
+                // 2. Send TOGGLE_THEME to Hospital
                 const hospitalFrame = document.getElementById('iframe-hospital');
                 if(hospitalFrame && hospitalFrame.contentWindow) {
                     hospitalFrame.contentWindow.postMessage({ type: 'TOGGLE_THEME' }, '*');
