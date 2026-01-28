@@ -343,7 +343,7 @@ footer { margin-top: 60px; padding-bottom: 40px; text-align: center; color: #555
     .std-img-wrapper { width: 100%; max-width: 250px; margin: 0 auto 15px auto; }
     
     /* Mobile Shop Layout */
-    .shop-layout { flex-direction: column; }
+    .shop-layout { flex-direction: column; align-items: stretch; } /* 強制填滿寬度 */
     .mobile-filter-toggle { display: block; }
     .filter-panel { width: 100%; margin-bottom: 20px; display: none; }
     .filter-panel.show { display: block; }
