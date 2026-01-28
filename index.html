@@ -981,7 +981,21 @@
             </transition>
 
             <!-- Genes -->
-            <transition name="fade"><div v-show="curTab==='genes'"><div v-for="(list, cat) in db[geneSpecies]" class="gene-section"><h2 class="gene-cat-title">{{cat}}</h2><div class="gene-btn-grid"><div v-for="g in list" class="gene-btn-item" @click="openGenePage(g)">{{g}} <span>➜</span></div></div></div></div></transition>
+            <transition name="fade">
+            <div v-show="curTab==='genes'">
+                <h1 class="page-title">守宮基因圖鑑</h1>
+                <div class="tabs">
+                    <div class="tab" :class="{active: geneSpecies==='豹紋守宮'}" @click="geneSpecies='豹紋守宮'">豹紋守宮</div>
+                    <div class="tab" :class="{active: geneSpecies==='肥尾守宮'}" @click="geneSpecies='肥尾守宮'">肥尾守宮</div>
+                </div>
+                <div v-for="(list, cat) in db[geneSpecies]" class="gene-section">
+                    <h2 class="gene-cat-title">{{cat}}</h2>
+                    <div class="gene-btn-grid">
+                        <div v-for="g in list" class="gene-btn-item" @click="openGenePage(g)">{{g}} <span>➜</span></div>
+                    </div>
+                </div>
+            </div>
+            </transition>
             <transition name="fade"><div v-show="curTab==='gene_detail'"><div v-if="viewingGene" class="prod-container"><button class="btn-back" @click="navigateTo('/genes')">← 返回</button><div class="page-text-box"><h1 class="page-title">{{viewingGene.Name}}</h1><div v-if="viewingGene.Warning" class="warn-box">{{viewingGene.Warning}}</div><div class="about-layout"><img v-if="viewingGene.ImageURL" :src="convertLink(viewingGene.ImageURL)" class="about-img"><div class="about-content"><h3>基因簡介</h3><p>{{viewingGene.Brief}}</p><div v-if="viewingGene.Detail"><h3 style="margin-top:20px;color:var(--pri)">詳細敘述</h3><p style="white-space:pre-wrap">{{viewingGene.Detail}}</p></div><div v-if="viewingGene.Source" style="margin-top:20px;font-size:0.9rem;color:#888;border-top:1px solid var(--bd);padding-top:10px">資料來源：{{viewingGene.Source}}</div></div></div></div></div></div></transition>
 
             <!-- FAQ -->
