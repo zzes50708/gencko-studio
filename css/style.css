@@ -203,8 +203,8 @@ body.day-mode .gene-pill { background: #fff3e0; color: #e65100; border-color: #f
     .prod-title { font-size: 1.6rem; }
     .btn-buy-lg { width: 100%; }
     .btn-share { width: 100%; }
-    .slim-grid { grid-template-columns: 1fr 1fr; gap: 10px; }
-    .slim-img { height: auto; }
+    .slim-grid { grid-template-columns: 1fr; gap: 15px; } /* Shop 單欄 */
+    .slim-img { height: 220px; width: 100%; object-fit: cover; } /* Shop 圖片調整 */
 }
 
 /* About/Care/FAQ Specifics */
@@ -355,30 +355,30 @@ footer { margin-top: 60px; padding-bottom: 40px; text-align: center; color: #555
     .about-layout { gap: 15px; }
     
     /* Grid & Content */
-    .grid { grid-template-columns: 1fr 1fr; gap: 10px; }
-    .card-img { height: auto; aspect-ratio: 1/1; }
-    .price { font-size: 0.9rem; width: 100%; text-align: center; margin-bottom: 5px; }
+    .grid { grid-template-columns: 1fr; gap: 20px; } /* 改為單欄 */
+    .card-img { height: 220px; object-fit: cover; aspect-ratio: auto; } /* 圖片高度固定，避免過大 */
+    .price { font-size: 1.2rem; width: 100%; text-align: left; margin-bottom: 5px; } /* 價格靠左對齊 */
     
     /* Button Fix (Full width) */
-    .btn-buy { font-size: 0.8rem; padding: 8px 0; width: 100%; text-align: center; display: block; box-sizing: border-box; }
+    .btn-buy { font-size: 1rem; padding: 10px 0; width: 100%; text-align: center; display: block; box-sizing: border-box; }
     
     .status-badge { width: 100%; text-align: center; display: block; }
-    .id-group { display: none; }
-    .cont { padding: 10px; width: 100%; overflow-x: hidden; }
+    .id-group { display: flex; } /* 手機版保留 ID 顯示 */
+    .cont { padding: 15px; width: 100%; overflow-x: hidden; }
     .page-text-box { width: 100%; padding: 20px; white-space: normal; word-wrap: break-word; }
     .page-title { font-size: 1.6rem; border-left-width: 3px; padding-left: 15px; }
     
     /* Shop Controls */
-    .controls-row { flex-wrap: nowrap; gap: 5px; overflow-x: visible; }
-    .sort-select { font-size: 0.85rem; padding: 10px 5px; flex: 2; min-width: 0; }
-    .fav-toggle, .history-toggle { flex: 1; font-size: 0.85rem; padding: 10px 5px; justify-content: center; min-width: 0; }
-    .fav-toggle span, .history-toggle span { display: none; } 
-    .fav-toggle::after { content: '❤'; } 
-    .history-toggle::after { content: '🕒'; }
+    .controls-row { flex-wrap: wrap; gap: 10px; overflow-x: visible; }
+    .sort-select { font-size: 0.95rem; padding: 10px; flex: 100%; width: 100%; }
+    .fav-toggle, .history-toggle { flex: 1; font-size: 0.9rem; padding: 10px; justify-content: center; min-width: 0; }
+    .fav-toggle span, .history-toggle span { display: inline; } /* 恢復文字顯示 */
+    .fav-toggle::after { content: ''; } 
+    .history-toggle::after { content: ''; }
 
     .admin-box { padding: 15px; overflow-x: hidden; }
     table { display: block; overflow-x: auto; white-space: nowrap; min-width: 0; }
-    .gene-btn-grid { grid-template-columns: 1fr 1fr; gap: 10px; }
+    .gene-btn-grid { grid-template-columns: 1fr; gap: 10px; } /* 基因按鈕單欄 */
     .about-layout { flex-direction: column; gap: 20px; }
     .about-img { width: 100%; }
     .reader-container { padding: 20px; }

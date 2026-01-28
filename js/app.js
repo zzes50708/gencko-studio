@@ -631,6 +631,8 @@ window.addEventListener('load', function() {
                     history.pushState(null, '', href);
                     this.resolveRoute(href);
                     this.mobileMenuOpen = false;
+                    // 自動收合所有已展開的 details
+                    document.querySelectorAll('details.mm-details[open]').forEach(el => el.removeAttribute('open'));
                 }
             },
             navigateTo(path) {
@@ -682,7 +684,7 @@ window.addEventListener('load', function() {
             resetFilters() { this.fil = { stock:true, sold:false, minP:'', maxP:'', sexM:true, sexF:true, genes:[] }; this.kw = ''; this.displayLimit = 20; window.scrollTo({ top: 0, behavior: 'smooth' }); },
             toggleFCat(c) { this.openFCat = (this.openFCat === c) ? null : c; },
             handleScroll() {
-                const st = window.scrollY;
+                const st = Math.max(0, window.scrollY); // 避免負值 (iOS 回彈)
                 if (st > 100 && st > this.lastScrollY) this.navHidden = true;
                 else this.navHidden = false;
                 this.lastScrollY = st;
