@@ -1,0 +1,14 @@
+# 依賴套件 (絕對不要上傳，Vercel 會自己安裝)
+node_modules/
+
+# 建置產物 (這是生成的結果，不要上傳)
+dist/
+
+# 環境變數 (避免敏感資料外洩，雖然目前 GAS URL 是公開的，但習慣要養成)
+.env
+
+# 系統雜檔
+.DS_Store
+Thumbs.db
+*.log
+npm-debug.log*

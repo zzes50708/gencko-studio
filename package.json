@@ -1,0 +1,21 @@
+{
+  "name": "gencko-hybrid-ssg",
+  "version": "1.0.0",
+  "description": "Gencko Studio Hybrid SSG Build System",
+  "main": "ssg_build.js",
+  "scripts": {
+    "build": "node ssg_build.js",
+    "dev": "live-server --port=8080 --entry-file=index.html --ignore=dist"
+  },
+  "dependencies": {
+    "axios": "^1.6.0",
+    "dotenv": "^16.3.0",
+    "fs-extra": "^11.1.0",
+    "xmlbuilder2": "^3.1.1"
+  },
+  "devDependencies": {
+    "live-server": "^1.2.2"
+  },
+  "author": "Gencko Studio",
+  "license": "ISC"
+}
