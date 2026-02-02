@@ -6,7 +6,6 @@ export default {
     }
 }
 </script>
-
 <template>
     <div class="marquee-container">
         <div class="marquee-content">

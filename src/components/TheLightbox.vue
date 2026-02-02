@@ -18,7 +18,6 @@ export default {
     }
 }
 </script>
-
 <template>
     <div v-if="item" class="lightbox-overlay" @click="$emit('close')">
         <div class="lightbox-close" @click.stop="$emit('close')">✕</div>
