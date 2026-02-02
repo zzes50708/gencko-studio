@@ -53,13 +53,18 @@ export default {
             </div>
             <div class="scenario-card" @click="$emit('navigate', '/breeders')">
                 <div class="scenario-icon">👑</div>
-                <div class="scenario-title">種群鑑賞</div>
+                <div class="scenario-title">種群展示</div>
                 <div class="scenario-desc">欣賞 Gencko 核心種公母</div>
             </div>
             <div class="scenario-card" @click="$emit('navigate', '/calculator')">
                 <div class="scenario-icon">🧬</div>
                 <div class="scenario-title">基因計算</div>
                 <div class="scenario-desc">專業玩家的選育工具</div>
+            </div>
+            <div class="scenario-card" @click="$emit('navigate', '/hospital')">
+                <div class="scenario-icon">🏥</div>
+                <div class="scenario-title">特寵醫院</div>
+                <div class="scenario-desc">全台特寵就醫地圖</div>
             </div>
         </div>
 
