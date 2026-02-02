@@ -124,7 +124,8 @@ body.day-mode .dt-dropdown a:hover, body.day-mode .dt-dropdown div:hover { backg
 .mm-item:active, .mm-sub:active, .mm-summary:active { background: rgba(255,69,0,0.1); color: var(--pri); }
 
 /* Components - Compact */
-.page-text-box { background: linear-gradient(145deg, rgba(20,20,20,0.9), rgba(10,10,10,0.95)); padding: 20px; border-radius: 12px; border: 1px solid var(--bd); box-shadow: 0 5px 20px rgba(0,0,0,0.5); line-height: 1.6; font-size: 0.95rem; color: #ccc; text-align: justify; white-space: pre-line; margin-bottom: 15px; width: 100%; word-wrap: break-word; }
+/* Fix: 增加 overflow-wrap 與 word-break 確保手機版長文字必定換行 */
+.page-text-box { background: linear-gradient(145deg, rgba(20,20,20,0.9), rgba(10,10,10,0.95)); padding: 20px; border-radius: 12px; border: 1px solid var(--bd); box-shadow: 0 5px 20px rgba(0,0,0,0.5); line-height: 1.6; font-size: 0.95rem; color: #ccc; text-align: justify; white-space: pre-line; margin-bottom: 15px; width: 100%; word-wrap: break-word; overflow-wrap: anywhere; word-break: break-word; }
 .page-title { font-size: 1.6rem; font-weight: 900; color: #fff; margin-bottom: 15px; letter-spacing: 1px; border-left: 4px solid var(--pri); padding-left: 12px; text-shadow: 0 0 20px rgba(0,0,0,0.8); }
 .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 15px; }
 /* Card Base */
@@ -571,7 +572,22 @@ body.day-mode .calc-tag.het { background: #fffde7; color: #f9a825; border-color:
 body.day-mode .calc-tag.poly { background: #e3f2fd; color: #1565c0; border-color: #90caf9; }
 
 @media (max-width: 768px) {
-    .calc-parent-grid { grid-template-columns: 1fr; }
+    /* Calculator Mobile Tweaks */
+    .calc-container { padding-top: 0 !important; }
+    .calc-header { margin-bottom: 5px !important; }
+    .calc-top-desc { margin-bottom: 2px; font-size: 0.9rem; }
+    .calc-sub-desc { margin-bottom: 8px; font-size: 0.75rem; }
+    .calc-helper-btns { margin-bottom: 8px; transform: scale(0.9); }
+    
+    /* 父母代改為並排 (1fr 1fr)，並縮小內部間距以防擠壓 */
+    .calc-parent-grid { grid-template-columns: 1fr 1fr !important; gap: 6px; margin-bottom: 15px; }
+    .calc-p-header { padding: 8px 4px; flex-direction: column; text-align: center; gap: 4px; }
+    .calc-sex-icon { margin-bottom: 2px; width: 30px; height: 30px; font-size: 0.9rem; }
+    .calc-p-title h3 { font-size: 0.9rem; }
+    .calc-p-body { padding: 6px; gap: 8px; }
+    .calc-add-btn { padding: 8px 5px; font-size: 0.75rem; }
+    .calc-selected-list { min-height: 80px; padding: 4px; }
+    
     .calc-res-card { flex-direction: column; }
     .calc-prob-box { width: 100%; border-right: none; border-bottom: 1px solid var(--bd); flex-direction: row; gap: 10px; height: auto; }
 }
@@ -780,7 +796,8 @@ body.day-mode .ac-details[open] .ac-summary { border-bottom-color: #ccc; }
 
 /* --- New Components (Scenario, Guarantee, Floating) --- */
 /* Home Scenario Grid */
-.home-scenario-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 25px; }
+.home-scenario-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 25px; }
+@media (max-width: 768px) { .home-scenario-grid { grid-template-columns: repeat(2, 1fr); } }
 .scenario-card { background: var(--card-bg); border: 1px solid var(--bd); padding: 15px; border-radius: 10px; text-align: center; cursor: pointer; transition: 0.3s; }
 .scenario-card:hover { transform: translateY(-3px); border-color: var(--pri); }
 .scenario-icon { font-size: 2rem; margin-bottom: 5px; }
