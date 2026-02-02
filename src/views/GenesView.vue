@@ -44,7 +44,7 @@ export default {
         <transition name="fade">
             <div v-show="curTab==='gene_detail'">
                 <div v-if="viewingGene" class="prod-container">
-                    <button class="btn-back" @click="$emit('navigate', '/genes')">← 返回</button>
+                    <button class="btn-back" @click="$emit('navigate', '/genes')">← 返回圖鑑列表</button>
                     <div class="page-text-box">
                         <h1 class="page-title">{{viewingGene.Name}}</h1>
                         <div v-if="viewingGene.Warning" class="warn-box">{{viewingGene.Warning}}</div>
@@ -57,7 +57,7 @@ export default {
                                     <h3 style="margin-top:20px;color:var(--pri)">詳細敘述</h3>
                                     <p style="white-space:pre-wrap">{{viewingGene.Detail}}</p>
                                 </div>
-                                <div v-if="viewingGene.Source" style="margin-top:20px;font-size:0.9rem;color:#888;border-top:1px solid var(--bd);padding-top:10px">
+                                <div v-if="viewingGene.Source" style="margin-top:20px;font-size:0.9rem;color:#888;border-top:1px solid var(--bd);padding-top:10px;text-align:left;">
                                     資料來源：{{viewingGene.Source}}
                                 </div>
                             </div>
