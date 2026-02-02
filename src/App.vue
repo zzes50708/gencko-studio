@@ -7,26 +7,9 @@ import { shopLogic } from './modules/shop.js';
 import { contentLogic } from './modules/content.js';
 import { adminLogic } from './modules/admin.js';
 import { toolsLogic } from './modules/tools.js';
-// 注意：Calculator 邏輯已移至 CalculatorView 內部，此處不再引入
 
 import { FAQ_DATA } from './data/faq.js';
 import GENES_DB from './data/genes.json'; 
-
-// 引入視圖 (Views)
-import HomeView from './views/HomeView.vue';
-import AboutView from './views/AboutView.vue';
-import CareView from './views/CareView.vue';
-import FaqView from './views/FaqView.vue';
-import ArticlesView from './views/ArticlesView.vue';
-import GenesView from './views/GenesView.vue';
-import QsView from './views/QsView.vue';
-import HealthView from './views/HealthView.vue';
-import HospitalView from './views/HospitalView.vue';
-import BreedersView from './views/BreedersView.vue';
-import MerchView from './views/MerchView.vue';
-import ShopView from './views/ShopView.vue';
-import AdminView from './views/AdminView.vue';
-import CalculatorView from './views/CalculatorView.vue';
 
 // 引入全域組件 (Layout Components)
 import TheLightbox from './components/TheLightbox.vue';
@@ -38,26 +21,18 @@ import TheNavbar from './components/TheNavbar.vue';
 export default {
     name: 'App',
     components: {
-        // Views
-        HomeView, AboutView, CareView, FaqView, ArticlesView, GenesView,
-        QsView, HealthView, HospitalView, BreedersView, MerchView, ShopView, AdminView, CalculatorView,
-        // Layouts
         TheLightbox, TheMarquee, TheToast, TheFooter, TheNavbar
     },
-    // CalculatorLogic 已移除
     mixins: [shopLogic, contentLogic, adminLogic, toolsLogic],
     
-    // --- 1. Data ---
     data() {
         return {
             db: GENES_DB || {},
-            // 其他狀態
             readingProgress: 0,
             searchTimer: null
         };
     },
 
-    // --- 2. Computed ---
     computed: {
         loading: { get() { return store.loading; }, set(v) { store.loading = v; } },
         isDayMode: { get() { return store.isDayMode; }, set(v) { store.isDayMode = v; } },
@@ -88,26 +63,18 @@ export default {
         geneSpecies: { get() { return store.geneSpecies || '豹紋守宮'; }, set(v) { store.geneSpecies = v; } }
     },
 
-    // --- 3. Watch ---
     watch: {
-        curTab() { this.$nextTick(() => this.updateMeta()); },
-        'store.readingArticle'() { this.$nextTick(() => this.updateMeta()); },
-        targetProductId() { this.$nextTick(() => this.updateMeta()); },
-        'store.viewingGene'() { this.$nextTick(() => this.updateMeta()); }
+        '$route'(to) { this.handleRouteChange(to); },
+        'store.loading'(val) { if (!val) this.syncStateWithRoute(); }
     },
 
-    // --- 4. Mounted ---
     mounted() {
         this.initTheme();
         this.loadDataFromAPI();
-        this.resolveRoute(window.location.pathname);
         
         window.addEventListener('popstate', () => {
             if (this.lightboxItem) this.lightboxItem = null;
-            else this.resolveRoute(window.location.pathname);
         });
-
-        document.addEventListener('click', this.handleLinkClick);
 
         const savedWish = localStorage.getItem('gencko_wishlist');
         if(savedWish) store.wishlist = JSON.parse(savedWish);
@@ -122,8 +89,71 @@ export default {
         window.addEventListener('scroll', this.handleScroll);
     },
 
-    // --- 5. Methods ---
     methods: {
+        handleRouteChange(to) {
+            this.mobileMenuOpen = false;
+            document.querySelectorAll('details.mm-details[open]').forEach(el => el.removeAttribute('open'));
+
+            if (to.name === 'admin' && !this.admin) {
+                this.$router.replace('/');
+                return;
+            }
+
+            // 修正路由狀態判斷
+            if (to.path.startsWith('/articles')) {
+                this.curTab = 'articles';
+            } else {
+                this.curTab = to.name || 'home';
+            }
+
+            this.syncStateWithRoute(to);
+            this.$nextTick(() => this.updateMeta());
+            if (!to.hash) window.scrollTo(0, 0);
+        },
+
+        syncStateWithRoute(route = this.$route) {
+            if (store.loading) return;
+
+            if (route.name === 'product_detail') {
+                this.targetProductId = route.params.id;
+            }
+            
+            if (route.name === 'article_detail') {
+                const artId = route.params.id;
+                if (store.articlesList.length) {
+                    store.readingArticle = store.articlesList.find(a => a.ID === artId) || null;
+                }
+            } else if (route.name === 'articles') {
+                store.readingArticle = null;
+            }
+
+            if (route.name === 'gene_detail') {
+                const geneName = route.params.id;
+                let found = null;
+                if (store.genePages.length) {
+                    found = store.genePages.find(g => g.Name === geneName);
+                }
+                store.viewingGene = found || { Name: geneName, Brief: '資料載入中或無此基因...' };
+            } else if (route.name === 'genes') {
+                store.viewingGene = null;
+            }
+
+            if (route.name === 'merch_detail') {
+                this.targetMerchId = route.params.id;
+            }
+        },
+
+        navigateTo(path) {
+            if (path.startsWith('http')) window.open(path, '_blank');
+            else this.$router.push(path);
+        },
+        openProduct(id) { this.$router.push(`/product/${id}`); },
+        openArticle(item) { this.$router.push(`/articles/${item.ID}`); },
+        closeArticle() { this.$router.push('/articles'); },
+        openGenePage(gName) { this.$router.push(`/genes/${encodeURIComponent(gName)}`); },
+        openMerchDetail(item) { this.$router.push(`/merch/${item.ItemID}`); },
+        toShop() { this.$router.push('/shop'); },
+        
         async loadDataFromAPI() {
             store.loading = true;
             try {
@@ -226,60 +256,7 @@ export default {
             else document.body.classList.remove('day-mode');
             localStorage.setItem('gencko_theme', this.isDayMode ? 'light' : 'dark');
         },
-        resolveRoute(path) {
-            const cleanPath = path.replace(/\/+$/, '') || '/';
-            if (cleanPath === '/calculator') this.curTab = 'calculator';
-            else if (cleanPath === '/') this.curTab = 'home';
-            else if (cleanPath === '/shop') this.curTab = 'shop';
-            else if (cleanPath.startsWith('/product/')) {
-                this.targetProductId = cleanPath.split('/')[2];
-                this.curTab = 'product_detail';
-            } else if (cleanPath === '/articles') {
-                this.curTab = 'articles';
-                store.readingArticle = null;
-            } else if (cleanPath.startsWith('/articles/')) {
-                const id = cleanPath.split('/')[2];
-                this.curTab = 'articles';
-                if(store.articlesList.length) {
-                    const art = store.articlesList.find(a => a.ID === id);
-                    if(art) store.readingArticle = art;
-                }
-            } else if (cleanPath === '/genes') {
-                this.curTab = 'genes';
-                store.viewingGene = null;
-            } else if (cleanPath.startsWith('/genes/')) {
-                const name = decodeURIComponent(cleanPath.split('/')[2]);
-                this.curTab = 'gene_detail';
-                this.setViewingGene(name);
-            } else if (cleanPath === '/merch') {
-                this.curTab = 'merch';
-            } else if (cleanPath.startsWith('/merch/')) {
-                this.targetMerchId = cleanPath.split('/')[2];
-                this.curTab = 'merch_detail';
-            } else if (['/about', '/care', '/qs', '/health', '/hospital', '/breeders', '/faq'].includes(cleanPath)) {
-                this.curTab = cleanPath.substring(1);
-            } else {
-                this.curTab = 'home';
-            }
-            window.scrollTo(0, 0);
-        },
-        handleLinkClick(e) {
-            const link = e.target.closest('a');
-            if (!link) return;
-            const href = link.getAttribute('href');
-            if (href && href.startsWith('/') && !href.startsWith('//') && link.target !== '_blank') {
-                e.preventDefault();
-                history.pushState(null, '', href);
-                this.resolveRoute(href);
-                this.mobileMenuOpen = false;
-                document.querySelectorAll('details.mm-details[open]').forEach(el => el.removeAttribute('open'));
-            }
-        },
-        navigateTo(path) {
-            history.pushState(null, '', path);
-            this.resolveRoute(path);
-        },
-        scrollToTop() { this.navigateTo('/'); },
+        scrollToTop() { window.scrollTo(0,0); },
         handleScroll() {
             const st = Math.max(0, window.scrollY); 
             if (st > 100 && st > store.lastScrollY) this.navHidden = true;
@@ -298,21 +275,24 @@ export default {
             }
         },
         copy(t){ navigator.clipboard.writeText(t).then(() => { this.showToast = true; setTimeout(() => this.showToast = false, 2000); }); },
-        convertLink(url) {
-            if (!url) return '';
-            const driveRegex = /file\/d\/([a-zA-Z0-9_-]+)\//;
-            const match = url.match(driveRegex);
-            let target = url;
-            if (match && match[1]) target = 'https://drive.google.com/uc?id=' + match[1];
-            return `https://wsrv.nl/?url=${encodeURIComponent(target)}&w=1000&output=webp&q=80`;
+        
+        // --- 修正的新手模式 ---
+        setBeginnerMode() {
+            this.$router.push('/shop').then(() => {
+                this.resetFilters();
+                // 移除檢查，直接強制加入標籤
+                this.toggleTag('新手推薦');
+            });
         },
+        
         updateMeta() {
             let title = '守宮選購與飼養｜Gencko Studio';
             if(this.curTab === 'calculator') title = '基因計算機｜Gencko Studio';
-            if(this.curTab === 'product_detail' && this.currentProduct) title = `${this.currentProduct.Morph}｜Gencko Studio`;
+            if(this.curTab === 'shop' && this.currentProduct) title = `${this.currentProduct.Morph}｜Gencko Studio`;
             if(this.curTab === 'articles' && store.readingArticle) title = `${store.readingArticle.Title}｜Gencko Studio`;
             if(this.curTab === 'shop') title = '線上選購守宮｜Gencko Studio';
             if(this.curTab === 'genes') title = '守宮基因圖鑑｜Gencko Studio';
+            if(this.curTab === 'hospital') title = '特寵醫院地圖｜Gencko Studio';
             document.title = title;
         }
     }
@@ -321,7 +301,6 @@ export default {
 
 <template>
     <div class="cont">
-        <!-- Global Layout Components -->
         <TheLightbox 
             :item="lightboxItem" 
             :line-link="lineLink"
@@ -329,7 +308,6 @@ export default {
         />
         
         <TheToast :show="showToast" />
-        
         <TheMarquee :list="marqueeList" />
         
         <TheNavbar
@@ -347,172 +325,119 @@ export default {
             @scroll-top="scrollToTop"
         />
 
-        <div v-if="!admin" style="padding-top: 0;">
-            <!-- Views -->
-            <transition name="fade">
-                <HomeView v-show="curTab==='home'"
-                    :loading="loading"
-                    :hot-list="hotList"
-                    :articles-list="articlesList"
-                    @navigate="navigateTo"
-                    @set-beginner="setBeginnerMode"
-                    @open-product="openProduct"
-                    @open-article="openArticle"
-                />
-            </transition>
+       <!-- 設定 min-height 防止轉場時 footer 上跳 -->
+        <div style="padding-top: 0; min-height: 80vh;">
+            <!-- Router View (補上 cur-tab) -->
+            <router-view v-slot="{ Component }">
+                <transition name="fade" mode="out-in">
+                    <component :is="Component"
+                        :loading="loading"
+                        :cur-tab="curTab" 
+                        
+                        :hot-list="hotList"
+                        :articles-list="articlesList"
+                        :wishlist="wishlist"
+                        :merch-list="merchList"
+                        :gene-pages="genePages"
+                        
+                        :about-img="aboutImg"
+                        :care-img="careImg"
+                        :line-link="lineLink"
+                        
+                        :filtered-articles="filteredArticles"
+                        :article-cats="articleCats"
+                        :reading-article="readingArticle"
+                        v-model:art-cat="artCat"
 
-            <transition name="fade">
-                <AboutView v-show="curTab==='about'" :about-img="aboutImg" />
-            </transition>
+                        :qs="qs"
+                        :qs-progress="qs_progress"
+                        :qs-current-q="qs_currentQ"
+                        :qs-result="qs_result"
+                        :qs-total-score="qs_totalScore"
+                        
+                        :health="health"
+                        :health-result="health_result"
+                        
+                        :hosp-city="hosp_city"
+                        v-model:hosp-district="hosp_district"
+                        :hosp-regions="hosp_regions"
+                        :hosp-available-cities="hosp_availableCities"
+                        :hosp-districts="hosp_districts"
+                        :hosp-filtered="hosp_filtered"
+                        @change-city="(val) => { hosp_city = val; hosp_district = 'all'; }"
 
-            <transition name="fade">
-                <CalculatorView v-show="curTab==='calculator'" />
-            </transition>
-
-            <transition name="fade">
-                <CareView v-show="curTab==='care'" :care-img="careImg" />
-            </transition>
-
-            <transition name="fade">
-                <ArticlesView v-show="curTab==='articles'" 
-                    :filtered-articles="filteredArticles"
-                    :article-cats="articleCats"
-                    :reading-article="readingArticle"
-                    v-model:art-cat="artCat"
-                    @open-article="openArticle"
-                    @close-article="closeArticle"
-                />
-            </transition>
-
-            <!-- QS Questionnaire -->
-            <transition name="fade">
-                <QsView v-show="curTab==='qs'"
-                    :qs="qs"
-                    :qs-progress="qs_progress"
-                    :qs-current-q="qs_currentQ"
-                    :qs-result="qs_result"
-                    :qs-total-score="qs_totalScore"
-                    @select-option="qs_selectOption"
-                    @prev-step="qs_prevStep"
-                    @reset="qs_reset"
-                />
-            </transition>
-
-            <!-- Health Assessment -->
-            <transition name="fade">
-                <HealthView v-show="curTab==='health'"
-                    :health="health"
-                    :health-result="health_result"
-                />
-            </transition>
-            
-            <!-- Hospital Map -->
-            <transition name="fade">
-                <HospitalView v-show="curTab==='hospital'"
-                    :hosp-city="hosp_city"
-                    v-model:hosp-district="hosp_district"
-                    :hosp-regions="hosp_regions"
-                    :hosp-available-cities="hosp_availableCities"
-                    :hosp-districts="hosp_districts"
-                    :hosp-filtered="hosp_filtered"
-                    @change-city="(val) => { hosp_city = val; hosp_district = 'all'; }"
-                />
-            </transition>
-
-            <!-- Shop & Product Detail -->
-            <ShopView 
-                :cur-tab="curTab"
-                v-model:sp="sp"
-                v-model:kw="kw"
-                :fil="fil"
-                :shop-list="shopList"
-                :tags="tags"
-                :db="db"
-                :available-genes="availableGenes"
-                :max-price="maxPrice"
-                v-model:show-mobile-filter="showMobileFilter"
-                v-model:open-f-cat="openFCat"
-                v-model:sort-order="sortOrder"
-                v-model:show-only-history="showOnlyHistory"
-                v-model:show-only-fav="showOnlyFav"
-                :wishlist="wishlist"
-                :product-modules="productModules"
-                :current-product="currentProduct"
-                :line-link="lineLink"
-                @reset-filters="resetFilters"
-                @toggle-tag="toggleTag"
-                @search-input="onSearchInput"
-                @open-product="openProduct"
-                @toggle-wishlist="toggleWishlist"
-                @navigate="toShop"
-                @copy="copy"
-                @open-lightbox="openLightbox"
-            />
-
-            <!-- Breeders -->
-            <transition name="fade">
-                <BreedersView v-show="curTab==='breeders'"
-                    :breeders-list="breedersList"
-                    v-model:breeder-sp="breeder_sp"
-                    @open-lightbox="openLightbox"
-                />
-            </transition>
-
-            <!-- Merch -->
-            <MerchView 
-                :cur-tab="curTab"
-                :merch-list="merchList"
-                :current-merch="currentMerch"
-                :line-link="lineLink"
-                @open-detail="openMerchDetail"
-                @navigate="navigateTo"
-                @copy="copy"
-            />
-
-            <!-- Genes -->
-            <GenesView 
-                :cur-tab="curTab"
-                :db="db"
-                v-model:gene-species="geneSpecies"
-                :viewing-gene="viewingGene"
-                @open-gene="openGenePage"
-                @navigate="navigateTo"
-            />
-
-            <!-- FAQ -->
-            <transition name="fade">
-                <FaqView v-show="curTab==='faq'" :faq-list="faqList" />
-            </transition>
+                        v-model:sp="sp"
+                        v-model:kw="kw"
+                        :fil="fil"
+                        :shop-list="shopList"
+                        :tags="tags"
+                        :db="db"
+                        :available-genes="availableGenes"
+                        :max-price="maxPrice"
+                        v-model:show-mobile-filter="showMobileFilter"
+                        v-model:open-f-cat="openFCat"
+                        v-model:sort-order="sortOrder"
+                        v-model:show-only-history="showOnlyHistory"
+                        v-model:show-only-fav="showOnlyFav"
+                        :product-modules="productModules"
+                        :current-product="currentProduct"
+                        
+                        :breeders-list="breedersList"
+                        v-model:breeder-sp="breeder_sp"
+                        
+                        :current-merch="currentMerch"
+                        
+                        v-model:gene-species="geneSpecies"
+                        :viewing-gene="viewingGene"
+                        
+                        :faq-list="faqList"
+                        
+                        :dash="dash"
+                        :admin-list="adminList"
+                        :morph-his="morphHis"
+                        :edit-mode="editMode"
+                        :new-i="newI"
+                        v-model:a-kw="aKw"
+                        v-model:a-fil="aFil"
+                        
+                        @navigate="navigateTo"
+                        @set-beginner="setBeginnerMode"
+                        @open-product="openProduct"
+                        @open-article="openArticle"
+                        @close-article="closeArticle"
+                        @open-gene="(g) => openGenePage(typeof g === 'string' ? g : g.Name)"
+                        @open-detail="openMerchDetail"
+                        
+                        @select-option="qs_selectOption"
+                        @prev-step="qs_prevStep"
+                        @reset="qs_reset"
+                        
+                        @reset-filters="resetFilters"
+                        @toggle-tag="toggleTag"
+                        @search-input="onSearchInput"
+                        @toggle-wishlist="toggleWishlist"
+                        @copy="copy"
+                        @open-lightbox="openLightbox"
+                        
+                        @submit="submit"
+                        @cancel-edit="cancelEdit"
+                        @check-status="chkStat"
+                        @update-item="upd"
+                        @duplicate-item="dup"
+                        @delete-item="del"
+                    />
+                </transition>
+            </router-view>
         </div>
 
         <!-- Floating Inquire Button -->
-        <a v-if="wishlist.length > 0" 
+        <a v-if="wishlist.length > 0 && !admin" 
            :href="'https://line.me/R/ti/p/@219abdzn?text=' + encodeURIComponent('Hi Gencko, 我有興趣詢問收藏清單中的守宮 (' + wishlist.length + '隻) ID：\n' + wishlist.join(', '))" 
            target="_blank"
            class="floating-inquire-btn">
            <span>❤ 已選 {{wishlist.length}} 隻｜一次詢問</span>
            <span>➜</span>
         </a>
-
-        <!-- Admin -->
-        <AdminView v-if="admin"
-            :loading="loading"
-            :dash="dash"
-            :admin-list="adminList"
-            :morph-his="morphHis"
-            :db="db"
-            :edit-mode="editMode"
-            :new-i="newI"
-            v-model:a-kw="aKw"
-            v-model:a-fil="aFil"
-            @submit="submit"
-            @cancel-edit="cancelEdit"
-            @check-status="chkStat"
-            @update-item="upd"
-            @duplicate-item="dup"
-            @delete-item="del"
-            @open-lightbox="openLightbox"
-        />
         
         <TheFooter @trigger-login="login" />
     </div>

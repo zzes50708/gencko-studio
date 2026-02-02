@@ -90,7 +90,8 @@ export default {
                             <div v-if="i.Status==='ForSale'" class="trust-badge">🛡️ 100% HEALTH</div>
                         </div>
                         <div class="card-body" style="padding:15px; text-align:center;">
-                            <div class="morph-title" style="margin:0; font-size:1.1rem;">{{i.Morph}}</div>
+                            <!-- 使用 slim-title 確保樣式一致 -->
+                            <div class="slim-title" style="margin:0; font-size:1.1rem; white-space:normal;">{{i.Morph}}</div>
                         </div>
                     </div>
                 </div>
@@ -114,7 +115,7 @@ export default {
                     </div>
                     <div class="card-body">
                         <div style="font-size:0.8rem;color:#888;margin-bottom:5px;">{{ fmtDate(item.PublishDate) }}</div>
-                        <div class="morph-title" style="font-size:1.1rem;margin-bottom:8px;">{{ item.Title }}</div>
+                        <div class="slim-title" style="font-size:1.1rem;margin-bottom:8px;white-space:normal;">{{ item.Title }}</div>
                         <div class="art-summary">{{ item.Summary }}</div>
                     </div>
                 </div>
