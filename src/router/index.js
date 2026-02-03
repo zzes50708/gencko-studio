@@ -13,7 +13,6 @@ import HospitalView from '../views/HospitalView.vue';
 import BreedersView from '../views/BreedersView.vue';
 import MerchView from '../views/MerchView.vue';
 import ShopView from '../views/ShopView.vue';
-import AdminView from '../views/AdminView.vue';
 import CalculatorView from '../views/CalculatorView.vue';
 
 const routes = [
@@ -60,7 +59,7 @@ const routes = [
         component: GenesView
     },
     {
-        path: '/genes/:id', // 原本邏輯是用名稱當 ID (e.g. /genes/川普白化)
+        path: '/genes/:id', 
         name: 'gene_detail',
         component: GenesView
     },
@@ -106,13 +105,6 @@ const routes = [
         name: 'product_detail',
         component: ShopView
     },
-    {
-        path: '/admin',
-        name: 'admin',
-        component: AdminView,
-        // 簡單的路由守衛：如果不是管理員，導回首頁 (依賴 App.vue 狀態，此處僅作預留)
-        // 實際權限檢查建議在組件內或透過 Store 進行
-    },
     // 捕捉所有未定義路由，重導向至首頁
     {
         path: '/:pathMatch(.*)*',
@@ -121,7 +113,8 @@ const routes = [
 ];
 
 const router = createRouter({
-    history: createWebHistory(),
+    // 使用 import.meta.env.BASE_URL 以支援非根目錄部署，避免重新整理時路徑錯亂導致跳回首頁
+    history: createWebHistory(import.meta.env.BASE_URL),
     routes,
     scrollBehavior(to, from, savedPosition) {
         if (savedPosition) {

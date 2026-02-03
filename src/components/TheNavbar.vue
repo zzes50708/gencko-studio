@@ -3,7 +3,6 @@ export default {
     name: 'TheNavbar',
     props: {
         navHidden: { type: Boolean, default: false },
-        admin: { type: Boolean, default: false },
         isDayMode: { type: Boolean, default: true },
         mobileMenuOpen: { type: Boolean, default: false },
         logoUrl: { type: String, default: '' },
@@ -11,10 +10,9 @@ export default {
         readingArticle: { type: Object, default: null },
         readingProgress: { type: Number, default: 0 }
     },
-    emits: ['toggle-theme', 'update:mobileMenuOpen', 'logout', 'scroll-top'],
+    emits: ['toggle-theme', 'update:mobileMenuOpen', 'scroll-top'],
     data() {
         return {
-            // 控制手機版哪個選單展開 ('shop', 'tool', 'service', 或 null)
             mobileExpanded: null
         };
     },
@@ -24,14 +22,12 @@ export default {
         isServiceActive() { return ['about', 'care', 'articles', 'faq'].includes(this.curTab); }
     },
     watch: {
-        // 當手機選單關閉時，重置展開狀態
         mobileMenuOpen(val) {
             if (!val) this.mobileExpanded = null;
         }
     },
     methods: {
         toggleMobileGroup(groupName) {
-            // 如果點擊已展開的則關閉，否則展開新的 (自動關閉其他的)
             this.mobileExpanded = this.mobileExpanded === groupName ? null : groupName;
         },
         closeMobileMenu() {
@@ -53,7 +49,7 @@ export default {
                 </router-link>
 
                 <!-- Desktop Menu -->
-                <div class="dt-nav" v-if="!admin">
+                <div class="dt-nav">
                     <div class="nav-item-dt dropdown-hover" :class="{active: isShopActive}">
                         探索選購 ▾
                         <div class="dt-dropdown">
@@ -88,14 +84,13 @@ export default {
                     <div class="theme-toggle" @click="$emit('toggle-theme')" style="cursor:pointer;font-size:1rem;font-weight:bold;margin-right:15px;color:var(--txt);display:flex;align-items:center;border:1px solid var(--bd);padding:4px 10px;border-radius:20px;">
                         {{ isDayMode ? '夜間' : '日間' }}
                     </div>
-                    <div class="hamburger" v-if="!admin" @click="$emit('update:mobileMenuOpen', !mobileMenuOpen)">☰</div>
-                    <button v-if="admin" @click="$emit('logout')" class="nav-btn-logout">登出</button>
+                    <div class="hamburger" @click="$emit('update:mobileMenuOpen', !mobileMenuOpen)">☰</div>
                 </div>
             </div>
         </div>
 
         <!-- Mobile Menu -->
-        <div class="mobile-menu-overlay" :class="{open: mobileMenuOpen}" v-if="!admin" style="position:fixed; top:90px; left:0; width:100%; height:calc(100vh - 90px); overflow-y:auto;">
+        <div class="mobile-menu-overlay" :class="{open: mobileMenuOpen}" style="position:fixed; top:90px; left:0; width:100%; height:calc(100vh - 90px); overflow-y:auto;">
             <router-link to="/" class="mm-item" style="text-decoration:none;" @click="closeMobileMenu">
                 首頁
             </router-link>

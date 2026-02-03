@@ -2,10 +2,9 @@
 import { _supabase } from './supabase.js';
 import { store } from './store.js';
 
-// 引入各功能模組 (Mixins)
+// 引入各功能模組 (Mixins) - 移除 adminLogic
 import { shopLogic } from './modules/shop.js';
 import { contentLogic } from './modules/content.js';
-import { adminLogic } from './modules/admin.js';
 import { toolsLogic } from './modules/tools.js';
 
 import { FAQ_DATA } from './data/faq.js';
@@ -23,7 +22,8 @@ export default {
     components: {
         TheLightbox, TheMarquee, TheToast, TheFooter, TheNavbar
     },
-    mixins: [shopLogic, contentLogic, adminLogic, toolsLogic],
+    // 移除 adminLogic mixin
+    mixins: [shopLogic, contentLogic, toolsLogic],
     
     data() {
         return {
@@ -36,7 +36,7 @@ export default {
     computed: {
         loading: { get() { return store.loading; }, set(v) { store.loading = v; } },
         isDayMode: { get() { return store.isDayMode; }, set(v) { store.isDayMode = v; } },
-        admin: { get() { return store.admin; }, set(v) { store.admin = v; } },
+        // 移除 admin computed
         curTab: { get() { return store.curTab; }, set(v) { store.curTab = v; } },
         navHidden: { get() { return store.navHidden; }, set(v) { store.navHidden = v; } },
         mobileMenuOpen: { get() { return store.mobileMenuOpen; }, set(v) { store.mobileMenuOpen = v; } },
@@ -94,10 +94,7 @@ export default {
             this.mobileMenuOpen = false;
             document.querySelectorAll('details.mm-details[open]').forEach(el => el.removeAttribute('open'));
 
-            if (to.name === 'admin' && !this.admin) {
-                this.$router.replace('/');
-                return;
-            }
+            // 移除 admin 路由跳轉檢查
 
             // 修正路由狀態判斷
             if (to.path.startsWith('/articles')) {
@@ -160,6 +157,7 @@ export default {
                 let { data: invData, error: invErr } = await _supabase.from('inventory').select('*');
                 if(invErr) throw invErr;
                 
+                // 讀取庫存資料
                 store.inv = invData.map(i => ({
                     ID: String(i.id || '').trim(),
                     Source: i.source,
@@ -236,11 +234,7 @@ export default {
             }
         },
         initHotPicks() { store.hotList = store.inv.filter(i => i.IsHot === 'Hot'); },
-        login(){ 
-            if(store.login()) {
-                this.$router.push('/admin');
-            }
-        },
+        // 移除 login 方法
         openLightbox(i) { 
             store.lightboxItem = i; 
             history.pushState({ lightbox: true }, ''); 
@@ -280,11 +274,9 @@ export default {
         },
         copy(t){ navigator.clipboard.writeText(t).then(() => { this.showToast = true; setTimeout(() => this.showToast = false, 2000); }); },
         
-        // --- 修正的新手模式 ---
         setBeginnerMode() {
             this.$router.push('/shop').then(() => {
                 this.resetFilters();
-                // 移除檢查，直接強制加入標籤
                 this.toggleTag('新手推薦');
             });
         },
@@ -314,9 +306,9 @@ export default {
         <TheToast :show="showToast" />
         <TheMarquee :list="marqueeList" />
         
+        <!-- 移除 :admin 與 @logout -->
         <TheNavbar
             :nav-hidden="navHidden"
-            :admin="admin"
             :is-day-mode="isDayMode"
             v-model:mobile-menu-open="mobileMenuOpen"
             :logo-url="logoUrl"
@@ -324,14 +316,13 @@ export default {
             :reading-article="readingArticle"
             :reading-progress="readingProgress"
             @toggle-theme="toggleTheme"
-            @logout="admin = false"
             @navigate="navigateTo"
             @scroll-top="scrollToTop"
         />
 
        <!-- 設定 min-height 防止轉場時 footer 上跳 -->
         <div style="padding-top: 0; min-height: 80vh;">
-            <!-- Router View (補上 cur-tab) -->
+            <!-- Router View (移除所有 admin 相關 props 與 listeners) -->
             <router-view v-slot="{ Component }">
                 <transition name="fade" mode="out-in">
                     <component :is="Component"
@@ -396,14 +387,6 @@ export default {
                         
                         :faq-list="faqList"
                         
-                        :dash="dash"
-                        :admin-list="adminList"
-                        :morph-his="morphHis"
-                        :edit-mode="editMode"
-                        :new-i="newI"
-                        v-model:a-kw="aKw"
-                        v-model:a-fil="aFil"
-                        
                         @navigate="navigateTo"
                         @set-beginner="setBeginnerMode"
                         @open-product="openProduct"
@@ -422,20 +405,13 @@ export default {
                         @toggle-wishlist="toggleWishlist"
                         @copy="copy"
                         @open-lightbox="openLightbox"
-                        
-                        @submit="submit"
-                        @cancel-edit="cancelEdit"
-                        @check-status="chkStat"
-                        @update-item="upd"
-                        @duplicate-item="dup"
-                        @delete-item="del"
                     />
                 </transition>
             </router-view>
         </div>
 
-        <!-- Floating Inquire Button -->
-        <a v-if="wishlist.length > 0 && !admin" 
+        <!-- Floating Inquire Button (移除 !admin 判斷) -->
+        <a v-if="wishlist.length > 0" 
            :href="'https://line.me/R/ti/p/@219abdzn?text=' + encodeURIComponent('Hi Gencko, 我有興趣詢問收藏清單中的守宮 (' + wishlist.length + '隻) ID：\n' + wishlist.join(', '))" 
            target="_blank"
            class="floating-inquire-btn">
@@ -443,6 +419,7 @@ export default {
            <span>➜</span>
         </a>
         
-        <TheFooter @trigger-login="login" />
+        <!-- 移除 @trigger-login -->
+        <TheFooter />
     </div>
 </template>

@@ -4,7 +4,6 @@ export const store = reactive({
     // --- 核心狀態 ---
     loading: false,
     isDayMode: true,
-    admin: false,
     curTab: 'home',
     
     // --- 資料儲存 (從 Supabase 讀取) ---
@@ -30,16 +29,5 @@ export const store = reactive({
     careImg: 'https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/%E7%92%B0%E5%A2%83.png', 
     aboutImg: 'https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/324500%20(1).png',
     logoUrl: 'https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/%E6%AD%A3%E9%9D%A2.png',
-    lineLink: 'https://line.me/R/ti/p/@219abdzn', 
-    
-    // --- 簡易權限登入 ---
-    login(){ 
-        const p = prompt('密碼'); 
-        // 704098 -> NzA0MDk4
-        if(btoa(p) === 'NzA0MDk4') {
-            this.admin = true;
-            return true;
-        }
-        return false;
-    }
+    lineLink: 'https://line.me/R/ti/p/@219abdzn'
 });
