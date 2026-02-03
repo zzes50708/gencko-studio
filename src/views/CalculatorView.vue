@@ -1,5 +1,4 @@
 <script>
-// 從原本的位置引入 Mixin
 import { calculatorLogic } from '../features/calculator/index.js';
 
 export default {
@@ -7,7 +6,6 @@ export default {
     mixins: [calculatorLogic],
     data() {
         return {
-            // 將原本在 App.vue data() 中的 calculator 相關狀態移至此處
             calc_sp: '豹紋守宮',
             calc_male: [],
             calc_female: [],
@@ -20,7 +18,6 @@ export default {
         };
     },
     watch: {
-        // 將原本在 App.vue watch 中的監聽器移至此處
         calc_male: { deep: true, handler: 'calc_run' },
         calc_female: { deep: true, handler: 'calc_run' },
         calc_sp() { 
@@ -29,7 +26,6 @@ export default {
         }
     },
     mounted() {
-        // 處理下拉選單點擊外部關閉的邏輯
         document.addEventListener('click', this.handleGlobalClick);
     },
     beforeUnmount() {
@@ -37,11 +33,37 @@ export default {
     },
     methods: {
         handleGlobalClick(e) {
-            if (this.calc_activeSelector && !e.target.closest('.calc-dropdown-container')) {
-                this.calc_activeSelector = null;
-                this.calc_expandType = null;
-                this.calc_expandGroup = null;
+            if (this.calc_activeSelector) {
+                if (!e.target.closest('.calc-dropdown-container') && 
+                    !e.target.closest('.calc-mobile-trigger') &&
+                    !e.target.closest('.calc-dropdown-menu')) {
+                    this.calc_activeSelector = null;
+                    this.calc_expandType = null;
+                    this.calc_expandGroup = null;
+                }
             }
+        },
+        calc_getProbFraction(prob) {
+            if (prob >= 0.99) return '';
+            const denom = Math.round(1 / prob);
+            if ([2, 3, 4, 8, 16, 32, 64, 128, 256].includes(denom)) return `1/${denom}`;
+            return '';
+        },
+        formatResultText(text) {
+            if (!text) return '';
+            const parts = text.split(' (');
+            const visual = parts[0]; 
+            let extra = parts[1] ? '(' + parts[1] : '';
+
+            let html = `<span style="font-weight:900; color:var(--txt); display:block; margin-bottom:2px;">${visual}</span>`;
+            if (extra) {
+                html += `<span style="font-size:0.85rem; color:#888; display:block; line-height:1.3;">${extra}</span>`;
+            }
+            return html;
+        },
+        formatWarningText(text) {
+            if (!text) return '';
+            return text.replace(/Lethal/gi, '致死').replace(/Super/gi, '超級');
         }
     }
 }
@@ -49,9 +71,10 @@ export default {
 
 <template>
     <div class="calc-container">
+        
         <div class="calc-header">
             <div class="seo-hint">Gencko 整理製作，歡迎分享給你的爬友</div>
-            <div class="calc-sub-desc">專業的守宮基因計算機。非100%血系請統稱前綴(如橘化)。</div>
+            <div class="calc-sub-desc">非100%血系請統稱前綴(如橘化)。</div>
             
             <div class="tabs" style="margin: 20px 0;">
                 <div class="tab" :class="{active: calc_sp==='豹紋守宮'}" @click="calc_sp='豹紋守宮'">豹紋守宮</div>
@@ -66,71 +89,84 @@ export default {
 
         <div class="calc-parent-grid">
             <!-- Male Card -->
-            <div class="calc-parent-card">
-                <div class="calc-p-header calc-sex-m">
+            <div class="calc-parent-card" :style="{ zIndex: calc_activeSelector === 'Male' ? 101 : 1 }">
+                <div class="calc-p-header calc-sex-m calc-mobile-trigger" @click.stop="calc_toggleSelector('Male')">
                     <div class="calc-sex-icon">♂</div>
-                    <div class="calc-p-title"><span>SELECTED PARENT</span><h3>MALE (公)</h3></div>
+                    <div class="calc-p-title"><span>親代設定</span><h3>公</h3></div>
                 </div>
+                
                 <div class="calc-p-body">
-                    <!-- Dropdown Trigger -->
-                    <div class="calc-dropdown-container" style="position:relative; z-index:20;">
+                    <div class="calc-dropdown-container">
                         <div class="calc-add-btn" :class="{open: calc_activeSelector==='Male'}" @click.stop="calc_toggleSelector('Male')">
-                            <span>+ ADD GENE (新增)</span><span>▼</span>
+                            <span>+ 新增基因</span><span>▼</span>
                         </div>
-                        <!-- Dropdown Menu -->
-                        <div v-if="calc_activeSelector==='Male'" class="calc-dropdown-menu">
-                            <div v-for="type in calc_typeOrder" :key="type">
-                                <div v-if="calc_groupedGenes[type]" class="calc-dd-group-btn" :class="{active: calc_expandType===type}" @click.stop="calc_toggleType(type)">
-                                    {{type}} <span>></span>
+                        
+                        <!-- 加入 dropdown-anim 動畫 -->
+                        <Transition name="dropdown-anim">
+                            <div v-if="calc_activeSelector==='Male'" class="calc-dropdown-menu" @click.stop>
+                                <div class="mobile-close-hint">
+                                    <span class="calc-sex-icon" style="width:28px; height:28px; font-size:0.9rem; background:rgba(33,150,243,0.1); color:#2196F3;">♂</span>
+                                    <span style="font-size:0.9rem;">選擇基因</span>
+                                    <span @click="calc_activeSelector=null" class="mobile-close-x">✕</span>
                                 </div>
-                                <div v-if="calc_expandType===type" class="calc-dd-sub">
-                                    <!-- Combo Sub-groups -->
-                                    <template v-if="type === '品系'">
-                                        <div v-for="group in calc_comboGroups" :key="group">
-                                            <div class="calc-dd-combo-group" @click.stop="calc_toggleComboGroup(group)">📁 {{group}}</div>
-                                            <div v-if="calc_expandGroup===group">
-                                                <div v-for="g in calc_groupedGenes[type].filter(x=>x.group===group)" 
-                                                     class="calc-dd-item" 
-                                                     :class="{disabled: calc_isGeneDisabled(g.id, 'Male')}"
-                                                     @click.stop="!calc_isGeneDisabled(g.id, 'Male') && calc_addGene(g.id, 'Male')">
-                                                    {{g.name}} <span v-if="calc_isGeneDisabled(g.id, 'Male')">✓</span>
+
+                                <div v-for="type in calc_typeOrder" :key="type">
+                                    <div v-if="calc_groupedGenes[type]" class="calc-dd-group-btn" :class="{active: calc_expandType===type}" @click="calc_toggleType(type)">
+                                        {{type}} <span>></span>
+                                    </div>
+                                    
+                                    <!-- 加入 slide-anim 子選單動畫 -->
+                                    <Transition name="slide-anim">
+                                        <div v-if="calc_expandType===type" class="calc-dd-sub">
+                                            <template v-if="type === '品系'">
+                                                <div v-for="group in calc_comboGroups" :key="group">
+                                                    <div class="calc-dd-combo-group" @click.stop="calc_toggleComboGroup(group)">📁 {{group}}</div>
+                                                    
+                                                    <Transition name="slide-anim">
+                                                        <div v-if="calc_expandGroup===group">
+                                                            <div v-for="g in calc_groupedGenes[type].filter(x=>x.group===group && x.id!=='normal' && x.id!=='aft_normal')" 
+                                                                class="calc-dd-item" 
+                                                                :class="{disabled: calc_isGeneDisabled(g.id, 'Male')}"
+                                                                @click.stop="!calc_isGeneDisabled(g.id, 'Male') && calc_addGene(g.id, 'Male')">
+                                                                {{g.name}} <span v-if="calc_isGeneDisabled(g.id, 'Male')" style="color:var(--pri)">✓</span>
+                                                            </div>
+                                                        </div>
+                                                    </Transition>
                                                 </div>
-                                            </div>
+                                            </template>
+                                            <template v-else>
+                                                <div v-for="g in calc_groupedGenes[type].filter(x=>x.id!=='normal' && x.id!=='aft_normal')" 
+                                                    class="calc-dd-item"
+                                                    :class="{disabled: calc_isGeneDisabled(g.id, 'Male')}"
+                                                    @click.stop="!calc_isGeneDisabled(g.id, 'Male') && calc_addGene(g.id, 'Male')">
+                                                    {{g.name}} <span v-if="calc_isGeneDisabled(g.id, 'Male')" style="color:var(--pri)">✓</span>
+                                                </div>
+                                            </template>
                                         </div>
-                                    </template>
-                                    <!-- Normal List -->
-                                    <template v-else>
-                                        <div v-for="g in calc_groupedGenes[type]" 
-                                             class="calc-dd-item"
-                                             :class="{disabled: calc_isGeneDisabled(g.id, 'Male')}"
-                                             @click.stop="!calc_isGeneDisabled(g.id, 'Male') && calc_addGene(g.id, 'Male')">
-                                            {{g.name}} <span v-if="calc_isGeneDisabled(g.id, 'Male')">✓</span>
-                                        </div>
-                                    </template>
+                                    </Transition>
                                 </div>
                             </div>
-                        </div>
+                        </Transition>
                     </div>
 
-                    <!-- Selected List -->
                     <div class="calc-selected-list">
-                        <div v-if="calc_male.length === 0" class="calc-empty-msg">NO GENES SELECTED</div>
+                        <div v-if="calc_male.length === 0" style="text-align:center; color:#666; font-size:0.8rem; padding:10px;">尚未選擇基因</div>
                         <div v-else class="calc-gene-item" v-for="(g, idx) in calc_male" :key="idx">
                             <div class="calc-gene-row">
-                                <div>
+                                <div style="width:100%; overflow:hidden;">
                                     <div class="calc-gene-name">{{calc_currentDefs.find(d=>d.id===g.geneId)?.name}}</div>
                                     <div class="calc-gene-type">{{calc_currentDefs.find(d=>d.id===g.geneId)?.type}}</div>
                                 </div>
                                 <button class="calc-btn-remove" @click="calc_removeGene(idx, 'Male')">✕</button>
                             </div>
-                            <!-- Recessive: Checkbox for Het -->
+                            
                             <div v-if="calc_currentDefs.find(d=>d.id===g.geneId)?.type==='隱性'">
                                 <label class="calc-het-label">
                                     <input type="checkbox" class="calc-het-check" :checked="g.zygosity==='Het'" @change="calc_toggleHet($event, idx, 'Male')">
                                     Het (隱性帶基因)
                                 </label>
                             </div>
-                            <!-- Co-Dominant: Select -->
+                            
                             <div v-else-if="calc_currentDefs.find(d=>d.id===g.geneId)?.type==='共顯性'">
                                 <select class="calc-zyg-select" :value="g.zygosity" @change="calc_updateZygosity($event, idx, 'Male')">
                                     <option value="Single">單基因 (Single)</option>
@@ -143,69 +179,82 @@ export default {
             </div>
 
             <!-- Female Card -->
-            <div class="calc-parent-card">
-                <div class="calc-p-header calc-sex-f">
+            <div class="calc-parent-card" :style="{ zIndex: calc_activeSelector === 'Female' ? 101 : 1 }">
+                <div class="calc-p-header calc-sex-f calc-mobile-trigger" @click.stop="calc_toggleSelector('Female')">
                     <div class="calc-sex-icon">♀</div>
-                    <div class="calc-p-title"><span>SELECTED PARENT</span><h3>FEMALE (母)</h3></div>
+                    <div class="calc-p-title"><span>親代設定</span><h3>母</h3></div>
                 </div>
+                
                 <div class="calc-p-body">
-                    <!-- Dropdown Trigger -->
-                    <div class="calc-dropdown-container" style="position:relative; z-index:20;">
+                    <div class="calc-dropdown-container">
                         <div class="calc-add-btn" :class="{open: calc_activeSelector==='Female'}" @click.stop="calc_toggleSelector('Female')">
-                            <span>+ ADD GENE (新增)</span><span>▼</span>
+                            <span>+ 新增基因</span><span>▼</span>
                         </div>
-                        <!-- Dropdown Menu -->
-                        <div v-if="calc_activeSelector==='Female'" class="calc-dropdown-menu">
-                            <div v-for="type in calc_typeOrder" :key="type">
-                                <div v-if="calc_groupedGenes[type]" class="calc-dd-group-btn" :class="{active: calc_expandType===type}" @click.stop="calc_toggleType(type)">
-                                    {{type}} <span>></span>
+                        
+                        <Transition name="dropdown-anim">
+                            <div v-if="calc_activeSelector==='Female'" class="calc-dropdown-menu" @click.stop>
+                                <div class="mobile-close-hint">
+                                    <span class="calc-sex-icon" style="width:28px; height:28px; font-size:0.9rem; background:rgba(255, 64, 129, 0.1); color:#FF4081;">♀</span>
+                                    <span style="font-size:0.9rem;">選擇基因</span>
+                                    <span @click="calc_activeSelector=null" class="mobile-close-x">✕</span>
                                 </div>
-                                <div v-if="calc_expandType===type" class="calc-dd-sub">
-                                    <template v-if="type === '品系'">
-                                        <div v-for="group in calc_comboGroups" :key="group">
-                                            <div class="calc-dd-combo-group" @click.stop="calc_toggleComboGroup(group)">📁 {{group}}</div>
-                                            <div v-if="calc_expandGroup===group">
-                                                <div v-for="g in calc_groupedGenes[type].filter(x=>x.group===group)" 
-                                                     class="calc-dd-item" 
-                                                     :class="{disabled: calc_isGeneDisabled(g.id, 'Female')}"
-                                                     @click.stop="!calc_isGeneDisabled(g.id, 'Female') && calc_addGene(g.id, 'Female')">
-                                                    {{g.name}} <span v-if="calc_isGeneDisabled(g.id, 'Female')">✓</span>
+
+                                <div v-for="type in calc_typeOrder" :key="type">
+                                    <div v-if="calc_groupedGenes[type]" class="calc-dd-group-btn" :class="{active: calc_expandType===type}" @click="calc_toggleType(type)">
+                                        {{type}} <span>></span>
+                                    </div>
+                                    
+                                    <Transition name="slide-anim">
+                                        <div v-if="calc_expandType===type" class="calc-dd-sub">
+                                            <template v-if="type === '品系'">
+                                                <div v-for="group in calc_comboGroups" :key="group">
+                                                    <div class="calc-dd-combo-group" @click.stop="calc_toggleComboGroup(group)">📁 {{group}}</div>
+                                                    
+                                                    <Transition name="slide-anim">
+                                                        <div v-if="calc_expandGroup===group">
+                                                            <div v-for="g in calc_groupedGenes[type].filter(x=>x.group===group && x.id!=='normal' && x.id!=='aft_normal')" 
+                                                                class="calc-dd-item" 
+                                                                :class="{disabled: calc_isGeneDisabled(g.id, 'Female')}"
+                                                                @click.stop="!calc_isGeneDisabled(g.id, 'Female') && calc_addGene(g.id, 'Female')">
+                                                                {{g.name}} <span v-if="calc_isGeneDisabled(g.id, 'Female')" style="color:var(--pri)">✓</span>
+                                                            </div>
+                                                        </div>
+                                                    </Transition>
                                                 </div>
-                                            </div>
+                                            </template>
+                                            <template v-else>
+                                                <div v-for="g in calc_groupedGenes[type].filter(x=>x.id!=='normal' && x.id!=='aft_normal')" 
+                                                    class="calc-dd-item"
+                                                    :class="{disabled: calc_isGeneDisabled(g.id, 'Female')}"
+                                                    @click.stop="!calc_isGeneDisabled(g.id, 'Female') && calc_addGene(g.id, 'Female')">
+                                                    {{g.name}} <span v-if="calc_isGeneDisabled(g.id, 'Female')" style="color:var(--pri)">✓</span>
+                                                </div>
+                                            </template>
                                         </div>
-                                    </template>
-                                    <template v-else>
-                                        <div v-for="g in calc_groupedGenes[type]" 
-                                             class="calc-dd-item"
-                                             :class="{disabled: calc_isGeneDisabled(g.id, 'Female')}"
-                                             @click.stop="!calc_isGeneDisabled(g.id, 'Female') && calc_addGene(g.id, 'Female')">
-                                            {{g.name}} <span v-if="calc_isGeneDisabled(g.id, 'Female')">✓</span>
-                                        </div>
-                                    </template>
+                                    </Transition>
                                 </div>
                             </div>
-                        </div>
+                        </Transition>
                     </div>
 
-                    <!-- Selected List -->
                     <div class="calc-selected-list">
-                        <div v-if="calc_female.length === 0" class="calc-empty-msg">NO GENES SELECTED</div>
+                        <div v-if="calc_female.length === 0" style="text-align:center; color:#666; font-size:0.8rem; padding:10px;">尚未選擇基因</div>
                         <div v-else class="calc-gene-item" v-for="(g, idx) in calc_female" :key="idx">
                             <div class="calc-gene-row">
-                                <div>
+                                <div style="width:100%; overflow:hidden;">
                                     <div class="calc-gene-name">{{calc_currentDefs.find(d=>d.id===g.geneId)?.name}}</div>
                                     <div class="calc-gene-type">{{calc_currentDefs.find(d=>d.id===g.geneId)?.type}}</div>
                                 </div>
                                 <button class="calc-btn-remove" @click="calc_removeGene(idx, 'Female')">✕</button>
                             </div>
-                            <!-- Recessive: Checkbox for Het -->
+                            
                             <div v-if="calc_currentDefs.find(d=>d.id===g.geneId)?.type==='隱性'">
                                 <label class="calc-het-label">
                                     <input type="checkbox" class="calc-het-check" :checked="g.zygosity==='Het'" @change="calc_toggleHet($event, idx, 'Female')">
                                     Het (隱性帶基因)
                                 </label>
                             </div>
-                            <!-- Co-Dominant: Select -->
+                            
                             <div v-else-if="calc_currentDefs.find(d=>d.id===g.geneId)?.type==='共顯性'">
                                 <select class="calc-zyg-select" :value="g.zygosity" @change="calc_updateZygosity($event, idx, 'Female')">
                                     <option value="Single">單基因 (Single)</option>
@@ -227,7 +276,7 @@ export default {
 
             <div v-if="calc_result.warning" class="calc-warn">
                 <div style="font-size:1.5rem">⚠️</div>
-                <div style="white-space:pre-line">{{calc_result.warning}}</div>
+                <div style="white-space:pre-line">{{ formatWarningText(calc_result.warning) }}</div>
             </div>
 
             <div v-if="calc_result.notices && calc_result.notices.length" class="calc-notice">
@@ -237,15 +286,15 @@ export default {
                 </div>
             </div>
 
-            <div class="calc-res-card" v-for="(o, idx) in calc_result.outcomes" :key="idx" :class="{lethal: o.description.includes('致死')}">
+            <div class="calc-res-card" v-for="(o, idx) in calc_result.outcomes" :key="idx" :class="{lethal: o.description && o.description.includes('致死')}">
                 <div class="calc-prob-box">
                     <div class="calc-prob-val">{{Math.round(o.prob*100)}}<small style="font-size:0.8rem">%</small></div>
-                    <div class="calc-prob-sub" style="font-size:0.8rem;color:#888;font-family:monospace" v-if="o.prob < 0.99">
+                    <div class="calc-prob-sub" style="font-size:0.75rem;color:#888;font-family:monospace;margin-top:2px;" v-if="o.prob < 0.99">
                         {{ calc_getProbFraction(o.prob) }}
                     </div>
                 </div>
                 <div class="calc-res-info" style="display:flex; align-items:center;">
-                     <div class="calc-res-name" style="margin:0; line-height:1.4;" v-html="o.fullLabel"></div>
+                     <div class="calc-res-name" style="margin:0; line-height:1.4;" v-html="formatResultText(o.fullLabel)"></div>
                 </div>
             </div>
         </div>
@@ -283,3 +332,58 @@ export default {
         </div>
     </div>
 </template>
+
+<style scoped>
+@media (min-width: 769px) {
+    .mobile-close-hint { display: none !important; }
+}
+
+/* --- 動畫設定 --- */
+
+/* 1. 主選單 (Dropdown) 動畫 */
+/* 電腦版: 淡入 + 微微下滑 */
+.dropdown-anim-enter-active,
+.dropdown-anim-leave-active {
+    transition: all 0.2s ease-out;
+}
+.dropdown-anim-enter-from,
+.dropdown-anim-leave-to {
+    opacity: 0;
+    transform: translateY(-10px);
+}
+
+/* 手機版 (Modal): 彈跳放大效果 */
+@media (max-width: 768px) {
+    .dropdown-anim-enter-active {
+        animation: mobile-zoom-in 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    .dropdown-anim-leave-active {
+        transition: opacity 0.2s ease, transform 0.2s ease;
+    }
+    /* 覆蓋電腦版的 transform 設定，因為手機版是 fixed center */
+    .dropdown-anim-enter-from,
+    .dropdown-anim-leave-to {
+        opacity: 0;
+        transform: translate(-50%, -50%) scale(0.9) !important;
+    }
+}
+
+@keyframes mobile-zoom-in {
+    0% { opacity: 0; transform: translate(-50%, -50%) scale(0.85); }
+    100% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+}
+
+/* 2. 子選單 (Submenu) 動畫 */
+/* 展開收合效果 */
+.slide-anim-enter-active,
+.slide-anim-leave-active {
+    transition: all 0.2s ease;
+    max-height: 500px; /* 設定一個足夠大的高度 */
+    overflow: hidden;
+}
+.slide-anim-enter-from,
+.slide-anim-leave-to {
+    opacity: 0;
+    max-height: 0;
+}
+</style>

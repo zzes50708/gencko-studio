@@ -12,11 +12,31 @@ export default {
         readingProgress: { type: Number, default: 0 }
     },
     emits: ['toggle-theme', 'update:mobileMenuOpen', 'logout', 'scroll-top'],
+    data() {
+        return {
+            // 控制手機版哪個選單展開 ('shop', 'tool', 'service', 或 null)
+            mobileExpanded: null
+        };
+    },
     computed: {
-        // 定義各大類別包含的頁面 key (對應 App.vue 的 curTab)
         isShopActive() { return ['shop', 'breeders', 'merch'].includes(this.curTab); },
         isToolActive() { return ['calculator', 'genes', 'health', 'qs', 'hospital'].includes(this.curTab); },
         isServiceActive() { return ['about', 'care', 'articles', 'faq'].includes(this.curTab); }
+    },
+    watch: {
+        // 當手機選單關閉時，重置展開狀態
+        mobileMenuOpen(val) {
+            if (!val) this.mobileExpanded = null;
+        }
+    },
+    methods: {
+        toggleMobileGroup(groupName) {
+            // 如果點擊已展開的則關閉，否則展開新的 (自動關閉其他的)
+            this.mobileExpanded = this.mobileExpanded === groupName ? null : groupName;
+        },
+        closeMobileMenu() {
+            this.$emit('update:mobileMenuOpen', false);
+        }
     }
 }
 </script>
@@ -75,39 +95,58 @@ export default {
         </div>
 
         <!-- Mobile Menu -->
-        <!-- 改為 fixed 並設定 top:90px (40px跑馬燈 + 50px導覽列)，確保隨螢幕移動 -->
         <div class="mobile-menu-overlay" :class="{open: mobileMenuOpen}" v-if="!admin" style="position:fixed; top:90px; left:0; width:100%; height:calc(100vh - 90px); overflow-y:auto;">
-            <router-link to="/" class="mm-item" style="text-decoration:none;display:block;" @click="$emit('update:mobileMenuOpen', false)">首頁</router-link>
+            <router-link to="/" class="mm-item" style="text-decoration:none;" @click="closeMobileMenu">
+                首頁
+            </router-link>
             
-            <details class="mm-details" :open="isShopActive">
-                <summary class="mm-summary">探索選購 ▾</summary>
-                <div class="mm-dropdown-content">
-                    <router-link to="/shop" class="mm-sub" style="display:block;text-decoration:none;" @click="$emit('update:mobileMenuOpen', false)">選購守宮</router-link>
-                    <router-link to="/breeders" class="mm-sub" style="display:block;text-decoration:none;" @click="$emit('update:mobileMenuOpen', false)">種群展示</router-link>
-                    <router-link to="/merch" class="mm-sub" style="display:block;text-decoration:none;" @click="$emit('update:mobileMenuOpen', false)">周邊商品</router-link>
+            <!-- Group 1: Shop -->
+            <div class="mm-group" :class="{active: mobileExpanded === 'shop' || (mobileExpanded === null && isShopActive)}">
+                <div class="mm-summary" @click="toggleMobileGroup('shop')">
+                    探索選購
+                    <span class="mm-arrow">▼</span>
                 </div>
-            </details>
+                <div class="mm-anim-wrapper">
+                    <div class="mm-anim-inner">
+                        <router-link to="/shop" class="mm-sub" @click="closeMobileMenu">選購守宮</router-link>
+                        <router-link to="/breeders" class="mm-sub" @click="closeMobileMenu">種群展示</router-link>
+                        <router-link to="/merch" class="mm-sub" @click="closeMobileMenu">周邊商品</router-link>
+                    </div>
+                </div>
+            </div>
 
-            <details class="mm-details" :open="isToolActive">
-                <summary class="mm-summary">工具知識 ▾</summary>
-                <div class="mm-dropdown-content">
-                    <router-link to="/calculator" class="mm-sub" style="display:block;text-decoration:none;" @click="$emit('update:mobileMenuOpen', false)">基因計算機</router-link>
-                    <router-link to="/genes" class="mm-sub" style="display:block;text-decoration:none;" @click="$emit('update:mobileMenuOpen', false)">基因圖鑑</router-link>
-                    <router-link to="/health" class="mm-sub" style="display:block;text-decoration:none;" @click="$emit('update:mobileMenuOpen', false)">健康評估</router-link>
-                    <router-link to="/qs" class="mm-sub" style="display:block;text-decoration:none;" @click="$emit('update:mobileMenuOpen', false)">飼養評估</router-link>
-                    <router-link to="/hospital" class="mm-sub" style="display:block;text-decoration:none;" @click="$emit('update:mobileMenuOpen', false)">特寵醫院</router-link>
+            <!-- Group 2: Tools -->
+            <div class="mm-group" :class="{active: mobileExpanded === 'tool' || (mobileExpanded === null && isToolActive)}">
+                <div class="mm-summary" @click="toggleMobileGroup('tool')">
+                    工具知識
+                    <span class="mm-arrow">▼</span>
                 </div>
-            </details>
+                <div class="mm-anim-wrapper">
+                    <div class="mm-anim-inner">
+                        <router-link to="/calculator" class="mm-sub" @click="closeMobileMenu">基因計算機</router-link>
+                        <router-link to="/genes" class="mm-sub" @click="closeMobileMenu">基因圖鑑</router-link>
+                        <router-link to="/health" class="mm-sub" @click="closeMobileMenu">健康評估</router-link>
+                        <router-link to="/qs" class="mm-sub" @click="closeMobileMenu">飼養評估</router-link>
+                        <router-link to="/hospital" class="mm-sub" @click="closeMobileMenu">特寵醫院</router-link>
+                    </div>
+                </div>
+            </div>
 
-            <details class="mm-details" :open="isServiceActive">
-                <summary class="mm-summary">品牌服務 ▾</summary>
-                <div class="mm-dropdown-content">
-                    <router-link to="/about" class="mm-sub" style="display:block;text-decoration:none;" @click="$emit('update:mobileMenuOpen', false)">關於我們</router-link>
-                    <router-link to="/care" class="mm-sub" style="display:block;text-decoration:none;" @click="$emit('update:mobileMenuOpen', false)">飼養方式</router-link>
-                    <router-link to="/articles" class="mm-sub" style="display:block;text-decoration:none;" @click="$emit('update:mobileMenuOpen', false)">專欄文章</router-link>
-                    <router-link to="/faq" class="mm-sub" style="display:block;text-decoration:none;" @click="$emit('update:mobileMenuOpen', false)">常見問題</router-link>
+            <!-- Group 3: Service -->
+            <div class="mm-group" :class="{active: mobileExpanded === 'service' || (mobileExpanded === null && isServiceActive)}">
+                <div class="mm-summary" @click="toggleMobileGroup('service')">
+                    品牌服務
+                    <span class="mm-arrow">▼</span>
                 </div>
-            </details>
+                <div class="mm-anim-wrapper">
+                    <div class="mm-anim-inner">
+                        <router-link to="/about" class="mm-sub" @click="closeMobileMenu">關於我們</router-link>
+                        <router-link to="/care" class="mm-sub" @click="closeMobileMenu">飼養方式</router-link>
+                        <router-link to="/articles" class="mm-sub" @click="closeMobileMenu">專欄文章</router-link>
+                        <router-link to="/faq" class="mm-sub" @click="closeMobileMenu">常見問題</router-link>
+                    </div>
+                </div>
+            </div>
         </div>
         
         <!-- Reading Progress Bar -->

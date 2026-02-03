@@ -14,7 +14,7 @@ export const store = reactive({
     genePages: [],     // 基因圖鑑
     marqueeList: [],   // 跑馬燈
     
-    hotList: [], // <--- ⚠️ 請確認這一行是否存在！
+    hotList: [], // 
     // --- 使用者狀態 (Local Storage) ---
     wishlist: [],      // 最愛清單
     history: [],       // 瀏覽紀錄
