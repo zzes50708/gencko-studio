@@ -236,7 +236,11 @@ export default {
             }
         },
         initHotPicks() { store.hotList = store.inv.filter(i => i.IsHot === 'Hot'); },
-        login(){ store.login(); },
+        login(){ 
+            if(store.login()) {
+                this.$router.push('/admin');
+            }
+        },
         openLightbox(i) { 
             store.lightboxItem = i; 
             history.pushState({ lightbox: true }, ''); 

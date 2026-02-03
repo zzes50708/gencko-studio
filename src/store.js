@@ -36,6 +36,10 @@ export const store = reactive({
     login(){ 
         const p = prompt('密碼'); 
         // 704098 -> NzA0MDk4
-        if(btoa(p) === 'NzA0MDk4') this.admin = true; 
+        if(btoa(p) === 'NzA0MDk4') {
+            this.admin = true;
+            return true;
+        }
+        return false;
     }
 });
