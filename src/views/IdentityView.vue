@@ -1,5 +1,5 @@
 <script>
-// 修正 1: 改用 _supabase 以符合您專案的匯出名稱
+// 確保引用名稱與您的 supabase.js 匯出一致
 import { _supabase } from '../supabase';
 
 export default {
@@ -48,16 +48,15 @@ export default {
     methods: {
         async fetchItem(id) {
             try {
-                // 修正 2: 改查 inventory 資料表，並對應正確欄位 (參考 App.vue)
+                // 查詢 inventory 表
                 const { data, error } = await _supabase
                     .from('inventory')
                     .select('*')
-                    .eq('id', id) // 資料庫欄位通常是小寫 id
+                    .eq('id', id)
                     .single();
 
                 if (error) throw error;
 
-                // 修正 3: 將資料庫的小寫欄位轉換為 Template 需要的大寫格式
                 this.item = {
                     ID: data.id,
                     Morph: data.morph,
@@ -142,30 +141,28 @@ export default {
 
             <!-- Action Buttons -->
             <div class="id-actions">
-                <a v-if="item.ImageURL" :href="item.ImageURL" target="_blank" class="act-btn outline">
-                    📥 下載原始照片
-                </a>
+                <!-- 移除下載原始照片按鈕 -->
                 <button @click="triggerPrint" class="act-btn primary">
                     🖨️ 儲存電子身分證 (PDF)
                 </button>
             </div>
-            <p class="id-hint">* 點擊「儲存」可將此頁面存為 PDF 或圖片收藏</p>
+            <p class="id-hint">* 點擊按鈕可將此卡片存為 PDF 收藏</p>
 
         </div>
     </div>
 </template>
 
 <style scoped>
-/* Page Layout */
+/* Page Layout - 改為淺灰色背景，凸顯白色卡片 */
 .id-page-container {
     min-height: 100vh;
-    background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+    background: #f1f5f9; /* 淺灰背景 */
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     padding: 20px;
-    color: #fff;
+    color: #334155;
     font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
 }
 
@@ -173,23 +170,23 @@ export default {
 .status-msg {
     text-align: center;
     font-size: 1.2rem;
-    color: #94a3b8;
+    color: #64748b;
     display: flex;
     flex-direction: column;
     align-items: center;
     gap: 15px;
 }
-.status-msg.err { color: #f87171; }
+.status-msg.err { color: #ef4444; }
 .loader {
     width: 40px; height: 40px;
-    border: 4px solid rgba(255,255,255,0.1);
+    border: 4px solid #cbd5e1;
     border-top-color: #d84315;
     border-radius: 50%;
     animation: spin 1s linear infinite;
 }
 @keyframes spin { to { transform: rotate(360deg); } }
 
-/* Card Design */
+/* Card Design - 白色卡片 + 立體陰影 */
 .id-card {
     background: #fff;
     color: #1e293b;
@@ -197,16 +194,18 @@ export default {
     max-width: 800px;
     border-radius: 12px;
     overflow: hidden;
-    box-shadow: 0 20px 50px rgba(0,0,0,0.3);
+    /* 這裡設定明顯的陰影，營造實體卡片感 */
+    box-shadow: 0 20px 40px -5px rgba(0,0,0,0.15), 0 10px 20px -5px rgba(0,0,0,0.1);
     display: flex;
     flex-direction: row;
     position: relative;
+    border: 1px solid #fff; /* 微調邊界 */
 }
 
 /* Photo Section */
 .card-photo-box {
     flex: 1.2;
-    background: #f1f5f9;
+    background: #f8fafc;
     position: relative;
     min-height: 300px;
     display: flex; align-items: center; justify-content: center;
@@ -248,18 +247,16 @@ export default {
 
 .card-footer { margin-top: 30px; }
 .cf-line { height: 4px; width: 40px; background: #d84315; margin-bottom: 10px; }
-.cf-txt { font-size: 0.7rem; color: #cbd5e1; font-style: italic; }
+.cf-txt { font-size: 0.7rem; color: #94a3b8; font-style: italic; }
 
 /* Actions */
 .id-actions {
     margin-top: 30px;
     display: flex;
-    gap: 15px;
     justify-content: center;
-    flex-wrap: wrap;
 }
 .act-btn {
-    padding: 12px 24px;
+    padding: 12px 28px;
     border-radius: 30px;
     text-decoration: none;
     font-weight: bold;
@@ -268,13 +265,12 @@ export default {
     transition: transform 0.2s, box-shadow 0.2s;
     border: none;
     display: inline-flex; align-items: center; justify-content: center;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
 }
-.act-btn:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(0,0,0,0.2); }
+.act-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 15px rgba(0,0,0,0.15); }
 .act-btn.primary { background: #d84315; color: #fff; }
-.act-btn.outline { background: transparent; border: 2px solid rgba(255,255,255,0.3); color: #fff; }
-.act-btn.outline:hover { background: rgba(255,255,255,0.1); border-color: #fff; }
 
-.id-hint { font-size: 0.8rem; color: #64748b; margin-top: 15px; opacity: 0.7; }
+.id-hint { font-size: 0.8rem; color: #94a3b8; margin-top: 15px; }
 
 /* Responsive */
 @media (max-width: 768px) {
@@ -289,17 +285,50 @@ export default {
     .id-page-container { padding: 10px; }
 }
 
-/* Print Styles */
+/* 
+   Print Styles - 僅下載卡片本體 
+   邏輯：隱藏所有不相關元素，將背景設為白，確保卡片有邊框
+*/
 @media print {
     @page { margin: 0; size: auto; }
-    body, html { background: #fff; }
-    .id-page-container { background: #fff; padding: 0; min-height: auto; display: block; }
-    .id-card { 
-        box-shadow: none; border: 1px solid #ddd; 
-        max-width: 100%; width: 100%; margin: 0 auto;
-        border-radius: 0;
+    
+    body, html { 
+        background-color: #fff !important; 
+        height: auto;
     }
-    .id-actions, .id-hint, .status-msg { display: none !important; }
-    * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+    
+    .id-page-container {
+        background: #fff !important; 
+        padding: 0 !important;
+        margin: 0 !important;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 100vh; /* 讓卡片在 PDF 中垂直置中，或視需求改為 top */
+        width: 100%;
+    }
+
+    /* 隱藏按鈕、提示、Loading */
+    .id-actions, .id-hint, .status-msg, .loader { 
+        display: none !important; 
+    }
+
+    .id-card {
+        /* 移除陰影，改用細邊框讓 PDF 看起來乾淨 */
+        box-shadow: none !important;
+        border: 1px solid #cbd5e0 !important;
+        
+        /* 確保尺寸適中 */
+        max-width: 100% !important;
+        width: 800px; /* 強制寬度以保持排版 */
+        margin: 0 auto;
+        break-inside: avoid;
+    }
+
+    /* 確保列印色彩準確 */
+    * { 
+        -webkit-print-color-adjust: exact !important; 
+        print-color-adjust: exact !important; 
+    }
 }
 </style>
