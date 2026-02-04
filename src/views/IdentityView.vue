@@ -17,7 +17,6 @@ export default {
             const match = url.match(driveRegex);
             let target = url;
             if (match && match[1]) target = 'https://drive.google.com/uc?id=' + match[1];
-            // 使用 wsrv.nl 優化圖片載入速度
             return `https://wsrv.nl/?url=${encodeURIComponent(target)}&w=1200&output=webp&q=90`;
         },
         fmtSex() {
@@ -45,7 +44,6 @@ export default {
         }
         await this.fetchItem(id);
     },
-    // 離開頁面時，將標題改回預設值，避免影響其他頁面
     unmounted() {
         document.title = 'Gencko Studio';
     },
@@ -70,8 +68,7 @@ export default {
                     ImageURL: data.image_url
                 };
 
-                // [修改點] 設定網頁標題 = 品系名稱
-                // 這樣下載 PDF 時，預設檔名就會是 "品系名稱.pdf" (例如: Tangerine.pdf)
+                // 設定 PDF 檔名
                 if (this.item.Morph) {
                     document.title = this.item.Morph;
                 } else {
@@ -188,7 +185,6 @@ export default {
     max-width: 800px;
     border-radius: 12px;
     overflow: hidden;
-    /* 強烈陰影 */
     box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
     display: flex;
     flex-direction: row;
@@ -249,46 +245,66 @@ export default {
 }
 </style>
 
-<!-- Print Styles (Global) -->
+<!-- Print Styles (Global - Flexbox Centering Fix) -->
 <style>
 @media print {
-    /* 1. 設定紙張為 A4 橫向 (Landscape) */
+    /* 1. 強制橫向 A4，保留小邊界 */
     @page {
-        size: A4 landscape; /* [修改點] 關鍵：強制橫向，這會讓瀏覽器自動旋轉版面 */
-        margin: 10mm;       /* [修改點] 邊界縮小，讓卡片盡量填滿 */
+        size: A4 landscape;
+        margin: 10mm; /* 您希望的「一點點邊界」 */
     }
 
+    /* 2. 將整個頁面轉為 Flex 容器，強制內容垂直置中 */
+    body, html {
+        width: 100% !important;
+        height: 100% !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        overflow: hidden !important;
+        background: #fff !important;
+        
+        /* 關鍵：使用 Flexbox 完美置中 */
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+    }
+
+    /* 3. 隱藏其他元素 */
     body * {
         visibility: hidden;
     }
 
-    body, html {
-        background: #fff !important;
-        width: 100%;
-        height: 100%;
-        overflow: hidden;
-    }
-
+    /* 4. 顯示目標並撐滿容器 */
     .print-target, .print-target * {
         visibility: visible;
     }
 
     .print-target {
-        position: fixed;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
+        /* 移除定位設定，改由 body 的 flex 來控制置中 */
+        position: static !important;
+        transform: none !important;
         
-        /* [修改點] 寬度設為 100% 填滿橫向 A4 空間 */
-        width: 100% !important; 
+        /* 寬高設為 100%，自動填滿 @page 留下的空間 */
+        width: 100% !important;
+        height: 100% !important;
         max-width: none !important;
         
-        margin: 0 !important;
-        border: 1px solid #ccc;
+        /* 邊框與樣式 */
+        border: 2px solid #000 !important; /* 加粗邊框更有質感 */
         box-shadow: none !important;
-        break-inside: avoid;
+        margin: 0 !important;
+        
+        /* 確保卡片內部版面正常 */
+        display: flex !important;
+        flex-direction: row !important;
     }
     
+    /* 修正列印時圖片高度，確保填滿左半邊 */
+    .card-photo-box {
+        height: 100% !important;
+        min-height: 0 !important;
+    }
+
     .id-actions, .id-hint, .status-msg, .loader, .floating-inquire-btn {
         display: none !important;
     }
