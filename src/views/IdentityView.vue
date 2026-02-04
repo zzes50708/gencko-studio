@@ -105,9 +105,8 @@ export default {
             
             <!-- print-target 用於列印定位 -->
             <div class="id-card print-target">
-                <!-- Mobile Banner -->
-                <div class="card-brand-mobile">Gencko Studio</div>
-
+                <!-- Mobile Banner (移除，因為現在強制跟電腦一樣) -->
+                
                 <!-- Left: Photo -->
                 <div class="card-photo-box">
                     <img v-if="displayImg" :src="displayImg" alt="ID Photo">
@@ -170,6 +169,10 @@ export default {
     justify-content: center;
     padding: 20px;
     font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    
+    /* [新增] 允許水平捲動，確保手機上若卡片太寬也不會跑版 */
+    overflow-x: auto;
+    width: 100%;
 }
 
 /* Status */
@@ -183,9 +186,15 @@ export default {
     color: #1e293b;
     width: 100%;
     max-width: 800px;
+    
+    /* [新增] 設定最小寬度，強制手機版不准變成垂直堆疊，保持橫向長卡片 */
+    min-width: 650px; 
+    
     border-radius: 12px;
     overflow: hidden;
     box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    
+    /* Flex Row 設定，確保左右排列 */
     display: flex;
     flex-direction: row;
     position: relative;
@@ -206,7 +215,6 @@ export default {
 
 /* Info Section */
 .card-info-box { flex: 1; padding: 30px; display: flex; flex-direction: column; background: #fff; }
-.card-brand-mobile { display: none; }
 .card-header { margin-bottom: 25px; border-bottom: 2px solid #e2e8f0; padding-bottom: 15px; }
 .brand-sub { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 2px; color: #64748b; font-weight: bold; }
 .card-id { font-size: 2.2rem; font-weight: 900; margin: 5px 0; color: #0f172a; line-height: 1; }
@@ -236,25 +244,20 @@ export default {
 .act-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 15px rgba(0,0,0,0.4); }
 .id-hint { font-size: 0.8rem; color: rgba(255,255,255,0.8); margin-top: 15px; text-shadow: 0 1px 2px rgba(0,0,0,0.5); }
 
-@media (max-width: 768px) {
-    .id-card { flex-direction: column; max-width: 400px; }
-    .card-photo-box { height: 300px; flex: none; }
-    .card-brand-mobile { display: block; background: #0f172a; color: #fff; text-align: center; padding: 10px; font-weight: bold; font-size: 1.1rem; }
-    .card-info-box { padding: 25px; }
-    .card-id { font-size: 1.8rem; }
-}
+/* [已刪除] 手機版 RWD 設定 (移除後，手機就會顯示跟電腦一樣的橫向卡片) */
+
 </style>
 
-<!-- Print Styles (Global - Flexbox Centering Fix) -->
+<!-- Print Styles (Global) -->
 <style>
 @media print {
-    /* 1. 強制橫向 A4，保留小邊界 */
+    /* 強制橫向 A4，保留小邊界 */
     @page {
         size: A4 landscape;
-        margin: 10mm; /* 您希望的「一點點邊界」 */
+        margin: 10mm;
     }
 
-    /* 2. 將整個頁面轉為 Flex 容器，強制內容垂直置中 */
+    /* Flexbox 完美置中 */
     body, html {
         width: 100% !important;
         height: 100% !important;
@@ -262,44 +265,32 @@ export default {
         padding: 0 !important;
         overflow: hidden !important;
         background: #fff !important;
-        
-        /* 關鍵：使用 Flexbox 完美置中 */
         display: flex !important;
         align-items: center !important;
         justify-content: center !important;
     }
 
-    /* 3. 隱藏其他元素 */
-    body * {
-        visibility: hidden;
-    }
+    body * { visibility: hidden; }
 
-    /* 4. 顯示目標並撐滿容器 */
-    .print-target, .print-target * {
-        visibility: visible;
-    }
+    .print-target, .print-target * { visibility: visible; }
 
     .print-target {
-        /* 移除定位設定，改由 body 的 flex 來控制置中 */
         position: static !important;
         transform: none !important;
-        
-        /* 寬高設為 100%，自動填滿 @page 留下的空間 */
-        width: 100% !important;
+        /* 寬度設為 100% 填滿 PDF 版面 */
+        width: 100% !important; 
         height: 100% !important;
         max-width: none !important;
+        min-width: 0 !important; /* 列印時不需要 min-width */
         
-        /* 邊框與樣式 */
-        border: 2px solid #000 !important; /* 加粗邊框更有質感 */
+        border: 2px solid #000 !important;
         box-shadow: none !important;
         margin: 0 !important;
         
-        /* 確保卡片內部版面正常 */
         display: flex !important;
         flex-direction: row !important;
     }
     
-    /* 修正列印時圖片高度，確保填滿左半邊 */
     .card-photo-box {
         height: 100% !important;
         min-height: 0 !important;
