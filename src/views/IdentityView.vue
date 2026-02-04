@@ -1,5 +1,6 @@
 <script>
-import { supabase } from '../supabase';
+// 修正 1: 改用 _supabase 以符合您專案的匯出名稱
+import { _supabase } from '../supabase';
 
 export default {
     data() {
@@ -10,7 +11,6 @@ export default {
         };
     },
     computed: {
-        // 圖片優化與代理 (與後台邏輯一致)
         displayImg() {
             if (!this.item || !this.item.ImageURL) return null;
             const url = this.item.ImageURL;
@@ -18,7 +18,6 @@ export default {
             const match = url.match(driveRegex);
             let target = url;
             if (match && match[1]) target = 'https://drive.google.com/uc?id=' + match[1];
-            // 使用較高解析度 (w=1200) 供身分證展示
             return `https://wsrv.nl/?url=${encodeURIComponent(target)}&w=1200&output=webp&q=90`;
         },
         fmtSex() {
@@ -38,7 +37,6 @@ export default {
         }
     },
     async mounted() {
-        // 從網址路徑取得 ID (例如 /identity/ID-001)
         const id = this.$route.params.id;
         if (!id) {
             this.error = '無效的 ID 連結';
@@ -50,15 +48,26 @@ export default {
     methods: {
         async fetchItem(id) {
             try {
-                // 假設資料表名稱為 Gencko_Inventory，若不同請自行修改
-                const { data, error } = await supabase
-                    .from('Gencko_Inventory')
+                // 修正 2: 改查 inventory 資料表，並對應正確欄位 (參考 App.vue)
+                const { data, error } = await _supabase
+                    .from('inventory')
                     .select('*')
-                    .eq('ID', id)
+                    .eq('id', id) // 資料庫欄位通常是小寫 id
                     .single();
 
                 if (error) throw error;
-                this.item = data;
+
+                // 修正 3: 將資料庫的小寫欄位轉換為 Template 需要的大寫格式
+                this.item = {
+                    ID: data.id,
+                    Morph: data.morph,
+                    GenderType: data.gender_type,
+                    GenderValue: data.gender_value,
+                    Birthday: data.birthday,
+                    Species: data.species,
+                    ImageURL: data.image_url
+                };
+
             } catch (err) {
                 console.error(err);
                 this.error = '找不到此個體資料或已下架';
@@ -131,7 +140,7 @@ export default {
                 </div>
             </div>
 
-            <!-- Action Buttons (Hidden when Printing) -->
+            <!-- Action Buttons -->
             <div class="id-actions">
                 <a v-if="item.ImageURL" :href="item.ImageURL" target="_blank" class="act-btn outline">
                     📥 下載原始照片
@@ -180,7 +189,7 @@ export default {
 }
 @keyframes spin { to { transform: rotate(360deg); } }
 
-/* Card Design (The "Identity Card") */
+/* Card Design */
 .id-card {
     background: #fff;
     color: #1e293b;
@@ -280,7 +289,7 @@ export default {
     .id-page-container { padding: 10px; }
 }
 
-/* Print Styles - Hides background, centers card */
+/* Print Styles */
 @media print {
     @page { margin: 0; size: auto; }
     body, html { background: #fff; }
@@ -291,8 +300,6 @@ export default {
         border-radius: 0;
     }
     .id-actions, .id-hint, .status-msg { display: none !important; }
-    
-    /* Ensure colors print */
     * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
 }
 </style>
