@@ -45,6 +45,10 @@ export default {
         }
         await this.fetchItem(id);
     },
+    // 離開頁面時，將標題改回預設值，避免影響其他頁面
+    unmounted() {
+        document.title = 'Gencko Studio';
+    },
     methods: {
         async fetchItem(id) {
             try {
@@ -65,6 +69,14 @@ export default {
                     Species: data.species,
                     ImageURL: data.image_url
                 };
+
+                // [修改點] 設定網頁標題 = 品系名稱
+                // 這樣下載 PDF 時，預設檔名就會是 "品系名稱.pdf" (例如: Tangerine.pdf)
+                if (this.item.Morph) {
+                    document.title = this.item.Morph;
+                } else {
+                    document.title = `ID_${this.item.ID}`;
+                }
 
             } catch (err) {
                 console.error(err);
@@ -240,13 +252,12 @@ export default {
 <!-- Print Styles (Global) -->
 <style>
 @media print {
-    /* 1. 設定紙張與邊界 */
+    /* 1. 設定紙張為 A4 橫向 (Landscape) */
     @page {
-        size: A4;      /* 自動適應方向，通常是直向 */
-        margin: 15mm;  /* 設定四周邊界，保留一點白邊 */
+        size: A4 landscape; /* [修改點] 關鍵：強制橫向，這會讓瀏覽器自動旋轉版面 */
+        margin: 10mm;       /* [修改點] 邊界縮小，讓卡片盡量填滿 */
     }
 
-    /* 2. 隱藏所有雜項 */
     body * {
         visibility: hidden;
     }
@@ -258,29 +269,26 @@ export default {
         overflow: hidden;
     }
 
-    /* 3. 顯示卡片並強制放大 */
     .print-target, .print-target * {
         visibility: visible;
     }
 
     .print-target {
-        /* 使用 fixed + translate 確保絕對置中 */
         position: fixed;
         top: 50%;
         left: 50%;
         transform: translate(-50%, -50%);
         
-        /* 關鍵：寬度設為 100% 以填滿 @page 設定的邊界內範圍 */
+        /* [修改點] 寬度設為 100% 填滿橫向 A4 空間 */
         width: 100% !important; 
-        max-width: none !important; /* 解除原本 CSS 的寬度限制 */
+        max-width: none !important;
         
-        /* 樣式微調 */
         margin: 0 !important;
-        border: 1px solid #ccc; /* 加細框讓邊界清楚 */
-        box-shadow: none !important; /* 移除陰影讓列印乾淨 */
+        border: 1px solid #ccc;
+        box-shadow: none !important;
+        break-inside: avoid;
     }
     
-    /* 隱藏操作區 */
     .id-actions, .id-hint, .status-msg, .loader, .floating-inquire-btn {
         display: none !important;
     }
