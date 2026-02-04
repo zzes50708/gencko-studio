@@ -68,7 +68,6 @@ export default {
                     ImageURL: data.image_url
                 };
 
-                // 設定 PDF 檔名
                 if (this.item.Morph) {
                     document.title = this.item.Morph;
                 } else {
@@ -103,10 +102,9 @@ export default {
         <!-- Identity Content -->
         <div v-else class="id-content-wrap">
             
-            <!-- print-target 用於列印定位 -->
+            <!-- 卡片本體 -->
             <div class="id-card print-target">
-                <!-- Mobile Banner (不需要，因為現在跟電腦版一模一樣) -->
-
+                
                 <!-- Left: Photo -->
                 <div class="card-photo-box">
                     <img v-if="displayImg" :src="displayImg" alt="ID Photo">
@@ -162,15 +160,15 @@ export default {
 <style scoped>
 /* 基本頁面設定 */
 .id-page-container {
-    min-height: 100vh;
+    min-height: 80vh; /* 在手機上高度自適應 */
     background: transparent;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    padding: 20px;
+    padding: 15px; /* 手機邊距縮小 */
     font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
-    overflow: hidden; /* 防止旋轉後出現捲軸 */
+    width: 100%;
 }
 
 /* Status */
@@ -178,19 +176,18 @@ export default {
 .loader { width: 40px; height: 40px; border: 4px solid rgba(255,255,255,0.3); border-top-color: #fff; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 10px; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
-/* Card Design (電腦版預設樣式) */
+/* Card Design (預設電腦版：橫向) */
 .id-card {
     background: #fff;
     color: #1e293b;
     width: 100%;
-    max-width: 800px; /* 電腦版最大寬度 */
-    
+    max-width: 800px;
     border-radius: 12px;
     overflow: hidden;
     box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
     
     display: flex;
-    flex-direction: row; /* 強制橫向 */
+    flex-direction: row; /* 電腦版左右排 */
     position: relative;
     z-index: 10;
 }
@@ -209,7 +206,6 @@ export default {
 
 /* Info Section */
 .card-info-box { flex: 1; padding: 30px; display: flex; flex-direction: column; background: #fff; }
-.card-brand-mobile { display: none; }
 .card-header { margin-bottom: 25px; border-bottom: 2px solid #e2e8f0; padding-bottom: 15px; }
 .brand-sub { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 2px; color: #64748b; font-weight: bold; }
 .card-id { font-size: 2.2rem; font-weight: 900; margin: 5px 0; color: #0f172a; line-height: 1; }
@@ -226,8 +222,7 @@ export default {
 .cf-line { height: 4px; width: 40px; background: #d84315; margin-bottom: 10px; }
 .cf-txt { font-size: 0.7rem; color: #94a3b8; font-style: italic; }
 
-/* Actions */
-.id-actions { margin-top: 30px; display: flex; justify-content: center; }
+.id-actions { margin-top: 30px; display: flex; justify-content: center; width: 100%; }
 .act-btn {
     padding: 12px 28px; border-radius: 30px; border: none;
     font-weight: bold; font-size: 1rem; cursor: pointer;
@@ -235,59 +230,41 @@ export default {
     box-shadow: 0 4px 6px rgba(0,0,0,0.3);
     background: #d84315; color: #fff;
     transition: 0.2s;
+    max-width: 90%; /* 防止按鈕太寬 */
 }
-.act-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 15px rgba(0,0,0,0.4); }
-.id-hint { font-size: 0.8rem; color: rgba(255,255,255,0.8); margin-top: 15px; text-shadow: 0 1px 2px rgba(0,0,0,0.5); }
-
+.id-hint { font-size: 0.8rem; color: rgba(255,255,255,0.8); margin-top: 15px; text-shadow: 0 1px 2px rgba(0,0,0,0.5); text-align: center; }
 
 /* 
-   === 關鍵：手機版強制旋轉 (Mobile Rotation) === 
-   當螢幕寬度小於 768px 且是直向 (Portrait) 時觸發
+   === 手機版 RWD (Mobile Responsive) === 
+   當螢幕寬度小於 768px 時，改為垂直排列 (Column)，
+   並確保寬度不超過螢幕 (100%)。
 */
-@media screen and (max-width: 768px) and (orientation: portrait) {
-    /* 旋轉整個內容容器 (包含卡片與按鈕) */
-    .id-content-wrap {
-        position: fixed;
-        top: 50%;
-        left: 50%;
-        /* 旋轉 90 度，讓使用者轉手機看 */
-        transform: translate(-50%, -50%) rotate(90deg);
-        
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        
-        /* 
-           尺寸邏輯互換：
-           旋轉後，卡片的「寬度」不能超過手機的「高度 (vh)」
-           卡片的「高度」不能超過手機的「寬度 (vw)」
-        */
-        width: 85vh;  /* 使用高度作為寬度基準 */
-        height: auto;
-    }
-
+@media (max-width: 768px) {
     .id-card {
+        flex-direction: column; /* 圖片在上面，文字在下面 */
+        max-width: 100%;
         width: 100%;
-        max-width: none; /* 解除電腦版限制 */
-        min-width: 0;    /* 解除最小寬度限制 */
-        
-        /* 確保卡片高度不會超過手機螢幕寬度 (這時視覺上是垂直邊界) */
-        max-height: 90vw; 
     }
 
-    /* 確保按鈕在旋轉後依然易於點擊 */
-    .id-actions {
-        margin-top: 20px;
+    .card-photo-box {
+        width: 100%;
+        height: 250px; /* 手機版圖片高度固定 */
+        min-height: auto;
     }
+
+    .card-info-box {
+        padding: 20px; /* 手機版內距縮小 */
+    }
+
+    .card-id { font-size: 1.8rem; }
 }
 </style>
 
-<!-- Print Styles (Global) -->
+<!-- Print Styles (Global - 保持強制橫向 A4) -->
 <style>
 @media print {
     @page {
-        size: A4 landscape;
+        size: A4 landscape; /* 強制橫向列印，這會維持電腦版卡片比例 */
         margin: 10mm;
     }
 
@@ -308,6 +285,10 @@ export default {
     .print-target, .print-target * { visibility: visible; }
 
     .print-target {
+        /* 列印時強制切回 Row (橫向)，無視手機版 RWD */
+        display: flex !important;
+        flex-direction: row !important;
+        
         position: static !important;
         transform: none !important;
         width: 100% !important; 
@@ -318,14 +299,18 @@ export default {
         border: 2px solid #000 !important;
         box-shadow: none !important;
         margin: 0 !important;
-        
-        display: flex !important;
-        flex-direction: row !important;
     }
     
+    /* 列印時復原圖片區塊樣式 */
     .card-photo-box {
         height: 100% !important;
+        width: auto !important;
         min-height: 0 !important;
+        flex: 1.2 !important;
+    }
+    
+    .card-info-box {
+        flex: 1 !important;
     }
 
     .id-actions, .id-hint, .status-msg, .loader, .floating-inquire-btn {
