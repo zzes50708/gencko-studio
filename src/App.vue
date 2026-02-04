@@ -65,7 +65,10 @@ export default {
 
     watch: {
         '$route'(to) { this.handleRouteChange(to); },
-        'store.loading'(val) { if (!val) this.syncStateWithRoute(); }
+        'store.loading'(val) { 
+            // 當 loading 結束 (變為 false) 時，再次執行同步，確保文章/基因等依賴資料的內容正確顯示
+            if (!val) this.syncStateWithRoute(); 
+        }
     },
 
     mounted() {
@@ -109,15 +112,19 @@ export default {
         },
 
         syncStateWithRoute(route = this.$route) {
-            if (store.loading) return;
+            // [修正] 移除 loading 檢查，無論資料是否載入，先鎖定目標 ID
+            // if (store.loading) return; 
 
             if (route.name === 'product_detail') {
                 this.targetProductId = route.params.id;
             }
             
+            // 文章與基因頁面依賴列表資料，需保留防呆或在 computed 處理，
+            // 但商品部分 (targetProductId) 必須先設定，才能觸發 shopLogic 的 computed
             if (route.name === 'article_detail') {
                 const artId = route.params.id;
-                if (store.articlesList.length) {
+                // 這裡保留檢查，避免報錯，反正 loading 結束後 watch 會再觸發一次
+                if (store.articlesList && store.articlesList.length) {
                     store.readingArticle = store.articlesList.find(a => a.ID === artId) || null;
                 }
             } else if (route.name === 'articles') {
@@ -127,10 +134,10 @@ export default {
             if (route.name === 'gene_detail') {
                 const geneName = route.params.id;
                 let found = null;
-                if (store.genePages.length) {
+                if (store.genePages && store.genePages.length) {
                     found = store.genePages.find(g => g.Name === geneName);
                 }
-                store.viewingGene = found || { Name: geneName, Brief: '資料載入中或無此基因...' };
+                store.viewingGene = found || { Name: geneName, Brief: '資料載入中...' };
             } else if (route.name === 'genes') {
                 store.viewingGene = null;
             }

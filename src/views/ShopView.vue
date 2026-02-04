@@ -62,7 +62,13 @@ export default {
             return [...list].sort((a, b) => (this.isGeneAvail(b)?1:0) - (this.isGeneAvail(a)?1:0)); 
         },
         // --- 事件觸發封裝 ---
-        onSearchInput(e) { this.$emit('search-input', e); }
+        onSearchInput(e) { this.$emit('search-input', e); },
+        
+        // [新增] 複製當前網址
+        copyCurrentLink() {
+            // 透過 emit copy 事件，由 App.vue 統一處理 (顯示 Toast)
+            this.$emit('copy', window.location.href);
+        }
     }
 }
 </script>
@@ -187,7 +193,14 @@ export default {
         <!-- Product Detail Mode -->
         <transition name="fade">
             <div v-show="curTab==='product_detail'">
-                <div v-if="productModules" class="prod-container">
+                <!-- [新增] 資料載入中提示 -->
+                <div v-if="!productModules" style="text-align:center; padding:100px 0; color:#888;">
+                    <div class="loader" style="margin:0 auto 20px auto;"></div>
+                    <p>正在尋找這隻守宮的資料...</p>
+                    <button class="btn-hero" @click="$emit('navigate', '/shop')" style="margin-top:20px;">回商城列表</button>
+                </div>
+
+                <div v-else class="prod-container">
                     <button class="btn-back" @click="$emit('navigate', '/shop')">← 返回列表</button>
                     <div class="prod-layout">
                         <div class="prod-img-box">
@@ -231,7 +244,8 @@ export default {
 
                             <div class="prod-actions" style="margin-top:20px;">
                                 <a v-if="productModules.transaction.status==='ForSale'" :href="lineLink" target="_blank" class="btn-buy-lg">💬 私訊購買 (Line)</a>
-                                <button class="btn-share" @click="$emit('copy', window.location.href)">🔗 複製連結分享</button>
+                                <!-- [修改] 改用 copyCurrentLink 方法 -->
+                                <button class="btn-share" @click="copyCurrentLink">🔗 複製連結分享</button>
                             </div>
                             <div style="font-size:0.8rem; color:#666; margin-top:10px;">⚠️ {{productModules.expectations.notice}}</div>
                         </div>
