@@ -22,6 +22,11 @@ const routes = [
         component: HomeView
     },
     {
+        path: '/identity/:id',
+        name: 'identity',
+        component: () => import('../views/IdentityView.vue')
+    },
+    {
         path: '/about',
         name: 'about',
         component: AboutView
@@ -110,6 +115,7 @@ const routes = [
         path: '/:pathMatch(.*)*',
         redirect: '/'
     }
+
 ];
 
 const router = createRouter({
