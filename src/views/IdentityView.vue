@@ -13,7 +13,6 @@ export default {
         displayImg() {
             if (!this.item || !this.item.ImageURL) return null;
             const url = this.item.ImageURL;
-            // 處理 Google Drive 連結
             const driveRegex = /file\/d\/([a-zA-Z0-9_-]+)\//;
             const match = url.match(driveRegex);
             let target = url;
@@ -95,7 +94,7 @@ export default {
         <!-- Identity Content -->
         <div v-else class="id-content-wrap">
             
-            <!-- 加入 print-target class 方便列印時鎖定 -->
+            <!-- print-target 用於列印定位 -->
             <div class="id-card print-target">
                 <!-- Mobile Banner -->
                 <div class="card-brand-mobile">Gencko Studio</div>
@@ -140,7 +139,7 @@ export default {
                 </div>
             </div>
 
-            <!-- Actions (列印時會自動隱藏) -->
+            <!-- Actions -->
             <div class="id-actions">
                 <button @click="triggerPrint" class="act-btn primary">
                     🖨️ 儲存電子身分證 (PDF)
@@ -152,14 +151,10 @@ export default {
     </div>
 </template>
 
-<!-- 1. 頁面樣式 (Scoped): 負責正常瀏覽時的排版與美觀 -->
 <style scoped>
 .id-page-container {
-    min-height: 80vh; /* 確保至少佔據大部分畫面 */
-    
-    /* [修改點] 背景透明，讓它直接浮在 App.vue 的背景圖片上 */
-    background: transparent; 
-    
+    min-height: 80vh;
+    background: transparent;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -181,7 +176,7 @@ export default {
     max-width: 800px;
     border-radius: 12px;
     overflow: hidden;
-    /* [修改點] 增加強烈的陰影，讓卡片在背景圖上更立體 */
+    /* 強烈陰影 */
     box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
     display: flex;
     flex-direction: row;
@@ -242,49 +237,50 @@ export default {
 }
 </style>
 
-<!-- 
-    2. 列印專用樣式 (不加 scoped):
-       這是解決「下載包含導引欄」的關鍵。
-       使用 visibility: hidden 隱藏 body 下所有東西，
-       再單獨把卡片設為 visible 並絕對定位，達成「只印卡片」的效果。
--->
+<!-- Print Styles (Global) -->
 <style>
 @media print {
-    /* 1. 隱藏全站所有內容 (包含 Navbar, Footer, Marquee) */
+    /* 1. 設定紙張與邊界 */
+    @page {
+        size: A4;      /* 自動適應方向，通常是直向 */
+        margin: 15mm;  /* 設定四周邊界，保留一點白邊 */
+    }
+
+    /* 2. 隱藏所有雜項 */
     body * {
         visibility: hidden;
     }
 
-    /* 2. 設定背景為全白，移除頁首頁尾資訊 (視瀏覽器設定而定) */
-    @page {
-        size: auto;
-        margin: 0;
-    }
     body, html {
         background: #fff !important;
-        height: 100vh;
+        width: 100%;
+        height: 100%;
         overflow: hidden;
     }
 
-    /* 3. 只顯示卡片本體，並強制定位到正中間 */
+    /* 3. 顯示卡片並強制放大 */
     .print-target, .print-target * {
         visibility: visible;
     }
 
     .print-target {
-        position: absolute;
-        left: 50%;
+        /* 使用 fixed + translate 確保絕對置中 */
+        position: fixed;
         top: 50%;
+        left: 50%;
         transform: translate(-50%, -50%);
-        width: 100%;
-        max-width: 800px; /* 限制最大寬度保持美觀 */
-        margin: 0;
-        box-shadow: none !important; /* PDF 不需要陰影 */
-        border: 1px solid #ccc;      /* 加個細框 */
-        break-inside: avoid;
+        
+        /* 關鍵：寬度設為 100% 以填滿 @page 設定的邊界內範圍 */
+        width: 100% !important; 
+        max-width: none !important; /* 解除原本 CSS 的寬度限制 */
+        
+        /* 樣式微調 */
+        margin: 0 !important;
+        border: 1px solid #ccc; /* 加細框讓邊界清楚 */
+        box-shadow: none !important; /* 移除陰影讓列印乾淨 */
     }
-
-    /* 4. 再次確保按鈕與提示被隱藏 (雙重保險) */
+    
+    /* 隱藏操作區 */
     .id-actions, .id-hint, .status-msg, .loader, .floating-inquire-btn {
         display: none !important;
     }
