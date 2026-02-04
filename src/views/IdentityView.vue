@@ -105,8 +105,8 @@ export default {
             
             <!-- print-target 用於列印定位 -->
             <div class="id-card print-target">
-                <!-- Mobile Banner (移除，因為現在強制跟電腦一樣) -->
-                
+                <!-- Mobile Banner (不需要，因為現在跟電腦版一模一樣) -->
+
                 <!-- Left: Photo -->
                 <div class="card-photo-box">
                     <img v-if="displayImg" :src="displayImg" alt="ID Photo">
@@ -160,8 +160,9 @@ export default {
 </template>
 
 <style scoped>
+/* 基本頁面設定 */
 .id-page-container {
-    min-height: 80vh;
+    min-height: 100vh;
     background: transparent;
     display: flex;
     flex-direction: column;
@@ -169,10 +170,7 @@ export default {
     justify-content: center;
     padding: 20px;
     font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
-    
-    /* [新增] 允許水平捲動，確保手機上若卡片太寬也不會跑版 */
-    overflow-x: auto;
-    width: 100%;
+    overflow: hidden; /* 防止旋轉後出現捲軸 */
 }
 
 /* Status */
@@ -180,23 +178,19 @@ export default {
 .loader { width: 40px; height: 40px; border: 4px solid rgba(255,255,255,0.3); border-top-color: #fff; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 10px; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
-/* Card Design */
+/* Card Design (電腦版預設樣式) */
 .id-card {
     background: #fff;
     color: #1e293b;
     width: 100%;
-    max-width: 800px;
-    
-    /* [新增] 設定最小寬度，強制手機版不准變成垂直堆疊，保持橫向長卡片 */
-    min-width: 650px; 
+    max-width: 800px; /* 電腦版最大寬度 */
     
     border-radius: 12px;
     overflow: hidden;
     box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
     
-    /* Flex Row 設定，確保左右排列 */
     display: flex;
-    flex-direction: row;
+    flex-direction: row; /* 強制橫向 */
     position: relative;
     z-index: 10;
 }
@@ -215,6 +209,7 @@ export default {
 
 /* Info Section */
 .card-info-box { flex: 1; padding: 30px; display: flex; flex-direction: column; background: #fff; }
+.card-brand-mobile { display: none; }
 .card-header { margin-bottom: 25px; border-bottom: 2px solid #e2e8f0; padding-bottom: 15px; }
 .brand-sub { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 2px; color: #64748b; font-weight: bold; }
 .card-id { font-size: 2.2rem; font-weight: 900; margin: 5px 0; color: #0f172a; line-height: 1; }
@@ -244,20 +239,58 @@ export default {
 .act-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 15px rgba(0,0,0,0.4); }
 .id-hint { font-size: 0.8rem; color: rgba(255,255,255,0.8); margin-top: 15px; text-shadow: 0 1px 2px rgba(0,0,0,0.5); }
 
-/* [已刪除] 手機版 RWD 設定 (移除後，手機就會顯示跟電腦一樣的橫向卡片) */
 
+/* 
+   === 關鍵：手機版強制旋轉 (Mobile Rotation) === 
+   當螢幕寬度小於 768px 且是直向 (Portrait) 時觸發
+*/
+@media screen and (max-width: 768px) and (orientation: portrait) {
+    /* 旋轉整個內容容器 (包含卡片與按鈕) */
+    .id-content-wrap {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        /* 旋轉 90 度，讓使用者轉手機看 */
+        transform: translate(-50%, -50%) rotate(90deg);
+        
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        
+        /* 
+           尺寸邏輯互換：
+           旋轉後，卡片的「寬度」不能超過手機的「高度 (vh)」
+           卡片的「高度」不能超過手機的「寬度 (vw)」
+        */
+        width: 85vh;  /* 使用高度作為寬度基準 */
+        height: auto;
+    }
+
+    .id-card {
+        width: 100%;
+        max-width: none; /* 解除電腦版限制 */
+        min-width: 0;    /* 解除最小寬度限制 */
+        
+        /* 確保卡片高度不會超過手機螢幕寬度 (這時視覺上是垂直邊界) */
+        max-height: 90vw; 
+    }
+
+    /* 確保按鈕在旋轉後依然易於點擊 */
+    .id-actions {
+        margin-top: 20px;
+    }
+}
 </style>
 
 <!-- Print Styles (Global) -->
 <style>
 @media print {
-    /* 強制橫向 A4，保留小邊界 */
     @page {
         size: A4 landscape;
         margin: 10mm;
     }
 
-    /* Flexbox 完美置中 */
     body, html {
         width: 100% !important;
         height: 100% !important;
@@ -277,11 +310,10 @@ export default {
     .print-target {
         position: static !important;
         transform: none !important;
-        /* 寬度設為 100% 填滿 PDF 版面 */
         width: 100% !important; 
         height: 100% !important;
         max-width: none !important;
-        min-width: 0 !important; /* 列印時不需要 min-width */
+        min-width: 0 !important;
         
         border: 2px solid #000 !important;
         box-shadow: none !important;
