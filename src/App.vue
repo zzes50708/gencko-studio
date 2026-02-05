@@ -284,7 +284,10 @@ export default {
         setBeginnerMode() {
             this.$router.push('/shop').then(() => {
                 this.resetFilters();
-                this.toggleTag('新手推薦');
+                // 修正：直接設定篩選物件的 beginner 為 true，對應 shop.js 的邏輯
+                this.fil.beginner = true;
+                // 建議：自動展開手機版篩選面板，讓使用者看到「新手推薦」已被勾選
+                this.showMobileFilter = true;
             });
         },
         
