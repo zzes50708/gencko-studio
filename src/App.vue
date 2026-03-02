@@ -31,7 +31,7 @@ export default {
     setup() {
         const route = useRoute();
         // [SEO] 全域 Meta 設定
-        const SITE_URL = 'https://www.gencko.tw'; 
+        const SITE_URL = 'https://www.genckobreeding.com'; 
 
         useHead({
             // 若子頁面有設定 title (如: "豹紋守宮"), 則顯示 "豹紋守宮 | Gencko Studio"
