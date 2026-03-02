@@ -1,9 +1,46 @@
 <script>
+import { useHead } from '@vueuse/head';
 import { calculatorLogic } from '../features/calculator/index.js';
 
 export default {
     name: 'CalculatorView',
     mixins: [calculatorLogic],
+    setup() {
+        useHead({
+            title: '守宮基因計算機',
+            meta: [
+                { name: 'description', content: '專業的豹紋守宮與肥尾守宮基因計算工具。支援孟德爾遺傳法則、多基因 (Polygenic) 選育模擬，以及致死基因 (Lethal) 檢測。' },
+                { name: 'keywords', content: '守宮基因計算機, 爬蟲遺傳學, 豹紋守宮配對, 肥尾守宮基因, Morph Calculator' },
+                { property: 'og:title', content: '守宮基因計算機 | Gencko Studio' },
+                { property: 'og:description', content: '線上模擬守宮配對結果，預測子代品系機率。' },
+                { property: 'og:image', content: 'https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/%E5%AE%98%E7%B6%B2%E8%83%8C%E6%99%AF.png' }
+            ],
+            script: [
+                {
+                    type: 'application/ld+json',
+                    children: JSON.stringify({
+                        "@context": "https://schema.org",
+                        "@type": "WebApplication",
+                        "name": "Gencko Morph Calculator",
+                        "url": "https://www.gencko.tw/calculator",
+                        "applicationCategory": "UtilityApplication",
+                        "operatingSystem": "All",
+                        "description": "A professional genetic calculator for Leopard Geckos and African Fat-Tailed Geckos.",
+                        "offers": {
+                            "@type": "Offer",
+                            "price": "0",
+                            "priceCurrency": "TWD"
+                        },
+                        "featureList": [
+                            "Mendelian inheritance calculation",
+                            "Polygenic trait simulation",
+                            "Lethal gene detection"
+                        ]
+                    })
+                }
+            ]
+        });
+    },
     data() {
         return {
             calc_sp: '豹紋守宮',
@@ -270,7 +307,7 @@ export default {
         <!-- Results -->
         <div v-if="calc_result" class="calc-result-area">
             <div class="calc-res-header">
-                <div class="calc-res-title">預測結果</div>
+                <h2 class="calc-res-title">預測結果</h2>
                 <div class="calc-res-count">組合數: {{calc_result.totalCombos}}</div>
             </div>
 

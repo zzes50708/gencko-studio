@@ -1,4 +1,7 @@
 <script>
+import { computed } from 'vue';
+import { useHead } from '@vueuse/head';
+
 export default {
     name: 'HospitalView',
     props: {
@@ -10,8 +13,53 @@ export default {
         hospFiltered: { type: Array, default: () => [] }
     },
     emits: ['change-city', 'update:hospDistrict'],
+    setup(props) {
+        // [SEO] 動態地圖 Meta 與結構化資料
+        const siteData = computed(() => {
+            const city = props.hospCity === 'all' ? '' : props.hospCity;
+            const dist = props.hospDistrict === 'all' ? '' : props.hospDistrict;
+            const locationStr = city ? `${city}${dist}` : '全台';
+            
+            const title = `${locationStr} 特寵醫院地圖`;
+            const desc = `Gencko Studio 整理之${locationStr}爬蟲、守宮、特寵動物醫院名單 (${props.hospFiltered.length}間)。提供電話、地址與導航資訊，讓您的寵物獲得最即時的醫療協助。`;
+
+            // ItemList Schema (針對 Local SEO 優化)
+            const jsonLd = {
+                "@context": "https://schema.org",
+                "@type": "ItemList",
+                "itemListElement": props.hospFiltered.slice(0, 20).map((h, index) => ({
+                    "@type": "ListItem",
+                    "position": index + 1,
+                    "item": {
+                        "@type": "VeterinaryCare",
+                        "name": h.name,
+                        "telephone": h.phone,
+                        "address": h.address,
+                        "image": "https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/hospital-icon.png" // 通用圖標
+                    }
+                }))
+            };
+
+            return {
+                title,
+                desc,
+                script: [{ type: 'application/ld+json', children: JSON.stringify(jsonLd) }]
+            };
+        });
+
+        useHead({
+            title: computed(() => siteData.value.title),
+            meta: [
+                { name: 'description', content: computed(() => siteData.value.desc) },
+                { property: 'og:title', content: computed(() => `${siteData.value.title} | Gencko Studio`) },
+                { property: 'og:description', content: computed(() => siteData.value.desc) },
+                { property: 'og:image', content: 'https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/%E5%AE%98%E7%B6%B2%E8%83%8C%E6%99%AF.png' },
+                { property: 'og:url', content: 'https://www.gencko.tw/hospital' }
+            ],
+            script: computed(() => siteData.value.script)
+        });
+    },
     methods: {
-        // 純顯示邏輯，保留在 View 層
         getMapLink(h) {
             if(h.mapUrl) return h.mapUrl;
             return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(h.name + ' ' + h.address)}`;
@@ -22,6 +70,8 @@ export default {
 
 <template>
     <div class="hosp-container">
+        <h1 class="page-title">特寵醫院搜尋地圖</h1>
+        
         <!-- Filter Section -->
         <div class="hosp-filter-row">
             <div class="hosp-select-group">
@@ -61,12 +111,12 @@ export default {
                 NO RESULTS FOUND
             </div>
 
-            <div v-for="h in hospFiltered" :key="h.id" class="hosp-card">
+            <article v-for="h in hospFiltered" :key="h.id" class="hosp-card">
                 <div class="hosp-content-row">
                     <div class="hosp-info">
                         <h3 class="hosp-name">{{ h.name }}</h3>
                         
-                        <a :href="getMapLink(h)" target="_blank" class="hosp-detail-row hosp-link">
+                        <a :href="getMapLink(h)" target="_blank" class="hosp-detail-row hosp-link" rel="noopener noreferrer">
                             <svg class="hosp-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
                             <span>{{ h.address }}</span>
                         </a>
@@ -82,7 +132,7 @@ export default {
                         <a :href="'tel:' + h.phone.replace(/[^\d]/g, '')" class="hosp-call-btn">Call Now</a>
                     </div>
                 </div>
-            </div>
+            </article>
         </div>
 
         <footer class="hosp-footer">

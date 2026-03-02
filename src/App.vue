@@ -1,4 +1,7 @@
 <script>
+import { computed } from 'vue';
+import { useHead } from '@vueuse/head';
+import { useRoute } from 'vue-router';
 import { _supabase } from './supabase.js';
 import { store } from './store.js';
 
@@ -24,6 +27,31 @@ export default {
     },
     // 移除 adminLogic mixin
     mixins: [shopLogic, contentLogic, toolsLogic],
+
+    setup() {
+        const route = useRoute();
+        // [SEO] 全域 Meta 設定
+        const SITE_URL = 'https://www.gencko.tw'; 
+
+        useHead({
+            // 若子頁面有設定 title (如: "豹紋守宮"), 則顯示 "豹紋守宮 | Gencko Studio"
+            // 若子頁面沒設定 (如預設), 則顯示您指定的完整標題
+            titleTemplate: (title) => title ? `${title} | Gencko Studio` : 'Gencko Studio｜專業豹紋守宮選育工作室',
+            meta: [
+                { name: 'description', content: 'Gencko Studio 提供專業的豹紋守宮繁育、基因計算機與特寵飼養知識。線上選購守宮、查詢基因圖鑑的最佳平台。' },
+                { property: 'og:type', content: 'website' },
+                { property: 'og:site_name', content: 'Gencko Studio' },
+                { property: 'og:image', content: 'https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/%E6%AD%A3%E9%9D%A2.png' },
+                { name: 'twitter:card', content: 'summary_large_image' }
+            ],
+            link: [
+                {
+                    rel: 'canonical',
+                    href: computed(() => `${SITE_URL}${route.path}`)
+                }
+            ]
+        });
+    },
     
     data() {
         return {
@@ -107,7 +135,7 @@ export default {
             }
 
             this.syncStateWithRoute(to);
-            this.$nextTick(() => this.updateMeta());
+            // [SEO] 移除手動 updateMeta，改由各 View 透過 useHead 管理
             if (!to.hash) window.scrollTo(0, 0);
         },
 
@@ -289,17 +317,6 @@ export default {
                 // 建議：自動展開手機版篩選面板，讓使用者看到「新手推薦」已被勾選
                 this.showMobileFilter = true;
             });
-        },
-        
-        updateMeta() {
-            let title = '守宮選購與飼養｜Gencko Studio';
-            if(this.curTab === 'calculator') title = '基因計算機｜Gencko Studio';
-            if(this.curTab === 'shop' && this.currentProduct) title = `${this.currentProduct.Morph}｜Gencko Studio`;
-            if(this.curTab === 'articles' && store.readingArticle) title = `${store.readingArticle.Title}｜Gencko Studio`;
-            if(this.curTab === 'shop') title = '線上選購守宮｜Gencko Studio';
-            if(this.curTab === 'genes') title = '守宮基因圖鑑｜Gencko Studio';
-            if(this.curTab === 'hospital') title = '特寵醫院地圖｜Gencko Studio';
-            document.title = title;
         }
     }
 };
@@ -331,7 +348,7 @@ export default {
         />
 
        <!-- 設定 min-height 防止轉場時 footer 上跳 -->
-        <div style="padding-top: 0; min-height: 80vh;">
+        <main style="padding-top: 0; min-height: 80vh;">
             <!-- Router View (移除所有 admin 相關 props 與 listeners) -->
             <router-view v-slot="{ Component }">
                 <transition name="fade" mode="out-in">
@@ -418,7 +435,7 @@ export default {
                     />
                 </transition>
             </router-view>
-        </div>
+        </main>
 
         <!-- Floating Inquire Button (移除 !admin 判斷) -->
         <a v-if="wishlist.length > 0" 

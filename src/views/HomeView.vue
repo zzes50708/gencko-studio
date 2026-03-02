@@ -1,4 +1,6 @@
 <script>
+import { useHead } from '@vueuse/head';
+
 export default {
     name: 'HomeView',
     props: {
@@ -7,9 +9,40 @@ export default {
         articlesList: { type: Array, default: () => [] }
     },
     emits: ['navigate', 'set-beginner', 'open-product', 'open-article'],
+    setup() {
+        useHead({
+            // [SEO] 移除 title 設定，讓它自動使用 App.vue 定義的「Gencko Studio｜專業豹紋守宮選育工作室」
+            meta: [
+                { 
+                    name: 'description', 
+                    content: 'Gencko Studio 專注於豹紋守宮繁育、提供基因計算機工具、全台特寵醫院地圖，以及豐富的飼養知識專欄。新手入門首選的爬蟲與守宮平台。' 
+                },
+                { property: 'og:title', content: 'Gencko Studio | 專業豹紋守宮繁育與爬蟲知識' },
+                { property: 'og:description', content: '提供專業守宮選育、基因計算工具與特寵醫療地圖。' },
+                // 可替換為更具代表性的首頁 Banner 圖片
+                { property: 'og:image', content: 'https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/%E5%AE%98%E7%B6%B2%E8%83%8C%E6%99%AF.png' }
+            ],
+            // 結構化資料 (Structured Data) - 幫助 Google 理解這是品牌首頁
+            script: [
+                {
+                    type: 'application/ld+json',
+                    children: JSON.stringify({
+                        "@context": "https://schema.org",
+                        "@type": "WebSite",
+                        "name": "Gencko Studio",
+                        "url": "https://www.gencko.tw/",
+                        "potentialAction": {
+                            "@type": "SearchAction",
+                            "target": "https://www.gencko.tw/shop?kw={search_term_string}",
+                            "query-input": "required name=search_term_string"
+                        }
+                    })
+                }
+            ]
+        });
+    },
     methods: {
         // --- 顯示輔助函式 (View Helper) ---
-        // 為了確保 View 獨立渲染，將純顯示用的處理函式保留在組件內
         convertLink(url) {
             if (!url) return '';
             const driveRegex = /file\/d\/([a-zA-Z0-9_-]+)\//;
@@ -27,51 +60,53 @@ export default {
 
 <template>
     <div>
-        <div class="home-header-wrap">
+        <!-- Hero Section -->
+        <section class="home-header-wrap" aria-label="品牌形象首圖">
             <div class="hero-content hero-content-inner">
                 <h1 class="hero-main-title">GENCKO STUDIO</h1>
                 
                 <div class="hero-btn-group mobile-row-nowrap" style="margin-bottom:15px; justify-content:center;">
-                    <a href="https://line.me/ti/g2/x4QpkWPJTXYr87U_jHyxSrBLTeVYMdwwlPF9qg" target="_blank" class="btn-hero btn-line-join">
+                    <a href="https://line.me/ti/g2/x4QpkWPJTXYr87U_jHyxSrBLTeVYMdwwlPF9qg" target="_blank" class="btn-hero btn-line-join" rel="noopener noreferrer">
                         🔥 點擊加入社群享優惠
                     </a>
                 </div>
                 <div class="hero-btn-group social-group" style="justify-content:center;">
-                    <a href="https://www.instagram.com/gencko_breeding" target="_blank" class="btn-hero btn-soc">IG</a>
-                    <a href="https://www.facebook.com/profile.php?id=61579393505049&locale=zh_TW" target="_blank" class="btn-hero btn-soc">FB</a>
-                    <a href="https://myship.7-11.com.tw/general/detail/GM2509175195515" target="_blank" class="btn-hero btn-soc">賣貨便</a>
+                    <a href="https://www.instagram.com/gencko_breeding" target="_blank" class="btn-hero btn-soc" rel="noopener noreferrer">IG</a>
+                    <a href="https://www.facebook.com/profile.php?id=61579393505049&locale=zh_TW" target="_blank" class="btn-hero btn-soc" rel="noopener noreferrer">FB</a>
+                    <a href="https://myship.7-11.com.tw/general/detail/GM2509175195515" target="_blank" class="btn-hero btn-soc" rel="noopener noreferrer">賣貨便</a>
                 </div>
             </div>
-        </div>
+        </section>
         
-        <!-- Scenarios -->
-        <div class="home-scenario-grid">
-            <div class="scenario-card" @click="$emit('set-beginner')">
+        <!-- Scenarios Navigation -->
+        <nav class="home-scenario-grid" aria-label="快速導覽">
+            <div class="scenario-card" @click="$emit('set-beginner')" role="button" tabindex="0">
                 <div class="scenario-icon">🌱</div>
                 <div class="scenario-title">新手入門</div>
                 <div class="scenario-desc">好養、強壯、預算友善</div>
             </div>
-            <div class="scenario-card" @click="$emit('navigate', '/breeders')">
+            <div class="scenario-card" @click="$emit('navigate', '/breeders')" role="button" tabindex="0">
                 <div class="scenario-icon">👑</div>
                 <div class="scenario-title">種群展示</div>
                 <div class="scenario-desc">欣賞 Gencko 核心種公母</div>
             </div>
-            <div class="scenario-card" @click="$emit('navigate', '/calculator')">
+            <div class="scenario-card" @click="$emit('navigate', '/calculator')" role="button" tabindex="0">
                 <div class="scenario-icon">🧬</div>
                 <div class="scenario-title">基因計算</div>
                 <div class="scenario-desc">專業玩家的選育工具</div>
             </div>
-            <div class="scenario-card" @click="$emit('navigate', '/hospital')">
+            <div class="scenario-card" @click="$emit('navigate', '/hospital')" role="button" tabindex="0">
                 <div class="scenario-icon">🏥</div>
                 <div class="scenario-title">特寵醫院</div>
                 <div class="scenario-desc">全台特寵就醫地圖</div>
             </div>
-        </div>
+        </nav>
 
-        <div class="home-section">
+        <!-- Hot Picks Section -->
+        <section class="home-section" aria-labelledby="hot-picks-title">
             <div class="section-head">
-                <div class="sec-title">熱門精選</div>
-                <a href="/shop" class="sec-more" style="text-decoration:none;">查看更多 &rarr;</a>
+                <h2 id="hot-picks-title" class="sec-title">熱門精選</h2>
+                <a href="/shop" class="sec-more" style="text-decoration:none;" aria-label="查看更多熱門商品">查看更多 &rarr;</a>
             </div>
             
             <div v-if="loading && hotList.length===0" style="display:flex; gap:15px; overflow:hidden; padding:10px 0;">
@@ -85,13 +120,13 @@ export default {
                 <div class="hot-track">
                     <div class="hot-card-item" v-for="(i, idx) in [...hotList, ...hotList, ...hotList, ...hotList]" :key="idx">
                         <div style="position:relative; cursor:pointer;" @click="$emit('open-product', i.ID)">
-                            <img v-if="i.ImageURL" :src="convertLink(i.ImageURL)" class="card-img" loading="lazy">
+                            <img v-if="i.ImageURL" :src="convertLink(i.ImageURL)" :alt="i.Morph + ' 守宮'" class="card-img" loading="lazy">
                             <div v-else class="card-img" style="display:flex;align-items:center;justify-content:center;color:#333;font-size:3rem;background:#000;">🦎</div>
                             <div v-if="i.Status==='ForSale'" class="trust-badge">🛡️ 100% HEALTH</div>
                         </div>
                         <div class="card-body" style="padding:15px; text-align:center;">
-                            <!-- 使用 slim-title 確保樣式一致 -->
-                            <div class="slim-title" style="margin:0; font-size:1.1rem; white-space:normal;">{{i.Morph}}</div>
+                            <!-- 使用 h3 提升標題權重，並確保閉合標籤正確 -->
+                            <h3 class="slim-title" style="margin:0; font-size:1.1rem; white-space:normal;">{{i.Morph}}</h3>
                         </div>
                     </div>
                 </div>
@@ -99,27 +134,28 @@ export default {
             <div v-else style="text-align:center; padding:20px; color:#666;">
                 暫無熱門精選商品
             </div>
-        </div>
+        </section>
 
-        <div class="home-section" style="background:rgba(255,255,255,0.02);">
+        <!-- Latest Articles Section -->
+        <section class="home-section" style="background:rgba(255,255,255,0.02);" aria-labelledby="latest-articles-title">
             <div class="section-head">
-                <div class="sec-title">最新文章</div>
-                <a href="/articles" class="sec-more" style="text-decoration:none;">專欄文章 &rarr;</a>
+                <h2 id="latest-articles-title" class="sec-title">最新文章</h2>
+                <a href="/articles" class="sec-more" style="text-decoration:none;" aria-label="閱讀更多文章">專欄文章 &rarr;</a>
             </div>
             <div class="grid">
-                <div class="card article-card" v-for="item in articlesList.slice(0, 3)" :key="item.ID" @click="$emit('open-article', item)">
+                <article class="card article-card" v-for="item in articlesList.slice(0, 3)" :key="item.ID" @click="$emit('open-article', item)" style="cursor:pointer;">
                     <div style="position:relative; overflow:hidden;">
-                        <img v-if="item.ImageURL" :src="convertLink(item.ImageURL)" class="card-img" style="height:180px;" loading="lazy">
+                        <img v-if="item.ImageURL" :src="convertLink(item.ImageURL)" :alt="item.Title" class="card-img" style="height:180px;" loading="lazy">
                         <div v-else class="card-img" style="height:180px;display:flex;align-items:center;justify-content:center;font-size:3rem;background:#1a1a1a;">📝</div>
                         <div class="art-cat-tag">{{ item.Category }}</div>
                     </div>
                     <div class="card-body">
-                        <div style="font-size:0.8rem;color:#888;margin-bottom:5px;">{{ fmtDate(item.PublishDate) }}</div>
-                        <div class="slim-title" style="font-size:1.1rem;margin-bottom:8px;white-space:normal;">{{ item.Title }}</div>
-                        <div class="art-summary">{{ item.Summary }}</div>
+                        <time class="date-text" style="font-size:0.8rem;color:#888;margin-bottom:5px;display:block;">{{ fmtDate(item.PublishDate) }}</time>
+                        <h3 class="slim-title" style="font-size:1.1rem;margin-bottom:8px;white-space:normal;">{{ item.Title }}</h3>
+                        <p class="art-summary" style="margin:0;">{{ item.Summary }}</p>
                     </div>
-                </div>
+                </article>
             </div>
-        </div>
+        </section>
     </div>
 </template>

@@ -1,4 +1,7 @@
 <script>
+import { computed } from 'vue';
+import { useHead } from '@vueuse/head';
+
 export default {
     name: 'ShopView',
     props: {
@@ -23,6 +26,76 @@ export default {
         productModules: { type: Object, default: null },
         currentProduct: { type: Object, default: null },
         lineLink: { type: String, default: '' }
+    },
+    setup(props) {
+        // [SEO] 動態 Meta 與結構化資料
+        // 使用 computed 監聽 curTab 與 currentProduct 的變化
+        const siteData = computed(() => {
+            const isDetail = props.curTab === 'product_detail' && props.currentProduct;
+            
+            if (isDetail) {
+                const p = props.currentProduct;
+                const title = `${p.Morph} ${p.GenderType === '公' ? '♂' : p.GenderType === '母' ? '♀' : ''}`;
+                const desc = `ID:${p.ID}。${p.Morph} (${p.GenderType})，售價 NT$${p.ListingPrice}。Gencko Studio 專業繁育，100% 健康保證。`;
+                const img = p.ImageURL ? `https://wsrv.nl/?url=${encodeURIComponent(p.ImageURL)}&w=1200&output=webp` : '';
+                const url = `https://www.gencko.tw/product/${p.ID}`;
+                
+                // Google Product Schema
+                const jsonLd = {
+                    "@context": "https://schema.org/",
+                    "@type": "Product",
+                    "name": p.Morph,
+                    "image": img ? [img] : [],
+                    "description": desc,
+                    "sku": p.ID,
+                    "brand": {
+                        "@type": "Brand",
+                        "name": "Gencko Studio"
+                    },
+                    "offers": {
+                        "@type": "Offer",
+                        "url": url,
+                        "priceCurrency": "TWD",
+                        "price": p.ListingPrice,
+                        "availability": p.Status === 'ForSale' ? "https://schema.org/InStock" : "https://schema.org/SoldOut",
+                        "itemCondition": "https://schema.org/NewCondition"
+                    }
+                };
+
+                return {
+                    title,
+                    desc,
+                    img,
+                    url,
+                    script: [{ type: 'application/ld+json', children: JSON.stringify(jsonLd) }]
+                };
+            } else {
+                // 列表模式預設值
+                return {
+                    title: '線上選購守宮',
+                    desc: 'Gencko Studio 提供多樣化的豹紋守宮與肥尾守宮選購。透過進階篩選功能，依據基因、性別、價格找到您的夢幻守宮。',
+                    img: 'https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/%E6%AD%A3%E9%9D%A2.png',
+                    url: 'https://www.gencko.tw/shop',
+                    script: []
+                };
+            }
+        });
+
+        useHead({
+            title: computed(() => siteData.value.title),
+            meta: [
+                { name: 'description', content: computed(() => siteData.value.desc) },
+                { property: 'og:title', content: computed(() => `${siteData.value.title} | Gencko Studio`) },
+                { property: 'og:description', content: computed(() => siteData.value.desc) },
+                { property: 'og:image', content: computed(() => siteData.value.img) },
+                { property: 'og:url', content: computed(() => siteData.value.url) },
+                { name: 'twitter:card', content: 'summary_large_image' }
+            ],
+            link: [
+                { rel: 'canonical', href: computed(() => siteData.value.url) }
+            ],
+            script: computed(() => siteData.value.script)
+        });
     },
     emits: [
         'update:sp', 'update:kw', 'update:showMobileFilter', 'update:openFCat', 'update:sortOrder',
@@ -210,7 +283,7 @@ export default {
                         </div>
                         <div class="prod-info-box">
                             <div class="prod-header">
-                                <div class="prod-id">ID: {{productModules.identity.id}}</div>
+                                <span class="prod-id">ID: {{productModules.identity.id}}</span>
                                 <h1 class="prod-title">{{productModules.identity.morph}}</h1>
                                 <div class="gene-tag-row">
                                     <span v-for="g in productModules.identity.genes" :key="g" class="gene-pill">{{g}}</span>

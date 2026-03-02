@@ -1,4 +1,7 @@
 <script>
+import { computed } from 'vue';
+import { useHead } from '@vueuse/head';
+
 export default {
     name: 'ArticlesView',
     props: {
@@ -8,6 +11,75 @@ export default {
         artCat: { type: String, default: 'All' }
     },
     emits: ['update:artCat', 'open-article', 'close-article'],
+    setup(props) {
+        // [SEO] 圖片連結轉換邏輯 (需與 methods 內的保持一致以供 Meta 使用)
+        const getMetaImg = (url) => {
+            if (!url) return 'https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/%E6%AD%A3%E9%9D%A2.png';
+            const driveRegex = /file\/d\/([a-zA-Z0-9_-]+)\//;
+            const match = url.match(driveRegex);
+            let target = url;
+            if (match && match[1]) target = 'https://drive.google.com/uc?id=' + match[1];
+            return `https://wsrv.nl/?url=${encodeURIComponent(target)}&w=1200&output=webp&q=80`;
+        };
+
+        const siteData = computed(() => {
+            if (props.readingArticle) {
+                const art = props.readingArticle;
+                const imgUrl = getMetaImg(art.ImageURL);
+                const artUrl = `https://www.gencko.tw/articles/${art.ID}`;
+                const isoDate = new Date(art.PublishDate).toISOString();
+
+                // BlogPosting Schema
+                const jsonLd = {
+                    "@context": "https://schema.org",
+                    "@type": "BlogPosting",
+                    "headline": art.Title,
+                    "image": [imgUrl],
+                    "datePublished": isoDate,
+                    "dateModified": isoDate,
+                    "author": [{
+                        "@type": "Person",
+                        "name": art.Author || "Gencko Studio",
+                        "url": "https://www.gencko.tw/about"
+                    }],
+                    "description": art.Summary
+                };
+
+                return {
+                    title: art.Title,
+                    desc: art.Summary || 'Gencko Studio 專業爬蟲與守宮飼養專欄。',
+                    img: imgUrl,
+                    url: artUrl,
+                    script: [{ type: 'application/ld+json', children: JSON.stringify(jsonLd) }]
+                };
+            } else {
+                return {
+                    title: '專欄文章',
+                    desc: 'Gencko Studio 文章專欄，提供豹紋守宮、肥尾守宮飼養教學、基因解析、疾病預防與市場趨勢分析。',
+                    img: 'https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/%E6%AD%A3%E9%9D%A2.png',
+                    url: 'https://www.gencko.tw/articles',
+                    script: []
+                };
+            }
+        });
+
+        useHead({
+            title: computed(() => siteData.value.title),
+            meta: [
+                { name: 'description', content: computed(() => siteData.value.desc) },
+                { property: 'og:title', content: computed(() => `${siteData.value.title} | Gencko Studio`) },
+                { property: 'og:description', content: computed(() => siteData.value.desc) },
+                { property: 'og:image', content: computed(() => siteData.value.img) },
+                { property: 'og:url', content: computed(() => siteData.value.url) },
+                { property: 'og:type', content: computed(() => props.readingArticle ? 'article' : 'website') },
+                { name: 'twitter:card', content: 'summary_large_image' }
+            ],
+            link: [
+                { rel: 'canonical', href: computed(() => siteData.value.url) }
+            ],
+            script: computed(() => siteData.value.script)
+        });
+    },
     methods: {
         convertLink(url) {
             if (!url) return '';
@@ -42,18 +114,18 @@ export default {
             </div>
 
             <transition-group tag="div" name="list" class="grid" v-else>
-                <div class="card article-card" v-for="item in filteredArticles" :key="item.ID" @click="$emit('open-article', item)">
+                <article class="card article-card" v-for="item in filteredArticles" :key="item.ID" @click="$emit('open-article', item)" style="cursor:pointer;">
                     <div style="position:relative; overflow:hidden;">
-                        <img v-if="item.ImageURL" :src="convertLink(item.ImageURL)" class="card-img" style="height:180px;" loading="lazy">
+                        <img v-if="item.ImageURL" :src="convertLink(item.ImageURL)" :alt="item.Title" class="card-img" style="height:180px;" loading="lazy">
                         <div v-else class="card-img" style="height:180px;display:flex;align-items:center;justify-content:center;font-size:3rem;background:#1a1a1a;">📝</div>
                         <div class="art-cat-tag">{{ item.Category }}</div>
                     </div>
                     <div class="card-body">
-                        <div style="font-size:0.8rem;color:#888;margin-bottom:5px;">{{ fmtDate(item.PublishDate) }}</div>
-                        <div class="morph-title" style="font-size:1.1rem;margin-bottom:8px;">{{ item.Title }}</div>
-                        <div class="art-summary">{{ item.Summary }}</div>
+                        <time :datetime="item.PublishDate" style="font-size:0.8rem;color:#888;margin-bottom:5px;display:block;">{{ fmtDate(item.PublishDate) }}</time>
+                        <h2 class="morph-title" style="font-size:1.1rem;margin:0 0 8px 0;">{{ item.Title }}</h2>
+                        <p class="art-summary" style="margin:0;">{{ item.Summary }}</p>
                     </div>
-                </div>
+                </article>
             </transition-group>
         </div>
 
@@ -63,7 +135,7 @@ export default {
             <article class="reader-container">
                 <h1 style="color:#fff;font-size:2rem;margin-bottom:15px;">{{ readingArticle.Title }}</h1>
                 <div style="color:#666;font-size:0.9rem;margin-bottom:20px;">
-                    <span>📅 {{ fmtDate(readingArticle.PublishDate) }}</span>
+                    <time :datetime="readingArticle.PublishDate">📅 {{ fmtDate(readingArticle.PublishDate) }}</time>
                     <span style="margin-left:15px;">👤 {{ readingArticle.Author }}</span>
                     <span style="margin-left:15px;">📂 {{ readingArticle.Category }}</span>
                 </div>
