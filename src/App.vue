@@ -93,8 +93,9 @@ export default {
 
     watch: {
         '$route'(to) { this.handleRouteChange(to); },
-        'store.loading'(val) { 
-            // 當 loading 結束 (變為 false) 時，再次執行同步，確保文章/基因等依賴資料的內容正確顯示
+        // [修正] 改為監聽 computed 屬性 'loading'，確保資料載入後會觸發畫面更新
+        loading(val) { 
+            console.log('👀 Loading changed to:', val);
             if (!val) this.syncStateWithRoute(); 
         }
     },
