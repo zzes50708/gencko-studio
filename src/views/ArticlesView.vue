@@ -1,6 +1,7 @@
 <script>
 import { computed } from 'vue';
 import { useHead } from '@vueuse/head';
+import { useRoute } from 'vue-router'; // 引入 useRoute
 
 export default {
     name: 'ArticlesView',
@@ -12,6 +13,7 @@ export default {
     },
     emits: ['update:artCat', 'open-article', 'close-article'],
     setup(props) {
+        const route = useRoute(); // 取得當前路由
         // [SEO] 圖片連結轉換邏輯 (需與 methods 內的保持一致以供 Meta 使用)
         const getMetaImg = (url) => {
             if (!url) return 'https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/%E6%AD%A3%E9%9D%A2.png';
@@ -98,8 +100,14 @@ export default {
 
 <template>
     <div>
-        <!-- List Mode -->
-        <div v-show="!readingArticle">
+        <!-- Loading Mode: 有 ID 但還沒拿到文章資料時顯示 -->
+        <div v-if="$route.params.id && !readingArticle" style="text-align:center; padding:100px 0; color:#888;">
+            <div class="loader" style="margin:0 auto 20px auto;"></div>
+            <p>文章載入中...</p>
+        </div>
+
+        <!-- List Mode: 沒有 ID 且沒有閱讀文章時顯示 -->
+        <div v-else-if="!readingArticle">
             <h1 class="page-title">專欄文章</h1>
             <div style="margin-bottom:20px; display:flex; gap:10px; align-items:center;">
                 <label style="color:#aaa;">分類：</label>
