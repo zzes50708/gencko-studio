@@ -140,26 +140,37 @@ export default {
         },
 
         syncStateWithRoute(route = this.$route) {
-            // [修正] 移除 loading 檢查，無論資料是否載入，先鎖定目標 ID
-            // if (store.loading) return; 
+            console.log('🔄 Sync State:', route.path, 'Loading:', store.loading);
 
-            if (route.name === 'product_detail') {
+            // [商城] 商品詳情
+            if (route.path.startsWith('/product/') && route.params.id) {
                 this.targetProductId = route.params.id;
             }
             
-            // 文章與基因頁面依賴列表資料，需保留防呆或在 computed 處理，
-            // 但商品部分 (targetProductId) 必須先設定，才能觸發 shopLogic 的 computed
-            if (route.name === 'article_detail') {
+            // [文章] 詳情與列表
+            // 改用 path 判斷，比 name 更穩健
+            if (route.path.startsWith('/articles/') && route.params.id) {
                 const artId = route.params.id;
-                // 這裡保留檢查，避免報錯，反正 loading 結束後 watch 會再觸發一次
+                console.log('📖 嘗試鎖定文章 ID:', artId);
+                
                 if (store.articlesList && store.articlesList.length) {
-                    store.readingArticle = store.articlesList.find(a => a.ID === artId) || null;
+                    const found = store.articlesList.find(a => a.ID === artId);
+                    if (found) {
+                        console.log('✅ 找到文章:', found.Title);
+                        store.readingArticle = found;
+                    } else {
+                        console.warn('⚠️ 找不到文章 ID:', artId, '目前列表數量:', store.articlesList.length);
+                        // 若資料已載入但找不到，可能需要處理 404
+                    }
+                } else {
+                    console.log('⏳ 文章列表尚未載入，等待 Loading...');
                 }
-            } else if (route.name === 'articles') {
+            } else if (route.path === '/articles' || route.name === 'articles') {
                 store.readingArticle = null;
             }
 
-            if (route.name === 'gene_detail') {
+            // [基因] 詳情
+            if (route.path.startsWith('/genes/') && route.params.id) {
                 const geneName = route.params.id;
                 let found = null;
                 if (store.genePages && store.genePages.length) {
