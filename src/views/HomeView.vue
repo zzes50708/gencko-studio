@@ -119,7 +119,7 @@ export default {
 
             <div v-else-if="hotList.length > 0" class="hot-marquee-mask">
                 <div class="hot-track">
-                    <div class="hot-card-item" v-for="(i, idx) in[...hotList, ...hotList, ...hotList, ...hotList]" :key="idx">
+                    <div class="hot-card-item" v-for="(i, idx) in [...hotList, ...hotList, ...hotList, ...hotList]" :key="idx">
                         <!-- 加入 router-link 讓爬蟲能沿著首頁抓到最熱門的商品 -->
                         <router-link :to="`/product/${i.ID}`" style="display:block; text-decoration:none; color:inherit; height:100%;">
                             <div style="position:relative;">
