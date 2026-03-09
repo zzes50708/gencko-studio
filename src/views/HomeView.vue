@@ -80,26 +80,27 @@ export default {
         
         <!-- Scenarios Navigation -->
         <nav class="home-scenario-grid" aria-label="快速導覽">
+            <!-- 新手入門帶有特定過濾邏輯，保留原寫法，但改為更像按鈕的語意 -->
             <div class="scenario-card" @click="$emit('set-beginner')" role="button" tabindex="0">
                 <div class="scenario-icon">🌱</div>
                 <div class="scenario-title">新手入門</div>
                 <div class="scenario-desc">好養、強壯、預算友善</div>
             </div>
-            <div class="scenario-card" @click="$emit('navigate', '/breeders')" role="button" tabindex="0">
+            <router-link to="/breeders" class="scenario-card" style="text-decoration:none; display:block; color:inherit;">
                 <div class="scenario-icon">👑</div>
                 <div class="scenario-title">種群展示</div>
                 <div class="scenario-desc">欣賞 Gencko 核心種公母</div>
-            </div>
-            <div class="scenario-card" @click="$emit('navigate', '/calculator')" role="button" tabindex="0">
+            </router-link>
+            <router-link to="/calculator" class="scenario-card" style="text-decoration:none; display:block; color:inherit;">
                 <div class="scenario-icon">🧬</div>
                 <div class="scenario-title">基因計算</div>
                 <div class="scenario-desc">專業玩家的選育工具</div>
-            </div>
-            <div class="scenario-card" @click="$emit('navigate', '/hospital')" role="button" tabindex="0">
+            </router-link>
+            <router-link to="/hospital" class="scenario-card" style="text-decoration:none; display:block; color:inherit;">
                 <div class="scenario-icon">🏥</div>
                 <div class="scenario-title">特寵醫院</div>
                 <div class="scenario-desc">全台特寵就醫地圖</div>
-            </div>
+            </router-link>
         </nav>
 
         <!-- Hot Picks Section -->
@@ -118,16 +119,18 @@ export default {
 
             <div v-else-if="hotList.length > 0" class="hot-marquee-mask">
                 <div class="hot-track">
-                    <div class="hot-card-item" v-for="(i, idx) in [...hotList, ...hotList, ...hotList, ...hotList]" :key="idx">
-                        <div style="position:relative; cursor:pointer;" @click="$emit('open-product', i.ID)">
-                            <img v-if="i.ImageURL" :src="convertLink(i.ImageURL)" :alt="i.Morph + ' 守宮'" class="card-img" loading="lazy">
-                            <div v-else class="card-img" style="display:flex;align-items:center;justify-content:center;color:#333;font-size:3rem;background:#000;">🦎</div>
-                            <div v-if="i.Status==='ForSale'" class="trust-badge">🛡️ 100% HEALTH</div>
-                        </div>
-                        <div class="card-body" style="padding:15px; text-align:center;">
-                            <!-- 使用 h3 提升標題權重，並確保閉合標籤正確 -->
-                            <h3 class="slim-title" style="margin:0; font-size:1.1rem; white-space:normal;">{{i.Morph}}</h3>
-                        </div>
+                    <div class="hot-card-item" v-for="(i, idx) in[...hotList, ...hotList, ...hotList, ...hotList]" :key="idx">
+                        <!-- 加入 router-link 讓爬蟲能沿著首頁抓到最熱門的商品 -->
+                        <router-link :to="`/product/${i.ID}`" style="display:block; text-decoration:none; color:inherit; height:100%;">
+                            <div style="position:relative;">
+                                <img v-if="i.ImageURL" :src="convertLink(i.ImageURL)" :alt="i.Morph + ' 守宮'" class="card-img" loading="lazy">
+                                <div v-else class="card-img" style="display:flex;align-items:center;justify-content:center;color:#333;font-size:3rem;background:#000;">🦎</div>
+                                <div v-if="i.Status==='ForSale'" class="trust-badge">🛡️ 100% HEALTH</div>
+                            </div>
+                            <div class="card-body" style="padding:15px; text-align:center;">
+                                <h3 class="slim-title" style="margin:0; font-size:1.1rem; white-space:normal;">{{i.Morph}}</h3>
+                            </div>
+                        </router-link>
                     </div>
                 </div>
             </div>
@@ -143,17 +146,20 @@ export default {
                 <a href="/articles" class="sec-more" style="text-decoration:none;" aria-label="閱讀更多文章">專欄文章 &rarr;</a>
             </div>
             <div class="grid">
-                <article class="card article-card" v-for="item in articlesList.slice(0, 3)" :key="item.ID" @click="$emit('open-article', item)" style="cursor:pointer;">
-                    <div style="position:relative; overflow:hidden;">
-                        <img v-if="item.ImageURL" :src="convertLink(item.ImageURL)" :alt="item.Title" class="card-img" style="height:180px;" loading="lazy">
-                        <div v-else class="card-img" style="height:180px;display:flex;align-items:center;justify-content:center;font-size:3rem;background:#1a1a1a;">📝</div>
-                        <div class="art-cat-tag">{{ item.Category }}</div>
-                    </div>
-                    <div class="card-body">
-                        <time class="date-text" style="font-size:0.8rem;color:#888;margin-bottom:5px;display:block;">{{ fmtDate(item.PublishDate) }}</time>
-                        <h3 class="slim-title" style="font-size:1.1rem;margin-bottom:8px;white-space:normal;">{{ item.Title }}</h3>
-                        <p class="art-summary" style="margin:0;">{{ item.Summary }}</p>
-                    </div>
+                <article class="card article-card" v-for="item in articlesList.slice(0, 3)" :key="item.ID">
+                    <!-- 使用 router-link 讓爬蟲能抓到最新發布的文章 -->
+                    <router-link :to="`/articles/${item.ID}`" style="display:block; text-decoration:none; color:inherit; height:100%;">
+                        <div style="position:relative; overflow:hidden;">
+                            <img v-if="item.ImageURL" :src="convertLink(item.ImageURL)" :alt="item.Title" class="card-img" style="height:180px;" loading="lazy">
+                            <div v-else class="card-img" style="height:180px;display:flex;align-items:center;justify-content:center;font-size:3rem;background:#1a1a1a;">📝</div>
+                            <div class="art-cat-tag">{{ item.Category }}</div>
+                        </div>
+                        <div class="card-body">
+                            <time class="date-text" style="font-size:0.8rem;color:#888;margin-bottom:5px;display:block;">{{ fmtDate(item.PublishDate) }}</time>
+                            <h3 class="slim-title" style="font-size:1.1rem;margin-bottom:8px;white-space:normal;">{{ item.Title }}</h3>
+                            <p class="art-summary" style="margin:0;">{{ item.Summary }}</p>
+                        </div>
+                    </router-link>
                 </article>
             </div>
         </section>

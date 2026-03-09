@@ -232,19 +232,28 @@ export default {
                                 <p style="font-size:0.9rem;">牠們可能躲起來睡覺了，或是被買光囉！<br>試著調整篩選條件，或直接私訊我們許願吧。</p>
                                 <button class="btn-hero" @click="$emit('reset-filters')" style="margin-top:20px;">🔄 清除篩選條件</button>
                             </div>
-                            <div class="card slim-card" v-for="i in shopList" :key="i.ID" @click="$emit('open-product', i.ID)">
+                            
+                            <!-- 改造為 router-link，讓 Google 爬蟲能讀懂這是一個網頁連結 -->
+                            <router-link 
+                                :to="`/product/${i.ID}`" 
+                                class="card slim-card" 
+                                v-for="i in shopList" 
+                                :key="i.ID" 
+                                style="text-decoration:none; color:inherit;"
+                            >
                                 <div v-if="i.Status==='Sold'" class="sold-stamp">SOLD</div>
                                 <div style="position:absolute;top:5px;right:5px;z-index:10;">
-                                    <span class="fav-btn" :class="{active: wishlist.includes(i.ID)}" @click.stop="$emit('toggle-wishlist', i.ID)">❤</span>
+                                    <!-- 加上 .prevent 防止點擊愛心時跳轉到商品頁 -->
+                                    <span class="fav-btn" :class="{active: wishlist.includes(i.ID)}" @click.stop.prevent="$emit('toggle-wishlist', i.ID)">❤</span>
                                 </div>
                                 <div style="position:relative;">
-                                    <img v-if="i.ImageURL" :src="convertLink(i.ImageURL)" class="card-img slim-img" loading="lazy">
+                                    <img v-if="i.ImageURL" :src="convertLink(i.ImageURL)" :alt="i.Morph" class="card-img slim-img" loading="lazy">
                                     <div v-else class="card-img slim-img" style="display:flex;align-items:center;justify-content:center;color:#333;font-size:2rem;background:#000;">🦎</div>
                                     <div v-if="i.Status==='ForSale'" class="trust-badge">🛡️ 100% HEALTH</div>
                                 </div>
                                 <div class="card-body slim-body">
-                                    <div class="slim-title">{{i.Morph}}</div>
-                                    <div class="slim-price-row">
+                                    <h3 class="slim-title" style="margin:0;">{{i.Morph}}</h3>
+                                    <div class="slim-price-row" style="margin-top:4px;">
                                         <div v-if="i.Status!=='ForSale'">
                                             <span v-if="i.Status==='Sold'" class="status-badge s-sold">已售出</span>
                                             <span v-else-if="i.Status==='Reserved'" class="status-badge s-res">預訂</span>
@@ -256,7 +265,7 @@ export default {
                                         查看完整狀態 &rarr;
                                     </div>
                                 </div>
-                            </div>
+                            </router-link>
                         </transition-group>
                     </div>
                 </div>

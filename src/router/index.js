@@ -123,10 +123,18 @@ const router = createRouter({
     history: createWebHistory(import.meta.env.BASE_URL),
     routes,
     scrollBehavior(to, from, savedPosition) {
+        // 如果有存檔位置 (按上一頁時)，則回到該位置
         if (savedPosition) {
             return savedPosition;
-        } else {
-            return { top: 0 };
+        } 
+        // 如果是從列表頁進到詳情頁，通常希望詳情頁從頭開始看
+        // 但如果是在同一頁面切換 query (例如篩選)，則保持捲動位置
+        else if (to.name === from.name) {
+             return {};
+        }
+        // 其他情況 (切換單元)，回到頂部
+        else {
+            return { top: 0, behavior: 'smooth' };
         }
     }
 });
