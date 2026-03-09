@@ -26,7 +26,7 @@ export default {
             if (props.curTab === 'gene_detail' && props.viewingGene) {
                 const g = props.viewingGene;
                 const img = getMetaImg(g.ImageURL);
-                const url = `https://www.gencko.tw/genes/${encodeURIComponent(g.Name)}`;
+                const url = `https://www.genckobreeding.com/genes/${encodeURIComponent(g.Name)}`;
                 const desc = g.Brief || `Gencko Studio 收錄的 ${g.Name} 基因詳細介紹與特徵說明。`;
 
                 // Article Schema (視為百科條目)
@@ -55,7 +55,7 @@ export default {
                     title: '守宮基因圖鑑',
                     desc: '收錄完整豹紋守宮與肥尾守宮基因資料庫。提供基因簡介、選育特徵與遺傳法則說明，是玩家必備的查詢工具。',
                     img: 'https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/%E6%AD%A3%E9%9D%A2.png',
-                    url: 'https://www.gencko.tw/genes',
+                    url: 'https://www.genckobreeding.com/genes',
                     type: 'website',
                     script: []
                 };

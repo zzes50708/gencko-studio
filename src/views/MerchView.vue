@@ -27,7 +27,7 @@ export default {
             if (props.curTab === 'merch_detail' && props.currentMerch) {
                 const m = props.currentMerch;
                 const img = getMetaImg(m.ImageURL);
-                const url = `https://www.gencko.tw/merch/${m.ItemID}`;
+                const url = `https://www.genckobreeding.com/merch/${m.ItemID}`;
                 const title = `${m.Name} - NT$${m.Price}`;
                 const desc = m.Description ? m.Description.slice(0, 150) + '...' : `Gencko 特選周邊：${m.Name}，售價 NT$${m.Price}。`;
                 const isAvailable = m.Available !== 'No';
@@ -67,7 +67,7 @@ export default {
                     title: '周邊商品',
                     desc: 'Gencko Studio 精選爬蟲飼養器材、加熱墊、躲避屋與營養品。提供最適合守宮與爬蟲的專業周邊。',
                     img: 'https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/%E6%AD%A3%E9%9D%A2.png',
-                    url: 'https://www.gencko.tw/merch',
+                    url: 'https://www.genckobreeding.com/merch',
                     script: []
                 };
             }

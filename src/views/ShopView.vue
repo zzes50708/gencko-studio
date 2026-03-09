@@ -38,7 +38,7 @@ export default {
                 const title = `${p.Morph} ${p.GenderType === '公' ? '♂' : p.GenderType === '母' ? '♀' : ''}`;
                 const desc = `ID:${p.ID}。${p.Morph} (${p.GenderType})，售價 NT$${p.ListingPrice}。Gencko Studio 專業繁育，100% 健康保證。`;
                 const img = p.ImageURL ? `https://wsrv.nl/?url=${encodeURIComponent(p.ImageURL)}&w=1200&output=webp` : '';
-                const url = `https://www.gencko.tw/product/${p.ID}`;
+                const url = `https://www.genckobreeding.com/product/${p.ID}`;
                 
                 // Google Product Schema
                 const jsonLd = {
@@ -75,7 +75,7 @@ export default {
                     title: '線上選購守宮',
                     desc: 'Gencko Studio 提供多樣化的豹紋守宮與肥尾守宮選購。透過進階篩選功能，依據基因、性別、價格找到您的夢幻守宮。',
                     img: 'https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/%E6%AD%A3%E9%9D%A2.png',
-                    url: 'https://www.gencko.tw/shop',
+                    url: 'https://www.genckobreeding.com/shop',
                     script: []
                 };
             }

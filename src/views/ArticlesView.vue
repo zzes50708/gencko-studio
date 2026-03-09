@@ -28,7 +28,7 @@ export default {
             if (props.readingArticle) {
                 const art = props.readingArticle;
                 const imgUrl = getMetaImg(art.ImageURL);
-                const artUrl = `https://www.gencko.tw/articles/${art.ID}`;
+                const artUrl = `https://www.genckobreeding.com/articles/${art.ID}`;
                 const isoDate = new Date(art.PublishDate).toISOString();
 
                 // BlogPosting Schema
@@ -59,7 +59,7 @@ export default {
                     title: '專欄文章',
                     desc: 'Gencko Studio 文章專欄，提供豹紋守宮、肥尾守宮飼養教學、基因解析、疾病預防與市場趨勢分析。',
                     img: 'https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/%E6%AD%A3%E9%9D%A2.png',
-                    url: 'https://www.gencko.tw/articles',
+                    url: 'https://www.genckobreeding.com/articles',
                     script: []
                 };
             }
@@ -122,17 +122,20 @@ export default {
             </div>
 
             <transition-group tag="div" name="list" class="grid" v-else>
-                <article class="card article-card" v-for="item in filteredArticles" :key="item.ID" @click="$emit('open-article', item)" style="cursor:pointer;">
-                    <div style="position:relative; overflow:hidden;">
-                        <img v-if="item.ImageURL" :src="convertLink(item.ImageURL)" :alt="item.Title" class="card-img" style="height:180px;" loading="lazy">
-                        <div v-else class="card-img" style="height:180px;display:flex;align-items:center;justify-content:center;font-size:3rem;background:#1a1a1a;">📝</div>
-                        <div class="art-cat-tag">{{ item.Category }}</div>
-                    </div>
-                    <div class="card-body">
-                        <time :datetime="item.PublishDate" style="font-size:0.8rem;color:#888;margin-bottom:5px;display:block;">{{ fmtDate(item.PublishDate) }}</time>
-                        <h2 class="morph-title" style="font-size:1.1rem;margin:0 0 8px 0;">{{ item.Title }}</h2>
-                        <p class="art-summary" style="margin:0;">{{ item.Summary }}</p>
-                    </div>
+                <article class="card article-card" v-for="item in filteredArticles" :key="item.ID">
+                    <!-- 改用 router-link 包覆，並設定為區塊元素與移除底線，完美保持原有外觀與點擊範圍 -->
+                    <router-link :to="`/articles/${item.ID}`" style="display:block; text-decoration:none; color:inherit; height:100%;">
+                        <div style="position:relative; overflow:hidden;">
+                            <img v-if="item.ImageURL" :src="convertLink(item.ImageURL)" :alt="item.Title" class="card-img" style="height:180px;" loading="lazy">
+                            <div v-else class="card-img" style="height:180px;display:flex;align-items:center;justify-content:center;font-size:3rem;background:#1a1a1a;">📝</div>
+                            <div class="art-cat-tag">{{ item.Category }}</div>
+                        </div>
+                        <div class="card-body">
+                            <time :datetime="item.PublishDate" style="font-size:0.8rem;color:#888;margin-bottom:5px;display:block;">{{ fmtDate(item.PublishDate) }}</time>
+                            <h2 class="morph-title" style="font-size:1.1rem;margin:0 0 8px 0;">{{ item.Title }}</h2>
+                            <p class="art-summary" style="margin:0;">{{ item.Summary }}</p>
+                        </div>
+                    </router-link>
                 </article>
             </transition-group>
         </div>
