@@ -34,7 +34,7 @@ const goBack = () => {
 <template>
     <div class="care-page-wrapper">
         
-        <!-- 🌟 手機版顯示的 App-like 返回按鈕 -->
+        <!-- 手機版顯示的 App-like 返回按鈕 -->
         <div class="nav-action-row m-only">
             <button class="app-back-btn" @click="goBack">
                 <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
@@ -47,7 +47,7 @@ const goBack = () => {
             <h1 class="page-title dt-only">守宮飼養方式指南</h1>
             <h1 class="m-page-title m-only">飼養方式指南</h1>
             
-            <!-- 🌟 使用 NuxtImg 進行圖片最佳化 -->
+            <!-- 使用 NuxtImg 進行圖片最佳化 -->
             <NuxtImg 
                 v-if="careImg" 
                 :src="getCleanUrl(careImg)" 
@@ -60,7 +60,7 @@ const goBack = () => {
                 loading="lazy"
             />
             
-            <!-- 🌟 重構：將傳統 Table 改為 App 風格的 List -->
+            <!-- App 風格的 List -->
             <div class="care-info-list">
                 <div class="info-row">
                     <div class="info-label">飼養箱</div>
@@ -125,11 +125,11 @@ const goBack = () => {
     padding-bottom: 20px;
 }
 
-/* 🌟 Responsive Utilities */
+/* Responsive Utilities */
 .dt-only { display: block; }
 .m-only { display: none !important; }
 
-/* 🌟 App-like 返回按鈕 */
+/* App-like 返回按鈕 */
 .nav-action-row {
     width: 100%;
     display: flex;
@@ -160,7 +160,7 @@ const goBack = () => {
     background: rgba(255, 255, 255, 0.1);
 }
 
-/* 🌟 卡片化內容 */
+/* 卡片化內容 */
 .content-card {
     background: var(--card-bg);
     border: 1px solid var(--bd);
@@ -190,7 +190,7 @@ const goBack = () => {
     box-shadow: 0 5px 20px rgba(0,0,0,0.3);
 }
 
-/* 🌟 App-like List (取代 Table) */
+/* App-like List (取代 Table) */
 .care-info-list {
     display: flex;
     flex-direction: column;
@@ -215,11 +215,13 @@ const goBack = () => {
     font-size: 1.05rem;
 }
 
+/* 🌟 統一改為純白色以確保夜間模式清晰 */
 .info-val {
     flex: 1;
-    color: #ddd;
+    color: #fff;
     line-height: 1.6;
     font-size: 0.95rem;
+    font-weight: 500;
 }
 
 .care-section {
@@ -232,7 +234,7 @@ const goBack = () => {
 
 .care-h {
     color: var(--pri);
-    font-weight: 700;
+    font-weight: 900;
     font-size: 1.2rem;
     margin-bottom: 12px;
     display: block;
@@ -240,11 +242,13 @@ const goBack = () => {
     padding-bottom: 8px;
 }
 
+/* 🌟 統一改為純白色以確保夜間模式清晰 */
 .care-p {
-    color: #ccc;
+    color: #fff;
     line-height: 1.7;
     margin-bottom: 10px;
     font-size: 1rem;
+    font-weight: 500;
 }
 
 .care-quote {
@@ -260,9 +264,10 @@ const goBack = () => {
     font-size: 1.05rem;
     border: 1px solid var(--bd);
     border-left-width: 4px;
+    font-weight: 500;
 }
 
-/* Day Mode Overrides */
+/* 🌟 Day Mode Overrides：強制套用純黑色 (#000) 確保白天戶外也能看清 */
 :global(body.day-mode) .app-back-btn { background: #fff; border-color: #ddd; color: #333; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
 :global(body.day-mode) .app-back-btn:active { background: #f0f0f0; }
 :global(body.day-mode) .content-card { background: #fff; border-color: #ddd; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05); }
@@ -270,13 +275,13 @@ const goBack = () => {
 :global(body.day-mode) .m-page-title { color: #111; border-bottom-color: #eee; }
 :global(body.day-mode) .care-top-img { border-color: #ddd; box-shadow: 0 5px 20px rgba(0,0,0,0.05); }
 :global(body.day-mode) .info-row { background: #f9f9f9; border-color: #eee; }
-:global(body.day-mode) .info-val { color: #333; }
+:global(body.day-mode) .info-val { color: #000; } /* 🌟 強制純黑 */
 :global(body.day-mode) .care-section { background: #fff; border-color: #eee; box-shadow: 0 4px 15px rgba(0,0,0,0.02); }
 :global(body.day-mode) .care-h { border-bottom-color: #ddd; }
-:global(body.day-mode) .care-p { color: #444; }
-:global(body.day-mode) .care-quote { background: #fff3e0; border-color: #ffb74d; color: #333; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+:global(body.day-mode) .care-p { color: #000; } /* 🌟 強制純黑 */
+:global(body.day-mode) .care-quote { background: #fff3e0; border-color: #ffb74d; color: #000; box-shadow: 0 4px 15px rgba(0,0,0,0.05); } /* 🌟 強制純黑 */
 
-/* 🌟 Mobile Optimizations */
+/* Mobile Optimizations */
 @media (max-width: 768px) {
     .dt-only { display: none !important; }
     .m-only { display: flex !important; }
@@ -313,7 +318,6 @@ const goBack = () => {
         margin-bottom: 15px;
     }
     
-    /* 手機版：標題與內容改為上下堆疊，提升閱讀性 */
     .info-row {
         flex-direction: column;
         gap: 6px;

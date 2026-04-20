@@ -79,75 +79,72 @@ const healthResult = computed(() => {
 
 <template>
     <div class="health-container">
-        <div class="page-title">健康評估系統</div>
-        <div class="page-text-box" style="margin-bottom:20px; text-align:center;">
+        <!-- 🌟 手機版隱藏標題與說明，節省高度 -->
+        <h1 class="page-title dt-only">健康評估系統</h1>
+        <div class="page-text-box dt-only" style="margin-bottom:20px; text-align:center;">
             <p>本工具僅供自我檢測參考，若有嚴重異常請務必尋求特寵獸醫協助。</p>
         </div>
 
         <div class="health-grid">
-            <!-- Form Side -->
-            <div class="health-form-box">
-                <div>
-                    <div class="health-label">行為觀察：活躍程度</div>
-                    <select v-model="health.activity" class="health-select">
-                        <option value="HIGH">高 (活潑、對動向有反應)</option>
-                        <option value="MEDIUM">中 (偶爾活動、狀態正常)</option>
-                        <option value="LOW">低 (遲緩、大部分時間不動)</option>
-                    </select>
+            <!-- 🌟 左邊：顯示結果 -->
+            <div class="health-res-box">
+                <div class="res-top">
+                    <span class="health-sys-text">GE-SYS</span>
+                    <div class="health-score-val" :class="healthResult.colorClass">{{ healthResult.score }}%</div>
+                    <div class="health-status-row">
+                        <div class="health-dot" :class="healthResult.bgClass"></div>
+                        <div class="health-status-text" :class="healthResult.colorClass">{{ healthResult.status }}</div>
+                    </div>
                 </div>
-                <div>
-                    <div class="health-label">爬行狀態</div>
-                    <select v-model="health.movement" class="health-select">
-                        <option value="NORMAL">正常 (支撐有力、步伐穩定)</option>
-                        <option value="LETHARGIC">異常 (無力、拖行、震顫)</option>
-                    </select>
-                </div>
-                <div>
-                    <div class="health-label">尾巴粗細</div>
-                    <select v-model="health.tail" class="health-select">
-                        <option value="PLUMP">肥大 (豐滿、營養充足)</option>
-                        <option value="NORMAL">正常 (比例協調)</option>
-                        <option value="THIN">偏瘦 (明顯凹陷)</option>
-                        <option value="SICKLY">枯瘦 (皮包骨、危險信號)</option>
-                    </select>
-                </div>
-                <div>
-                    <div class="health-label">糞便觀察</div>
-                    <select v-model="health.droppings" class="health-select">
-                        <option value="SOLID">健康 (固態、伴隨白色尿酸鹽)</option>
-                        <option value="NONE">未排便 (近期無觀察到)</option>
-                        <option value="RUNNY">拉稀 (不成型、水分過多)</option>
-                        <option value="ABNORMAL">異常 (綠色、異味、膿血或奇色)</option>
-                    </select>
+
+                <div class="res-bottom">
+                    <div class="health-suggestion">
+                        {{ healthResult.suggestion }}
+                    </div>
+                    <div v-if="healthResult.warning" class="health-warning">
+                        {{ healthResult.warning }}
+                    </div>
+                    <div class="health-footer dt-only">
+                        <span>REPORT ID: GE-{{ Math.floor(Math.random() * 9000) + 1000 }}</span>
+                        <span>SYSTEM CALIBRATED</span>
+                    </div>
                 </div>
             </div>
 
-            <!-- Result Side -->
-            <div class="health-res-box">
-                <div class="health-res-header">
-                    <div>
-                        <span class="health-sys-text">MEDICAL DIAGNOSIS ENGINE</span>
-                        <h2 class="health-status-text" :class="healthResult.colorClass">評估報告</h2>
-                    </div>
-                    <div class="health-score-val" :class="healthResult.colorClass">{{ healthResult.score }}%</div>
+            <!-- 🌟 右邊：表單選擇 -->
+            <div class="health-form-box">
+                <div class="form-item">
+                    <div class="health-label">活躍程度</div>
+                    <select v-model="health.activity" class="health-select">
+                        <option value="HIGH">高 (活潑、有反應)</option>
+                        <option value="MEDIUM">中 (偶爾活動)</option>
+                        <option value="LOW">低 (遲緩、不動)</option>
+                    </select>
                 </div>
-
-                <div class="health-status-row">
-                    <div class="health-dot" :class="healthResult.bgClass"></div>
-                    <div class="health-status-text" :class="healthResult.colorClass">{{ healthResult.status }}</div>
+                <div class="form-item">
+                    <div class="health-label">爬行狀態</div>
+                    <select v-model="health.movement" class="health-select">
+                        <option value="NORMAL">正常 (步伐穩定)</option>
+                        <option value="LETHARGIC">異常 (無力、拖行)</option>
+                    </select>
                 </div>
-
-                <div class="health-suggestion">
-                    {{ healthResult.suggestion }}
+                <div class="form-item">
+                    <div class="health-label">尾巴體態</div>
+                        <select v-model="health.tail" class="health-select">
+                        <option value="PLUMP">肥大 (營養充足)</option>
+                        <option value="NORMAL">正常 (比例協調)</option>
+                        <option value="THIN">偏瘦 (明顯凹陷)</option>
+                        <option value="SICKLY">枯瘦 (皮包骨)</option>
+                    </select>
                 </div>
-
-                <div v-if="healthResult.warning" class="health-warning">
-                    {{ healthResult.warning }}
-                </div>
-
-                <div class="health-footer">
-                    <span>REPORT ID: GE-{{ Math.floor(Math.random() * 9000) + 1000 }}</span>
-                    <span>SYSTEM CALIBRATED</span>
+                <div class="form-item">
+                    <div class="health-label">糞便狀態</div>
+                    <select v-model="health.droppings" class="health-select">
+                        <option value="SOLID">健康 (固態含尿酸)</option>
+                        <option value="NONE">未排便 (近期無)</option>
+                        <option value="RUNNY">拉稀 (水分過多)</option>
+                        <option value="ABNORMAL">異常 (綠色/異味)</option>
+                    </select>
                 </div>
             </div>
         </div>
@@ -156,23 +153,35 @@ const healthResult = computed(() => {
 
 <style scoped>
 .health-container { max-width: 900px; margin: 0 auto; padding-top: 15px; }
-.health-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-.health-form-box { background: var(--card-bg); border: 1px solid var(--bd); border-radius: 12px; padding: 20px; display: flex; flex-direction: column; gap: 15px; }
-.health-label { font-size: 0.75rem; font-weight: 700; text-transform: uppercase; color: var(--pri); margin-bottom: 6px; letter-spacing: 1px; }
-.health-select { width: 100%; padding: 10px; background: rgba(0,0,0,0.3); border: 1px solid var(--bd); color: var(--txt); border-radius: 6px; font-size: 0.95rem; cursor: pointer; transition: 0.3s; }
+
+/* 🌟 Responsive Utilities */
+.dt-only { display: block; }
+
+/* Desktop Grid: 左結果，右表單 */
+.health-grid { display: grid; grid-template-columns: 1fr 1.2fr; gap: 20px; align-items: stretch; }
+
+/* Left Box (Result) */
+.health-res-box { background: var(--card-bg); border: 1px solid var(--bd); border-radius: 12px; padding: 25px; display: flex; flex-direction: column; position: relative; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
+.res-top { display: flex; flex-direction: column; margin-bottom: 20px; }
+.health-sys-text { font-family: monospace; font-size: 0.75rem; opacity: 0.5; letter-spacing: 2px; margin-bottom: 5px; }
+.health-score-val { font-size: 3.5rem; font-weight: 900; line-height: 1; text-shadow: 0 0 15px rgba(0,0,0,0.5); font-family: 'Black Ops One', cursive, sans-serif; margin-bottom: 10px; }
+.health-status-row { display: flex; align-items: center; gap: 8px; }
+.health-dot { width: 12px; height: 12px; border-radius: 50%; animation: pulse 2s infinite; }
+.health-status-text { font-size: 1.2rem; font-weight: 700; }
+
+.res-bottom { display: flex; flex-direction: column; flex: 1; justify-content: flex-end; }
+.health-suggestion { padding: 15px; border-radius: 8px; border: 1px dashed var(--bd); background: rgba(255,255,255,0.02); color: #ccc; line-height: 1.5; font-size: 0.95rem; margin-bottom: 15px; }
+.health-warning { padding: 10px; background: rgba(244, 67, 54, 0.1); border: 1px solid #f44336; color: #ef9a9a; text-align: center; font-size: 0.85rem; font-weight: bold; border-radius: 6px; animation: pulseRed 2s infinite; }
+.health-footer { margin-top: 25px; opacity: 0.3; border-top: 1px solid var(--txt); padding-top: 10px; display: flex; justify-content: space-between; font-size: 0.6rem; font-family: monospace; letter-spacing: 1px; }
+
+/* Right Box (Form) */
+.health-form-box { background: var(--card-bg); border: 1px solid var(--bd); border-radius: 12px; padding: 25px; display: flex; flex-direction: column; justify-content: center; gap: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
+.form-item { display: flex; flex-direction: column; }
+.health-label { font-size: 0.85rem; font-weight: 700; color: var(--pri); margin-bottom: 6px; letter-spacing: 1px; }
+.health-select { width: 100%; padding: 12px; background: rgba(0,0,0,0.3); border: 1px solid var(--bd); color: var(--txt); border-radius: 8px; font-size: 0.95rem; font-weight: bold; cursor: pointer; transition: 0.3s; appearance: none; }
 .health-select:focus { border-color: var(--pri); outline: none; box-shadow: 0 0 10px var(--pri-glow); }
 
-.health-res-box { background: var(--card-bg); border: 1px solid var(--bd); border-radius: 12px; padding: 20px; display: flex; flex-direction: column; transition: 0.3s; position: relative; overflow: hidden; }
-.health-res-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px; }
-.health-sys-text { font-family: monospace; font-size: 0.65rem; opacity: 0.5; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 4px; display: block; }
-.health-score-val { font-size: 2.5rem; font-weight: 900; line-height: 1; text-shadow: 0 0 15px rgba(0,0,0,0.5); font-family: 'Black Ops One', cursive, sans-serif; }
-.health-status-row { display: flex; align-items: center; gap: 8px; margin-bottom: 15px; }
-.health-dot { width: 10px; height: 10px; border-radius: 50%; animation: pulse 2s infinite; }
-.health-status-text { font-size: 1.1rem; font-weight: 700; }
-.health-suggestion { padding: 15px; border-radius: 8px; border: 1px dashed var(--bd); background: rgba(255,255,255,0.02); color: #ccc; line-height: 1.5; font-size: 0.9rem; margin-bottom: 15px; }
-.health-warning { margin-top: auto; padding: 8px; background: rgba(244, 67, 54, 0.1); border: 1px solid #f44336; color: #ef9a9a; text-align: center; font-size: 0.75rem; font-weight: bold; border-radius: 6px; animation: pulseRed 2s infinite; }
-.health-footer { margin-top: 25px; opacity: 0.3; border-top: 1px solid var(--txt); padding-top: 10px; display: flex; justify-content: space-between; font-size: 0.55rem; font-family: monospace; letter-spacing: 1px; }
-
+/* Colors */
 .c-green { color: #4ade80; } .bg-green { background-color: #4ade80; }
 .c-yellow { color: #facc15; } .bg-yellow { background-color: #facc15; }
 .c-orange { color: #fb923c; } .bg-orange { background-color: #fb923c; }
@@ -181,13 +190,83 @@ const healthResult = computed(() => {
 @keyframes pulse { 0% { opacity: 1; transform: scale(1); } 50% { opacity: 0.5; transform: scale(1.2); } 100% { opacity: 1; transform: scale(1); } }
 @keyframes pulseRed { 0% { box-shadow: 0 0 0 0 rgba(244, 67, 54, 0.4); } 70% { box-shadow: 0 0 0 10px rgba(244, 67, 54, 0); } 100% { box-shadow: 0 0 0 0 rgba(244, 67, 54, 0); } }
 
-:global(body.day-mode) .health-select { background: #fff; border-color: #ccc; color: #111; }
+/* Day Mode */
+:global(body.day-mode) .health-res-box { background: #fff; border-color: #ddd; box-shadow: 0 10px 30px rgba(0,0,0,0.05); }
+:global(body.day-mode) .health-form-box { background: #fff; border-color: #ddd; box-shadow: 0 10px 30px rgba(0,0,0,0.05); }
+:global(body.day-mode) .health-select { background: #f9f9f9; border-color: #ccc; color: #111; }
 :global(body.day-mode) .health-suggestion { background: #fff; border-color: var(--pri); border-style: solid; color: #222; font-weight: 500; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
 :global(body.day-mode) .health-sys-text { color: #666; opacity: 1; font-weight: bold; }
 :global(body.day-mode) .health-footer { color: #999; opacity: 1; border-top-color: #eee; }
 :global(body.day-mode) .health-warning { background: #ffebee; color: #c62828; border-color: #ef5350; }
 
+/* 🌟 Mobile App-like Optimizations (左結果、右選擇的緊湊並排) */
 @media (max-width: 768px) {
-    .health-grid { grid-template-columns: 1fr; gap: 15px; }
+    .dt-only { display: none !important; }
+    
+    .health-container { padding: 5px 15px 15px 15px; }
+
+    /* 黑魔法：重構 DOM 排版順序 */
+    .health-grid { 
+        grid-template-columns: 120px 1fr; /* 左 120px (結果), 右 1fr (表單) */
+        gap: 12px; 
+    }
+
+    /* 將外框解體，讓子元素直接參與外層的 Grid 排版 */
+    .health-res-box { 
+        display: contents; 
+    }
+
+    .health-form-box { 
+        grid-column: 2 / 3; 
+        grid-row: 1 / 2; 
+        background: var(--card-bg); 
+        border: 1px solid var(--bd); 
+        border-radius: 12px; 
+        padding: 12px; 
+        display: flex; 
+        flex-direction: column; 
+        gap: 8px; 
+        box-shadow: 0 4px 15px rgba(0,0,0,0.2); 
+    }
+
+    /* 左方：精簡版分數框 */
+    .res-top { 
+        grid-column: 1 / 2; 
+        grid-row: 1 / 2; 
+        background: var(--card-bg); 
+        border: 1px solid var(--bd); 
+        border-radius: 12px; 
+        padding: 15px 10px; 
+        display: flex; 
+        flex-direction: column; 
+        justify-content: center; 
+        align-items: center; 
+        text-align: center; 
+        box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        margin-bottom: 0; /* 覆寫桌機版 margin */
+    }
+
+    .health-score-val { font-size: 2.2rem; margin-bottom: 6px; }
+    .health-status-text { font-size: 0.9rem; }
+    .health-sys-text { font-size: 0.6rem; margin-bottom: 8px; }
+
+    /* 下方：滿版建議文字 */
+    .res-bottom { 
+        grid-column: 1 / -1; 
+        grid-row: 2 / 3; 
+        margin-top: 5px;
+    }
+    
+    .health-suggestion { font-size: 0.85rem; padding: 12px; margin-bottom: 10px; }
+    .health-warning { font-size: 0.8rem; padding: 10px; }
+
+    /* 表單項目壓縮 */
+    .health-label { font-size: 0.75rem; margin-bottom: 4px; }
+    .health-select { padding: 8px; font-size: 0.85rem; }
+}
+
+:global(body.day-mode) @media (max-width: 768px) {
+    .res-top { background: #fff; border-color: #ddd; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+    .health-form-box { background: #fff; border-color: #ddd; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
 }
 </style>

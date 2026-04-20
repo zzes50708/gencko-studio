@@ -33,7 +33,7 @@ useHead({
         <!-- 桌機版顯示標題，手機版隱藏以節省空間 -->
         <h1 class="page-title dt-only">守宮基因圖鑑</h1>
         
-        <!-- 🌟 App-like 分段切換器 (Segmented Control) -->
+        <!-- 🌟 App-like 分段切換器 (縮減高度版) -->
         <div class="segmented-control">
             <div class="segment" :class="{active: geneSpecies === '豹紋守宮'}" @click="geneSpecies = '豹紋守宮'">豹紋守宮</div>
             <div class="segment" :class="{active: geneSpecies === '肥尾守宮'}" @click="geneSpecies = '肥尾守宮'">肥尾守宮</div>
@@ -41,13 +41,13 @@ useHead({
 
         <div class="genes-content">
             <div v-for="(list, cat) in GENES_DB[geneSpecies]" :key="cat" class="gene-section">
-                <!-- 🌟 加入吸頂效果的分類標題 -->
+                <!-- 吸頂分類標題 -->
                 <div class="section-header-sticky">
                     <h2 class="gene-cat-title">{{ cat }}</h2>
                 </div>
                 
                 <div class="gene-btn-grid">
-                    <NuxtLink v-for="g in list" :key="g" :to="`/genes/${encodeURIComponent(g)}`" class="gene-btn-item" style="text-decoration:none;">
+                    <NuxtLink v-for="g in list" :key="g" :to="`/genes/${encodeURIComponent(g)}`" class="gene-btn-item">
                         <span class="g-name">{{ g }}</span> 
                         <span class="g-arrow">➜</span>
                     </NuxtLink>
@@ -98,7 +98,7 @@ useHead({
 /* 🌟 吸頂分類標題 */
 .section-header-sticky {
     position: sticky;
-    /* 桌導覽列高度大約是 Top(40) + Nav(50) = 90px，加上安全區 */
+    /* Navbar高度 + Marquee高度 = 90px，加上 iOS 瀏海安全區 */
     top: calc(90px + env(safe-area-inset-top, 0px));
     background: rgba(8, 8, 8, 0.95);
     backdrop-filter: blur(10px);
@@ -143,6 +143,7 @@ useHead({
     font-weight: bold;
     font-size: 1rem;
     box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+    text-decoration: none;
 }
 
 .gene-btn-item:hover {
@@ -164,6 +165,8 @@ useHead({
     font-size: 0.9rem;
     opacity: 0.8;
     transition: transform 0.2s;
+    margin-left: 8px;
+    flex-shrink: 0;
 }
 
 .gene-btn-item:hover .g-arrow {
@@ -179,36 +182,63 @@ useHead({
 :global(body.day-mode) .gene-btn-item { background: #fff; border-color: #ddd; color: #333; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
 :global(body.day-mode) .gene-btn-item:hover { background: #f9f9f9; border-color: var(--pri); }
 
-/* Mobile Optimizations */
+/* 🌟 Mobile Optimizations */
 @media (max-width: 768px) {
     .dt-only { display: none !important; }
-    .genes-page-wrapper { padding-top: 0; }
     
-    .segmented-control { margin-bottom: 15px; }
-    .segment { padding: 10px 0; font-size: 0.95rem; }
+    .genes-page-wrapper {
+        padding: 5px 15px 15px 15px; /* 移除頂部空白 */
+    }
     
+    /* 🌟 極致壓縮頂部的豹紋/肥尾按鈕高度與邊距 */
+    .segmented-control {
+        padding: 2px;
+        margin-bottom: 12px;
+        border-radius: 20px;
+    }
+    
+    .segment {
+        padding: 8px 0;
+        font-size: 0.9rem;
+        border-radius: 18px;
+    }
+    
+    /* 🌟 基因清單重構，確保文字清晰可見不被切斷 */
     .gene-btn-grid {
         grid-template-columns: repeat(2, 1fr);
-        gap: 10px;
+        gap: 8px;
     }
 
     .gene-btn-item {
-        padding: 12px 15px;
-        font-size: 0.95rem;
-        border-radius: 12px;
-        justify-content: space-between;
-        text-align: left;
+        padding: 10px 12px;
+        border-radius: 10px;
+        min-height: 54px; /* 確保雙行文字與單行文字時的高低一致性，並保證觸控範圍 */
+        align-items: center; 
     }
     
-    .g-name { white-space: normal; }
+    .g-name {
+        white-space: normal; /* 🌟 允許換行，不再隱藏 */
+        word-wrap: break-word;
+        font-size: 0.9rem;
+        line-height: 1.3;
+    }
 
-    /* 確保手機版箭頭強制顯示，不受之前全域 CSS 的隱藏影響 */
-    .g-arrow { display: block !important; }
+    .g-arrow {
+        display: block !important;
+        font-size: 0.85rem;
+    }
     
     .section-header-sticky {
-        padding: 8px 5px;
-        margin-bottom: 10px;
+        padding: 8px 0;
+        margin-bottom: 8px;
     }
-    .gene-cat-title { font-size: 1.1rem; }
+    
+    .gene-cat-title {
+        font-size: 1.05rem;
+    }
+    
+    .gene-section {
+        margin-bottom: 20px;
+    }
 }
 </style>

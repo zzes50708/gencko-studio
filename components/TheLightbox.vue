@@ -41,10 +41,7 @@ const onTouchEnd = () => {
 
 <template>
     <div v-if="item" class="lightbox-overlay" @click="emit('close')">
-        <!-- 🌟 App-like 毛玻璃關閉按鈕 -->
-        <button class="lightbox-close" @click.stop="emit('close')">
-            <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-        </button>
+        <!-- 🌟 移除 ✕ 按鈕，改用全手勢操作 -->
         
         <div class="lightbox-content-wrapper"
              :style="{
@@ -57,8 +54,11 @@ const onTouchEnd = () => {
              @touchend="onTouchEnd"
              @click.stop
         >
-            <!-- 🌟 App-like 頂部滑動提示條 -->
-            <div class="swipe-indicator"></div>
+            <!-- 🌟 新增：下滑關閉的小提示 -->
+            <div class="swipe-hint-container">
+                <div class="swipe-indicator"></div>
+                <span class="swipe-text">下拉關閉圖片</span>
+            </div>
 
             <!-- 使用 NuxtImg 進行放大預覽圖的最佳化 -->
             <NuxtImg 
@@ -113,19 +113,44 @@ const onTouchEnd = () => {
     will-change: transform, opacity;
 }
 
-/* 🌟 滑動提示條 */
+/* 🌟 下拉提示容器與動畫 */
+.swipe-hint-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-bottom: 12px;
+    opacity: 0.6;
+    animation: float 2s ease-in-out infinite;
+}
+
+@keyframes float {
+    0% { transform: translateY(0px); }
+    50% { transform: translateY(-5px); }
+    100% { transform: translateY(0px); }
+}
+
 .swipe-indicator {
     width: 40px;
     height: 5px;
     border-radius: 5px;
-    background: rgba(255, 255, 255, 0.4);
-    margin-bottom: 12px;
+    background: #fff;
+    margin-bottom: 6px;
 }
 
+.swipe-text {
+    font-size: 0.75rem;
+    color: #fff;
+    font-weight: bold;
+    letter-spacing: 1px;
+}
+
+/* 🌟 圖片高度自動縮減優化 */
 .lightbox-img {
     max-width: 95%;
-    max-height: 75vh;
-    border-radius: 16px; /* 🌟 加大圓角 */
+    width: 100%; /* 讓寬度撐滿容器限制 */
+    height: auto; /* 🌟 高度跟著寬度等比例縮放，避免過高的黑邊 */
+    max-height: 70vh; /* 防止直式照片超出螢幕 */
+    border-radius: 16px; 
     box-shadow: 0 10px 40px rgba(0,0,0,0.8);
     object-fit: contain;
     /* 防止長按圖片時跳出系統選單，提升 App 沉浸感 */
@@ -176,38 +201,27 @@ const onTouchEnd = () => {
     box-shadow: 0 2px 10px rgba(255, 69, 0, 0.3);
 }
 
-/* 🌟 App-like 毛玻璃關閉按鈕 */
-.lightbox-close {
-    position: absolute;
-    top: calc(20px + env(safe-area-inset-top, 0px));
-    right: 20px;
-    color: #fff;
-    cursor: pointer;
-    z-index: 1000000;
-    background: rgba(255, 255, 255, 0.15);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    width: 44px; /* 🌟 確保符合觸控標準 */
-    height: 44px;
-    border-radius: 50%;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    transition: background 0.2s, transform 0.2s;
-    padding: 0;
-}
-
-.lightbox-close:active {
-    background: rgba(255, 255, 255, 0.25);
-    transform: scale(0.9);
-}
-
 /* Day Mode Overrides */
 :global(body.day-mode) .lightbox-overlay { background: rgba(255, 255, 255, 0.98); }
 :global(body.day-mode) .lightbox-title { color: #111; text-shadow: none; }
-:global(body.day-mode) .swipe-indicator { background: rgba(0, 0, 0, 0.2); }
+:global(body.day-mode) .swipe-indicator { background: #333; }
+:global(body.day-mode) .swipe-text { color: #555; }
 :global(body.day-mode) .lightbox-img { border-color: #ddd; box-shadow: 0 10px 40px rgba(0,0,0,0.15); background: #f9f9f9; }
-:global(body.day-mode) .lightbox-close { background: rgba(0, 0, 0, 0.05); color: #333; border-color: rgba(0, 0, 0, 0.1); }
-:global(body.day-mode) .lightbox-close:active { background: rgba(0, 0, 0, 0.1); }
+
+/* 🌟 Mobile Optimizations */
+@media (max-width: 768px) {
+    .lightbox-img {
+        max-height: 60vh; /* 手機版進一步限制最大高度，保留空間給標題與按鈕 */
+    }
+    
+    .lightbox-title {
+        font-size: 1.25rem;
+        margin-bottom: 12px;
+    }
+    
+    .app-btn-buy {
+        padding: 12px 25px;
+        font-size: 1rem;
+    }
+}
 </style>

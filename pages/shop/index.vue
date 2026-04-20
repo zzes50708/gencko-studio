@@ -57,7 +57,7 @@ const maxPrice = computed(() => {
 
 const availableGenes = computed(() => {
     const s = new Set()
-    const targetStatus = fil.value.sold ?[ 'ForSale', 'Sold', 'Reserved' ] : [ 'ForSale', 'Reserved' ]
+    const targetStatus = fil.value.sold ?[ 'ForSale', 'Sold', 'Reserved' ] :[ 'ForSale', 'Reserved' ]
     store.inv.filter(i => i.Species === sp.value && targetStatus.includes(i.Status)).forEach(i => {
         if (Array.isArray(i.Genes)) i.Genes.forEach(g => s.add(g === '白黃' ? 'WY' : g))
     })
@@ -226,15 +226,13 @@ const toggleWishlist = (id) => {
                     </button>
                 </div>
                 
-                <!-- 🌟 App-like 水平捲動 Chips (取代肥大的 Tabs 與獨立 Controls Row) -->
+                <!-- 🌟 App-like 水平捲動 Chips -->
                 <div class="scroll-chips-row">
-                    <!-- 物種頁籤轉化為 Chip -->
                     <div class="chip-tab main-tab" :class="{active: sp === '豹紋守宮'}" @click="sp = '豹紋守宮'; store.displayLimit = 20">豹紋守宮</div>
                     <div class="chip-tab main-tab" :class="{active: sp === '肥尾守宮'}" @click="sp = '肥尾守宮'; store.displayLimit = 20">肥尾守宮</div>
 
                     <div class="chip-divider"></div>
 
-                    <!-- 排序與功能 Toggle -->
                     <select v-model="sortOrder" class="chip-select">
                         <option value="default">預設排序</option>
                         <option value="price_asc">價格由低到高</option>
@@ -246,7 +244,6 @@ const toggleWishlist = (id) => {
 
                     <div class="chip-divider"></div>
 
-                    <!-- 快速標籤 -->
                     <span v-for="t in tags[sp]" :key="t" class="chip-tag" :class="{sel: kw === t}" @click="toggleTag(t)">{{ t }}</span>
                 </div>
 
@@ -255,7 +252,7 @@ const toggleWishlist = (id) => {
                     <div v-if="shopList.length === 0" key="empty-msg" class="shop-empty-state">
                         <div class="empty-icon">🦎💤</div>
                         <h3 style="color:var(--txt); margin-bottom:10px;">找不到符合的守宮</h3>
-                        <p style="font-size:0.9rem;">試著調整篩選條件，或直接私訊我們許願吧。</p>
+                        <p style="font-size:0.9rem;">牠們可能躲起來睡覺了，或是被買光囉！<br>試著調整篩選條件，或直接私訊我們許願吧。</p>
                         <button class="btn-hero" @click="resetFilters" style="margin-top:20px;">🔄 清除篩選條件</button>
                     </div>
                     
@@ -299,7 +296,7 @@ const toggleWishlist = (id) => {
 
 <style scoped>
 /* Shop Layout */
-.shop-page-wrapper { display: flex; flex-direction: column; width: 100%; }
+.shop-page-wrapper { display: flex; flex-direction: column; width: 100%; max-width: 1300px; margin: 0 auto; }
 .shop-layout { display: flex; gap: 20px; align-items: flex-start; }
 
 /* 🌟 Responsive Utilities */
@@ -309,31 +306,31 @@ const toggleWishlist = (id) => {
 /* 🌟 App-like Search Row */
 .search-filter-row { display: flex; gap: 10px; align-items: center; margin-bottom: 12px; width: 100%; }
 .inp-wrap { position: relative; flex: 1; margin-bottom: 0; }
-.inp { width: 100%; padding: 12px 12px 12px 40px; background: #111; border: 1px solid var(--bd); color: #fff; border-radius: 8px; box-sizing: border-box; font-size: 1rem; font-weight: 500; transition: 0.3s; }
-.inp:focus { border-color: var(--pri); outline: none; box-shadow: 0 0 15px rgba(255,69,0,0.15); }
-.search-icon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #666; font-size: 1.1rem; pointer-events: none; }
+.inp { width: 100%; padding: 10px 12px 10px 35px; background: #111; border: 1px solid var(--bd); color: #fff; border-radius: 8px; box-sizing: border-box; font-size: 0.95rem; font-weight: 500; transition: 0.3s; }
+.inp:focus { border-color: var(--pri); outline: none; box-shadow: 0 0 10px rgba(255,69,0,0.15); }
+.search-icon { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: #666; font-size: 1rem; pointer-events: none; }
 
-.btn-filter-icon { background: #111; border: 1px solid var(--bd); color: #ccc; border-radius: 8px; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; transition: 0.2s; }
-.btn-filter-icon.active { background: var(--pri); color: #fff; border-color: var(--pri); box-shadow: 0 0 10px var(--pri-glow); }
+.btn-filter-icon { background: #111; border: 1px solid var(--bd); color: #ccc; border-radius: 8px; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; transition: 0.2s; }
+.btn-filter-icon.active { background: var(--pri); color: #fff; border-color: var(--pri); box-shadow: 0 0 8px var(--pri-glow); }
 
-/* 🌟 Horizontal Scrolling Chips (The Ultimate Space Saver) */
-.scroll-chips-row { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 10px; margin-bottom: 15px; scrollbar-width: none; align-items: center; white-space: nowrap; -webkit-overflow-scrolling: touch; width: 100%; }
+/* 🌟 Horizontal Scrolling Chips */
+.scroll-chips-row { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 8px; margin-bottom: 10px; scrollbar-width: none; align-items: center; white-space: nowrap; -webkit-overflow-scrolling: touch; width: 100%; }
 .scroll-chips-row::-webkit-scrollbar { display: none; }
 
-.chip-tab { padding: 6px 12px; border-radius: 20px; font-size: 0.9rem; font-weight: bold; background: rgba(255,255,255,0.05); border: 1px solid transparent; cursor: pointer; color: #aaa; transition: 0.2s; flex-shrink: 0; }
+.chip-tab { padding: 6px 12px; border-radius: 20px; font-size: 0.85rem; font-weight: bold; background: rgba(255,255,255,0.05); border: 1px solid transparent; cursor: pointer; color: #aaa; transition: 0.2s; flex-shrink: 0; }
 .chip-tab.main-tab { border: 1px solid var(--bd); }
-.chip-tab.active { background: var(--pri); color: #fff; border-color: var(--pri); box-shadow: 0 0 10px var(--pri-glow); }
+.chip-tab.active { background: var(--pri); color: #fff; border-color: var(--pri); box-shadow: 0 0 8px var(--pri-glow); }
 
-.chip-divider { width: 1px; height: 18px; background: var(--bd); flex-shrink: 0; margin: 0 2px; }
+.chip-divider { width: 1px; height: 16px; background: var(--bd); flex-shrink: 0; margin: 0 2px; opacity: 0.5; }
 
-.chip-select { background: #111; color: #fff; border: 1px solid var(--bd); padding: 6px 12px; border-radius: 20px; font-size: 0.85rem; font-weight: bold; outline: none; flex-shrink: 0; cursor: pointer; appearance: none; text-align: center; }
+.chip-select { background: #111; color: #fff; border: 1px solid var(--bd); padding: 6px 10px; border-radius: 20px; font-size: 0.85rem; font-weight: bold; outline: none; flex-shrink: 0; cursor: pointer; appearance: none; text-align: center; }
 .chip-select:focus { border-color: var(--pri); }
 
-.chip-toggle { padding: 6px 12px; border-radius: 20px; border: 1px solid var(--bd); cursor: pointer; font-size: 0.85rem; font-weight: bold; color: #888; background: #111; transition: 0.2s; flex-shrink: 0; }
+.chip-toggle { padding: 6px 10px; border-radius: 20px; border: 1px solid var(--bd); cursor: pointer; font-size: 0.8rem; font-weight: bold; color: #888; background: #111; transition: 0.2s; flex-shrink: 0; }
 .chip-toggle.active { background: #e91e63; color: #fff; border-color: #e91e63; }
 .chip-toggle.active:nth-child(5) { background: #2196F3; border-color: #2196F3; }
 
-.chip-tag { font-size: 0.85rem; padding: 6px 12px; background: rgba(255,255,255,0.05); border: 1px dashed var(--bd); border-radius: 20px; color: #aaa; cursor: pointer; transition: 0.3s; flex-shrink: 0; }
+.chip-tag { font-size: 0.8rem; padding: 6px 10px; background: rgba(255,255,255,0.05); border: 1px dashed var(--bd); border-radius: 20px; color: #aaa; cursor: pointer; transition: 0.3s; flex-shrink: 0; }
 .chip-tag.sel { background: var(--pri); color: #fff; border: solid 1px var(--pri); font-weight: bold; }
 
 /* Desktop Filter Panel */
@@ -358,21 +355,22 @@ const toggleWishlist = (id) => {
 .slim-price { font-size: 1.1rem; font-weight: 900; color: var(--pri); }
 
 .trust-badge { position: absolute; bottom: 5px; left: 5px; background: rgba(0,0,0,0.8); border: 1px solid #FFD700; color: #FFD700; font-size: 0.6rem; padding: 2px 5px; border-radius: 4px; display: flex; align-items: center; gap: 3px; z-index: 5; pointer-events: none; }
-.fav-btn { position: absolute; top: 5px; right: 5px; font-size: 1.4rem; color: rgba(255,255,255,0.7); cursor: pointer; z-index: 5; transition: 0.2s; text-shadow: 0 0 5px rgba(0,0,0,1); background: rgba(0,0,0,0.4); border-radius: 50%; width: 36px; height: 36px; display: flex; justify-content: center; align-items: center; padding-top: 2px; }
+.fav-btn { position: absolute; top: 5px; right: 5px; font-size: 1.4rem; color: rgba(255,255,255,0.7); cursor: pointer; z-index: 5; transition: 0.2s; text-shadow: 0 0 5px rgba(0,0,0,1); background: rgba(0,0,0,0.4); border-radius: 50%; width: 32px; height: 32px; display: flex; justify-content: center; align-items: center; padding-top: 2px; }
 .fav-btn.active { color: #e91e63; transform: scale(1.1); text-shadow: 0 0 10px #e91e63; background: rgba(0,0,0,0.6); }
 .sold-stamp { position: absolute; top: 8px; left: 8px; transform: none; border: none; color: #fff; font-size: 0.7rem; font-weight: bold; padding: 3px 6px; border-radius: 4px; background: #222; opacity: 1; pointer-events: none; z-index: 10; font-family: sans-serif; letter-spacing: 1px; }
 
 .status-badge { padding: 4px 8px; font-size: 0.8rem; font-weight: bold; border-radius: 4px; white-space: nowrap; }
 .s-sold { background: #333; color: #fff; border: 1px solid #666; } .s-res { background: #FFC107; color: #000; } .s-nfs { background: #9C27B0; color: #fff; box-shadow: 0 0 10px rgba(156, 39, 176, 0.4); }
 
-.shop-empty-state { grid-column: 1/-1; text-align: center; padding: 50px 20px; color: #666; }
-.empty-icon { font-size: 4rem; margin-bottom: 15px; opacity: 0.6; }
+.shop-empty-state { grid-column: 1/-1; text-align: center; padding: 40px 20px; color: #666; }
+.empty-icon { font-size: 4rem; margin-bottom: 10px; opacity: 0.6; }
 
-/* 🌟 Mobile View 核心覆寫 */
+/* 🌟 Mobile View 核心覆寫 (強制雙欄 2-columns) */
 @media (max-width: 768px) {
     .dt-only { display: none !important; }
     .m-only { display: flex !important; }
     
+    .shop-page-wrapper { padding: 5px 10px 15px 10px; } /* 極致壓縮頂部空白 */
     .shop-layout { flex-direction: column; align-items: stretch; gap: 0; }
     
     /* Mobile App-like Modal for Filters */
@@ -387,13 +385,29 @@ const toggleWishlist = (id) => {
     .btn-clear { flex: 1; padding: 12px; border-radius: 8px; background: transparent; border: 1px solid #555; color: #ccc; font-weight: bold; font-size: 1rem; }
     .btn-apply { flex: 2; padding: 12px; border-radius: 8px; background: var(--pri); border: none; color: #fff; font-weight: bold; font-size: 1rem; box-shadow: 0 4px 10px var(--pri-glow); }
 
-    .grid.photo-grid { grid-template-columns: repeat(2, 1fr) !important; gap: 8px; }
-    .photo-grid .slim-body { padding: 6px; }
-    .photo-grid .slim-title { font-size: 0.8rem; margin-bottom: 2px; }
-    .photo-grid .slim-price { font-size: 0.95rem; }
-    .photo-grid .trust-badge { font-size: 0.55rem; padding: 1px 4px; bottom: 3px; left: 3px; }
-    .photo-grid .fav-btn { font-size: 1.1rem; width: 28px; height: 28px; top: 3px; right: 3px; }
-    .photo-grid .sold-stamp { font-size: 0.6rem; padding: 2px 4px; top: 4px; left: 4px; }
+    /* 🌟 強制完美的雙欄配置 */
+    .grid.photo-grid { 
+        display: grid !important;
+        grid-template-columns: repeat(2, 1fr) !important; 
+        gap: 8px !important; 
+    }
+    
+    .card-img.slim-img {
+        height: auto !important;
+        aspect-ratio: 1 / 1 !important; /* 確保圖片絕對正方形 */
+    }
+    
+    .slim-body { padding: 6px !important; }
+    .slim-title { font-size: 0.85rem !important; margin-bottom: 2px !important; }
+    .slim-price { font-size: 1rem !important; }
+    
+    /* 縮小標籤避免在雙欄模式下擠壓版面 */
+    .trust-badge { font-size: 0.5rem; padding: 2px 4px; bottom: 2px; left: 2px; }
+    .fav-btn { font-size: 1rem; width: 26px; height: 26px; top: 3px; right: 3px; }
+    .sold-stamp { font-size: 0.55rem; padding: 2px 4px; top: 4px; left: 4px; }
+    .status-badge { padding: 2px 6px !important; font-size: 0.75rem !important; }
+    
+    .shop-empty-state { grid-column: 1 / -1 !important; }
 }
 
 /* Day Mode Configuration */

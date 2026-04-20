@@ -63,24 +63,40 @@ const getCountdownText = (item) => {
 const goToDetail = (id) => {
     router.push(`/auction/${id}`)
 }
+
+// 🌟 App-like 返回邏輯
+const goBack = () => {
+    if (window.history.state && window.history.state.back) {
+        router.back()
+    } else {
+        router.push('/')
+    }
+}
 </script>
 
 <template>
     <div class="auction-page">
+        <!-- 🌟 手機版顯示的 App-like 返回按鈕 -->
+        <div class="nav-action-row m-only">
+            <button class="app-back-btn" @click="goBack">
+                <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+                返回
+            </button>
+        </div>
+
         <div v-if="loading && displayAuctions.length === 0" class="loading-state" style="text-align:center; padding:100px 0; color:#888;">
             <div class="loader" style="margin:0 auto 20px auto;"></div>
             <p>載入競標資料中...</p>
         </div>
 
         <div v-else class="auction-container">
-            <!-- 🌟 加上 dt-only 讓手機版隱藏標題與描述 -->
+            <!-- 桌機版標題 -->
             <h1 class="page-title dt-only">線上競標 <span>Live Auctions</span></h1>
             <p class="page-desc dt-only">限時競標，結標前 3 分鐘出價自動延長。</p>
             
             <div class="auction-grid">
                 <div v-for="item in displayAuctions" :key="item.id" class="auction-card" @click="goToDetail(item.id)">
                     <div class="card-img-box">
-                        <!-- 使用 NuxtImg -->
                         <NuxtImg 
                             :src="item.images && item.images.length ? getCleanUrl(item.images[0]) : 'https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/placeholder.jpg'" 
                             :alt="item.morph" 
@@ -90,21 +106,24 @@ const goToDetail = (id) => {
                             fit="cover"
                             format="webp"
                         />
+                        <!-- 🌟 修正：確保文字不換行且寬度自適應 -->
                         <div class="status-badge" :class="getAuctionStatus(item).class">
                             {{ getAuctionStatus(item).text }}
                         </div>
                     </div>
                     <div class="card-info">
-                        <h3>{{ item.morph }} <span v-if="item.gender && item.gender !== '未定'">({{ item.gender }})</span></h3>
-                        <p class="morph" v-if="item.note">{{ item.note.substring(0, 30) }}{{ item.note.length > 30 ? '...' : '' }}</p>
+                        <h3 class="morph-name">{{ item.morph }} <span class="gender-tag" v-if="item.gender && item.gender !== '未定'">({{ item.gender }})</span></h3>
+                        <!-- 🌟 縮短描述字數，節省高度 -->
+                        <p class="morph-desc" v-if="item.note">{{ item.note.substring(0, 20) }}{{ item.note.length > 20 ? '...' : '' }}</p>
                         <div class="price-info">
                             <div class="price-col">
-                                <span>起標價</span>
-                                <strong>${{ item.start_price }}</strong>
+                                <span class="price-label">起標價</span>
+                                <strong class="price-val">${{ item.start_price }}</strong>
                             </div>
+                            <div class="price-divider"></div>
                             <div class="price-col">
-                                <span>直購價</span>
-                                <strong>${{ item.buy_now_price }}</strong>
+                                <span class="price-label">直購價</span>
+                                <strong class="price-val">${{ item.buy_now_price }}</strong>
                             </div>
                         </div>
                         <div class="countdown" :class="{ 'ending-soon': isEndingSoon(item) }">
@@ -114,7 +133,7 @@ const goToDetail = (id) => {
                 </div>
             </div>
             
-            <div v-if="displayAuctions.length === 0" style="text-align:center; padding: 3rem; color: #888;">
+            <div v-if="displayAuctions.length === 0" class="empty-state">
                 目前尚無開放中的競標商品。
             </div>
         </div>
@@ -126,6 +145,38 @@ const goToDetail = (id) => {
 
 /* 🌟 Responsive Utilities */
 .dt-only { display: block; }
+.m-only { display: none !important; }
+
+/* 🌟 App-like 返回按鈕 */
+.nav-action-row {
+    width: 100%;
+    display: flex;
+    justify-content: flex-start;
+    margin-bottom: 10px;
+}
+
+.app-back-btn {
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    color: var(--txt);
+    font-size: 0.95rem;
+    font-weight: bold;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    border-radius: 30px;
+    transition: 0.2s;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+}
+
+.app-back-btn:active {
+    transform: scale(0.95);
+    background: rgba(255, 255, 255, 0.1);
+}
 
 .page-title { font-size: 2rem; margin-bottom: 0.5rem; display: flex; align-items: baseline; gap: 1rem; }
 .page-title span { font-size: 1rem; color: #888; }
@@ -138,52 +189,107 @@ const goToDetail = (id) => {
 .card-img-box { width: 100%; aspect-ratio: 4 / 3; background-color: #000; position: relative; overflow: hidden; border-bottom: 1px solid var(--bd); }
 .card-img-box img { width: 100%; height: 100%; object-fit: cover; display: block; }
 
-.status-badge { position: absolute !important; top: 10px !important; left: 10px !important; padding: 4px 12px !important; border-radius: 20px !important; font-size: 0.85rem !important; font-weight: bold !important; color: #fff !important; z-index: 10 !important; }
-.badge-active { background: var(--pri) !important; box-shadow: 0 0 10px rgba(255, 69, 0, 0.5); }
-.badge-ended { background: #666 !important; }
+/* 🌟 狀態標籤優化 */
+.status-badge { 
+    position: absolute; 
+    top: 10px; 
+    left: 10px; 
+    padding: 4px 12px; 
+    border-radius: 20px; 
+    font-size: 0.85rem; 
+    font-weight: bold; 
+    color: #fff; 
+    z-index: 10;
+    /* 確保寬度自適應且不換行 */
+    width: max-content;
+    white-space: nowrap;
+    line-height: 1.2;
+}
+.badge-active { background: var(--pri); box-shadow: 0 0 10px rgba(255, 69, 0, 0.5); }
+.badge-ended { background: #666; }
 
 .card-info { padding: 1rem; display: flex; flex-direction: column; flex-grow: 1; }
-.card-info h3 { margin: 0 0 0.5rem 0; font-size: 1.1rem; color: var(--txt); line-height: 1.3; }
-.morph { color: #aaa; font-size: 0.9rem; margin-bottom: 1rem; line-height: 1.4; }
-.price-info { display: flex; justify-content: space-between; margin-bottom: 1rem; background: rgba(255,255,255,0.03); padding: 0.5rem; border-radius: 8px; border: 1px solid var(--bd); }
-.price-col { display: flex; flex-direction: column; }
-.price-col span { font-size: 0.8rem; color: #888; }
-.price-col strong { font-size: 1.1rem; color: var(--pri); }
-.countdown { margin-top: auto; font-weight: bold; color: #ddd; text-align: center; padding: 0.5rem; border-radius: 6px; background: rgba(255,255,255,0.05); border: 1px solid var(--bd); }
+.morph-name { margin: 0 0 0.5rem 0; font-size: 1.1rem; color: var(--txt); line-height: 1.3; }
+.gender-tag { font-size: 0.9rem; color: #888; }
+.morph-desc { color: #aaa; font-size: 0.9rem; margin-bottom: 1rem; line-height: 1.4; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* 價格區域優化 */
+.price-info { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; background: rgba(255,255,255,0.03); padding: 8px 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); }
+.price-col { display: flex; flex-direction: column; align-items: flex-start; flex: 1; }
+.price-col:last-child { align-items: flex-end; }
+.price-label { font-size: 0.75rem; color: #888; margin-bottom: 2px; }
+.price-val { font-size: 1.1rem; color: var(--pri); }
+.price-divider { width: 1px; height: 25px; background: rgba(255,255,255,0.1); margin: 0 10px; }
+
+.countdown { margin-top: auto; font-weight: bold; color: #ddd; text-align: center; padding: 8px; border-radius: 6px; background: rgba(255,255,255,0.05); border: 1px solid var(--bd); font-size: 0.95rem; }
 .countdown.ending-soon { color: #fff; background: #e74c3c; border-color: #c0392b; animation: pulse 1.5s infinite; }
+.empty-state { text-align:center; padding: 3rem; color: #888; }
 
 @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.8; } 100% { opacity: 1; } }
 
 /* Day Mode */
+:global(body.day-mode) .app-back-btn { background: #fff; border-color: #ddd; color: #333; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+:global(body.day-mode) .app-back-btn:active { background: #f0f0f0; }
 :global(body.day-mode) .auction-page { color: #333; }
 :global(body.day-mode) .auction-card { background: #fff; border-color: #ddd; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
 :global(body.day-mode) .auction-card:hover { box-shadow: 0 8px 25px rgba(0,0,0,0.1); border-color: var(--pri); }
 :global(body.day-mode) .card-img-box { background-color: #f4f4f4; border-bottom-color: #eee; }
-:global(body.day-mode) .card-info h3 { color: #111; }
-:global(body.day-mode) .morph { color: #666; }
+:global(body.day-mode) .morph-name { color: #111; }
+:global(body.day-mode) .morph-desc { color: #666; }
 :global(body.day-mode) .price-info { background: #f9f9f9; border-color: #eee; }
+:global(body.day-mode) .price-divider { background: #ddd; }
 :global(body.day-mode) .countdown { background: #eee; color: #444; border-color: #ddd; }
 :global(body.day-mode) .countdown.ending-soon { background: #e74c3c; color: #fff; border-color: #c0392b; }
 
 /* 🌟 Mobile Optimizations */
 @media (max-width: 768px) {
     .dt-only { display: none !important; }
+    .m-only { display: flex !important; }
     
     .auction-page {
-        padding: 0 15px 15px 15px; /* 移除上方多餘 padding */
+        padding: 5px 15px 15px 15px; /* 大幅縮減頂部空白 */
     }
     
     .auction-grid {
-        grid-template-columns: 1fr; /* 手機版維持單欄卡片，較易閱讀 */
-        gap: 15px;
+        grid-template-columns: 1fr; /* 手機版維持單欄，卡片較寬易閱讀 */
+        gap: 12px; /* 縮小卡片間距 */
     }
     
-    .card-info h3 {
-        font-size: 1.15rem;
+    /* 縮小卡片內部元素的 Padding */
+    .card-info {
+        padding: 10px 12px;
     }
     
-    .price-col strong {
-        font-size: 1.2rem;
+    .morph-name {
+        font-size: 1.05rem;
+        margin-bottom: 4px;
+    }
+    
+    .gender-tag {
+        font-size: 0.85rem;
+    }
+    
+    .morph-desc {
+        font-size: 0.85rem;
+        margin-bottom: 8px;
+    }
+    
+    .price-info {
+        padding: 6px 10px;
+        margin-bottom: 10px;
+    }
+    
+    .price-label {
+        font-size: 0.7rem;
+    }
+    
+    .price-val {
+        font-size: 1.05rem;
+    }
+    
+    .countdown {
+        padding: 6px;
+        font-size: 0.9rem;
     }
 }
 </style>
