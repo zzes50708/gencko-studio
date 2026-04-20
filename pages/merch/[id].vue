@@ -3,6 +3,7 @@ import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useHead, useAsyncData, useSupabaseClient } from '#imports'
 import { useMainStore } from '~/stores/useMainStore'
+import { getCleanUrl } from '~/utils/image.js'
 
 const route = useRoute()
 const router = useRouter()
@@ -44,16 +45,7 @@ const siteData = computed(() => {
     if (currentMerch.value) {
         const m = currentMerch.value
         
-        const getMetaImg = (url) => {
-            if (!url) return 'https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/%E6%AD%A3%E9%9D%A2.png'
-            const driveRegex = /file\/d\/([a-zA-Z0-9_-]+)\//
-            const match = url.match(driveRegex)
-            let target = url
-            if (match && match[1]) target = 'https://drive.google.com/uc?id=' + match[1]
-            return `https://wsrv.nl/?url=${encodeURIComponent(target)}&w=1200&output=webp&q=80`
-        }
-        
-        const imgUrl = getMetaImg(m.ImageURL)
+        const imgUrl = m.ImageURL ? getCleanUrl(m.ImageURL) : 'https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/%E6%AD%A3%E9%9D%A2.png'
         const itemUrl = `https://www.genckobreeding.com/merch/${m.ItemID}`
         const title = `${m.Name} - NT$${m.Price}`
         const desc = m.Description ? m.Description.slice(0, 150) + '...' : `Gencko 特選周邊：${m.Name}，售價 NT$${m.Price}。`
@@ -95,7 +87,7 @@ const siteData = computed(() => {
         desc: '該周邊商品可能已下架或不存在。',
         img: 'https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/%E6%AD%A3%E9%9D%A2.png',
         url: `https://www.genckobreeding.com/merch/${merchId}`,
-        script:[]
+        script:[ ]
     }
 })
 
@@ -115,15 +107,6 @@ useHead({
     ],
     script: computed(() => siteData.value.script)
 })
-
-const convertLink = (url) => {
-    if (!url) return ''
-    const driveRegex = /file\/d\/([a-zA-Z0-9_-]+)\//
-    const match = url.match(driveRegex)
-    let target = url
-    if (match && match[1]) target = 'https://drive.google.com/uc?id=' + match[1]
-    return `https://wsrv.nl/?url=${encodeURIComponent(target)}&w=1000&output=webp&q=80`
-}
 
 const copyCurrentLink = async () => {
     try {
@@ -159,7 +142,20 @@ const goBack = () => {
             <button class="btn-back" @click="goBack">← 返回列表</button>
             <div class="prod-layout">
                 <div class="prod-img-box">
-                    <img :src="convertLink(currentMerch.ImageURL)" :alt="currentMerch.Name" class="prod-main-img" @click="store.openLightbox(currentMerch)" style="cursor: pointer;" title="點擊放大圖片">
+                    <!-- 使用 NuxtImg -->
+                    <NuxtImg 
+                        v-if="currentMerch.ImageURL"
+                        :src="getCleanUrl(currentMerch.ImageURL)" 
+                        :alt="currentMerch.Name" 
+                        class="prod-main-img" 
+                        @click="store.openLightbox(currentMerch)" 
+                        style="cursor: pointer;" 
+                        title="點擊放大圖片"
+                        width="600"
+                        height="500"
+                        fit="contain"
+                        format="webp"
+                    />
                     <div class="prod-hint">點擊放大圖片</div>
                 </div>
                 <div class="prod-info-box">
@@ -216,6 +212,7 @@ const goBack = () => {
 :global(body.day-mode) .btn-back:hover { border-color: var(--pri); color: var(--pri); }
 :global(body.day-mode) .prod-info-box { background: #fff; border-color: #ddd; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
 :global(body.day-mode) .prod-price-area { border-top-color: #eee; }
+:global(body.day-mode) .prod-img-box { background-color: #f4f4f4; border-color: #eee; }
 
 @media (max-width: 768px) {
     .prod-layout { flex-direction: column; gap: 15px; }

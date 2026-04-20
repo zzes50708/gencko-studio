@@ -3,41 +3,57 @@ export default defineNuxtConfig({
   compatibilityDate: '2024-04-16',
   devtools: { enabled: true },
 
-  // 註冊所需模組 (加入 sitemap 與 robots)
+  // 註冊所需模組
   modules:[
     '@nuxtjs/supabase',
     '@pinia/nuxt',
     '@vueuse/nuxt',
     '@nuxtjs/sitemap',
-    '@nuxtjs/robots'
+    '@nuxtjs/robots',
+    '@nuxt/image' // 🌟 新增圖片最佳化模組
   ],
 
-  // 設定正式網域 (Sitemap 需要知道你的網域才能產生絕對路徑)
+  // 🌟 Nuxt Image 設定
+  image: {
+    // 允許從哪些外部網域載入圖片進行最佳化
+    domains:[
+      'cdn.jsdelivr.net',
+      'drive.google.com'
+    ],
+    // 定義各種裝置的斷點尺寸，讓系統自動產生不同大小的圖片
+    screens: {
+      xs: 320,
+      sm: 640,
+      md: 768,
+      lg: 1024,
+      xl: 1280,
+      xxl: 1536,
+    },
+    // 預設將所有圖片轉換為最輕量的 webp 格式
+    format: ['webp']
+  },
+
   site: {
     url: 'https://www.genckobreeding.com',
     name: 'Gencko Studio'
   },
 
-  // Sitemap 動態資料來源設定
   sitemap: {
-    sources:[
-      '/api/_sitemap-urls' // 我們等一下會建立這支 API 來動態抓取 Supabase 資料
+    sources: [
+      '/api/_sitemap-urls'
     ]
   },
 
-  // Supabase 設定
   supabase: {
     url: 'https://sfndneptcwhblvrxykcy.supabase.co',
     key: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNmbmRuZXB0Y3doYmx2cnh5a2N5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk3MjYxMTcsImV4cCI6MjA4NTMwMjExN30.dN4MHhwjEM26coS9eZAW_eIQJplF8j9YHT9WyFypK3I',
     redirect: false
   },
 
-  // 全域 CSS 引入
   css:[
     '~/assets/css/style.css'
   ],
 
-  // 全域 Head / SEO 與資源載入
   app: {
     head: {
       titleTemplate: '%s | Gencko Studio',

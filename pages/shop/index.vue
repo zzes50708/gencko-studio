@@ -4,6 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { useHead } from '#imports'
 import { useMainStore } from '~/stores/useMainStore'
 import { GENES_DB } from '~/utils/genes-db.js'
+import { getCleanUrl } from '~/utils/image.js'
 
 const store = useMainStore()
 const route = useRoute()
@@ -35,8 +36,8 @@ const showOnlyFav = ref(false)
 const showOnlyHistory = ref(false)
 
 const tags = {
-    '豹紋守宮':['黑夜', '蜜橘', '紅鑽石', '土匪'],
-    '肥尾守宮':['幽靈', '橘白', '無紋', '立可白']
+    '豹紋守宮':[ '黑夜', '蜜橘', '紅鑽石', '土匪' ],
+    '肥尾守宮':[ '幽靈', '橘白', '無紋', '立可白' ]
 }
 
 // 處理首頁傳過來的新手推薦參數
@@ -56,7 +57,7 @@ const maxPrice = computed(() => {
 
 const availableGenes = computed(() => {
     const s = new Set()
-    const targetStatus = fil.value.sold ? ['ForSale', 'Sold', 'Reserved'] :['ForSale', 'Reserved']
+    const targetStatus = fil.value.sold ?[ 'ForSale', 'Sold', 'Reserved' ] : [ 'ForSale', 'Reserved' ]
     store.inv.filter(i => i.Species === sp.value && targetStatus.includes(i.Status)).forEach(i => {
         if (Array.isArray(i.Genes)) i.Genes.forEach(g => s.add(g === '白黃' ? 'WY' : g))
     })
@@ -66,7 +67,7 @@ const availableGenes = computed(() => {
 const isGeneAvail = (g) => availableGenes.value.includes(g)
 
 const getSortedGenes = (list) => {
-    return [...list].sort((a, b) => (isGeneAvail(b) ? 1 : 0) - (isGeneAvail(a) ? 1 : 0))
+    return [ ...list ].sort((a, b) => (isGeneAvail(b) ? 1 : 0) - (isGeneAvail(a) ? 1 : 0))
 }
 
 const shopList = computed(() => {
@@ -148,15 +149,6 @@ const toggleWishlist = (id) => {
         store.wishlist.push(id)
     }
     if (import.meta.client) localStorage.setItem('gencko_wishlist', JSON.stringify(store.wishlist))
-}
-
-const convertLink = (url) => {
-    if (!url) return ''
-    const driveRegex = /file\/d\/([a-zA-Z0-9_-]+)\//
-    const match = url.match(driveRegex)
-    let target = url
-    if (match && match[1]) target = 'https://drive.google.com/uc?id=' + match[1]
-    return `https://wsrv.nl/?url=${encodeURIComponent(target)}&w=1000&output=webp&q=80`
 }
 
 const fmtSex = (i) => {
@@ -271,7 +263,18 @@ const getSexCls = (i) => {
                             <span class="fav-btn" :class="{active: store.wishlist.includes(i.ID)}" @click.stop.prevent="toggleWishlist(i.ID)">❤</span>
                         </div>
                         <div style="position:relative;">
-                            <img v-if="i.ImageURL" :src="convertLink(i.ImageURL)" :alt="i.Morph" class="card-img slim-img" loading="lazy">
+                            <!-- 使用 NuxtImg 進行圖片最佳化 -->
+                            <NuxtImg 
+                                v-if="i.ImageURL" 
+                                :src="getCleanUrl(i.ImageURL)" 
+                                :alt="i.Morph" 
+                                class="card-img slim-img" 
+                                loading="lazy"
+                                width="220"
+                                height="220"
+                                fit="cover"
+                                format="webp"
+                            />
                             <div v-else class="card-img slim-img" style="display:flex;align-items:center;justify-content:center;color:#333;font-size:2rem;background:#000;">🦎</div>
                             <div v-if="i.Status === 'ForSale'" class="trust-badge">🛡️ 100% HEALTH</div>
                         </div>

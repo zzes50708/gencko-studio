@@ -3,6 +3,7 @@ import { computed, ref, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useHead } from '#imports'
 import { useMainStore } from '~/stores/useMainStore'
+import { getCleanUrl } from '~/utils/image.js'
 
 const store = useMainStore()
 const router = useRouter()
@@ -78,7 +79,16 @@ const goToDetail = (id) => {
             <div class="auction-grid">
                 <div v-for="item in displayAuctions" :key="item.id" class="auction-card" @click="goToDetail(item.id)">
                     <div class="card-img-box">
-                        <img :src="item.images && item.images.length ? item.images[0] : 'https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/placeholder.jpg'" :alt="item.morph" loading="lazy" />
+                        <!-- 使用 NuxtImg -->
+                        <NuxtImg 
+                            :src="item.images && item.images.length ? getCleanUrl(item.images[0]) : 'https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/placeholder.jpg'" 
+                            :alt="item.morph" 
+                            loading="lazy"
+                            width="280"
+                            height="210"
+                            fit="cover"
+                            format="webp"
+                        />
                         <div class="status-badge" :class="getAuctionStatus(item).class">
                             {{ getAuctionStatus(item).text }}
                         </div>

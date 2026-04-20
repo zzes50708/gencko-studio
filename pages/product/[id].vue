@@ -3,6 +3,7 @@ import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useHead, useAsyncData, useSupabaseClient } from '#imports'
 import { useMainStore } from '~/stores/useMainStore'
+import { getCleanUrl } from '~/utils/image.js'
 
 const route = useRoute()
 const router = useRouter()
@@ -10,15 +11,13 @@ const store = useMainStore()
 const supabase = useSupabaseClient()
 const productId = route.params.id
 
-//[SEO] 透過 SSR 抓取單筆商品資料
+// [SEO] 透過 SSR 抓取單筆商品資料
 const { data: currentProduct, pending } = await useAsyncData(`product-${productId}`, async () => {
-    // 若 Store 已經有資料，直接使用
     if (store.inv && store.inv.length > 0) {
         const found = store.inv.find(i => i.ID === productId)
         if (found) return found
     }
 
-    // 若無資料 (SSR 或直接進內頁)，向 Supabase 查詢
     const { data, error } = await supabase
         .from('inventory')
         .select('*')
@@ -42,7 +41,6 @@ const { data: currentProduct, pending } = await useAsyncData(`product-${productI
     }
 })
 
-// 處理商品展示模組的資料對應
 const productModules = computed(() => {
     const p = currentProduct.value
     if (!p) return null
@@ -79,15 +77,14 @@ const siteData = computed(() => {
         const p = currentProduct.value
         const title = `${p.Morph} ${p.GenderType === '公' ? '♂' : p.GenderType === '母' ? '♀' : ''}`
         const desc = `ID:${p.ID}。${p.Morph} (${p.GenderType})，售價 NT$${p.ListingPrice}。Gencko Studio 專業繁育，100% 健康保證。`
-        const img = p.ImageURL ? `https://wsrv.nl/?url=${encodeURIComponent(p.ImageURL)}&w=1200&output=webp` : ''
+        const img = getCleanUrl(p.ImageURL)
         const url = `https://www.genckobreeding.com/product/${p.ID}`
         
-        // Google Product Schema
         const jsonLd = {
             "@context": "https://schema.org/",
             "@type": "Product",
             "name": p.Morph,
-            "image": img ? [img] :[ ],
+            "image": img ? [img] : [ ],
             "description": desc,
             "sku": p.ID,
             "brand": {
@@ -104,13 +101,7 @@ const siteData = computed(() => {
             }
         }
 
-        return {
-            title,
-            desc,
-            img,
-            url,
-            script:[{ type: 'application/ld+json', children: JSON.stringify(jsonLd) }]
-        }
+        return { title, desc, img, url, script:[{ type: 'application/ld+json', children: JSON.stringify(jsonLd) }] }
     }
     
     return {
@@ -137,16 +128,6 @@ useHead({
     ],
     script: computed(() => siteData.value.script)
 })
-
-// --- 輔助方法 ---
-const convertLink = (url) => {
-    if (!url) return ''
-    const driveRegex = /file\/d\/([a-zA-Z0-9_-]+)\//
-    const match = url.match(driveRegex)
-    let target = url
-    if (match && match[1]) target = 'https://drive.google.com/uc?id=' + match[1]
-    return `https://wsrv.nl/?url=${encodeURIComponent(target)}&w=1000&output=webp&q=80`
-}
 
 const fmtSex = (i) => {
     if (!i) return ''
@@ -201,7 +182,20 @@ const goBack = () => {
             <div class="prod-layout">
                 <div class="prod-img-box">
                     <div v-if="productModules.transaction.status === 'Sold'" class="sold-stamp" style="font-size:3rem;border-width:6px;">SOLD OUT</div>
-                    <img v-for="(img, idx) in productModules.visuals.list" :key="idx" :src="convertLink(img)" class="prod-main-img" @click="router.push(`/identity/${productModules.identity.id}`)" style="cursor: pointer;" title="查看專屬電子身分證">
+                    <!-- 使用 NuxtImg -->
+                    <NuxtImg 
+                        v-for="(img, idx) in productModules.visuals.list" 
+                        :key="idx" 
+                        :src="getCleanUrl(img)" 
+                        class="prod-main-img" 
+                        @click="router.push(`/identity/${productModules.identity.id}`)" 
+                        style="cursor: pointer;" 
+                        title="查看專屬電子身分證"
+                        width="600"
+                        height="500"
+                        fit="contain"
+                        format="webp"
+                    />
                     <div class="prod-hint">點擊圖片可查看專屬電子身分證</div>
                 </div>
                 <div class="prod-info-box">

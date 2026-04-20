@@ -2,11 +2,12 @@
 import { computed } from 'vue'
 import { useHead } from '#imports'
 import { useMainStore } from '~/stores/useMainStore'
+import { getCleanUrl } from '~/utils/image.js'
 
 const store = useMainStore()
 
 // 取出全域周邊商品列表
-const merchList = computed(() => store.merchList ||[])
+const merchList = computed(() => store.merchList || [ ])
 
 useHead({
     title: '周邊商品',
@@ -22,15 +23,6 @@ useHead({
         { rel: 'canonical', href: 'https://www.genckobreeding.com/merch' }
     ]
 })
-
-const convertLink = (url) => {
-    if (!url) return ''
-    const driveRegex = /file\/d\/([a-zA-Z0-9_-]+)\//
-    const match = url.match(driveRegex)
-    let target = url
-    if (match && match[1]) target = 'https://drive.google.com/uc?id=' + match[1]
-    return `https://wsrv.nl/?url=${encodeURIComponent(target)}&w=1000&output=webp&q=80`
-}
 </script>
 
 <template>
@@ -45,7 +37,19 @@ const convertLink = (url) => {
         <div class="grid" v-else>
             <!-- 點擊後跳轉到動態商品內頁 -->
             <NuxtLink v-for="m in merchList" :key="m.ItemID" :to="`/merch/${m.ItemID}`" class="card" style="text-decoration:none; color:inherit; display:block;">
-                <img :src="convertLink(m.ImageURL)" :alt="m.Name" class="card-img" loading="lazy">
+                <!-- 使用 NuxtImg -->
+                <NuxtImg 
+                    v-if="m.ImageURL"
+                    :src="getCleanUrl(m.ImageURL)" 
+                    :alt="m.Name" 
+                    class="card-img" 
+                    loading="lazy"
+                    width="220"
+                    height="180"
+                    fit="cover"
+                    format="webp"
+                />
+                <div v-else class="card-img" style="display:flex;align-items:center;justify-content:center;color:#333;font-size:3rem;background:#1a1a1a;">🛍️</div>
                 <div class="card-body">
                     <h2 class="morph-title" style="font-size: 1.1rem; margin-bottom: 8px;">{{ m.Name }}</h2>
                     <div class="price" style="font-size: 1.2rem; font-weight: bold; color: var(--pri);">NT$ {{ m.Price }}</div>

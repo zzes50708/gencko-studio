@@ -3,6 +3,7 @@ import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useHead } from '#imports'
 import { useMainStore } from '~/stores/useMainStore'
+import { getCleanUrl } from '~/utils/image.js'
 
 const store = useMainStore()
 const router = useRouter()
@@ -46,15 +47,6 @@ const hasActiveAuction = computed(() => {
     const now = new Date().getTime()
     return auctionList.value.some(a => new Date(a.end_time).getTime() > now)
 })
-
-const convertLink = (url) => {
-    if (!url) return ''
-    const driveRegex = /file\/d\/([a-zA-Z0-9_-]+)\//
-    const match = url.match(driveRegex)
-    let target = url
-    if (match && match[1]) target = 'https://drive.google.com/uc?id=' + match[1]
-    return `https://wsrv.nl/?url=${encodeURIComponent(target)}&w=1000&output=webp&q=80`
-}
 
 const fmtDate = (d) => {
     try { return new Date(d).toISOString().split('T')[0] } catch(e) { return '' }
@@ -127,10 +119,21 @@ const setBeginnerMode = () => {
 
             <div v-else-if="hotList.length > 0" class="hot-marquee-mask">
                 <div class="hot-track">
-                    <div class="hot-card-item" v-for="(i, idx) in [ ...hotList, ...hotList, ...hotList, ...hotList ]" :key="idx">
+                    <div class="hot-card-item" v-for="(i, idx) in[ ...hotList, ...hotList, ...hotList, ...hotList ]" :key="idx">
                         <NuxtLink :to="`/product/${i.ID}`" style="display:block; text-decoration:none; color:inherit; height:100%;">
                             <div style="position:relative;">
-                                <img v-if="i.ImageURL" :src="convertLink(i.ImageURL)" :alt="i.Morph + ' 守宮'" class="card-img" loading="lazy">
+                                <!-- 使用 NuxtImg 取代 img -->
+                                <NuxtImg 
+                                    v-if="i.ImageURL" 
+                                    :src="getCleanUrl(i.ImageURL)" 
+                                    :alt="i.Morph + ' 守宮'" 
+                                    class="card-img" 
+                                    loading="lazy" 
+                                    width="220" 
+                                    height="180" 
+                                    fit="cover" 
+                                    format="webp" 
+                                />
                                 <div v-else class="card-img" style="display:flex;align-items:center;justify-content:center;color:#333;font-size:3rem;background:#000;">🦎</div>
                                 <div v-if="i.Status === 'ForSale'" class="trust-badge">🛡️ 100% HEALTH</div>
                             </div>
@@ -156,7 +159,19 @@ const setBeginnerMode = () => {
                 <article class="card article-card" v-for="item in articlesList.slice(0, 3)" :key="item.ID">
                     <NuxtLink :to="`/articles/${item.ID}`" style="display:block; text-decoration:none; color:inherit; height:100%;">
                         <div style="position:relative; overflow:hidden;">
-                            <img v-if="item.ImageURL" :src="convertLink(item.ImageURL)" :alt="item.Title" class="card-img" style="height:180px;" loading="lazy">
+                            <!-- 使用 NuxtImg 取代 img -->
+                            <NuxtImg 
+                                v-if="item.ImageURL" 
+                                :src="getCleanUrl(item.ImageURL)" 
+                                :alt="item.Title" 
+                                class="card-img" 
+                                style="height:180px;" 
+                                loading="lazy" 
+                                width="400" 
+                                height="180" 
+                                fit="cover" 
+                                format="webp" 
+                            />
                             <div v-else class="card-img" style="height:180px;display:flex;align-items:center;justify-content:center;font-size:3rem;background:#1a1a1a;">📝</div>
                             <div class="art-cat-tag">{{ item.Category }}</div>
                         </div>

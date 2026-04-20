@@ -3,6 +3,7 @@ import { computed, ref, onMounted, onUnmounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useHead, useAsyncData, useSupabaseClient } from '#imports'
 import { useMainStore } from '~/stores/useMainStore'
+import { getCleanUrl } from '~/utils/image.js'
 
 const route = useRoute()
 const router = useRouter()
@@ -28,7 +29,7 @@ const { data: currentAuction, pending } = await useAsyncData(`auction-${auctionI
     return data
 })
 
-const realBids = ref([])
+const realBids = ref([ ])
 let bidsSubscription = null
 
 // 存放當前登入使用者狀態 (Google 或 LINE 統一格式)
@@ -74,7 +75,7 @@ onMounted(() => {
 })
 
 const currentBids = computed(() => {
-    return [...realBids.value].sort((a, b) => b.amount - a.amount)
+    return [ ...realBids.value ].sort((a, b) => b.amount - a.amount)
 })
 
 const highestBidAmount = computed(() => {
@@ -106,7 +107,7 @@ const loadBids = async (id) => {
             .select('*')
             .eq('auction_id', id)
         if (error) throw error
-        realBids.value = data ||[]
+        realBids.value = data || [ ]
     } catch (err) {
         console.error("載入出價紀錄失敗:", err)
     }
@@ -130,7 +131,7 @@ watch(() => route.params.id, async (newId) => {
             subscribeToBids(newId)
         }
     } else {
-        realBids.value =[]
+        realBids.value = [ ]
         if (import.meta.client && bidsSubscription) {
             supabase.removeChannel(bidsSubscription)
             bidsSubscription = null
@@ -192,7 +193,7 @@ const siteData = computed(() => {
         const a = currentAuction.value
         const title = `限時競標：${a.morph} ${a.gender && a.gender !== '未定' ? '('+a.gender+')' : ''}`
         const desc = `目前最高出價 NT$${highestBidAmount.value}。${a.note ? a.note.substring(0, 40) + '...' : 'Gencko Studio 嚴選守宮，點擊參與競標！'}`
-        const img = a.images && a.images.length ? `https://wsrv.nl/?url=${encodeURIComponent(a.images[0])}&w=1200&output=webp` : 'https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/%E6%AD%A3%E9%9D%A2.png'
+        const img = a.images && a.images.length ? getCleanUrl(a.images[0]) : 'https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/%E6%AD%A3%E9%9D%A2.png'
         const url = `https://www.genckobreeding.com/auction/${a.id}`
         return { title, desc, img, url }
     }
@@ -346,7 +347,15 @@ const buyNow = () => {
                 <!-- 左側：圖片與出價紀錄 -->
                 <div class="left-col">
                     <div class="main-img" @click="store.openLightbox(currentAuction.images && currentAuction.images.length ? { ImageURL: currentAuction.images[0] } : { ImageURL: 'https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/placeholder.jpg' })">
-                        <img :src="currentAuction.images && currentAuction.images.length ? currentAuction.images[0] : 'https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/placeholder.jpg'" :alt="currentAuction.morph" />
+                        <!-- 使用 NuxtImg -->
+                        <NuxtImg 
+                            :src="currentAuction.images && currentAuction.images.length ? getCleanUrl(currentAuction.images[0]) : 'https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/placeholder.jpg'" 
+                            :alt="currentAuction.morph" 
+                            width="600"
+                            height="450"
+                            fit="contain"
+                            format="webp"
+                        />
                         <div class="zoom-hint">🔍 點擊放大圖片</div>
                     </div>
                     
