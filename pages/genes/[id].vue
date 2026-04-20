@@ -290,7 +290,7 @@ p {
 :global(body.day-mode) .gene-title { color: #111; border-bottom-color: #eee; }
 :global(body.day-mode) .warn-box { background: #ffebee; border-color: #ef5350; color: #c62828; }
 :global(body.day-mode) p { color: #333; }
-:global(body.day-mode) .source-text { color: #888; border-top-color: #eee; }
+:global(body.day-mode) .source-text { color: #111; border-top-color: #eee; }
 :global(body.day-mode) .gene-img { border-color: #ddd; box-shadow: 0 5px 20px rgba(0,0,0,0.05); }
 
 /* 🌟 Mobile Responsive */
