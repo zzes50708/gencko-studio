@@ -240,36 +240,65 @@ useHead({
     
     .hosp-alert-box {
         padding: 10px;
-        margin-bottom: 15px;
+        margin-bottom: 12px; /* 縮減間距 */
         font-size: 0.8rem;
     }
     
     .hosp-filter-row { 
         /* 🌟 保持並排，減少垂直高度佔用 */
         grid-template-columns: 1fr 1fr; 
-        gap: 10px; 
-        margin-bottom: 15px;
+        gap: 8px; /* 縮減間距 */
+        margin-bottom: 12px;
     }
     
     .hosp-select {
-        padding: 10px;
+        padding: 8px 10px; /* 縮小輸入框高度 */
         font-size: 0.9rem;
     }
+
+    .hosp-label { margin-bottom: 4px; }
     
-    .hosp-content-row { flex-direction: column; }
+    /* 🌟 極致壓縮卡片高度 */
+    .hosp-card {
+        padding: 10px 12px; /* 縮小內距 */
+        border-radius: 8px;
+    }
+
+    .hosp-content-row { flex-direction: column; gap: 0; }
+
+    .hosp-name {
+        font-size: 1rem;
+        margin-bottom: 4px; /* 縮減標題下邊距 */
+    }
+
+    .hosp-detail-row {
+        font-size: 0.8rem;
+        margin-bottom: 4px; /* 縮減文字行距 */
+    }
+
+    .hosp-icon {
+        width: 12px;
+        height: 12px;
+        margin-top: 1px;
+    }
+
     .hosp-actions { 
         flex-direction: row; 
         justify-content: space-between; 
         align-items: center; 
         width: 100%; 
-        margin-top: 10px; 
+        margin-top: 8px; /* 縮減按鈕區上間距 */
         border-top: 1px solid rgba(255,255,255,0.05); 
-        padding-top: 10px; 
+        padding-top: 8px; /* 縮減按鈕區內距 */
     }
+
     .hosp-call-btn {
         width: auto !important;
-        padding: 8px 20px;
+        padding: 6px 16px; /* 縮小按鈕高度 */
+        font-size: 0.8rem;
     }
+    
+    .hosp-tag { font-size: 0.7rem; padding: 2px 6px; }
 }
 
 :global(body.day-mode) @media (max-width: 768px) {

@@ -198,11 +198,11 @@ const fmtDate = (d) => {
     .dt-only { display: none !important; }
     
     .articles-page-wrapper {
-        padding-top: 0;
+        padding: 5px 10px 15px 10px; /* 壓縮頂部與兩側留白 */
     }
     
     .filter-row {
-        margin-bottom: 15px;
+        margin-bottom: 12px;
         padding: 8px 12px;
     }
     
@@ -211,12 +211,49 @@ const fmtDate = (d) => {
     }
     
     .filter-select {
-        padding: 10px 30px 10px 12px;
-        font-size: 1rem;
+        padding: 8px 30px 8px 12px;
+        font-size: 0.95rem;
+    }
+
+    /* 🌟 強制雙欄排版與縮小內容 */
+    .grid {
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 8px !important;
+    }
+
+    .card-img {
+        height: 120px !important; /* 縮減圖片高度，避免卡片過長 */
+    }
+
+    .card-body {
+        padding: 8px !important; /* 縮減內距 */
+    }
+
+    .date-text {
+        font-size: 0.7rem !important;
+        margin-bottom: 4px !important;
+    }
+
+    .morph-title {
+        font-size: 0.95rem !important;
+        margin-bottom: 4px !important;
+        line-height: 1.2 !important;
+        white-space: nowrap; /* 強制單行避免撐破 */
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .art-summary {
+        font-size: 0.8rem !important;
+        line-height: 1.4 !important;
+        -webkit-line-clamp: 2 !important; /* 確保簡介最多兩行 */
     }
     
-    .morph-title {
-        font-size: 1.05rem;
+    .art-cat-tag {
+        font-size: 0.65rem !important;
+        padding: 2px 6px !important;
+        top: 6px !important;
+        left: 6px !important;
     }
 }
 </style>

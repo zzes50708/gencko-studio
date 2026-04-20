@@ -581,9 +581,7 @@ const buyNow = () => {
 :global(body.day-mode) .history-list li { border-bottom-color: #eee; color: #444; }
 :global(body.day-mode) .bid-time, :global(body.day-mode) .p-lbl, :global(body.day-mode) .price-row.sub { color: #888; }
 :global(body.day-mode) .price-row.sub { border-top-color: #eee; }
-:global(body.day-mode) .specs-list li, :global(body.day-mode) .note-box, :global(body.day-mode) .timer-box { background: #f9f9f9; border-color: #eee; color: #333; }
-:global(body.day-mode) .timer-title { color: #666; }
-:global(body.day-mode) .timer-value { color: #111; }
+:global(body.day-mode) .specs-list li, :global(body.day-mode) .note-box { background: #f9f9f9; border-color: #eee; color: #333; }
 :global(body.day-mode) .input-group { border-color: #ccc; }
 :global(body.day-mode) .input-group .currency { background: #eee; color: #555; border-right-color: #ccc; }
 :global(body.day-mode) .input-group input, :global(body.day-mode) .nick-input { background: #fff; color: #333; border-color: #ccc; }
@@ -593,6 +591,12 @@ const buyNow = () => {
 :global(body.day-mode) .user-info-box { background: #f9f9f9; border-color: #eee; }
 :global(body.day-mode) .u-name { color: #333; }
 :global(body.day-mode) .btn-logout { background: #fff; border-color: #ccc; color: #555; }
+
+/* 🌟 強制修正日間模式時，一般狀態的計時器文字顏色為黑色 */
+:global(body.day-mode) .timer-box:not(.ending-soon) { background: #f9f9f9; border-color: #eee; }
+:global(body.day-mode) .timer-box:not(.ending-soon) .timer-title { color: #666 !important; }
+:global(body.day-mode) .timer-box:not(.ending-soon) .timer-value { color: #111 !important; }
+:global(body.day-mode) .timer-box:not(.ending-soon) .timer-note { color: #888 !important; }
 
 /* 🌟 Mobile UI (The 2-Column Grid Layout) */
 @media (max-width: 768px) {

@@ -247,49 +247,77 @@ const goBack = () => {
     .m-only { display: flex !important; }
     
     .auction-page {
-        padding: 5px 15px 15px 15px; /* 大幅縮減頂部空白 */
+        padding: 5px 10px 15px 10px; /* 壓縮頂部與左右留白 */
     }
     
     .auction-grid {
-        grid-template-columns: 1fr; /* 手機版維持單欄，卡片較寬易閱讀 */
-        gap: 12px; /* 縮小卡片間距 */
+        grid-template-columns: repeat(2, 1fr) !important; /* 強制雙欄 */
+        gap: 8px; /* 縮小卡片間距 */
     }
     
-    /* 縮小卡片內部元素的 Padding */
+    .auction-card {
+        border-radius: 8px; /* 卡片圓角縮小 */
+    }
+
+    .card-img-box {
+        aspect-ratio: 1 / 1; /* 圖片改為 1:1 正方形 */
+    }
+    
     .card-info {
-        padding: 10px 12px;
+        padding: 6px 8px; /* 極致壓縮內距 */
     }
     
+    .status-badge {
+        padding: 2px 6px;
+        font-size: 0.65rem;
+        top: 4px;
+        left: 4px;
+    }
+
     .morph-name {
-        font-size: 1.05rem;
+        font-size: 0.85rem;
         margin-bottom: 4px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis; /* 單行文字防破版 */
     }
     
     .gender-tag {
-        font-size: 0.85rem;
+        font-size: 0.75rem;
     }
     
     .morph-desc {
-        font-size: 0.85rem;
-        margin-bottom: 8px;
+        display: none; /* 雙欄模式下隱藏備註，保持版面乾淨 */
     }
     
     .price-info {
-        padding: 6px 10px;
-        margin-bottom: 10px;
+        padding: 4px 6px;
+        margin-bottom: 6px;
+        flex-direction: column; /* 價格上下排列 */
+        align-items: flex-start;
+        gap: 4px;
+    }
+    
+    .price-divider {
+        display: none; /* 隱藏分隔線 */
+    }
+
+    .price-col, .price-col:last-child {
+        align-items: flex-start; /* 全部靠左對齊 */
+        width: 100%;
     }
     
     .price-label {
-        font-size: 0.7rem;
+        font-size: 0.65rem;
     }
     
     .price-val {
-        font-size: 1.05rem;
+        font-size: 0.95rem;
     }
     
     .countdown {
-        padding: 6px;
-        font-size: 0.9rem;
+        padding: 4px;
+        font-size: 0.75rem;
     }
 }
 </style>

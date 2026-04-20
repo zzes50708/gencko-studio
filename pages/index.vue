@@ -65,12 +65,12 @@ const setBeginnerMode = () => {
             <div class="hero-content hero-content-inner">
                 <h1 class="hero-main-title">GENCKO STUDIO</h1>
                 
-                <div class="hero-btn-group mobile-row-nowrap" style="margin-bottom:15px; justify-content:center;">
+                <div class="hero-btn-group mobile-row-nowrap" style="margin-bottom:8px; justify-content:center;">
                     <a href="https://line.me/ti/g2/x4QpkWPJTXYr87U_jHyxSrBLTeVYMdwwlPF9qg" target="_blank" class="btn-hero btn-line-join" rel="noopener noreferrer">
                         🔥 點擊加入社群享優惠
                     </a>
                 </div>
-                <div class="hero-btn-group social-group" style="justify-content:center;">
+                <div class="hero-btn-group social-group" style="justify-content:center; margin-bottom: 8px;">
                     <a href="https://www.instagram.com/gencko_breeding" target="_blank" class="btn-hero btn-soc" rel="noopener noreferrer">IG</a>
                     <a href="https://www.facebook.com/profile.php?id=61579393505049&locale=zh_TW" target="_blank" class="btn-hero btn-soc" rel="noopener noreferrer">FB</a>
                     <a href="https://myship.7-11.com.tw/general/detail/GM2509175195515" target="_blank" class="btn-hero btn-soc" rel="noopener noreferrer">賣貨便</a>
@@ -119,7 +119,7 @@ const setBeginnerMode = () => {
 
             <div v-else-if="hotList.length > 0" class="hot-marquee-mask">
                 <div class="hot-track">
-                    <div class="hot-card-item" v-for="(i, idx) in [ ...hotList, ...hotList, ...hotList, ...hotList ]" :key="idx">
+                    <div class="hot-card-item" v-for="(i, idx) in[ ...hotList, ...hotList, ...hotList, ...hotList ]" :key="idx">
                         <NuxtLink :to="`/product/${i.ID}`" style="display:block; text-decoration:none; color:inherit; height:100%;">
                             <div style="position:relative;">
                                 <NuxtImg 
@@ -271,17 +271,23 @@ const setBeginnerMode = () => {
         padding: 0;
     }
 
-    .hero-main-title { font-size: 2rem; margin-bottom: 15px; }
+    /* 縮減 GENCKO STUDIO 標題與上下行距 */
+    .hero-main-title { font-size: 1.8rem; margin-top: 5px; margin-bottom: 5px; }
 
-    /* 按鈕加大，符合觸控 */
-    .mobile-row-nowrap .btn-line-join { width: 100%; padding: 14px 0; font-size: 1.05rem; }
-    .social-group { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; width: 100%; }
-    .social-group .btn-soc { padding: 12px 0; font-size: 0.9rem; width: 100%; text-align: center; }
+    /* 縮減加入社群按鈕與 IG FB 賣貨便的上下行距、高度 */
+    .mobile-row-nowrap .btn-line-join { width: 100%; padding: 8px 0; font-size: 0.95rem; height: auto; line-height: 1.2; }
+    .hero-btn-group { margin-bottom: 8px !important; }
+    .social-group { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; width: 100%; margin-bottom: 8px; }
+    .social-group .btn-soc { padding: 8px 0; font-size: 0.85rem; width: 100%; text-align: center; height: auto; line-height: 1.2; }
 
-    .home-scenario-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 25px; padding: 0 10px; }
-    .scenario-card { padding: 18px 10px; border-radius: 16px; }
+    /* 4 個按鈕並排 */
+    .home-scenario-grid { grid-template-columns: repeat(4, 1fr); gap: 6px; margin-bottom: 15px; padding: 0 10px; }
+    .scenario-card { padding: 10px 4px; border-radius: 12px; }
+    .scenario-icon { font-size: 1.4rem; margin-bottom: 4px; }
+    .scenario-title { font-size: 0.75rem; margin-bottom: 2px; }
+    .scenario-desc { font-size: 0.6rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-    /* 🌟 將 Section 改為 Edge-to-Edge 滿版設計，更像原生 App */
+    /* Edge-to-Edge 滿版設計 */
     .home-section {
         padding: 20px 0;
         margin-bottom: 15px;
@@ -296,26 +302,37 @@ const setBeginnerMode = () => {
     .section-head {
         padding: 0 15px;
         margin-bottom: 15px;
-        border-bottom: none; /* 移除底線，更清爽 */
+        border-bottom: none; 
     }
 
-    /* 確保跑馬燈遮罩不會裁切到邊緣以外的陰影 */
     .hot-marquee-mask {
         padding-left: 15px;
         mask-image: linear-gradient(to right, #000 90%, transparent);
         -webkit-mask-image: linear-gradient(to right, #000 90%, transparent);
     }
     
+    /* 熱門精選卡片高度寬度縮減 1/3 */
     .hot-card-item {
-        width: 160px; /* 手機版卡片縮小，一屏可看更多 */
-        border-radius: 12px;
+        width: 106px; /* 約原 160px 的 2/3 */
+        border-radius: 8px;
     }
 
     .card-img {
-        height: 140px;
+        height: 93px; /* 約原 140px 的 2/3 */
+    }
+    
+    .card-body { padding: 6px !important; }
+    
+    /* 品系欄單行、縮減行距 */
+    .slim-title { 
+        font-size: 0.8rem !important; 
+        line-height: 1.2 !important; 
+        white-space: nowrap !important; 
+        overflow: hidden !important; 
+        text-overflow: ellipsis !important; 
+        margin-bottom: 0 !important;
     }
 
-    /* 文章區塊同樣滿版處理 */
     .article-grid {
         padding: 0 15px;
         grid-template-columns: 1fr;

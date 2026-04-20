@@ -193,7 +193,7 @@ const goBack = () => {
 
             <div class="prod-layout">
                 <div class="prod-img-box">
-                    <div v-if="productModules.transaction.status === 'Sold'" class="sold-stamp" style="font-size:3rem;border-width:6px;">SOLD OUT</div>
+                    <div v-if="productModules.transaction.status === 'Sold'" class="sold-stamp">SOLD OUT</div>
                     <!-- 使用 NuxtImg -->
                     <NuxtImg 
                         v-for="(img, idx) in productModules.visuals.list" 
@@ -217,20 +217,20 @@ const goBack = () => {
                         <div class="gene-tag-row">
                             <span v-for="g in productModules.identity.genes" :key="g" class="gene-pill">{{ g }}</span>
                         </div>
-                        <div v-if="productModules.identity.note" style="margin-bottom:15px; color:#aaa; font-size:0.95rem; background:rgba(255,255,255,0.05); padding:10px; border-radius:6px; border:1px solid var(--bd); white-space: pre-wrap;">
+                        <div v-if="productModules.identity.note" class="prod-note">
                             📝 備註：{{ productModules.identity.note }}
                         </div>
-                        <div class="spec-row" style="border:none; padding:5px 0 0 0;">
-                            <span :class="getSexCls(currentProduct)" style="font-size:1.1rem; margin-right:15px;">{{ fmtSex(currentProduct) }}</span>
-                            <span style="color:#888;">{{ productModules.identity.birth }} 出生</span>
+                        <div class="spec-row">
+                            <span :class="getSexCls(currentProduct)" class="sex-val">{{ fmtSex(currentProduct) }}</span>
+                            <span class="birth-val">{{ productModules.identity.birth }} 出生</span>
                         </div>
                     </div>
                     <div class="prod-price-area">
                         <div v-if="productModules.transaction.status !== 'ForSale'">
-                            <span v-if="productModules.transaction.status === 'Sold'" class="status-badge s-sold" style="font-size:1.2rem;padding:10px 20px;">已售出</span>
-                            <span v-else class="status-badge s-nfs" style="font-size:1.2rem;padding:10px 20px;">非賣/預訂</span>
+                            <span v-if="productModules.transaction.status === 'Sold'" class="status-badge s-sold">已售出</span>
+                            <span v-else class="status-badge s-nfs">非賣/預訂</span>
                         </div>
-                        <div v-else class="price" style="font-size:2.5rem;">NT$ {{ productModules.transaction.price }}</div>
+                        <div v-else class="price">NT$ {{ productModules.transaction.price }}</div>
                     </div>
 
                     <div class="guarantee-icons-row">
@@ -244,11 +244,11 @@ const goBack = () => {
                         <span>{{ productModules.health.statement }}</span>
                     </div>
 
-                    <div class="prod-actions" style="margin-top:20px;">
+                    <div class="prod-actions">
                         <a v-if="productModules.transaction.status === 'ForSale'" :href="store.lineLink" target="_blank" class="btn-buy-lg">💬 私訊購買 (Line)</a>
                         <button class="btn-share" @click="copyCurrentLink">🔗 複製連結分享</button>
                     </div>
-                    <div style="font-size:0.8rem; color:#666; margin-top:10px;">⚠️ {{ productModules.expectations.notice }}</div>
+                    <div class="prod-expect-notice">⚠️ {{ productModules.expectations.notice }}</div>
                 </div>
             </div>
             <div class="prod-terms-box">
@@ -313,8 +313,11 @@ const goBack = () => {
 .prod-header { border-bottom: 1px solid var(--bd); padding-bottom: 15px; margin-bottom: 15px; }
 .prod-id { color: #666; font-family: monospace; font-size: 0.85rem; margin-bottom: 4px; display: block; }
 .prod-title { font-size: 1.8rem; color: #fff; margin: 0 0 8px; line-height: 1.2; }
+.prod-note { margin-bottom: 15px; color: #aaa; font-size: 0.95rem; background: rgba(255,255,255,0.05); padding: 10px; border-radius: 6px; border: 1px solid var(--bd); white-space: pre-wrap; }
 .prod-price-area { margin-bottom: 20px; }
-.spec-row { display: flex; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.05); }
+.spec-row { display: flex; padding: 5px 0 0 0; border: none; align-items: center; }
+.sex-val { font-size: 1.1rem; margin-right: 15px; }
+.birth-val { color: #888; font-size: 1rem; }
 .gene-tag-row { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
 .gene-pill { background: rgba(255,69,0,0.15); color: var(--pri); padding: 4px 12px; border-radius: 15px; font-size: 0.85rem; font-weight: bold; border: 1px solid rgba(255,69,0,0.3); }
 
@@ -326,11 +329,13 @@ const goBack = () => {
 .g-pill-blue { color: #2196F3; background: rgba(33,150,243,0.1); }
 .g-pill-orange { color: #ff9800; background: rgba(255,152,0,0.1); }
 
-.prod-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 15px; }
+.prod-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 15px; margin-top: 20px; }
 .btn-buy-lg { flex: 2; background: linear-gradient(135deg, #FF4500 0%, #d84315 100%); color: #fff; text-align: center; padding: 12px; font-size: 1.1rem; font-weight: bold; border-radius: 25px; text-decoration: none; transition: 0.3s; box-shadow: 0 4px 10px rgba(255,69,0,0.3); display: flex; align-items: center; justify-content: center; }
 .btn-buy-lg:hover { transform: translateY(-2px); box-shadow: 0 6px 15px rgba(255,69,0,0.5); }
 .btn-share { flex: 1; background: #333; color: #ccc; border: 1px solid #555; padding: 12px; border-radius: 25px; cursor: pointer; transition: 0.2s; font-weight: bold; font-size: 1rem; }
 .btn-share:hover { background: #444; color: #fff; }
+
+.prod-expect-notice { font-size: 0.8rem; color: #666; margin-top: 10px; }
 
 .prod-terms-box { margin-top: 30px; background: rgba(255,255,255,0.03); padding: 25px; border-radius: 12px; border: 1px solid var(--bd); box-shadow: 0 10px 30px rgba(0,0,0,0.2); }
 .terms-title { text-align: center; color: var(--pri); font-weight: 900; font-size: 1.1rem; margin-bottom: 15px; letter-spacing: 1px; }
@@ -338,10 +343,11 @@ const goBack = () => {
 .terms-list li { margin-bottom: 8px; padding-left: 12px; position: relative; }
 .terms-list li::before { content: "•"; position: absolute; left: 0; color: #666; }
 
+/* 🌟 取代原本 Inline style 的類別設定 */
 .sold-stamp { position: absolute; top: 15px; left: 15px; transform: none; border: 6px solid #f44336; color: #f44336; font-size: 3rem; font-weight: 900; padding: 5px 15px; border-radius: 8px; background: rgba(0,0,0,0.5); opacity: 1; pointer-events: none; z-index: 10; font-family: 'Black Ops One', sans-serif; letter-spacing: 2px; text-transform: uppercase; text-shadow: 2px 2px 5px rgba(0,0,0,1); }
 .price { font-size: 2.5rem; color: var(--pri); font-weight: 900; letter-spacing: 0.5px; white-space: nowrap; line-height: 1; }
+.status-badge { padding: 10px 20px; font-size: 1.2rem; font-weight: bold; border-radius: 4px; white-space: nowrap; }
 
-.status-badge { padding: 4px 8px; font-size: 0.8rem; font-weight: bold; border-radius: 4px; white-space: nowrap; }
 .s-sold { background: #333; color: #fff; border: 1px solid #666; }
 .s-res { background: #FFC107; color: #000; }
 .s-nfs { background: #9C27B0; color: #fff; box-shadow: 0 0 10px rgba(156, 39, 176, 0.4); }
@@ -366,22 +372,82 @@ const goBack = () => {
 :global(body.day-mode) .g-pill-orange { background: #fff3e0; color: #ef6c00; }
 :global(body.day-mode) .prod-info-box { background: #fff; border-color: #ddd; box-shadow: 0 10px 30px rgba(0,0,0,0.05); }
 :global(body.day-mode) .prod-header { border-bottom-color: #eee; }
-:global(body.day-mode) .spec-row { border-bottom-color: #eee; }
+:global(body.day-mode) .prod-note { background: #f9f9f9; border-color: #eee; color: #333; }
 
-/* 🌟 Mobile Optimizations */
+/* 🌟 Mobile Optimizations (照片與資訊欄並排雙欄) */
 @media (max-width: 768px) {
-    .product-page-wrapper { padding-top: 0; }
+    .product-page-wrapper { padding-top: 0; padding-bottom: 15px; }
     
     .nav-action-row { margin-bottom: 5px; }
     .app-back-btn { padding: 6px 12px; font-size: 0.9rem; }
     
-    .prod-layout { flex-direction: column; gap: 15px; }
-    .prod-title { font-size: 1.5rem; }
-    .btn-buy-lg { width: 100%; flex: auto; }
-    .btn-share { width: 100%; flex: auto; }
-    .prod-actions { flex-direction: column; }
+    /* 🌟 改為並排雙欄 Grid，左側固定寬度放照片 */
+    .prod-layout { 
+        display: grid; 
+        grid-template-columns: 140px 1fr; 
+        gap: 12px; 
+        align-items: start;
+        margin-top: 5px;
+    }
     
-    .prod-info-box { padding: 15px; border-radius: 8px; }
-    .prod-terms-box { padding: 15px; }
+    .prod-img-box { 
+        border-radius: 8px; 
+    }
+    
+    .prod-main-img { 
+        width: 100%; 
+        aspect-ratio: 1 / 1; 
+        object-fit: cover; 
+        max-height: none; 
+    }
+    
+    .prod-hint { display: none; } /* 手機版並排時隱藏文字以省空間 */
+    
+    .sold-stamp {
+        font-size: 1.2rem;
+        border-width: 3px;
+        padding: 4px 8px;
+        top: 8px; 
+        left: 8px;
+    }
+    
+    .prod-info-box { 
+        padding: 10px; 
+        border-radius: 8px; 
+    }
+    
+    .prod-header { 
+        padding-bottom: 8px; 
+        margin-bottom: 8px; 
+    }
+    
+    .prod-id { font-size: 0.7rem; margin-bottom: 2px; }
+    .prod-title { font-size: 1.15rem; margin-bottom: 6px; padding-bottom: 0; border-bottom: none; }
+    
+    .gene-pill { padding: 2px 6px; font-size: 0.7rem; }
+    .prod-note { font-size: 0.8rem; padding: 8px; margin-bottom: 8px; }
+    
+    .spec-row { font-size: 0.85rem; }
+    .sex-val { font-size: 0.9rem; margin-right: 8px; }
+    .birth-val { font-size: 0.8rem; }
+    
+    .prod-price-area { margin-bottom: 10px; }
+    .price { font-size: 1.4rem; }
+    .status-badge { font-size: 0.9rem !important; padding: 6px 12px !important; }
+    
+    .g-icon-pill { font-size: 0.65rem; padding: 4px 6px; }
+    .prod-guarantee { font-size: 0.75rem; padding: 8px; margin-bottom: 10px; }
+    
+    .prod-actions { flex-direction: column; gap: 6px; margin-top: 10px; }
+    .btn-buy-lg { width: 100%; padding: 8px; font-size: 0.95rem; }
+    .btn-share { width: 100%; padding: 8px; font-size: 0.85rem; }
+    
+    .prod-expect-notice { font-size: 0.7rem; }
+    
+    /* 購買須知放置於雙欄下方滿版顯示 */
+    .prod-terms-box { 
+        padding: 15px; 
+        margin-top: 15px; 
+    }
 }
 </style>

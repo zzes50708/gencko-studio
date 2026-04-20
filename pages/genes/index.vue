@@ -174,26 +174,47 @@ useHead({
     opacity: 1;
 }
 
-/* Day Mode Overrides */
+/* 🌟 Day Mode Overrides：強制覆寫確保白底黑字 */
 :global(body.day-mode) .segmented-control { background: #eee; border-color: #ddd; }
 :global(body.day-mode) .segment { color: #666; }
 :global(body.day-mode) .segment.active { background: var(--pri); color: #fff; }
-:global(body.day-mode) .section-header-sticky { background: rgba(255,255,255,0.95); border-bottom-color: #eee; }
-:global(body.day-mode) .gene-btn-item { background: #fff; border-color: #ddd; color: #333; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
-:global(body.day-mode) .gene-btn-item:hover { background: #f9f9f9; border-color: var(--pri); }
+
+:global(body.day-mode) .section-header-sticky { 
+    background: rgba(255,255,255,0.95); 
+    border-bottom-color: #eee; 
+}
+:global(body.day-mode) .gene-cat-title { 
+    color: #111 !important; /* 強制黑字 */
+}
+
+:global(body.day-mode) .gene-btn-item { 
+    background: #fff; 
+    border-color: #ddd; 
+    box-shadow: 0 4px 10px rgba(0,0,0,0.05); 
+}
+:global(body.day-mode) .gene-btn-item:hover { 
+    background: #f9f9f9; 
+    border-color: var(--pri); 
+}
+:global(body.day-mode) .g-name { 
+    color: #111 !important; /* 強制黑字 */
+}
+:global(body.day-mode) .g-arrow { 
+    color: #111 !important; /* 強制黑字 */
+}
 
 /* 🌟 Mobile Optimizations */
 @media (max-width: 768px) {
     .dt-only { display: none !important; }
     
     .genes-page-wrapper {
-        padding: 5px 15px 15px 15px; /* 移除頂部空白 */
+        padding: 5px 10px 15px 10px; /* 壓縮左右與頂部留白 */
     }
     
     /* 🌟 極致壓縮頂部的豹紋/肥尾按鈕高度與邊距 */
     .segmented-control {
         padding: 2px;
-        margin-bottom: 12px;
+        margin-bottom: 4px; /* 縮減與下方的間距 */
         border-radius: 20px;
     }
     
@@ -217,8 +238,9 @@ useHead({
     }
     
     .g-name {
-        white-space: normal; /* 🌟 允許換行，不再隱藏 */
-        word-wrap: break-word;
+        white-space: normal !important; /* 🌟 強制允許換行 */
+        word-wrap: break-word !important;
+        word-break: break-word !important;
         font-size: 0.9rem;
         line-height: 1.3;
     }
@@ -229,8 +251,9 @@ useHead({
     }
     
     .section-header-sticky {
-        padding: 8px 0;
-        margin-bottom: 8px;
+        padding: 4px 0;
+        margin-bottom: 6px; /* 縮減與基因卡片的間距 */
+        top: calc(85px + env(safe-area-inset-top, 0px)); /* 適應手機版高度 */
     }
     
     .gene-cat-title {
@@ -238,7 +261,7 @@ useHead({
     }
     
     .gene-section {
-        margin-bottom: 20px;
+        margin-bottom: 15px;
     }
 }
 </style>

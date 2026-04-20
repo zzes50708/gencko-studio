@@ -236,10 +236,11 @@ const goBack = () => {
     opacity: 0.8;
 }
 
+/* 🌟 日間模式強制黑字 */
 :global(body.day-mode) .app-back-btn {
     background: rgba(0, 0, 0, 0.05);
     border-color: rgba(0, 0, 0, 0.1);
-    color: #333;
+    color: #111 !important; /* 強制黑字 */
     box-shadow: 0 4px 10px rgba(0,0,0,0.05);
 }
 
@@ -284,7 +285,7 @@ const goBack = () => {
 .ig-row { display: flex; flex-direction: column; }
 .ig-row label { font-size: 0.75rem; color: #94a3b8; text-transform: uppercase; font-weight: bold; margin-bottom: 2px; }
 .ig-val { font-size: 1.1rem; font-weight: 600; color: #334155; }
-.ig-val.highlight { font-size: 1.25rem; color: #0f172a; font-weight: 800; }
+.ig-val.highlight { font-size: 1.25rem; color: #0f172a; font-weight: 800; line-height: 1.2; }
 .t-male { color: #2563eb; }
 .t-female { color: #db2777; }
 .t-mix { color: #8b5cf6; }
@@ -307,27 +308,60 @@ const goBack = () => {
 }
 .id-hint { font-size: 0.8rem; color: rgba(255,255,255,0.8); margin-top: 15px; text-shadow: 0 1px 2px rgba(0,0,0,0.5); text-align: center; }
 
-/* Mobile Responsive */
+/* Day Mode Body Overrides (Fallback text shadow) */
+:global(body.day-mode) .status-msg { color: #333; text-shadow: none; }
+:global(body.day-mode) .loader { border-color: rgba(0,0,0,0.1); border-top-color: var(--pri); }
+:global(body.day-mode) .id-hint { color: #666; text-shadow: none; }
+
+/* 🌟 Mobile Responsive (強制並排，左圖右文) */
 @media (max-width: 768px) {
-    .id-page-container { padding-top: 0; }
+    .id-page-container { padding-top: 0; padding-bottom: 15px; }
+
+    .nav-action-row { margin-bottom: 8px; }
+    .app-back-btn { padding: 6px 12px; font-size: 0.9rem; }
 
     .id-card {
-        flex-direction: column;
+        flex-direction: row; /* 強制左右排列 */
         max-width: 100%;
         width: 100%;
+        border-radius: 12px;
+        align-items: stretch;
     }
 
     .card-photo-box {
-        width: 100%;
-        height: 250px;
-        min-height: auto;
+        width: 120px; /* 固定左側照片寬度 */
+        flex: none;
+        height: auto;
+        min-height: 180px;
     }
 
     .card-info-box {
-        padding: 20px;
+        padding: 12px;
+        flex: 1;
+        min-width: 0; /* 讓文字可以縮排截斷 */
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
     }
 
-    .card-id { font-size: 1.8rem; }
+    /* 縮減字體適應雙欄 */
+    .card-header { margin-bottom: 10px; padding-bottom: 8px; border-bottom-width: 1px; }
+    .brand-sub { font-size: 0.55rem; }
+    .card-id { font-size: 1.25rem; margin: 2px 0; }
+    .brand-logo { font-size: 0.7rem; }
+
+    .info-grid { gap: 8px; }
+    .ig-row label { font-size: 0.6rem; }
+    .ig-val { font-size: 0.85rem; }
+    .ig-val.highlight { font-size: 0.95rem; }
+
+    .card-footer { margin-top: 15px; }
+    .cf-line { margin-bottom: 6px; }
+    .cf-txt { font-size: 0.6rem; }
+
+    .id-actions { margin-top: 20px; }
+    .act-btn { padding: 10px 20px; font-size: 0.9rem; }
+    .id-hint { font-size: 0.75rem; margin-top: 8px; }
 }
 </style>
 
