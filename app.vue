@@ -1,12 +1,13 @@
 <script setup>
 import { onMounted, onUnmounted, watch, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { useHead } from '#imports'
+import { useHead, useNuxtApp } from '#imports'
 import { useMainStore } from '~/stores/useMainStore'
 
 const store = useMainStore()
 const route = useRoute()
 const router = useRouter()
+const { $pwa } = useNuxtApp() // 🌟 取得 PWA 實體
 
 // 綁定全域 body class，處理日夜間模式的 CSS 變數切換
 useHead({
@@ -101,6 +102,17 @@ onUnmounted(() => {
 
 <template>
   <div class="cont">
+    <VitePwaManifest /> <!-- 🌟 注入 PWA Manifest -->
+
+    <!-- 🌟 PWA 更新通知提示 -->
+    <div v-if="$pwa?.needRefresh" class="pwa-update-toast">
+      <span style="font-weight: bold;">🚀 發現新版本！請更新以獲得最佳體驗</span>
+      <div class="pwa-update-actions">
+        <button class="pwa-btn-update" @click="$pwa.updateServiceWorker()">立即更新</button>
+        <button class="pwa-btn-cancel" @click="$pwa.cancelPrompt()">稍後</button>
+      </div>
+    </div>
+
     <!-- 全域共用元件 (Nuxt 會自動從 components/ 引入) -->
     <TheLightbox 
       :item="store.lightboxItem" 
@@ -137,5 +149,89 @@ onUnmounted(() => {
     </a>
     
     <TheFooter />
+
+    <!-- 🌟 引入新建立的手機底部導航列 -->
+    <TheBottomNav />
   </div>
 </template>
+
+<style scoped>
+/* 🌟 PWA 更新通知樣式 */
+.pwa-update-toast {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(20, 20, 20, 0.95);
+  backdrop-filter: blur(10px);
+  border: 1px solid var(--pri);
+  color: #fff;
+  padding: 15px 20px;
+  border-radius: 12px;
+  z-index: 100000;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  width: 90%;
+  max-width: 350px;
+  text-align: center;
+  animation: slideUpFade 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.pwa-update-actions {
+  display: flex;
+  gap: 10px;
+  width: 100%;
+}
+
+.pwa-btn-update {
+  flex: 1;
+  background: var(--pri);
+  color: #fff;
+  border: none;
+  padding: 10px;
+  border-radius: 8px;
+  font-weight: bold;
+  cursor: pointer;
+  box-shadow: 0 4px 10px var(--pri-glow);
+}
+
+.pwa-btn-cancel {
+  flex: 1;
+  background: transparent;
+  color: #aaa;
+  border: 1px solid #555;
+  padding: 10px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+@keyframes slideUpFade {
+  from { opacity: 0; transform: translate(-50%, 20px); }
+  to { opacity: 1; transform: translate(-50%, 0); }
+}
+
+/* 日間模式的 PWA 更新通知 */
+:global(body.day-mode) .pwa-update-toast {
+  background: rgba(255, 255, 255, 0.95);
+  color: #000;
+  border-color: var(--pri);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+}
+:global(body.day-mode) .pwa-btn-cancel {
+  color: #555;
+  border-color: #ccc;
+}
+
+/* 🌟 行動端避開底部導航列 (TheBottomNav) 的遮擋 */
+@media (max-width: 768px) {
+  .floating-inquire-btn {
+    bottom: calc(85px + env(safe-area-inset-bottom, 0px)) !important;
+  }
+  .pwa-update-toast {
+    bottom: calc(85px + env(safe-area-inset-bottom, 0px)) !important;
+  }
+}
+</style>

@@ -15,7 +15,7 @@ const emit = defineEmits(['toggle-theme', 'update:mobileMenuOpen', 'scroll-top']
 
 const mobileExpanded = ref(null)
 
-const isShopActive = computed(() => ['shop', 'auction', 'breeders', 'merch'].includes(props.curTab))
+const isShopActive = computed(() =>['shop', 'auction', 'breeders', 'merch'].includes(props.curTab))
 const isToolActive = computed(() =>['calculator', 'genes', 'health', 'qs', 'hospital'].includes(props.curTab))
 const isServiceActive = computed(() =>['about', 'care', 'articles', 'faq'].includes(props.curTab))
 
@@ -77,7 +77,8 @@ const closeMobileMenu = () => {
 
                 <!-- Right Controls -->
                 <div class="nav-right">
-                    <NuxtLink to="/profile" style="text-decoration:none; margin-right:15px; font-size:1.2rem; display:flex; align-items:center;" title="我的專區">👤</NuxtLink>
+                    <!-- 🌟 增加 profile-link-dt 類別，在手機版隱藏此圖示以交給底部導航列 -->
+                    <NuxtLink to="/profile" class="profile-link-dt" style="text-decoration:none; margin-right:15px; font-size:1.2rem; display:flex; align-items:center;" title="我的專區">👤</NuxtLink>
                     <div class="theme-toggle" @click="$emit('toggle-theme')" style="cursor:pointer;font-size:1rem;font-weight:bold;margin-right:15px;color:var(--txt);display:flex;align-items:center;border:1px solid var(--bd);padding:4px 10px;border-radius:20px;">
                         {{ isDayMode ? '夜間' : '日間' }}
                     </div>
@@ -87,14 +88,9 @@ const closeMobileMenu = () => {
         </div>
 
         <!-- Mobile Menu -->
-        <div class="mobile-menu-overlay" :class="{open: mobileMenuOpen}" style="position:fixed; top:90px; left:0; width:100%; height:calc(100vh - 90px); overflow-y:auto;">
-            <NuxtLink to="/" class="mm-item" style="text-decoration:none;" @click="closeMobileMenu">
-                首頁
-            </NuxtLink>
-            
-            <NuxtLink to="/profile" class="mm-item" style="text-decoration:none; color: var(--pri);" @click="closeMobileMenu">
-                👤 我的專區
-            </NuxtLink>
+        <!-- 🌟 增加 padding-bottom: 100px 確保滑到底部時不會被底部導航列擋住 -->
+        <div class="mobile-menu-overlay" :class="{open: mobileMenuOpen}" style="position:fixed; top:90px; left:0; width:100%; height:calc(100vh - 90px); overflow-y:auto; padding-bottom: 100px;">
+            <!-- 🌟 已移除首頁與我的專區，簡化手機選單 -->
 
             <!-- Group 1: Shop -->
             <div class="mm-group" :class="{active: mobileExpanded === 'shop' || (mobileExpanded === null && isShopActive)}">
@@ -152,3 +148,12 @@ const closeMobileMenu = () => {
         </div>
     </div>
 </template>
+
+<style scoped>
+@media (max-width: 768px) {
+    /* 🌟 在手機版隱藏頂部的「我的專區」圖示 */
+    .profile-link-dt {
+        display: none !important;
+    }
+}
+</style>
