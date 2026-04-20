@@ -56,7 +56,7 @@ const productModules = computed(() => {
             note: p.Note || '' 
         },
         visuals: { 
-            list: p.ImageURL ? [p.ImageURL] : [ ] 
+            list: p.ImageURL ? [p.ImageURL] :[ ] 
         },
         health: { 
             statement: '本工作室嚴格把關，所有上架個體均確認進食與排泄正常，無健康隱憂始開放選購。' 
@@ -71,7 +71,7 @@ const productModules = computed(() => {
     }
 })
 
-// [SEO] 動態 Meta 與結構化資料
+//[SEO] 動態 Meta 與結構化資料
 const siteData = computed(() => {
     if (currentProduct.value) {
         const p = currentProduct.value
@@ -158,27 +158,39 @@ const copyCurrentLink = async () => {
     }
 }
 
+// 🌟 返回邏輯優化：如果是從商城點進來的就回上一頁，否則預設回 /shop
 const goBack = () => {
-    router.push('/shop')
+    if (window.history.state && window.history.state.back) {
+        router.back()
+    } else {
+        router.push('/shop')
+    }
 }
 </script>
 
 <template>
-    <div>
+    <div class="product-page-wrapper">
         <div v-if="pending" style="text-align:center; padding:100px 0; color:#888;">
             <div class="loader" style="margin:0 auto 20px auto;"></div>
             <p>正在尋找這隻守宮的資料...</p>
-            <button class="btn-back" @click="goBack" style="margin-top:20px;">回商城列表</button>
+            <button class="app-back-btn" @click="goBack" style="margin: 20px auto; justify-content: center;">返回商城列表</button>
         </div>
 
         <div v-else-if="!currentProduct" style="text-align:center; padding:100px 0; color:#888;">
             <h2>找不到此守宮</h2>
             <p>該商品可能已下架或不存在。</p>
-            <button class="btn-back" @click="goBack" style="margin-top:20px;">回商城列表</button>
+            <button class="app-back-btn" @click="goBack" style="margin: 20px auto; justify-content: center;">返回商城列表</button>
         </div>
 
         <div v-else class="prod-container">
-            <button class="btn-back" @click="goBack">← 返回列表</button>
+            <!-- 🌟 App-like 膠囊返回按鈕 -->
+            <div class="nav-action-row">
+                <button class="app-back-btn" @click="goBack">
+                    <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+                    返回列表
+                </button>
+            </div>
+
             <div class="prod-layout">
                 <div class="prod-img-box">
                     <div v-if="productModules.transaction.status === 'Sold'" class="sold-stamp" style="font-size:3rem;border-width:6px;">SOLD OUT</div>
@@ -258,22 +270,55 @@ const goBack = () => {
 </template>
 
 <style scoped>
+.product-page-wrapper { width: 100%; }
+
+/* 🌟 App-like 膠囊狀返回按鈕 */
+.nav-action-row {
+    width: 100%;
+    display: flex;
+    justify-content: flex-start;
+    margin-bottom: 10px;
+}
+
+.app-back-btn {
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    color: var(--txt);
+    font-size: 0.95rem;
+    font-weight: bold;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    border-radius: 30px;
+    transition: 0.2s;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+}
+
+.app-back-btn:active {
+    transform: scale(0.95);
+    background: rgba(255, 255, 255, 0.1);
+}
+
 /* Product Detail Styles */
 .prod-container { max-width: 1100px; margin: 0 auto; padding-top: 15px; }
-.prod-layout { display: flex; gap: 30px; margin-top: 15px; align-items: flex-start; }
+.prod-layout { display: flex; gap: 30px; margin-top: 10px; align-items: flex-start; }
 .prod-img-box { flex: 1; position: relative; border-radius: 10px; overflow: hidden; border: 1px solid var(--bd); background: #000; }
 .prod-main-img { width: 100%; height: auto; max-height: 500px; object-fit: contain; cursor: zoom-in; display: block; }
 .prod-hint { text-align: center; color: #666; font-size: 0.75rem; padding: 4px; background: #111; }
-.prod-info-box { flex: 1; padding: 15px; background: rgba(255,255,255,0.02); border-radius: 10px; }
+.prod-info-box { flex: 1; padding: 20px; background: rgba(255,255,255,0.02); border-radius: 12px; border: 1px solid var(--bd); box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
 .prod-header { border-bottom: 1px solid var(--bd); padding-bottom: 15px; margin-bottom: 15px; }
 .prod-id { color: #666; font-family: monospace; font-size: 0.85rem; margin-bottom: 4px; display: block; }
 .prod-title { font-size: 1.8rem; color: #fff; margin: 0 0 8px; line-height: 1.2; }
 .prod-price-area { margin-bottom: 20px; }
 .spec-row { display: flex; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.05); }
 .gene-tag-row { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
-.gene-pill { background: rgba(255,69,0,0.15); color: var(--pri); padding: 3px 10px; border-radius: 15px; font-size: 0.85rem; font-weight: bold; border: 1px solid rgba(255,69,0,0.3); }
+.gene-pill { background: rgba(255,69,0,0.15); color: var(--pri); padding: 4px 12px; border-radius: 15px; font-size: 0.85rem; font-weight: bold; border: 1px solid rgba(255,69,0,0.3); }
 
-.prod-guarantee { background: rgba(40, 167, 69, 0.1); color: #81c784; padding: 12px; border-radius: 6px; border-left: 3px solid #4caf50; display: flex; align-items: flex-start; line-height: 1.5; margin-bottom: 15px; font-size: 0.9rem; }
+.prod-guarantee { background: rgba(40, 167, 69, 0.1); color: #81c784; padding: 12px; border-radius: 8px; border-left: 4px solid #4caf50; display: flex; align-items: flex-start; line-height: 1.5; margin-bottom: 15px; font-size: 0.9rem; }
 
 .guarantee-icons-row { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; }
 .g-icon-pill { display: flex; align-items: center; gap: 5px; font-size: 0.85rem; padding: 5px 10px; border-radius: 20px; font-weight: bold; }
@@ -287,10 +332,10 @@ const goBack = () => {
 .btn-share { flex: 1; background: #333; color: #ccc; border: 1px solid #555; padding: 12px; border-radius: 25px; cursor: pointer; transition: 0.2s; font-weight: bold; font-size: 1rem; }
 .btn-share:hover { background: #444; color: #fff; }
 
-.prod-terms-box { margin-top: 30px; background: rgba(255,255,255,0.03); padding: 20px; border-radius: 10px; border: 1px solid var(--bd); }
+.prod-terms-box { margin-top: 30px; background: rgba(255,255,255,0.03); padding: 25px; border-radius: 12px; border: 1px solid var(--bd); box-shadow: 0 10px 30px rgba(0,0,0,0.2); }
 .terms-title { text-align: center; color: var(--pri); font-weight: 900; font-size: 1.1rem; margin-bottom: 15px; letter-spacing: 1px; }
 .terms-list { list-style: none; padding: 0; margin: 0; color: #bbb; line-height: 1.6; font-size: 0.9rem; }
-.terms-list li { margin-bottom: 6px; padding-left: 12px; position: relative; }
+.terms-list li { margin-bottom: 8px; padding-left: 12px; position: relative; }
 .terms-list li::before { content: "•"; position: absolute; left: 0; color: #666; }
 
 .sold-stamp { position: absolute; top: 15px; left: 15px; transform: none; border: 6px solid #f44336; color: #f44336; font-size: 3rem; font-weight: 900; padding: 5px 15px; border-radius: 8px; background: rgba(0,0,0,0.5); opacity: 1; pointer-events: none; z-index: 10; font-family: 'Black Ops One', sans-serif; letter-spacing: 2px; text-transform: uppercase; text-shadow: 2px 2px 5px rgba(0,0,0,1); }
@@ -301,13 +346,13 @@ const goBack = () => {
 .s-res { background: #FFC107; color: #000; }
 .s-nfs { background: #9C27B0; color: #fff; box-shadow: 0 0 10px rgba(156, 39, 176, 0.4); }
 
-.btn-back { background: transparent; border: 1px solid #555; color: #ddd; padding: 6px 12px; border-radius: 4px; cursor: pointer; transition: 0.2s; display: inline-block; margin-bottom: 15px; font-size: 0.9rem; }
-.btn-back:hover { border-color: var(--pri); color: var(--pri); }
-
 .male { color: #2196F3; font-weight: bold; }
 .female { color: #E91E63; font-weight: bold; }
 .mix { color: #9C27B0; font-weight: bold; }
 
+/* Day Mode Configuration */
+:global(body.day-mode) .app-back-btn { background: #fff; border-color: #ddd; color: #333; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+:global(body.day-mode) .app-back-btn:active { background: #f0f0f0; }
 :global(body.day-mode) .prod-title { color: #111; }
 :global(body.day-mode) .prod-hint { background: #f0f0f0; color: #888; }
 :global(body.day-mode) .btn-share { background: #fff; color: #555; border-color: #ccc; }
@@ -316,16 +361,27 @@ const goBack = () => {
 :global(body.day-mode) .prod-terms-box { background: #fff; border-color: #ddd; color: #333; box-shadow: 0 5px 20px rgba(0,0,0,0.05); }
 :global(body.day-mode) .terms-list { color: #444; }
 :global(body.day-mode) .gene-pill { background: #fff3e0; color: #e65100; border-color: #ffb74d; }
-:global(body.day-mode) .btn-back { color: #000; border-color: #999; }
-:global(body.day-mode) .btn-back:hover { border-color: var(--pri); color: var(--pri); }
 :global(body.day-mode) .g-pill-green { background: #e8f5e9; color: #2e7d32; }
 :global(body.day-mode) .g-pill-blue { background: #e3f2fd; color: #1565c0; }
 :global(body.day-mode) .g-pill-orange { background: #fff3e0; color: #ef6c00; }
+:global(body.day-mode) .prod-info-box { background: #fff; border-color: #ddd; box-shadow: 0 10px 30px rgba(0,0,0,0.05); }
+:global(body.day-mode) .prod-header { border-bottom-color: #eee; }
+:global(body.day-mode) .spec-row { border-bottom-color: #eee; }
 
+/* 🌟 Mobile Optimizations */
 @media (max-width: 768px) {
+    .product-page-wrapper { padding-top: 0; }
+    
+    .nav-action-row { margin-bottom: 5px; }
+    .app-back-btn { padding: 6px 12px; font-size: 0.9rem; }
+    
     .prod-layout { flex-direction: column; gap: 15px; }
     .prod-title { font-size: 1.5rem; }
-    .btn-buy-lg { width: 100%; }
-    .btn-share { width: 100%; }
+    .btn-buy-lg { width: 100%; flex: auto; }
+    .btn-share { width: 100%; flex: auto; }
+    .prod-actions { flex-direction: column; }
+    
+    .prod-info-box { padding: 15px; border-radius: 8px; }
+    .prod-terms-box { padding: 15px; }
 }
 </style>

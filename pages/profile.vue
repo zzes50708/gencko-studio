@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router'
 import { useHead, useSupabaseClient } from '#imports'
 import { useMainStore } from '~/stores/useMainStore'
 import { HOSPITAL_DATA } from '~/utils/hospitals.js'
+import { getCleanUrl } from '~/utils/image.js' // 🌟 引入新的圖片處理函數
 
 const store = useMainStore()
 const router = useRouter()
@@ -66,16 +67,14 @@ onMounted(() => {
 const fetchMyBids = async (emailOrId) => {
     isLoadingBids.value = true
     try {
-        // 關聯查詢 auction_bids 與 auctions 表
         const { data, error } = await supabase
             .from('auction_bids')
             .select('auction_id, amount, bid_time, auctions(morph, end_time, status, images)')
-            .eq('phone', emailOrId) // 出價時是把 email/id 存在 phone 欄位
+            .eq('phone', emailOrId) 
             .order('bid_time', { ascending: false })
 
         if (error) throw error
 
-        // 將同一個競標商品的多筆出價群組化，只顯示最高出價
         const grouped = {}
         if (data) {
             data.forEach(bid => {
@@ -130,7 +129,7 @@ const logout = async () => {
     if (currentUser.value?.type === 'line' && window.liff) window.liff.logout()
     else await supabase.auth.signOut()
     currentUser.value = null
-    myBids.value = [ ]
+    myBids.value =[]
 }
 
 // 收藏操作
@@ -152,16 +151,6 @@ const toggleHospWishlist = (id) => {
     if (import.meta.client) localStorage.setItem('gencko_hosp_wishlist', JSON.stringify(store.hospWishlist))
 }
 
-// 輔助函式
-const convertLink = (url) => {
-    if (!url) return ''
-    const driveRegex = /file\/d\/([a-zA-Z0-9_-]+)\//
-    const match = url.match(driveRegex)
-    let target = url
-    if (match && match[1]) target = 'https://drive.google.com/uc?id=' + match[1]
-    return `https://wsrv.nl/?url=${encodeURIComponent(target)}&w=800&output=webp&q=80`
-}
-
 const getAuctionStatus = (endTime) => {
     const now = new Date().getTime()
     if (now >= new Date(endTime).getTime()) return { text: '已結標', class: 's-sold' }
@@ -175,8 +164,9 @@ const getMapLink = (h) => {
 </script>
 
 <template>
-    <div class="profile-container">
-        <h1 class="page-title">我的專區 <span>Personal Dashboard</span></h1>
+    <div class="profile-page-wrapper">
+        <!-- 🌟 手機版隱藏大標題 -->
+        <h1 class="page-title dt-only">我的專區 <span>Personal Dashboard</span></h1>
         
         <!-- 未登入畫面 -->
         <div v-if="!currentUser" class="login-prompt-box">
@@ -198,24 +188,30 @@ const getMapLink = (h) => {
 
         <!-- 已登入畫面 -->
         <div v-else>
-            <!-- 使用者資訊卡片 -->
+            <!-- 🌟 App-like 使用者資訊卡片 -->
             <div class="user-card">
                 <div class="user-info">
                     <img v-if="currentUser.picture" :src="currentUser.picture" alt="Avatar" class="user-avatar">
                     <div v-else class="user-avatar-placeholder">{{ currentUser.name.charAt(0).toUpperCase() }}</div>
-                    <div>
-                        <h2 style="margin: 0; font-size: 1.3rem; color: var(--txt);">{{ currentUser.name }}</h2>
-                        <span style="font-size: 0.85rem; color: #888;">{{ currentUser.type === 'line' ? 'LINE 登入' : 'Google 登入' }}</span>
+                    <div class="user-text">
+                        <h2 class="user-name">{{ currentUser.name }}</h2>
+                        <span class="user-type">{{ currentUser.type === 'line' ? 'LINE 登入' : 'Google 登入' }}</span>
                     </div>
                 </div>
-                <button @click="logout" class="btn-logout">登出帳號</button>
+                <button @click="logout" class="btn-logout">登出</button>
             </div>
 
-            <!-- 頁籤切換 -->
-            <div class="tabs">
-                <div class="tab" :class="{active: activeTab === 'wishlist'}" @click="activeTab = 'wishlist'">我的收藏 ({{ wishlistItems.length }})</div>
-                <div class="tab" :class="{active: activeTab === 'hospitals'}" @click="activeTab = 'hospitals'">收藏醫院 ({{ hospWishlistItems.length }})</div>
-                <div class="tab" :class="{active: activeTab === 'bids'}" @click="activeTab = 'bids'">競標紀錄 ({{ myBids.length }})</div>
+            <!-- 🌟 App-like 分段切換器 (Segmented Control) -->
+            <div class="segmented-tabs">
+                <div class="seg-tab" :class="{active: activeTab === 'wishlist'}" @click="activeTab = 'wishlist'">
+                    商品收藏 <span>{{ wishlistItems.length }}</span>
+                </div>
+                <div class="seg-tab" :class="{active: activeTab === 'hospitals'}" @click="activeTab = 'hospitals'">
+                    醫院名單 <span>{{ hospWishlistItems.length }}</span>
+                </div>
+                <div class="seg-tab" :class="{active: activeTab === 'bids'}" @click="activeTab = 'bids'">
+                    競標紀錄 <span>{{ myBids.length }}</span>
+                </div>
             </div>
 
             <!-- Tab 1: 收藏清單 -->
@@ -233,7 +229,18 @@ const getMapLink = (h) => {
                             <span class="fav-btn active" @click.stop.prevent="toggleWishlist(i.ID)">❤</span>
                         </div>
                         <div style="position:relative;">
-                            <img v-if="i.ImageURL" :src="convertLink(i.ImageURL)" :alt="i.Morph" class="card-img slim-img" loading="lazy">
+                            <!-- 🌟 使用 NuxtImg 進行圖片最佳化 -->
+                            <NuxtImg 
+                                v-if="i.ImageURL" 
+                                :src="getCleanUrl(i.ImageURL)" 
+                                :alt="i.Morph" 
+                                class="card-img slim-img" 
+                                loading="lazy"
+                                width="220"
+                                height="220"
+                                fit="cover"
+                                format="webp"
+                            />
                             <div v-else class="card-img slim-img" style="display:flex;align-items:center;justify-content:center;font-size:2rem;background:#000;">🦎</div>
                         </div>
                         <div class="card-body slim-body">
@@ -303,18 +310,27 @@ const getMapLink = (h) => {
                 
                 <div v-else class="bid-list">
                     <NuxtLink :to="`/auction/${bid.auction_id}`" class="bid-card" v-for="bid in myBids" :key="bid.auction_id">
-                        <img :src="bid.image ? bid.image : 'https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/placeholder.jpg'" class="bid-img">
+                        <!-- 🌟 使用 NuxtImg 進行圖片最佳化 -->
+                        <NuxtImg 
+                            :src="bid.image ? getCleanUrl(bid.image) : 'https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/placeholder.jpg'" 
+                            class="bid-img"
+                            loading="lazy"
+                            width="120"
+                            height="120"
+                            fit="cover"
+                            format="webp"
+                        />
                         <div class="bid-info">
                             <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
-                                <h3 style="margin: 0; font-size: 1.1rem; color: var(--txt);">{{ bid.morph }}</h3>
+                                <h3 style="margin: 0; font-size: 1.1rem; color: var(--txt); line-height: 1.3;">{{ bid.morph }}</h3>
                                 <span class="status-badge" :class="getAuctionStatus(bid.end_time).class">{{ getAuctionStatus(bid.end_time).text }}</span>
                             </div>
                             <div class="bid-detail-row">
-                                <span>我的最高出價</span>
+                                <span>最高出價</span>
                                 <strong style="color: var(--pri); font-size: 1.1rem;">${{ bid.my_max_bid }}</strong>
                             </div>
                             <div style="font-size: 0.8rem; color: #888; margin-top: 8px;">
-                                共出價 {{ bid.bid_count }} 次
+                                您共出價了 {{ bid.bid_count }} 次
                             </div>
                         </div>
                     </NuxtLink>
@@ -325,7 +341,8 @@ const getMapLink = (h) => {
 </template>
 
 <style scoped>
-.profile-container { max-width: 900px; margin: 0 auto; padding: 20px 15px; }
+.profile-page-wrapper { max-width: 900px; margin: 0 auto; padding: 20px 15px; }
+.dt-only { display: block; }
 .page-title span { font-size: 1rem; color: #888; font-weight: normal; margin-left: 10px; }
 
 /* 登入區塊 */
@@ -337,32 +354,35 @@ const getMapLink = (h) => {
 .btn-login.google { background: #fff; color: #333; border: 1px solid #ddd; }
 .btn-login.google:hover { background: #f9f9f9; transform: translateY(-2px); box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
 
-/* 使用者卡片 */
-.user-card { display: flex; justify-content: space-between; align-items: center; background: var(--card-bg); border: 1px solid var(--pri); border-radius: 12px; padding: 20px; margin-bottom: 25px; box-shadow: 0 5px 15px rgba(255, 69, 0, 0.1); }
+/* 🌟 App-like 使用者卡片 */
+.user-card { display: flex; justify-content: space-between; align-items: center; background: var(--card-bg); border: 1px solid var(--pri); border-radius: 12px; padding: 15px 20px; margin-bottom: 25px; box-shadow: 0 4px 15px rgba(255, 69, 0, 0.1); }
 .user-info { display: flex; align-items: center; gap: 15px; }
 .user-avatar { width: 50px; height: 50px; border-radius: 50%; object-fit: cover; border: 2px solid var(--pri); }
 .user-avatar-placeholder { width: 50px; height: 50px; border-radius: 50%; background: var(--pri); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; font-weight: bold; }
-.btn-logout { background: transparent; border: 1px solid var(--bd); color: #888; padding: 8px 15px; border-radius: 6px; cursor: pointer; font-size: 0.85rem; transition: 0.2s; }
-.btn-logout:hover { border-color: #f44336; color: #f44336; }
+.user-name { margin: 0; font-size: 1.2rem; color: var(--txt); }
+.user-type { font-size: 0.8rem; color: #888; }
+.btn-logout { background: rgba(255,255,255,0.05); border: 1px solid var(--bd); color: #ccc; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 0.85rem; font-weight: bold; transition: 0.2s; }
+.btn-logout:hover { border-color: #f44336; color: #f44336; background: rgba(244,67,54,0.1); }
+
+/* 🌟 App-like 頁籤 (Segmented Control) */
+.segmented-tabs { display: flex; background: rgba(255, 255, 255, 0.05); border: 1px solid var(--bd); border-radius: 30px; padding: 4px; margin-bottom: 20px; }
+.seg-tab { flex: 1; text-align: center; padding: 10px 0; border-radius: 25px; font-size: 0.9rem; font-weight: bold; color: #888; cursor: pointer; transition: all 0.3s ease; display: flex; align-items: center; justify-content: center; gap: 6px; }
+.seg-tab span { background: rgba(0,0,0,0.3); padding: 2px 6px; border-radius: 10px; font-size: 0.75rem; }
+.seg-tab.active { background: var(--pri); color: #fff; box-shadow: 0 4px 10px rgba(255, 69, 0, 0.4); }
+.seg-tab.active span { background: rgba(255,255,255,0.2); }
 
 /* 狀態區塊 */
 .empty-state { text-align: center; padding: 50px 20px; background: rgba(0,0,0,0.1); border: 1px dashed var(--bd); border-radius: 12px; color: #888; }
 .empty-icon { font-size: 3rem; margin-bottom: 10px; opacity: 0.5; }
-
-/* 頁籤 */
-.tabs { display: flex; gap: 0; margin-bottom: 15px; background: #111; border-radius: 8px; overflow: hidden; border: 1px solid var(--bd); }
-.tab { flex: 1; padding: 12px; text-align: center; cursor: pointer; color: #666; font-weight: 700; font-size: 1rem; transition: 0.3s; border-right: 1px solid #222; }
-.tab:last-child { border-right: none; }
-.tab.active { background: var(--pri); color: #000; box-shadow: inset 0 0 20px rgba(0,0,0,0.2); }
 
 /* 競標列表 */
 .bid-list { display: flex; flex-direction: column; gap: 15px; }
 .bid-card { display: flex; background: var(--card-bg); border: 1px solid var(--bd); border-radius: 10px; overflow: hidden; text-decoration: none; transition: 0.2s; }
 .bid-card:hover { transform: translateY(-3px); border-color: var(--pri); box-shadow: 0 5px 15px rgba(0,0,0,0.2); }
 .bid-img { width: 120px; height: 120px; object-fit: cover; border-right: 1px solid var(--bd); }
-.bid-info { padding: 15px; flex: 1; display: flex; flex-direction: column; justify-content: center; }
-.bid-detail-row { display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.02); padding: 10px; border-radius: 6px; border: 1px solid var(--bd); }
-.status-badge { padding: 4px 8px; font-size: 0.8rem; font-weight: bold; border-radius: 4px; white-space: nowrap; }
+.bid-info { padding: 12px 15px; flex: 1; display: flex; flex-direction: column; justify-content: center; }
+.bid-detail-row { display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.02); padding: 8px 10px; border-radius: 6px; border: 1px solid var(--bd); }
+.status-badge { padding: 4px 8px; font-size: 0.75rem; font-weight: bold; border-radius: 4px; white-space: nowrap; }
 .s-sold { background: #333; color: #fff; border: 1px solid #666; }
 .s-res { background: #FFC107; color: #000; }
 
@@ -375,32 +395,8 @@ const getMapLink = (h) => {
 .slim-title { font-size: 0.9rem; font-weight: 700; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 2px; }
 .slim-price-row { display: flex; justify-content: space-between; align-items: center; padding-top: 4px; border-top: 1px solid rgba(255,255,255,0.1); }
 .slim-price { font-size: 1.1rem; font-weight: 900; color: var(--pri); }
-.fav-btn { position: absolute; top: 5px; right: 5px; font-size: 1.4rem; color: rgba(255,255,255,0.7); cursor: pointer; z-index: 5; transition: 0.2s; text-shadow: 0 0 5px rgba(0,0,0,1); background: rgba(0,0,0,0.3); border-radius: 50%; width: 28px; height: 28px; display: flex; justify-content: center; align-items: center; padding-top: 2px; }
+.fav-btn { position: absolute; top: 5px; right: 5px; font-size: 1.4rem; color: rgba(255,255,255,0.7); cursor: pointer; z-index: 5; transition: 0.2s; text-shadow: 0 0 5px rgba(0,0,0,1); background: rgba(0,0,0,0.3); border-radius: 50%; width: 32px; height: 32px; display: flex; justify-content: center; align-items: center; padding-top: 2px; }
 .fav-btn.active { color: #e91e63; transform: scale(1.1); text-shadow: 0 0 10px #e91e63; background: rgba(0,0,0,0.6); }
-
-/* Day Mode */
-:global(body.day-mode) .user-card { background: #fff; border-color: var(--pri); box-shadow: 0 5px 15px rgba(255, 69, 0, 0.05); }
-:global(body.day-mode) .btn-logout { background: #fff; border-color: #ccc; color: #555; }
-:global(body.day-mode) .btn-logout:hover { border-color: #c62828; color: #c62828; background: #ffebee; }
-:global(body.day-mode) .empty-state { background: #f9f9f9; border-color: #ddd; color: #666; }
-:global(body.day-mode) .bid-card { background: #fff; border-color: #ddd; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
-:global(body.day-mode) .bid-img { border-right-color: #ddd; }
-:global(body.day-mode) .bid-detail-row { background: #f9f9f9; border-color: #eee; color: #333; }
-:global(body.day-mode) .login-prompt-box { background: #fff; border-color: #ddd; box-shadow: 0 10px 30px rgba(0,0,0,0.05); }
-:global(body.day-mode) .tabs { background: #eee; border-color: #ccc; }
-:global(body.day-mode) .tab { border-right-color: #ccc; color: #666; }
-:global(body.day-mode) .tab.active { background: #ddd; color: #000; }
-:global(body.day-mode) .card { background: #fff; border-color: #ddd; }
-:global(body.day-mode) .slim-title { color: #111; }
-:global(body.day-mode) .slim-price-row { border-top-color: #eee; }
-
-@media (max-width: 768px) {
-    .user-card { flex-direction: column; gap: 15px; text-align: center; }
-    .user-info { flex-direction: column; }
-    .bid-card { flex-direction: column; }
-    .bid-img { width: 100%; height: 180px; border-right: none; border-bottom: 1px solid var(--bd); }
-    .grid { grid-template-columns: repeat(2, 1fr) !important; gap: 8px; }
-}
 
 /* 醫院卡片樣式 */
 .hosp-list { display: flex; flex-direction: column; gap: 12px; }
@@ -418,14 +414,55 @@ const getMapLink = (h) => {
 .hosp-call-btn { padding: 6px 12px; font-size: 0.7rem; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; border: 1px solid var(--pri); color: var(--pri); text-decoration: none; transition: 0.2s; border-radius: 4px; }
 .hosp-call-btn:hover { background: var(--pri); color: #fff; }
 
+/* Day Mode */
+:global(body.day-mode) .user-card { background: #fff; border-color: var(--pri); box-shadow: 0 4px 15px rgba(255, 69, 0, 0.05); }
+:global(body.day-mode) .btn-logout { background: #fff; border-color: #ccc; color: #555; }
+:global(body.day-mode) .btn-logout:hover { border-color: #c62828; color: #c62828; background: #ffebee; }
+:global(body.day-mode) .segmented-tabs { background: #eee; border-color: #ddd; }
+:global(body.day-mode) .seg-tab { color: #666; }
+:global(body.day-mode) .seg-tab span { background: rgba(0,0,0,0.1); color: #333; }
+:global(body.day-mode) .seg-tab.active { background: var(--pri); color: #fff; }
+:global(body.day-mode) .seg-tab.active span { background: rgba(255,255,255,0.2); color: #fff; }
+:global(body.day-mode) .empty-state { background: #f9f9f9; border-color: #ddd; color: #666; }
+:global(body.day-mode) .bid-card { background: #fff; border-color: #ddd; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+:global(body.day-mode) .bid-img { border-right-color: #ddd; }
+:global(body.day-mode) .bid-detail-row { background: #f9f9f9; border-color: #eee; color: #333; }
+:global(body.day-mode) .login-prompt-box { background: #fff; border-color: #ddd; box-shadow: 0 10px 30px rgba(0,0,0,0.05); }
+:global(body.day-mode) .card { background: #fff; border-color: #ddd; }
+:global(body.day-mode) .slim-title { color: #111; }
+:global(body.day-mode) .slim-price-row { border-top-color: #eee; }
 :global(body.day-mode) .hosp-card { background: #fff; border-color: #ddd; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
 :global(body.day-mode) .hosp-name { color: #222; }
 :global(body.day-mode) .hosp-tag { background: #fff !important; color: var(--pri) !important; border-color: rgba(255, 69, 0, 0.3) !important; }
 :global(body.day-mode) .hosp-call-btn { border-color: var(--pri) !important; color: var(--pri) !important; }
 :global(body.day-mode) .hosp-call-btn:hover { background: var(--pri) !important; color: #fff !important; }
 
+/* 🌟 Mobile Optimizations */
 @media (max-width: 768px) {
+    .dt-only { display: none !important; }
+    
+    .profile-page-wrapper {
+        padding-top: 5px; /* 移除頂部多餘空間 */
+    }
+    
+    .user-card { padding: 12px 15px; margin-bottom: 15px; }
+    .user-avatar, .user-avatar-placeholder { width: 40px; height: 40px; }
+    .user-name { font-size: 1rem; }
+    .btn-logout { padding: 6px 10px; font-size: 0.8rem; }
+    
+    .segmented-tabs { margin-bottom: 15px; }
+    .seg-tab { font-size: 0.85rem; padding: 8px 0; flex-direction: column; gap: 2px; }
+    .seg-tab span { padding: 1px 5px; }
+
+    .bid-card { flex-direction: column; }
+    .bid-img { width: 100%; height: 160px; border-right: none; border-bottom: 1px solid var(--bd); }
+    .bid-detail-row { font-size: 0.9rem; }
+    
+    .grid { grid-template-columns: repeat(2, 1fr) !important; gap: 8px; }
+    
     .hosp-content-row { flex-direction: column; }
     .hosp-actions { flex-direction: row; justify-content: space-between; align-items: center; width: 100%; margin-top: 10px; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 10px; }
+    
+    .btn-hero { width: 100%; }
 }
 </style>

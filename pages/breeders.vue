@@ -36,8 +36,10 @@ useHead({
 </script>
 
 <template>
-    <div>
-        <h1 class="page-title">種群展示</h1>
+    <div class="breeders-page-wrapper">
+        <!-- 🌟 桌機版顯示標題，手機版隱藏 -->
+        <h1 class="page-title dt-only">種群展示</h1>
+        
         <div class="tabs">
             <div class="tab" :class="{active: breederSp === '豹紋守宮'}" @click="breederSp = '豹紋守宮'">豹紋守宮</div>
             <div class="tab" :class="{active: breederSp === '肥尾守宮'}" @click="breederSp = '肥尾守宮'">肥尾守宮</div>
@@ -73,22 +75,44 @@ useHead({
 </template>
 
 <style scoped>
+.breeders-page-wrapper { max-width: 1200px; margin: 0 auto; }
+
+/* 🌟 Responsive Utilities */
+.dt-only { display: block; }
+
 .tabs { display: flex; gap: 0; margin-bottom: 15px; background: #111; border-radius: 8px; overflow: hidden; border: 1px solid var(--bd); }
 .tab { flex: 1; padding: 12px; text-align: center; cursor: pointer; color: #666; font-weight: 700; font-size: 1rem; transition: 0.3s; border-right: 1px solid #222; }
 .tab:last-child { border-right: none; }
 .tab.active { background: var(--pri); color: #000; box-shadow: inset 0 0 20px rgba(0,0,0,0.2); }
 
 .photo-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
-.photo-grid .card-img { width: 100%; height: auto; aspect-ratio: 1 / 1; object-fit: cover; cursor: pointer; background-color: #000; }
-.morph-title { margin: 0; font-weight: bold; color: var(--txt); }
+.photo-grid .card-img { width: 100%; height: auto; aspect-ratio: 1 / 1; object-fit: cover; cursor: pointer; background-color: #000; border-bottom: 1px solid var(--bd); transition: filter 0.3s; }
+.morph-title { margin: 0; font-weight: bold; color: var(--txt); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* Card Base Hover */
+.card { background: var(--card-bg); border: 1px solid var(--bd); border-radius: 10px; overflow: hidden; position: relative; transition: 0.3s; cursor: pointer; }
+.card:hover { transform: translateY(-3px); border-color: rgba(255, 87, 34, 0.8); box-shadow: 0 5px 15px rgba(0,0,0,0.3); }
 
 :global(body.day-mode) .tabs { background: #eee; border-color: #ccc; }
 :global(body.day-mode) .tab { border-right-color: #ccc; color: #666; }
 :global(body.day-mode) .tab.active { background: #ddd; color: #000; }
 :global(body.day-mode) .morph-title { color: #111; }
-:global(body.day-mode) .photo-grid .card-img { background-color: #f4f4f4; }
+:global(body.day-mode) .photo-grid .card-img { background-color: #f4f4f4; border-bottom-color: #eee; }
+:global(body.day-mode) .card { background: #fff; border-color: #ddd; }
+:global(body.day-mode) .card:hover { border-color: var(--pri); box-shadow: 0 5px 15px rgba(0,0,0,0.05); }
 
+/* 🌟 Mobile Optimizations */
 @media (max-width: 768px) {
+    .dt-only { display: none !important; }
+    
+    .breeders-page-wrapper {
+        padding-top: 0;
+    }
+    
+    .tabs { margin-bottom: 15px; }
+    .tab { padding: 10px; font-size: 0.95rem; }
+
     .grid.photo-grid { grid-template-columns: repeat(2, 1fr) !important; gap: 8px; }
+    .morph-title { font-size: 0.9rem !important; }
 }
 </style>

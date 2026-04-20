@@ -1,13 +1,14 @@
 <script setup>
 import { computed } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useHead, useAsyncData, useSupabaseClient } from '#imports'
 
 const route = useRoute()
+const router = useRouter() // 🌟 引入 router 處理返回
 const supabase = useSupabaseClient()
 const identityId = route.params.id
 
-// [SEO] 透過 SSR 抓取電子身分證資料，確保分享連結能直接預覽
+//[SEO] 透過 SSR 抓取電子身分證資料，確保分享連結能直接預覽
 const { data: item, pending, error } = await useAsyncData(`identity-${identityId}`, async () => {
     const { data, error: fetchError } = await supabase
         .from('inventory')
@@ -96,6 +97,15 @@ const triggerPrint = () => {
         window.print()
     }
 }
+
+// 🌟 返回上一頁的邏輯
+const goBack = () => {
+    if (window.history.state && window.history.state.back) {
+        router.back()
+    } else {
+        router.push('/')
+    }
+}
 </script>
 
 <template>
@@ -107,11 +117,20 @@ const triggerPrint = () => {
         </div>
         <div v-else-if="error" class="status-msg err">
             ⚠️ {{ error.message || '找不到此個體資料或已下架' }}
+            <button @click="goBack" class="app-back-btn" style="margin-top: 20px;">返回上一頁</button>
         </div>
 
         <!-- Identity Content -->
         <div v-else-if="item" class="id-content-wrap">
             
+            <!-- 🌟 App-like 返回按鈕 -->
+            <div class="nav-action-row">
+                <button class="app-back-btn" @click="goBack">
+                    <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+                    返回上一頁
+                </button>
+            </div>
+
             <!-- 卡片本體 -->
             <div class="id-card print-target">
                 
@@ -181,8 +200,51 @@ const triggerPrint = () => {
     width: 100%;
 }
 
+.id-content-wrap {
+    width: 100%;
+    max-width: 800px;
+}
+
+/* 🌟 App-like 膠囊狀返回按鈕 */
+.nav-action-row {
+    width: 100%;
+    display: flex;
+    justify-content: flex-start;
+    margin-bottom: 15px;
+}
+
+.app-back-btn {
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    color: #fff;
+    font-size: 0.95rem;
+    font-weight: bold;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    border-radius: 30px; /* 膠囊狀 */
+    transition: 0.2s;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+}
+
+.app-back-btn:active {
+    transform: scale(0.95);
+    opacity: 0.8;
+}
+
+:global(body.day-mode) .app-back-btn {
+    background: rgba(0, 0, 0, 0.05);
+    border-color: rgba(0, 0, 0, 0.1);
+    color: #333;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+}
+
 /* Status */
-.status-msg { text-align: center; font-size: 1.2rem; color: #fff; text-shadow: 0 2px 4px rgba(0,0,0,0.5); }
+.status-msg { text-align: center; font-size: 1.2rem; color: #fff; text-shadow: 0 2px 4px rgba(0,0,0,0.5); display: flex; flex-direction: column; align-items: center; }
 .loader { width: 40px; height: 40px; border: 4px solid rgba(255,255,255,0.3); border-top-color: #fff; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 10px; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
@@ -191,8 +253,7 @@ const triggerPrint = () => {
     background: #fff;
     color: #1e293b;
     width: 100%;
-    max-width: 800px;
-    border-radius: 12px;
+    border-radius: 16px;
     overflow: hidden;
     box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
     display: flex;
@@ -236,15 +297,20 @@ const triggerPrint = () => {
     padding: 12px 28px; border-radius: 30px; border: none;
     font-weight: bold; font-size: 1rem; cursor: pointer;
     display: inline-flex; align-items: center; justify-content: center;
-    box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+    box-shadow: 0 4px 10px rgba(0,0,0,0.3);
     background: #d84315; color: #fff;
     transition: 0.2s;
     max-width: 90%;
+}
+.act-btn:active {
+    transform: scale(0.95);
 }
 .id-hint { font-size: 0.8rem; color: rgba(255,255,255,0.8); margin-top: 15px; text-shadow: 0 1px 2px rgba(0,0,0,0.5); text-align: center; }
 
 /* Mobile Responsive */
 @media (max-width: 768px) {
+    .id-page-container { padding-top: 0; }
+
     .id-card {
         flex-direction: column;
         max-width: 100%;
@@ -265,7 +331,7 @@ const triggerPrint = () => {
 }
 </style>
 
-<!-- Print Styles (Global - 保持強制橫向 A4) -->
+<!-- Print Styles -->
 <style>
 @media print {
     @page {
@@ -314,7 +380,7 @@ const triggerPrint = () => {
         flex: 1 !important;
     }
 
-    .id-actions, .id-hint, .status-msg, .loader, .floating-inquire-btn {
+    .id-actions, .id-hint, .status-msg, .loader, .floating-inquire-btn, .nav-action-row, .bottom-nav {
         display: none !important;
     }
 }

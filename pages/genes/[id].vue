@@ -3,6 +3,7 @@ import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useHead, useAsyncData, useSupabaseClient } from '#imports'
 import { useMainStore } from '~/stores/useMainStore'
+import { getCleanUrl } from '~/utils/image.js'
 
 const route = useRoute()
 const router = useRouter()
@@ -43,6 +44,7 @@ if (viewingGene.value && import.meta.client) {
     store.viewingGene = viewingGene.value
 }
 
+// SEO 用的圖片網址處理
 const getMetaImg = (url) => {
     if (!url) return 'https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/%E6%AD%A3%E9%9D%A2.png'
     const driveRegex = /file\/d\/([a-zA-Z0-9_-]+)\//
@@ -50,15 +52,6 @@ const getMetaImg = (url) => {
     let target = url
     if (match && match[1]) target = 'https://drive.google.com/uc?id=' + match[1]
     return `https://wsrv.nl/?url=${encodeURIComponent(target)}&w=1200&output=webp&q=80`
-}
-
-const convertLink = (url) => {
-    if (!url) return ''
-    const driveRegex = /file\/d\/([a-zA-Z0-9_-]+)\//
-    const match = url.match(driveRegex)
-    let target = url
-    if (match && match[1]) target = 'https://drive.google.com/uc?id=' + match[1]
-    return `https://wsrv.nl/?url=${encodeURIComponent(target)}&w=1000&output=webp&q=80`
 }
 
 const siteData = computed(() => {
@@ -124,7 +117,7 @@ const goBack = () => {
 </script>
 
 <template>
-    <div>
+    <div class="gene-detail-wrapper">
         <div v-if="pending" style="text-align:center; padding:100px 0; color:#888;">
             <div class="loader" style="margin:0 auto 20px auto;"></div>
             <p>基因資料載入中...</p>
@@ -133,24 +126,51 @@ const goBack = () => {
         <div v-else-if="!viewingGene" style="text-align:center; padding:100px 0; color:#888;">
             <h2>找不到「{{ geneName }}」的資料</h2>
             <p>可能該基因條目尚未建立或已被移除。</p>
-            <button @click="goBack" class="btn-back" style="margin-top:20px;">← 返回圖鑑列表</button>
+            <button @click="goBack" class="app-back-btn" style="margin: 20px auto; justify-content: center;">
+                <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none"><polyline points="15 18 9 12 15 6"></polyline></svg> 返回圖鑑列表
+            </button>
         </div>
 
-        <div v-else class="prod-container">
-            <button class="btn-back" @click="goBack">← 返回圖鑑列表</button>
-            <div class="page-text-box">
-                <h1 class="page-title">{{ viewingGene.Name }}</h1>
-                <div v-if="viewingGene.Warning" class="warn-box">{{ viewingGene.Warning }}</div>
-                <div class="about-layout">
-                    <img v-if="viewingGene.ImageURL" :src="convertLink(viewingGene.ImageURL)" :alt="viewingGene.Name + ' 基因特徵'" class="about-img">
-                    <div class="about-content">
-                        <h3>基因簡介</h3>
-                        <p>{{ viewingGene.Brief }}</p>
-                        <div v-if="viewingGene.Detail">
-                            <h3 style="margin-top:20px;color:var(--pri)">詳細敘述</h3>
-                            <p style="white-space:pre-wrap">{{ viewingGene.Detail }}</p>
+        <div v-else class="gene-container">
+            <!-- 🌟 App-like 返回按鈕 -->
+            <button class="app-back-btn" @click="goBack">
+                <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+                返回圖鑑
+            </button>
+
+            <!-- 🌟 集中閱讀的卡片化設計 -->
+            <div class="content-card">
+                <h1 class="gene-title">{{ viewingGene.Name }}</h1>
+                
+                <div v-if="viewingGene.Warning" class="warn-box">
+                    <span style="font-size: 1.2rem; margin-right: 5px;">⚠️</span>
+                    {{ viewingGene.Warning }}
+                </div>
+                
+                <div class="gene-layout">
+                    <!-- 使用 NuxtImg 優化載入 -->
+                    <NuxtImg 
+                        v-if="viewingGene.ImageURL" 
+                        :src="getCleanUrl(viewingGene.ImageURL)" 
+                        :alt="viewingGene.Name + ' 基因特徵'" 
+                        class="gene-img"
+                        width="600"
+                        height="600"
+                        fit="cover"
+                        format="webp"
+                        loading="eager"
+                    />
+                    
+                    <div class="gene-text-content">
+                        <h3>📖 基因簡介</h3>
+                        <p class="brief-txt">{{ viewingGene.Brief }}</p>
+                        
+                        <div v-if="viewingGene.Detail" class="detail-section">
+                            <h3>🔍 詳細敘述</h3>
+                            <p class="detail-txt">{{ viewingGene.Detail }}</p>
                         </div>
-                        <div v-if="viewingGene.Source" style="margin-top:20px;font-size:0.9rem;color:#888;border-top:1px solid var(--bd);padding-top:10px;text-align:left;">
+                        
+                        <div v-if="viewingGene.Source" class="source-text">
                             資料來源：{{ viewingGene.Source }}
                         </div>
                     </div>
@@ -159,3 +179,154 @@ const goBack = () => {
         </div>
     </div>
 </template>
+
+<style scoped>
+.gene-detail-wrapper {
+    max-width: 900px;
+    margin: 0 auto;
+    padding-top: 5px;
+    padding-bottom: 20px;
+}
+
+/* 🌟 App-like 返回按鈕 */
+.app-back-btn {
+    background: transparent;
+    border: none;
+    color: var(--pri);
+    font-size: 1.1rem;
+    font-weight: bold;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 10px 0;
+    margin-bottom: 10px;
+    transition: opacity 0.2s, transform 0.2s;
+}
+
+.app-back-btn:active {
+    opacity: 0.7;
+    transform: scale(0.97);
+}
+
+/* 🌟 卡片化內容 */
+.content-card {
+    background: var(--card-bg);
+    border: 1px solid var(--bd);
+    border-radius: 16px;
+    padding: 30px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
+}
+
+.gene-title {
+    font-size: 2.2rem;
+    margin: 0 0 20px 0;
+    color: #fff;
+    line-height: 1.2;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    padding-bottom: 15px;
+}
+
+.warn-box {
+    background: rgba(244, 67, 54, 0.1);
+    border: 1px solid #f44336;
+    color: #ffcdd2;
+    padding: 15px;
+    border-radius: 10px;
+    margin-bottom: 25px;
+    font-weight: bold;
+    font-size: 0.95rem;
+    display: flex;
+    align-items: center;
+    line-height: 1.5;
+}
+
+.gene-layout {
+    display: flex;
+    gap: 30px;
+    align-items: flex-start;
+}
+
+.gene-img {
+    width: 45%;
+    border-radius: 12px;
+    object-fit: cover;
+    border: 1px solid var(--bd);
+    box-shadow: 0 5px 20px rgba(0,0,0,0.3);
+}
+
+.gene-text-content {
+    flex: 1;
+}
+
+h3 {
+    color: var(--pri);
+    font-size: 1.25rem;
+    margin: 0 0 10px 0;
+}
+
+p {
+    color: #ccc;
+    line-height: 1.7;
+    font-size: 1.05rem;
+    white-space: pre-wrap;
+    text-align: justify;
+}
+
+.detail-section {
+    margin-top: 25px;
+}
+
+.source-text {
+    margin-top: 30px;
+    font-size: 0.85rem;
+    color: #666;
+    border-top: 1px dashed rgba(255, 255, 255, 0.1);
+    padding-top: 15px;
+}
+
+/* Day Mode Overrides */
+:global(body.day-mode) .content-card { background: #fff; border-color: #ddd; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05); }
+:global(body.day-mode) .gene-title { color: #111; border-bottom-color: #eee; }
+:global(body.day-mode) .warn-box { background: #ffebee; border-color: #ef5350; color: #c62828; }
+:global(body.day-mode) p { color: #333; }
+:global(body.day-mode) .source-text { color: #888; border-top-color: #eee; }
+:global(body.day-mode) .gene-img { border-color: #ddd; box-shadow: 0 5px 20px rgba(0,0,0,0.05); }
+
+/* 🌟 Mobile Responsive */
+@media (max-width: 768px) {
+    .gene-detail-wrapper {
+        padding-top: 0;
+    }
+    
+    .app-back-btn {
+        padding: 5px 10px;
+        margin-bottom: 5px;
+    }
+    
+    .content-card {
+        padding: 20px;
+        border-radius: 12px;
+    }
+    
+    .gene-title {
+        font-size: 1.8rem;
+        margin-bottom: 15px;
+        padding-bottom: 10px;
+    }
+    
+    .gene-layout {
+        flex-direction: column;
+        gap: 20px;
+    }
+    
+    .gene-img {
+        width: 100%;
+        max-height: 350px;
+    }
+    
+    p {
+        font-size: 1rem;
+    }
+}
+</style>

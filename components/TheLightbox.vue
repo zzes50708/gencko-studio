@@ -41,9 +41,11 @@ const onTouchEnd = () => {
 
 <template>
     <div v-if="item" class="lightbox-overlay" @click="emit('close')">
-        <div class="lightbox-close" @click.stop="emit('close')">✕</div>
+        <!-- 🌟 App-like 毛玻璃關閉按鈕 -->
+        <button class="lightbox-close" @click.stop="emit('close')">
+            <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </button>
         
-        <!-- 🌟 將圖片與文字包裝起來，方便整體連動滑動 -->
         <div class="lightbox-content-wrapper"
              :style="{
                  transform: `translateY(${touchDeltaY}px)`,
@@ -55,6 +57,9 @@ const onTouchEnd = () => {
              @touchend="onTouchEnd"
              @click.stop
         >
+            <!-- 🌟 App-like 頂部滑動提示條 -->
+            <div class="swipe-indicator"></div>
+
             <!-- 使用 NuxtImg 進行放大預覽圖的最佳化 -->
             <NuxtImg 
                 v-if="item.ImageURL"
@@ -68,14 +73,13 @@ const onTouchEnd = () => {
             />
             
             <div class="lightbox-info">
-                <h2 style="color:#fff;margin:10px 0;">{{ item.Morph || item.Name }}</h2>
+                <h2 class="lightbox-title">{{ item.Morph || item.Name }}</h2>
                 <a v-if="item.Status === 'ForSale' || item.Available !== 'No'" 
                    :href="item.ExternalLink || lineLink" 
                    target="_blank" 
-                   class="btn-buy" 
-                   style="font-size:1.2rem;padding:12px 30px;display:inline-block;margin-top:10px;position:relative;z-index:100001;"
+                   class="app-btn-buy" 
                    rel="noopener noreferrer">
-                   立即私訊購買
+                   💬 立即私訊購買
                 </a>
             </div>
         </div>
@@ -84,6 +88,20 @@ const onTouchEnd = () => {
 
 <style scoped>
 /* 🌟 增強行動端手勢流暢度 */
+.lightbox-overlay {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: rgba(0, 0, 0, 0.95);
+    z-index: 999999;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+}
+
 .lightbox-content-wrapper {
     display: flex;
     flex-direction: column;
@@ -95,10 +113,101 @@ const onTouchEnd = () => {
     will-change: transform, opacity;
 }
 
+/* 🌟 滑動提示條 */
+.swipe-indicator {
+    width: 40px;
+    height: 5px;
+    border-radius: 5px;
+    background: rgba(255, 255, 255, 0.4);
+    margin-bottom: 12px;
+}
+
 .lightbox-img {
+    max-width: 95%;
+    max-height: 75vh;
+    border-radius: 16px; /* 🌟 加大圓角 */
+    box-shadow: 0 10px 40px rgba(0,0,0,0.8);
+    object-fit: contain;
     /* 防止長按圖片時跳出系統選單，提升 App 沉浸感 */
     -webkit-touch-callout: none;
     -webkit-user-select: none;
     user-select: none;
+    background: #000;
+    border: 1px solid rgba(255, 255, 255, 0.1);
 }
+
+.lightbox-info {
+    margin-top: 20px;
+    text-align: center;
+    width: 100%;
+    position: relative;
+    z-index: 1000000;
+}
+
+.lightbox-title {
+    color: #fff;
+    margin: 0 0 15px 0;
+    font-size: 1.5rem;
+    font-weight: 900;
+    text-shadow: 0 2px 10px rgba(0,0,0,0.5);
+}
+
+/* 🌟 App-like 購買按鈕 */
+.app-btn-buy {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    font-size: 1.1rem;
+    padding: 14px 35px;
+    background: var(--pri);
+    color: #fff;
+    border-radius: 30px;
+    font-weight: bold;
+    text-decoration: none;
+    box-shadow: 0 5px 20px rgba(255, 69, 0, 0.4);
+    transition: transform 0.2s, box-shadow 0.2s;
+    position: relative;
+    z-index: 100001;
+}
+
+.app-btn-buy:active {
+    transform: scale(0.95);
+    box-shadow: 0 2px 10px rgba(255, 69, 0, 0.3);
+}
+
+/* 🌟 App-like 毛玻璃關閉按鈕 */
+.lightbox-close {
+    position: absolute;
+    top: calc(20px + env(safe-area-inset-top, 0px));
+    right: 20px;
+    color: #fff;
+    cursor: pointer;
+    z-index: 1000000;
+    background: rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    width: 44px; /* 🌟 確保符合觸控標準 */
+    height: 44px;
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    transition: background 0.2s, transform 0.2s;
+    padding: 0;
+}
+
+.lightbox-close:active {
+    background: rgba(255, 255, 255, 0.25);
+    transform: scale(0.9);
+}
+
+/* Day Mode Overrides */
+:global(body.day-mode) .lightbox-overlay { background: rgba(255, 255, 255, 0.98); }
+:global(body.day-mode) .lightbox-title { color: #111; text-shadow: none; }
+:global(body.day-mode) .swipe-indicator { background: rgba(0, 0, 0, 0.2); }
+:global(body.day-mode) .lightbox-img { border-color: #ddd; box-shadow: 0 10px 40px rgba(0,0,0,0.15); background: #f9f9f9; }
+:global(body.day-mode) .lightbox-close { background: rgba(0, 0, 0, 0.05); color: #333; border-color: rgba(0, 0, 0, 0.1); }
+:global(body.day-mode) .lightbox-close:active { background: rgba(0, 0, 0, 0.1); }
 </style>

@@ -73,8 +73,9 @@ const goToDetail = (id) => {
         </div>
 
         <div v-else class="auction-container">
-            <h1 class="page-title">線上競標 <span>Live Auctions</span></h1>
-            <p class="page-desc">限時競標，結標前 3 分鐘出價自動延長。</p>
+            <!-- 🌟 加上 dt-only 讓手機版隱藏標題與描述 -->
+            <h1 class="page-title dt-only">線上競標 <span>Live Auctions</span></h1>
+            <p class="page-desc dt-only">限時競標，結標前 3 分鐘出價自動延長。</p>
             
             <div class="auction-grid">
                 <div v-for="item in displayAuctions" :key="item.id" class="auction-card" @click="goToDetail(item.id)">
@@ -122,6 +123,10 @@ const goToDetail = (id) => {
 
 <style scoped>
 .auction-page { max-width: 1200px; margin: 0 auto; padding: 2rem 1rem; color: var(--txt); }
+
+/* 🌟 Responsive Utilities */
+.dt-only { display: block; }
+
 .page-title { font-size: 2rem; margin-bottom: 0.5rem; display: flex; align-items: baseline; gap: 1rem; }
 .page-title span { font-size: 1rem; color: #888; }
 .page-desc { color: #666; margin-bottom: 2rem; }
@@ -138,8 +143,8 @@ const goToDetail = (id) => {
 .badge-ended { background: #666 !important; }
 
 .card-info { padding: 1rem; display: flex; flex-direction: column; flex-grow: 1; }
-.card-info h3 { margin: 0 0 0.5rem 0; font-size: 1.1rem; color: var(--txt); }
-.morph { color: #aaa; font-size: 0.9rem; margin-bottom: 1rem; }
+.card-info h3 { margin: 0 0 0.5rem 0; font-size: 1.1rem; color: var(--txt); line-height: 1.3; }
+.morph { color: #aaa; font-size: 0.9rem; margin-bottom: 1rem; line-height: 1.4; }
 .price-info { display: flex; justify-content: space-between; margin-bottom: 1rem; background: rgba(255,255,255,0.03); padding: 0.5rem; border-radius: 8px; border: 1px solid var(--bd); }
 .price-col { display: flex; flex-direction: column; }
 .price-col span { font-size: 0.8rem; color: #888; }
@@ -159,4 +164,26 @@ const goToDetail = (id) => {
 :global(body.day-mode) .price-info { background: #f9f9f9; border-color: #eee; }
 :global(body.day-mode) .countdown { background: #eee; color: #444; border-color: #ddd; }
 :global(body.day-mode) .countdown.ending-soon { background: #e74c3c; color: #fff; border-color: #c0392b; }
+
+/* 🌟 Mobile Optimizations */
+@media (max-width: 768px) {
+    .dt-only { display: none !important; }
+    
+    .auction-page {
+        padding: 0 15px 15px 15px; /* 移除上方多餘 padding */
+    }
+    
+    .auction-grid {
+        grid-template-columns: 1fr; /* 手機版維持單欄卡片，較易閱讀 */
+        gap: 15px;
+    }
+    
+    .card-info h3 {
+        font-size: 1.15rem;
+    }
+    
+    .price-col strong {
+        font-size: 1.2rem;
+    }
+}
 </style>
