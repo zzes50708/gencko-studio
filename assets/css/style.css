@@ -182,13 +182,13 @@ body.day-mode .mm-anim-inner { background: #f5f5f5; }
 .slim-card { border-radius: 8px; cursor: pointer; }
 .slim-body { padding: 8px; }
 .slim-title { font-size: 0.9rem; font-weight: 700; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 2px; line-height: 1.2; }
-.slim-gene { font-size: 0.75rem; color: #aaa; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.slim-gene { font-size: 0.75rem; color: #111; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .slim-meta { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px; font-size: 0.8rem; }
 .slim-price-row { display: flex; justify-content: space-between; align-items: center; padding-top: 4px; border-top: 1px solid rgba(255,255,255,0.1); }
 .slim-price { font-size: 1.1rem; font-weight: 900; color: var(--pri); }
 
 body.day-mode .slim-title { color: #111; }
-body.day-mode .slim-gene { color: #555; }
+body.day-mode .slim-gene { color: #111; }
 body.day-mode .slim-price-row { border-top-color: #eee; }
 
 /* Product Detail */
@@ -203,12 +203,10 @@ body.day-mode .slim-price-row { border-top-color: #eee; }
 .prod-id { color: #666; font-family: monospace; font-size: 0.85rem; margin-bottom: 4px; }
 .prod-title { font-size: 1.8rem; color: #fff; margin: 0 0 8px; line-height: 1.2; }
 .merch-desc { color: #eee; font-size: 1rem; line-height: 1.6; margin-bottom: 20px; white-space: pre-wrap; }
-.prod-genes { color: #ccc; font-size: 1rem; }
+.prod-genes { color: #111; font-size: 1rem; }
 .prod-price-area { margin-bottom: 20px; }
 .spec-row { display: flex; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.05); }
 .spec-row:last-child { border-bottom: none; }
-.gene-tag-row { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
-.gene-pill { background: rgba(255,69,0,0.15); color: var(--pri); padding: 5px 12px; border-radius: 15px; font-size: 0.9rem; font-weight: bold; border: 1px solid rgba(255,69,0,0.3); }
 
 .prod-guarantee { background: rgba(40, 167, 69, 0.1); color: #81c784; padding: 15px; border-radius: 6px; border-left: 3px solid #4caf50; display: flex; align-items: flex-start; line-height: 1.5; margin-bottom: 15px; font-size: 0.95rem; }
 
@@ -232,7 +230,6 @@ body.day-mode .btn-share:hover { background: #f0f0f0; color: #000; }
 body.day-mode .prod-guarantee { background: #e8f5e9; color: #2e7d32; border-color: #2e7d32; }
 body.day-mode .prod-terms-box { background: #fff; border-color: #ddd; color: #333; box-shadow: 0 5px 20px rgba(0,0,0,0.05); }
 body.day-mode .terms-list { color: #444; }
-body.day-mode .gene-pill { background: #fff3e0; color: #e65100; border-color: #ffb74d; }
 
 @media (max-width: 768px) {
     .prod-layout { flex-direction: column; gap: 15px; }
@@ -260,14 +257,6 @@ body.day-mode .gene-pill { background: #fff3e0; color: #e65100; border-color: #f
 .faq-item.active .faq-body-wrapper { grid-template-rows: 1fr; }
 .faq-body-inner { overflow: hidden; }
 .faq-a { padding: 15px; background: #050505; color: #bbb; line-height: 1.6; border-top: 1px solid var(--bd); font-size: 0.95rem; }
-
-/* Genes */
-.gene-section { margin-bottom: 25px; }
-.gene-cat-title { font-size: 1.2rem; color: var(--pri); border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 8px; margin-bottom: 12px; font-weight: 700; letter-spacing: 1px; }
-.gene-btn-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
-.gene-btn-item { background: var(--card-bg); border: 1px solid var(--bd); border-radius: 8px; padding: 12px 15px; text-align: left; cursor: pointer; transition: 0.3s; display: flex; justify-content: space-between; align-items: center; color: #eee; font-weight: bold; font-size: 0.95rem; box-shadow: 0 3px 5px rgba(0,0,0,0.2); }
-.gene-btn-item:hover { border-color: var(--pri); transform: translateY(-3px); box-shadow: 0 5px 15px rgba(255,69,0,0.2); background: rgba(255,255,255,0.05); }
-.warn-box { background: #4a0d0d; color: #ffcdd2; padding: 12px; border-radius: 6px; margin-top: 15px; font-weight: bold; border: 1px solid #ef5350; box-shadow: 0 2px 8px rgba(0,0,0,0.3); letter-spacing: 0.5px; }
 
 /* Shop Layout */
 .shop-layout { display: flex; gap: 20px; align-items: flex-start; }
@@ -356,9 +345,7 @@ footer { margin-top: 40px; padding-bottom: 30px; text-align: center; color: #555
     .controls-row { flex-wrap: wrap; gap: 8px; overflow-x: visible; }
     .sort-select { font-size: 0.95rem; padding: 10px; flex: 100%; width: 100%; }
     .fav-toggle, .history-toggle { flex: 1; font-size: 0.9rem; padding: 10px; justify-content: center; min-width: 0; }
-    .gene-btn-grid { grid-template-columns: repeat(3, 1fr); gap: 8px; }
-    .gene-btn-item { padding: 10px 5px; font-size: 0.85rem; justify-content: center; text-align: center; white-space: normal; line-height: 1.3; height: 100%; }
-    .gene-btn-item span { display: none; }
+
     .about-img { width: 100%; }
     .reader-container { padding: 15px; }
     .mobile-buy-bar { display: flex; }
@@ -437,16 +424,13 @@ body.day-mode .article-card, body.day-mode .hot-card-item { background: #fff; bo
 body.day-mode .art-summary { color: #555; }
 body.day-mode .card-img { background: #f4f4f4 !important; color: #333 !important; }
 body.day-mode .art-cat-tag { background: #fff; color: var(--pri); border: 1px solid var(--pri); font-weight: bold; }
-body.day-mode .card, body.day-mode .gene-btn-item { border: 1px solid var(--pri); }
-body.day-mode .card:hover, body.day-mode .gene-btn-item:hover { border-width: 2px; }
 
 body.day-mode .reader-container { background: #fff; border: 1px solid #ccc; color: #111; }
 body.day-mode .reader-content { color: #111; }
 body.day-mode .btn-back { color: #000; border-color: #999; }
 body.day-mode .btn-back:hover { border-color: var(--pri); color: var(--pri); }
 
-body.day-mode .gene-btn-item { background: #fff; border-color: #ddd; color: #333; }
-body.day-mode .gene-btn-item:hover { background: #f9f9f9; border-color: var(--pri); }
+
 body.day-mode .faq-item { background: #fff; border-color: #ddd; }
 body.day-mode .faq-q { background: #fff; color: #111; }
 body.day-mode .faq-a { background: #f9f9f9; color: #333; border-top-color: #ddd; }

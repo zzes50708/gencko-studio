@@ -123,12 +123,10 @@ const resetQuiz = () => {
 .qs-nav-btn { margin-top: 25px; background: transparent; border: none; color: #888; cursor: pointer; font-size: 0.85rem; display: flex; align-items: center; gap: 8px; padding: 8px 0; transition: 0.2s; }
 .qs-nav-btn:hover { color: var(--pri); }
 
-.qs-result-box { text-align: center; padding: 30px; background: var(--card-bg); border: 1px solid var(--bd); border-radius: 16px; animation: slideUp 0.6s ease; max-width: 600px; margin: 0 auto; }
-.qs-badge { display: inline-block; padding: 3px 10px; border-radius: 20px; border: 1px solid var(--pri); color: var(--pri); font-size: 0.65rem; font-weight: bold; text-transform: uppercase; margin-bottom: 15px; letter-spacing: 1px; }
-.qs-res-title { font-size: 1.8rem; font-weight: 900; margin-bottom: 8px; color: var(--txt); }
-.qs-score-display { font-size: 3rem; font-weight: 900; color: var(--pri); margin: 15px 0; font-family: 'Black Ops One', cursive; text-shadow: 0 0 20px var(--pri-glow); }
-.qs-res-desc { font-size: 1rem; line-height: 1.5; color: #ccc; margin-bottom: 25px; }
-.qs-hint-box { background: rgba(255,255,255,0.03); border: 1px dashed var(--bd); padding: 12px; border-radius: 8px; color: #888; font-size: 0.85rem; margin-bottom: 25px; }
+.qs-result-box { text-align: center; padding: 20px; background: var(--card-bg); border: 1px solid var(--bd); border-radius: 16px; animation: slideUp 0.6s ease; max-width: 600px; margin: 0 auto; }
+.qs-score-display { font-size: 2.5rem; font-weight: 900; color: var(--pri); margin: 10px 0; font-family: 'Black Ops One', cursive; text-shadow: 0 0 20px var(--pri-glow); }
+.qs-res-desc { font-size: 0.95rem; line-height: 1.4; color: #ccc; margin-bottom: 15px; }
+.qs-hint-box { background: rgba(255,255,255,0.03); border: 1px dashed var(--bd); padding: 10px; border-radius: 8px; color: #888; font-size: 0.8rem; margin-bottom: 15px; }
 .qs-reset-btn { width: 100%; padding: 12px; background: var(--pri); color: #fff; border: none; border-radius: 12px; font-weight: bold; font-size: 1rem; cursor: pointer; transition: 0.3s; box-shadow: 0 5px 15px var(--pri-glow); }
 .qs-reset-btn:hover { transform: translateY(-3px); filter: brightness(1.1); }
 

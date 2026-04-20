@@ -59,8 +59,8 @@ useHead({
                     :alt="i.Morph" 
                     class="card-img" 
                     loading="lazy"
-                    width="300"
-                    height="300"
+                    width="400"
+                    height="400"
                     fit="cover"
                     format="webp"
                 />
@@ -75,6 +75,11 @@ useHead({
 </template>
 
 <style scoped>
+/* 強制警告區塊內的所有文字黑字 */
+:global(body.day-mode) .calc-warn,
+:global(body.day-mode) .calc-warn div,
+:global(body.day-mode) .calc-notice,
+:global(body.day-mode) .calc-notice div { color: #000 !important; text-shadow: none !important; }
 .breeders-page-wrapper { max-width: 1200px; margin: 0 auto; }
 
 /* 🌟 Responsive Utilities */
@@ -85,7 +90,8 @@ useHead({
 .tab:last-child { border-right: none; }
 .tab.active { background: var(--pri); color: #000; box-shadow: inset 0 0 20px rgba(0,0,0,0.2); }
 
-.photo-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+/* 🌟 將原本的 repeat(4, 1fr) 改為 repeat(3, 1fr)，並稍微加大間距讓排版更大器 */
+.photo-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; }
 .photo-grid .card-img { width: 100%; height: auto; aspect-ratio: 1 / 1; object-fit: cover; cursor: pointer; background-color: #000; border-bottom: 1px solid var(--bd); transition: filter 0.3s; }
 .morph-title { margin: 0; font-weight: bold; color: var(--txt); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
@@ -104,15 +110,12 @@ useHead({
 /* 🌟 Mobile Optimizations */
 @media (max-width: 768px) {
     .dt-only { display: none !important; }
-    
-    .breeders-page-wrapper {
-        padding-top: 0;
-    }
-    
+    .breeders-page-wrapper { padding-top: 0; }
     .tabs { margin-bottom: 15px; }
     .tab { padding: 10px; font-size: 0.95rem; }
 
-    .grid.photo-grid { grid-template-columns: repeat(2, 1fr) !important; gap: 8px; }
-    .morph-title { font-size: 0.9rem !important; }
+    /* 改為 3 欄並縮小間距 */
+    .grid.photo-grid { grid-template-columns: repeat(3, 1fr) !important; gap: 6px; }
+    .morph-title { font-size: 0.8rem !important; }
 }
 </style>

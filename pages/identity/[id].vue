@@ -189,13 +189,13 @@ const goBack = () => {
 <style scoped>
 /* 基本頁面設定 */
 .id-page-container {
-    min-height: 80vh;
+    min-height: 50vh;
     background: transparent;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    padding: 15px;
+    padding: 5px;
     font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
     width: 100%;
 }
@@ -215,10 +215,10 @@ const goBack = () => {
 
 .app-back-btn {
     background: rgba(255, 255, 255, 0.1);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(5px);
+    -webkit-backdrop-filter: blur(5px);
     border: 1px solid rgba(255, 255, 255, 0.15);
-    color: #fff;
+    color: #000;
     font-size: 0.95rem;
     font-weight: bold;
     cursor: pointer;
@@ -226,9 +226,9 @@ const goBack = () => {
     align-items: center;
     gap: 6px;
     padding: 8px 16px;
-    border-radius: 30px; /* 膠囊狀 */
+    border-radius: 50px; /* 膠囊狀 */
     transition: 0.2s;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+    box-shadow: 0 4px 5px rgba(0,0,0,0.2);
 }
 
 .app-back-btn:active {
@@ -329,7 +329,7 @@ const goBack = () => {
     }
 
     .card-photo-box {
-        width: 120px; /* 固定左側照片寬度 */
+        width: 265px; /* 固定左側照片寬度 */
         flex: none;
         height: auto;
         min-height: 180px;

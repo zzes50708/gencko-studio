@@ -347,7 +347,7 @@ const buyNow = () => {
             </button>
         </div>
 
-        <div v-if="pending" class="loading-state" style="text-align:center; padding:100px 0; color:#888;">
+        <div v-if="pending" class="loading-state" style="text-align:center; padding:100px 0; color:var(--txt); opacity:0.6;">
             <div class="loader" style="margin:0 auto 20px auto;"></div>
             <p>載入競標資料中...</p>
         </div>
@@ -376,11 +376,11 @@ const buyNow = () => {
                         </button>
                     </div>
                     
-                    <div v-if="currentBids.length === 0" class="empty-history" style="text-align: center; padding: 1.5rem 0; color: #888;">
+                    <div v-if="currentBids.length === 0" class="empty-history" style="text-align: center; padding: 1.5rem 0; color: var(--txt); opacity: 0.6;">
                         <div style="margin-bottom: 12px;">目前尚無出價，搶先成為第一位！</div>
-                        <div style="font-size: 0.85rem; color: #666; background: rgba(255,255,255,0.05); padding: 12px; border-radius: 8px; border: 1px dashed var(--bd); display: inline-block;">
+                        <div style="font-size: 0.85rem; background: rgba(128,128,128,0.1); padding: 12px; border-radius: 8px; border: 1px dashed var(--bd); display: inline-block;">
                             💡 顯示範例：<br>
-                            <span style="color: var(--txt); font-weight: bold;">王O明 (或自訂暱稱)</span> 
+                            <span style="color: var(--txt); font-weight: bold; opacity: 1;">王O明 (或自訂暱稱)</span> 
                             出價 <span style="color: var(--pri); font-weight: bold;">${{ minNextBid }}</span>
                         </div>
                     </div>
@@ -485,7 +485,7 @@ const buyNow = () => {
             </div>
         </div>
 
-        <div v-else class="not-found" style="text-align:center; padding:100px 0; color:#888;">
+        <div v-else class="not-found" style="text-align:center; padding:100px 0; color:var(--txt); opacity:0.6;">
             <h2>找不到此競標商品</h2>
             <button @click="goBack" class="app-back-btn" style="margin: 20px auto;">回列表</button>
         </div>
@@ -495,108 +495,90 @@ const buyNow = () => {
 <style scoped>
 .auction-page-wrapper { max-width: 1200px; margin: 0 auto; padding: 15px; color: var(--txt); }
 
-/* 🌟 App-like 膠囊返回按鈕 */
+/* 🌟 App-like 膠囊返回按鈕 (全面使用變數) */
 .nav-action-row { width: 100%; display: flex; justify-content: flex-start; margin-bottom: 15px; }
-.app-back-btn { background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.15); color: var(--txt); font-size: 0.95rem; font-weight: bold; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; border-radius: 30px; transition: 0.2s; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
-.app-back-btn:active { transform: scale(0.95); background: rgba(255, 255, 255, 0.1); }
+.app-back-btn { background: var(--card-bg); border: 1px solid var(--bd); color: var(--txt); font-size: 0.95rem; font-weight: bold; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; border-radius: 30px; transition: 0.2s; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
+.app-back-btn:active { transform: scale(0.95); background: var(--bd); }
 
 /* 🌟 Desktop Layout */
 .detail-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; }
-.left-col .main-img { position: relative; border-radius: 12px; overflow: hidden; cursor: zoom-in; margin-bottom: 2rem; width: 100%; aspect-ratio: 4 / 3; background-color: #000; border: 1px solid var(--bd); box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
+.left-col .main-img { position: relative; border-radius: 12px; overflow: hidden; cursor: zoom-in; margin-bottom: 2rem; width: 100%; aspect-ratio: 4 / 3; background-color: var(--card-bg); border: 1px solid var(--bd); box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
 .main-img img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .zoom-hint { position: absolute; bottom: 0; left: 0; right: 0; background: rgba(0,0,0,0.5); color: #fff; text-align: center; padding: 0.5rem; font-size: 0.9rem; }
 
 .bid-history { background: var(--card-bg); border: 1px solid var(--bd); border-radius: 12px; padding: 1.5rem; }
-.history-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 0.5rem; margin-bottom: 0.5rem; }
+.history-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--bd); padding-bottom: 0.5rem; margin-bottom: 0.5rem; }
 .history-header h3 { margin: 0; color: var(--txt); }
 .btn-toggle { background: transparent; border: 1px solid var(--pri); color: var(--pri); padding: 4px 10px; border-radius: 4px; cursor: pointer; font-size: 0.85rem; transition: 0.2s; }
 .btn-toggle:hover { background: var(--pri); color: #fff; }
 .history-list { list-style: none; padding: 0; margin: 0; max-height: 250px; overflow-y: auto; }
-.history-list li { display: flex; justify-content: space-between; padding: 0.8rem 0; border-bottom: 1px dashed rgba(255,255,255,0.1); font-size: 0.95rem; color: #ccc; }
-.history-list li.highest-bid { color: var(--pri); font-weight: bold; }
-.bid-time { color: #888; font-size: 0.8rem; }
+.history-list li { display: flex; justify-content: space-between; padding: 0.8rem 0; border-bottom: 1px dashed var(--bd); font-size: 0.95rem; color: var(--txt); opacity: 0.85; }
+.history-list li.highest-bid { color: var(--pri); font-weight: bold; opacity: 1; }
+.bid-time { color: var(--txt); opacity: 0.6; font-size: 0.8rem; }
 
 .right-col .header-info { display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem; flex-wrap: wrap; }
 .right-col h2 { margin: 0; font-size: 1.8rem; color: var(--txt); }
-.m-gender { font-size: 1.2rem; color: #666; }
+.m-gender { font-size: 1.2rem; color: var(--txt); opacity: 0.6; }
 
 .status-badge { padding: 6px 14px; border-radius: 20px; font-size: 0.9rem; font-weight: bold; color: #fff; width: max-content; white-space: nowrap; line-height: 1.2; }
 .badge-active { background: var(--pri); box-shadow: 0 0 10px rgba(255, 69, 0, 0.4); }
 .badge-ended { background: #666; }
 
-.price-dashboard { margin-bottom: 1.5rem; background: rgba(255,255,255,0.03); border: 1px solid var(--bd); padding: 15px; border-radius: 12px; }
+.price-dashboard { margin-bottom: 1.5rem; background: var(--card-bg); border: 1px solid var(--bd); padding: 15px; border-radius: 12px; }
 .price-row { display: flex; justify-content: space-between; align-items: center; font-size: 1.1rem; }
-.p-lbl { color: #aaa; }
-.price-row .highest-price { font-size: 2rem; font-weight: bold; color: var(--pri); text-shadow: 0 0 10px rgba(255,69,0,0.3); }
-.price-row.sub { font-size: 0.9rem; color: #888; border-top: 1px dashed rgba(255,255,255,0.1); margin-top: 10px; padding-top: 10px; }
+.p-lbl { color: var(--txt); opacity: 0.6; }
+.price-row .highest-price { font-size: 2rem; font-weight: bold; color: var(--pri); text-shadow: 0 0 10px rgba(255,69,0,0.2); }
+.price-row.sub { font-size: 0.9rem; color: var(--txt); opacity: 0.6; border-top: 1px dashed var(--bd); margin-top: 10px; padding-top: 10px; }
 
-.timer-box { background: rgba(255,255,255,0.05); border: 1px solid var(--bd); padding: 1.5rem; border-radius: 12px; text-align: center; margin-bottom: 1.5rem; }
-.timer-title { font-size: 0.9rem; color: #aaa; margin-bottom: 0.5rem; }
-.timer-value { font-size: 2rem; font-weight: bold; letter-spacing: 2px; font-family: monospace; color: #fff; }
-.timer-note { font-size: 0.8rem; color: #888; margin-top: 0.5rem; }
+.timer-box { background: var(--card-bg); border: 1px solid var(--bd); padding: 1.5rem; border-radius: 12px; text-align: center; margin-bottom: 1.5rem; }
+.timer-title { font-size: 0.9rem; color: var(--txt); opacity: 0.6; margin-bottom: 0.5rem; }
+.timer-value { font-size: 2rem; font-weight: bold; letter-spacing: 2px; font-family: monospace; color: var(--txt); }
+.timer-note { font-size: 0.8rem; color: var(--txt); opacity: 0.6; margin-top: 0.5rem; }
+
+/* 倒數快結束時維持紅底白字 (此為警告狀態不吃日夜變數) */
 .timer-box.ending-soon { color: #fff; background: #e74c3c; border-color: #c0392b; animation: pulse 1.5s infinite; }
-.timer-box.ending-soon .timer-title, .timer-box.ending-soon .timer-value, .timer-box.ending-soon .timer-note { color: #fff; }
+.timer-box.ending-soon .timer-title, 
+.timer-box.ending-soon .timer-value, 
+.timer-box.ending-soon .timer-note { color: #fff !important; opacity: 1; }
+
 @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.8; } 100% { opacity: 1; } }
 
-.action-box { background: var(--card-bg); border: 2px solid var(--pri); border-radius: 12px; padding: 1.5rem; margin-bottom: 1.5rem; width: 100%; box-shadow: 0 5px 20px rgba(0,0,0,0.2); }
-.action-box.ended { border-color: #666; background: rgba(255,255,255,0.05); text-align: center; font-weight: bold; color: #aaa; }
+.action-box { background: var(--card-bg); border: 2px solid var(--pri); border-radius: 12px; padding: 1.5rem; margin-bottom: 1.5rem; width: 100%; box-shadow: 0 5px 20px rgba(0,0,0,0.1); }
+.action-box.ended { border-color: var(--bd); background: var(--card-bg); text-align: center; font-weight: bold; color: var(--txt); opacity: 0.7; }
 
-.user-info-box { margin-bottom: 1rem; padding: 10px; background: rgba(255,255,255,0.05); border-radius: 8px; font-size: 0.9rem; display: flex; justify-content: space-between; align-items: center; border: 1px solid var(--bd); }
-.u-name { color: #ccc; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.btn-logout { background: transparent; border: 1px solid #555; color: #aaa; padding: 4px 10px; border-radius: 6px; cursor: pointer; }
+.user-info-box { margin-bottom: 1rem; padding: 10px; background: var(--card-bg); border-radius: 8px; font-size: 0.9rem; display: flex; justify-content: space-between; align-items: center; border: 1px solid var(--bd); }
+.u-name { color: var(--txt); opacity: 0.9; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.btn-logout { background: var(--card-bg); border: 1px solid var(--bd); color: var(--txt); opacity: 0.7; padding: 4px 10px; border-radius: 6px; cursor: pointer; transition: 0.2s; }
+.btn-logout:hover { opacity: 1; border-color: var(--txt); }
 
 .nick-input-wrap { margin-bottom: 15px; }
-.nick-input { width: 100%; padding: 12px; background: #111; border: 1px solid var(--bd); color: #fff; border-radius: 8px; font-size: 0.95rem; box-sizing: border-box; }
+.nick-input { width: 100%; padding: 12px; background: var(--card-bg); border: 1px solid var(--bd); color: var(--txt); border-radius: 8px; font-size: 0.95rem; box-sizing: border-box; }
 .nick-input:focus { border-color: var(--pri); outline: none; }
 
 .input-group { display: flex; align-items: center; margin-bottom: 1rem; border: 1px solid var(--bd); border-radius: 8px; overflow: hidden; width: 100%; }
-.input-group .currency { padding: 12px 15px; background: rgba(255,255,255,0.1); color: #fff; font-weight: bold; border-right: 1px solid var(--bd); }
-.input-group input { flex: 1; min-width: 0; border: none; padding: 12px; font-size: 1.3rem; outline: none; background: #111; color: #fff; font-weight: bold; }
+.input-group .currency { padding: 12px 15px; background: rgba(128,128,128,0.1); color: var(--txt); font-weight: bold; border-right: 1px solid var(--bd); }
+.input-group input { flex: 1; min-width: 0; border: none; padding: 12px; font-size: 1.3rem; outline: none; background: var(--card-bg); color: var(--txt); font-weight: bold; }
 
 .action-buttons { display: flex; gap: 10px; }
 .btn-bid { flex: 2; background: var(--pri); color: #fff; border: none; padding: 14px; border-radius: 8px; font-size: 1.1rem; font-weight: bold; cursor: pointer; box-shadow: 0 4px 10px var(--pri-glow); transition: 0.2s; }
 .btn-bid:hover { transform: translateY(-2px); }
 .btn-bid:disabled { background: #666; cursor: not-allowed; box-shadow: none; transform: none; }
-.btn-buy-now { flex: 1; background: #333; color: #fff; border: 1px solid #555; padding: 14px; border-radius: 8px; font-size: 0.9rem; cursor: pointer; font-weight: bold; }
+.btn-buy-now { flex: 1; background: var(--card-bg); color: var(--txt); border: 1px solid var(--bd); padding: 14px; border-radius: 8px; font-size: 0.9rem; cursor: pointer; font-weight: bold; transition: 0.2s; }
+.btn-buy-now:hover { background: rgba(128,128,128,0.1); }
 
-.bid-hint { font-size: 0.85rem; color: #888; margin-top: 10px; text-align: center; }
+.bid-hint { font-size: 0.85rem; color: var(--txt); opacity: 0.6; margin-top: 10px; text-align: center; }
 
 .login-prompt { text-align: center; padding: 10px 0; }
 .login-prompt p { margin-bottom: 15px; color: #d9534f; font-weight: bold; }
 .btn-login-line { background: #06C755; color: #fff; border: none; border-radius: 8px; padding: 12px; font-size: 1rem; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; width: 100%; gap: 10px; margin-bottom: 10px; }
 .btn-login-line img { width: 24px; height: 24px; }
-.btn-login-google { background: #fff; color: #333; border: 1px solid #ddd; border-radius: 8px; padding: 12px; font-size: 1rem; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; width: 100%; gap: 10px; }
+.btn-login-google { background: var(--card-bg); color: var(--txt); border: 1px solid var(--bd); border-radius: 8px; padding: 12px; font-size: 1rem; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; width: 100%; gap: 10px; transition: 0.2s; }
+.btn-login-google:hover { background: rgba(128,128,128,0.1); }
 
 .info-section { margin-bottom: 20px; }
 .specs-list { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-.specs-list li { background: rgba(255,255,255,0.03); padding: 12px; border-radius: 8px; font-size: 0.95rem; border: 1px solid var(--bd); }
-.note-box { margin-top: 15px; padding: 12px 15px; background: rgba(255,255,255,0.03); border-radius: 8px; font-size: 0.95rem; line-height: 1.5; border: 1px solid var(--bd); border-left: 4px solid var(--pri); }
-
-/* Day Mode Overrides */
-:global(body.day-mode) .app-back-btn { background: #fff; border-color: #ddd; color: #333; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
-:global(body.day-mode) .app-back-btn:active { background: #f0f0f0; }
-:global(body.day-mode) .bid-history, :global(body.day-mode) .action-box, :global(body.day-mode) .price-dashboard { background: #fff; border-color: #ddd; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
-:global(body.day-mode) .history-header { border-bottom-color: #eee; }
-:global(body.day-mode) .history-header h3, :global(body.day-mode) .right-col h2 { color: #111; }
-:global(body.day-mode) .history-list li { border-bottom-color: #eee; color: #444; }
-:global(body.day-mode) .bid-time, :global(body.day-mode) .p-lbl, :global(body.day-mode) .price-row.sub { color: #888; }
-:global(body.day-mode) .price-row.sub { border-top-color: #eee; }
-:global(body.day-mode) .specs-list li, :global(body.day-mode) .note-box { background: #f9f9f9; border-color: #eee; color: #333; }
-:global(body.day-mode) .input-group { border-color: #ccc; }
-:global(body.day-mode) .input-group .currency { background: #eee; color: #555; border-right-color: #ccc; }
-:global(body.day-mode) .input-group input, :global(body.day-mode) .nick-input { background: #fff; color: #333; border-color: #ccc; }
-:global(body.day-mode) .btn-buy-now { background: #f0f0f0; color: #333; border-color: #ccc; }
-:global(body.day-mode) .btn-buy-now:hover { background: #e0e0e0; }
-:global(body.day-mode) .action-box.ended { background: #f5f5f5; border-color: #999; color: #555; }
-:global(body.day-mode) .user-info-box { background: #f9f9f9; border-color: #eee; }
-:global(body.day-mode) .u-name { color: #333; }
-:global(body.day-mode) .btn-logout { background: #fff; border-color: #ccc; color: #555; }
-
-/* 🌟 強制修正日間模式時，一般狀態的計時器文字顏色為黑色 */
-:global(body.day-mode) .timer-box:not(.ending-soon) { background: #f9f9f9; border-color: #eee; }
-:global(body.day-mode) .timer-box:not(.ending-soon) .timer-title { color: #666 !important; }
-:global(body.day-mode) .timer-box:not(.ending-soon) .timer-value { color: #111 !important; }
-:global(body.day-mode) .timer-box:not(.ending-soon) .timer-note { color: #888 !important; }
+.specs-list li { background: var(--card-bg); padding: 12px; border-radius: 8px; font-size: 0.95rem; border: 1px solid var(--bd); color: var(--txt); }
+.note-box { margin-top: 15px; padding: 12px 15px; background: var(--card-bg); border-radius: 8px; font-size: 0.95rem; line-height: 1.5; border: 1px solid var(--bd); border-left: 4px solid var(--pri); color: var(--txt); }
 
 /* 🌟 Mobile UI (The 2-Column Grid Layout) */
 @media (max-width: 768px) {

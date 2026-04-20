@@ -118,12 +118,12 @@ const goBack = () => {
 
 <template>
     <div class="gene-detail-wrapper">
-        <div v-if="pending" style="text-align:center; padding:100px 0; color:#888;">
+        <div v-if="pending" style="text-align:center; padding:100px 0; color:var(--txt); opacity:0.6;">
             <div class="loader" style="margin:0 auto 20px auto;"></div>
             <p>基因資料載入中...</p>
         </div>
 
-        <div v-else-if="!viewingGene" style="text-align:center; padding:100px 0; color:#888;">
+        <div v-else-if="!viewingGene" style="text-align:center; padding:100px 0; color:var(--txt); opacity:0.6;">
             <h2>找不到「{{ geneName }}」的資料</h2>
             <p>可能該基因條目尚未建立或已被移除。</p>
             <button @click="goBack" class="app-back-btn" style="margin: 20px auto; justify-content: center;">
@@ -188,49 +188,51 @@ const goBack = () => {
     padding-bottom: 20px;
 }
 
-/* 🌟 App-like 返回按鈕 */
+/* 🌟 App-like 返回按鈕 (適配日夜變數) */
 .app-back-btn {
-    background: transparent;
-    border: none;
-    color: var(--pri);
+    background: var(--card-bg);
+    border: 1px solid var(--bd);
+    color: var(--txt);
     font-size: 1.1rem;
     font-weight: bold;
     cursor: pointer;
-    display: flex;
+    display: inline-flex;
     align-items: center;
-    gap: 4px;
-    padding: 10px 0;
+    gap: 6px;
+    padding: 8px 16px;
     margin-bottom: 10px;
-    transition: opacity 0.2s, transform 0.2s;
+    border-radius: 30px;
+    transition: 0.2s;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.05);
 }
 
 .app-back-btn:active {
-    opacity: 0.7;
-    transform: scale(0.97);
+    transform: scale(0.95);
+    background: var(--bd);
 }
 
-/* 🌟 卡片化內容 */
+/* 🌟 卡片化內容 (適配日夜變數) */
 .content-card {
     background: var(--card-bg);
     border: 1px solid var(--bd);
     border-radius: 16px;
     padding: 30px;
-    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
 }
 
 .gene-title {
     font-size: 2.2rem;
     margin: 0 0 20px 0;
-    color: #fff;
+    color: var(--txt);
     line-height: 1.2;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    border-bottom: 1px solid var(--bd);
     padding-bottom: 15px;
 }
 
 .warn-box {
     background: rgba(244, 67, 54, 0.1);
     border: 1px solid #f44336;
-    color: #ffcdd2;
+    color: var(--txt);
     padding: 15px;
     border-radius: 10px;
     margin-bottom: 25px;
@@ -252,7 +254,7 @@ const goBack = () => {
     border-radius: 12px;
     object-fit: cover;
     border: 1px solid var(--bd);
-    box-shadow: 0 5px 20px rgba(0,0,0,0.3);
+    box-shadow: 0 5px 20px rgba(0,0,0,0.1);
 }
 
 .gene-text-content {
@@ -265,11 +267,15 @@ h3 {
     margin: 0 0 10px 0;
 }
 
+/* 🌟 強制手機版自動折行，適配日夜模式變數 */
 p {
-    color: #ccc;
+    color: var(--txt);
+    opacity: 0.9;
     line-height: 1.7;
     font-size: 1.05rem;
-    white-space: pre-wrap;
+    white-space: pre-line; /* 允許自動換行且保留換行符號 */
+    word-wrap: break-word;
+    word-break: break-word;
     text-align: justify;
 }
 
@@ -280,18 +286,11 @@ p {
 .source-text {
     margin-top: 30px;
     font-size: 0.85rem;
-    color: #666;
-    border-top: 1px dashed rgba(255, 255, 255, 0.1);
+    color: var(--txt);
+    opacity: 0.6;
+    border-top: 1px dashed var(--bd);
     padding-top: 15px;
 }
-
-/* Day Mode Overrides */
-:global(body.day-mode) .content-card { background: #fff; border-color: #ddd; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05); }
-:global(body.day-mode) .gene-title { color: #111; border-bottom-color: #eee; }
-:global(body.day-mode) .warn-box { background: #ffebee; border-color: #ef5350; color: #c62828; }
-:global(body.day-mode) p { color: #333; }
-:global(body.day-mode) .source-text { color: #111; border-top-color: #eee; }
-:global(body.day-mode) .gene-img { border-color: #ddd; box-shadow: 0 5px 20px rgba(0,0,0,0.05); }
 
 /* 🌟 Mobile Responsive */
 @media (max-width: 768px) {
@@ -300,8 +299,9 @@ p {
     }
     
     .app-back-btn {
-        padding: 5px 10px;
+        padding: 6px 12px;
         margin-bottom: 5px;
+        font-size: 0.95rem;
     }
     
     .content-card {

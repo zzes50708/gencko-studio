@@ -33,7 +33,7 @@ useHead({
         <!-- 桌機版顯示標題，手機版隱藏以節省空間 -->
         <h1 class="page-title dt-only">守宮基因圖鑑</h1>
         
-        <!-- 🌟 App-like 分段切換器 (縮減高度版) -->
+        <!-- 🌟 App-like 分段切換器 -->
         <div class="segmented-control">
             <div class="segment" :class="{active: geneSpecies === '豹紋守宮'}" @click="geneSpecies = '豹紋守宮'">豹紋守宮</div>
             <div class="segment" :class="{active: geneSpecies === '肥尾守宮'}" @click="geneSpecies = '肥尾守宮'">肥尾守宮</div>
@@ -41,8 +41,8 @@ useHead({
 
         <div class="genes-content">
             <div v-for="(list, cat) in GENES_DB[geneSpecies]" :key="cat" class="gene-section">
-                <!-- 吸頂分類標題 -->
-                <div class="section-header-sticky">
+                <!-- 🌟 移除吸頂設定，恢復自然排版 -->
+                <div class="section-header">
                     <h2 class="gene-cat-title">{{ cat }}</h2>
                 </div>
                 
@@ -66,10 +66,9 @@ useHead({
 
 .dt-only { display: block; }
 
-/* 🌟 App-like 分段切換器 */
 .segmented-control {
     display: flex;
-    background: rgba(255, 255, 255, 0.05);
+    background: var(--card-bg);
     border: 1px solid var(--bd);
     border-radius: 30px;
     padding: 4px;
@@ -84,7 +83,8 @@ useHead({
     border-radius: 25px;
     font-size: 1rem;
     font-weight: bold;
-    color: #888;
+    color: var(--txt);
+    opacity: 0.6;
     cursor: pointer;
     transition: all 0.3s ease;
 }
@@ -92,28 +92,24 @@ useHead({
 .segment.active {
     background: var(--pri);
     color: #fff;
+    opacity: 1;
     box-shadow: 0 4px 10px rgba(255, 69, 0, 0.4);
 }
 
-/* 🌟 吸頂分類標題 */
-.section-header-sticky {
-    position: sticky;
-    /* Navbar高度 + Marquee高度 = 90px，加上 iOS 瀏海安全區 */
-    top: calc(90px + env(safe-area-inset-top, 0px));
-    background: rgba(8, 8, 8, 0.95);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    z-index: 10;
-    padding: 10px 0;
+/* 🌟 移除 sticky 定位，改回普通區塊 */
+.section-header {
+    background: var(--card-bg);
+    padding: 10px 15px;
     margin-bottom: 15px;
-    border-bottom: 1px solid rgba(255,255,255,0.05);
+    border-bottom: 1px solid var(--bd);
+    border-radius: 8px;
 }
 
 .gene-cat-title {
     font-size: 1.2rem;
-    color: var(--pri);
+    color: var(--txt);
     margin: 0;
-    font-weight: 700;
+    font-weight: 900;
     letter-spacing: 1px;
 }
 
@@ -121,7 +117,6 @@ useHead({
     margin-bottom: 30px;
 }
 
-/* 🌟 圓角基因按鈕 */
 .gene-btn-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
@@ -139,18 +134,17 @@ useHead({
     display: flex;
     justify-content: space-between;
     align-items: center;
-    color: #eee;
+    color: var(--txt);
     font-weight: bold;
     font-size: 1rem;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
     text-decoration: none;
 }
 
 .gene-btn-item:hover {
     border-color: var(--pri);
     transform: translateY(-3px);
-    box-shadow: 0 6px 15px rgba(255,69,0,0.3);
-    background: rgba(255,255,255,0.05);
+    box-shadow: 0 6px 15px rgba(255,69,0,0.2);
 }
 
 .g-name {
@@ -161,10 +155,10 @@ useHead({
 }
 
 .g-arrow {
-    color: var(--pri);
+    color: var(--txt);
+    opacity: 0.3;
     font-size: 0.9rem;
-    opacity: 0.8;
-    transition: transform 0.2s;
+    transition: transform 0.2s, opacity 0.2s, color 0.2s;
     margin-left: 8px;
     flex-shrink: 0;
 }
@@ -172,35 +166,7 @@ useHead({
 .gene-btn-item:hover .g-arrow {
     transform: translateX(3px);
     opacity: 1;
-}
-
-/* 🌟 Day Mode Overrides：強制覆寫確保白底黑字 */
-:global(body.day-mode) .segmented-control { background: #eee; border-color: #ddd; }
-:global(body.day-mode) .segment { color: #666; }
-:global(body.day-mode) .segment.active { background: var(--pri); color: #fff; }
-
-:global(body.day-mode) .section-header-sticky { 
-    background: rgba(255,255,255,0.95); 
-    border-bottom-color: #eee; 
-}
-:global(body.day-mode) .gene-cat-title { 
-    color: #111 !important; /* 強制黑字 */
-}
-
-:global(body.day-mode) .gene-btn-item { 
-    background: #fff; 
-    border-color: #ddd; 
-    box-shadow: 0 4px 10px rgba(0,0,0,0.05); 
-}
-:global(body.day-mode) .gene-btn-item:hover { 
-    background: #f9f9f9; 
-    border-color: var(--pri); 
-}
-:global(body.day-mode) .g-name { 
-    color: #111 !important; /* 強制黑字 */
-}
-:global(body.day-mode) .g-arrow { 
-    color: #111 !important; /* 強制黑字 */
+    color: var(--pri);
 }
 
 /* 🌟 Mobile Optimizations */
@@ -208,13 +174,12 @@ useHead({
     .dt-only { display: none !important; }
     
     .genes-page-wrapper {
-        padding: 5px 10px 15px 10px; /* 壓縮左右與頂部留白 */
+        padding: 5px 10px 15px 10px;
     }
     
-    /* 🌟 極致壓縮頂部的豹紋/肥尾按鈕高度與邊距 */
     .segmented-control {
         padding: 2px;
-        margin-bottom: 4px; /* 縮減與下方的間距 */
+        margin-bottom: 4px;
         border-radius: 20px;
     }
     
@@ -224,7 +189,6 @@ useHead({
         border-radius: 18px;
     }
     
-    /* 🌟 基因清單重構，確保文字清晰可見不被切斷 */
     .gene-btn-grid {
         grid-template-columns: repeat(2, 1fr);
         gap: 8px;
@@ -233,12 +197,12 @@ useHead({
     .gene-btn-item {
         padding: 10px 12px;
         border-radius: 10px;
-        min-height: 54px; /* 確保雙行文字與單行文字時的高低一致性，並保證觸控範圍 */
+        min-height: 54px;
         align-items: center; 
     }
     
     .g-name {
-        white-space: normal !important; /* 🌟 強制允許換行 */
+        white-space: normal !important;
         word-wrap: break-word !important;
         word-break: break-word !important;
         font-size: 0.9rem;
@@ -250,10 +214,9 @@ useHead({
         font-size: 0.85rem;
     }
     
-    .section-header-sticky {
-        padding: 4px 0;
-        margin-bottom: 6px; /* 縮減與基因卡片的間距 */
-        top: calc(85px + env(safe-area-inset-top, 0px)); /* 適應手機版高度 */
+    .section-header {
+        padding: 8px 12px;
+        margin-bottom: 8px; /* 縮減與下方基因卡片的間距 */
     }
     
     .gene-cat-title {

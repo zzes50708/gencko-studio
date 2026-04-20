@@ -164,7 +164,9 @@ const healthResult = computed(() => {
 .health-res-box { background: var(--card-bg); border: 1px solid var(--bd); border-radius: 12px; padding: 25px; display: flex; flex-direction: column; position: relative; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
 .res-top { display: flex; flex-direction: column; margin-bottom: 20px; }
 .health-sys-text { font-family: monospace; font-size: 0.75rem; opacity: 0.5; letter-spacing: 2px; margin-bottom: 5px; }
-.health-score-val { font-size: 3.5rem; font-weight: 900; line-height: 1; text-shadow: 0 0 15px rgba(0,0,0,0.5); font-family: 'Black Ops One', cursive, sans-serif; margin-bottom: 10px; }
+/* 減弱陰影並在日間模式移除 */
+.health-score-val { font-size: 3.5rem; font-weight: 900; line-height: 1; text-shadow: 0 0 5px rgba(0,0,0,0.6); font-family: 'Black Ops One', cursive, sans-serif; margin-bottom: 10px; }
+:global(body.day-mode) .health-score-val { text-shadow: none !important; color: #000 !important; }
 .health-status-row { display: flex; align-items: center; gap: 8px; }
 .health-dot { width: 12px; height: 12px; border-radius: 50%; animation: pulse 2s infinite; }
 .health-status-text { font-size: 1.2rem; font-weight: 700; }

@@ -43,9 +43,7 @@ const goBack = () => {
         </div>
 
         <div class="content-card">
-            <!-- 標題 -->
-            <h1 class="page-title dt-only">守宮飼養方式指南</h1>
-            <h1 class="m-page-title m-only">飼養方式指南</h1>
+            <!-- 🌟 已依據需求刪除所有 H1 標題 -->
             
             <!-- 使用 NuxtImg 進行圖片最佳化 -->
             <NuxtImg 
@@ -129,7 +127,7 @@ const goBack = () => {
 .dt-only { display: block; }
 .m-only { display: none !important; }
 
-/* App-like 返回按鈕 */
+/* 🌟 全面採用 var(--card-bg) 與 var(--txt) 自動處理日夜模式 */
 .nav-action-row {
     width: 100%;
     display: flex;
@@ -138,10 +136,8 @@ const goBack = () => {
 }
 
 .app-back-btn {
-    background: rgba(255, 255, 255, 0.05);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    border: 1px solid rgba(255, 255, 255, 0.15);
+    background: var(--card-bg);
+    border: 1px solid var(--bd);
     color: var(--txt);
     font-size: 0.95rem;
     font-weight: bold;
@@ -157,25 +153,15 @@ const goBack = () => {
 
 .app-back-btn:active {
     transform: scale(0.95);
-    background: rgba(255, 255, 255, 0.1);
+    background: var(--bd);
 }
 
-/* 卡片化內容 */
 .content-card {
     background: var(--card-bg);
     border: 1px solid var(--bd);
     border-radius: 16px;
     padding: 30px;
-    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
-}
-
-.page-title {
-    font-size: 2.2rem;
-    margin: 0 0 20px 0;
-    color: #fff;
-    line-height: 1.2;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-    padding-bottom: 15px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
 }
 
 .care-top-img {
@@ -183,14 +169,13 @@ const goBack = () => {
     height: auto;
     max-height: 350px;
     object-fit: cover;
-    background: #050505;
+    background: var(--card-bg);
     border: 1px solid var(--bd);
     border-radius: 12px;
     margin-bottom: 25px;
-    box-shadow: 0 5px 20px rgba(0,0,0,0.3);
+    box-shadow: 0 5px 20px rgba(0,0,0,0.2);
 }
 
-/* App-like List (取代 Table) */
 .care-info-list {
     display: flex;
     flex-direction: column;
@@ -201,7 +186,7 @@ const goBack = () => {
 .info-row {
     display: flex;
     align-items: flex-start;
-    background: rgba(255, 255, 255, 0.02);
+    background: var(--card-bg);
     border: 1px solid var(--bd);
     border-radius: 10px;
     padding: 15px;
@@ -215,10 +200,10 @@ const goBack = () => {
     font-size: 1.05rem;
 }
 
-/* 🌟 統一改為純白色以確保夜間模式清晰 */
+/* 🌟 自動依據模式切換文字顏色 */
 .info-val {
     flex: 1;
-    color: #fff;
+    color: var(--txt);
     line-height: 1.6;
     font-size: 0.95rem;
     font-weight: 500;
@@ -226,7 +211,7 @@ const goBack = () => {
 
 .care-section {
     margin-bottom: 20px;
-    background: rgba(255, 255, 255, 0.02);
+    background: var(--card-bg);
     padding: 20px;
     border-radius: 12px;
     border: 1px solid var(--bd);
@@ -238,48 +223,34 @@ const goBack = () => {
     font-size: 1.2rem;
     margin-bottom: 12px;
     display: block;
-    border-bottom: 1px dashed rgba(255,255,255,0.1);
+    border-bottom: 1px dashed var(--bd);
     padding-bottom: 8px;
 }
 
-/* 🌟 統一改為純白色以確保夜間模式清晰 */
+/* 🌟 自動依據模式切換文字顏色 */
 .care-p {
-    color: #fff;
+    color: var(--txt);
     line-height: 1.7;
     margin-bottom: 10px;
     font-size: 1rem;
     font-weight: 500;
+    opacity: 0.9;
 }
 
 .care-quote {
     font-style: normal;
-    color: #fff;
-    background: linear-gradient(90deg, rgba(255, 69, 0, 0.1), transparent);
+    color: var(--txt);
+    background: var(--card-bg);
     padding: 20px;
     border-radius: 12px;
+    border: 1px solid var(--bd);
     border-left: 4px solid var(--pri);
     margin-top: 30px;
     line-height: 1.8;
     text-align: justify;
     font-size: 1.05rem;
-    border: 1px solid var(--bd);
-    border-left-width: 4px;
     font-weight: 500;
 }
-
-/* 🌟 Day Mode Overrides：強制套用純黑色 (#000) 確保白天戶外也能看清 */
-:global(body.day-mode) .app-back-btn { background: #fff; border-color: #ddd; color: #333; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
-:global(body.day-mode) .app-back-btn:active { background: #f0f0f0; }
-:global(body.day-mode) .content-card { background: #fff; border-color: #ddd; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05); }
-:global(body.day-mode) .page-title { color: #111; border-bottom-color: #eee; }
-:global(body.day-mode) .m-page-title { color: #111; border-bottom-color: #eee; }
-:global(body.day-mode) .care-top-img { border-color: #ddd; box-shadow: 0 5px 20px rgba(0,0,0,0.05); }
-:global(body.day-mode) .info-row { background: #f9f9f9; border-color: #eee; }
-:global(body.day-mode) .info-val { color: #000; } /* 🌟 強制純黑 */
-:global(body.day-mode) .care-section { background: #fff; border-color: #eee; box-shadow: 0 4px 15px rgba(0,0,0,0.02); }
-:global(body.day-mode) .care-h { border-bottom-color: #ddd; }
-:global(body.day-mode) .care-p { color: #000; } /* 🌟 強制純黑 */
-:global(body.day-mode) .care-quote { background: #fff3e0; border-color: #ffb74d; color: #000; box-shadow: 0 4px 15px rgba(0,0,0,0.05); } /* 🌟 強制純黑 */
 
 /* Mobile Optimizations */
 @media (max-width: 768px) {
@@ -304,15 +275,6 @@ const goBack = () => {
         border-radius: 12px;
     }
     
-    .m-page-title {
-        font-size: 1.8rem;
-        margin: 0 0 15px 0;
-        color: var(--txt);
-        font-weight: 900;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-        padding-bottom: 10px;
-    }
-    
     .care-top-img {
         max-height: 250px;
         margin-bottom: 15px;
@@ -327,11 +289,9 @@ const goBack = () => {
     .info-label {
         width: 100%;
         font-size: 1.1rem;
-        border-bottom: 1px solid rgba(255,255,255,0.1);
+        border-bottom: 1px solid var(--bd);
         padding-bottom: 4px;
     }
-    
-    :global(body.day-mode) .info-label { border-bottom-color: #ddd; }
     
     .info-val {
         font-size: 0.95rem;

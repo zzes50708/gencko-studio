@@ -576,19 +576,12 @@ const formatWarningText = (text) => {
 :global(body.day-mode) .calc-res-name span { color: #666 !important; }
 
 /* Day Mode Overrides for Warnings */
-:global(body.day-mode) .calc-warn { 
-    background: #ffebee !important; 
-    border-color: #d32f2f !important; 
-    color: #000 !important; 
-    text-shadow: none;
-}
-
-:global(body.day-mode) .calc-notice { 
-    background: #fff8e1 !important; 
-    border-color: #f57f17 !important; 
-    color: #000 !important; 
-    text-shadow: none;
-}
+/* 🌟 強制內部所有文字黑字 */
+/* 強制警告區塊內的所有文字黑字 */
+:global(body.day-mode) .calc-warn,
+:global(body.day-mode) .calc-warn div,
+:global(body.day-mode) .calc-notice,
+:global(body.day-mode) .calc-notice div { color: #000 !important; text-shadow: none !important; }
 
 @media (max-width: 768px) {
     .calc-container { padding-top: 0 !important; margin-top: -10px; }

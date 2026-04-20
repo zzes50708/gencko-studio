@@ -64,7 +64,6 @@ const goToDetail = (id) => {
     router.push(`/auction/${id}`)
 }
 
-// 🌟 App-like 返回邏輯
 const goBack = () => {
     if (window.history.state && window.history.state.back) {
         router.back()
@@ -76,7 +75,6 @@ const goBack = () => {
 
 <template>
     <div class="auction-page">
-        <!-- 🌟 手機版顯示的 App-like 返回按鈕 -->
         <div class="nav-action-row m-only">
             <button class="app-back-btn" @click="goBack">
                 <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
@@ -84,13 +82,12 @@ const goBack = () => {
             </button>
         </div>
 
-        <div v-if="loading && displayAuctions.length === 0" class="loading-state" style="text-align:center; padding:100px 0; color:#888;">
+        <div v-if="loading && displayAuctions.length === 0" class="loading-state" style="text-align:center; padding:100px 0;">
             <div class="loader" style="margin:0 auto 20px auto;"></div>
-            <p>載入競標資料中...</p>
+            <p style="color: var(--txt); opacity: 0.7;">載入競標資料中...</p>
         </div>
 
         <div v-else class="auction-container">
-            <!-- 桌機版標題 -->
             <h1 class="page-title dt-only">線上競標 <span>Live Auctions</span></h1>
             <p class="page-desc dt-only">限時競標，結標前 3 分鐘出價自動延長。</p>
             
@@ -106,14 +103,12 @@ const goBack = () => {
                             fit="cover"
                             format="webp"
                         />
-                        <!-- 🌟 修正：確保文字不換行且寬度自適應 -->
                         <div class="status-badge" :class="getAuctionStatus(item).class">
                             {{ getAuctionStatus(item).text }}
                         </div>
                     </div>
                     <div class="card-info">
                         <h3 class="morph-name">{{ item.morph }} <span class="gender-tag" v-if="item.gender && item.gender !== '未定'">({{ item.gender }})</span></h3>
-                        <!-- 🌟 縮短描述字數，節省高度 -->
                         <p class="morph-desc" v-if="item.note">{{ item.note.substring(0, 20) }}{{ item.note.length > 20 ? '...' : '' }}</p>
                         <div class="price-info">
                             <div class="price-col">
@@ -141,13 +136,12 @@ const goBack = () => {
 </template>
 
 <style scoped>
+/* 徹底移除寫死的顏色，使用 CSS 變數自動適配日夜模式 */
 .auction-page { max-width: 1200px; margin: 0 auto; padding: 2rem 1rem; color: var(--txt); }
 
-/* 🌟 Responsive Utilities */
 .dt-only { display: block; }
 .m-only { display: none !important; }
 
-/* 🌟 App-like 返回按鈕 */
 .nav-action-row {
     width: 100%;
     display: flex;
@@ -156,10 +150,8 @@ const goBack = () => {
 }
 
 .app-back-btn {
-    background: rgba(255, 255, 255, 0.05);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    border: 1px solid rgba(255, 255, 255, 0.15);
+    background: var(--card-bg);
+    border: 1px solid var(--bd);
     color: var(--txt);
     font-size: 0.95rem;
     font-weight: bold;
@@ -170,26 +162,24 @@ const goBack = () => {
     padding: 8px 16px;
     border-radius: 30px;
     transition: 0.2s;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    box-shadow: 0 4px 10px rgba(0,0,0,0.05);
 }
 
 .app-back-btn:active {
     transform: scale(0.95);
-    background: rgba(255, 255, 255, 0.1);
 }
 
-.page-title { font-size: 2rem; margin-bottom: 0.5rem; display: flex; align-items: baseline; gap: 1rem; }
-.page-title span { font-size: 1rem; color: #888; }
-.page-desc { color: #666; margin-bottom: 2rem; }
+.page-title { font-size: 2rem; margin-bottom: 0.5rem; display: flex; align-items: baseline; gap: 1rem; color: var(--txt); }
+.page-title span { font-size: 1rem; color: var(--txt); opacity: 0.5; }
+.page-desc { color: var(--txt); opacity: 0.7; margin-bottom: 2rem; }
 
 .auction-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1.5rem; }
 .auction-card { display: flex; flex-direction: column; background: var(--card-bg); border: 1px solid var(--bd); border-radius: 12px; overflow: hidden; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s; }
-.auction-card:hover { transform: translateY(-4px); box-shadow: 0 8px 16px rgba(0,0,0,0.3); border-color: var(--pri); }
+.auction-card:hover { transform: translateY(-4px); box-shadow: 0 8px 16px rgba(0,0,0,0.15); border-color: var(--pri); }
 
-.card-img-box { width: 100%; aspect-ratio: 4 / 3; background-color: #000; position: relative; overflow: hidden; border-bottom: 1px solid var(--bd); }
+.card-img-box { width: 100%; aspect-ratio: 4 / 3; background-color: var(--card-bg); position: relative; overflow: hidden; border-bottom: 1px solid var(--bd); }
 .card-img-box img { width: 100%; height: 100%; object-fit: cover; display: block; }
 
-/* 🌟 狀態標籤優化 */
 .status-badge { 
     position: absolute; 
     top: 10px; 
@@ -200,7 +190,6 @@ const goBack = () => {
     font-weight: bold; 
     color: #fff; 
     z-index: 10;
-    /* 確保寬度自適應且不換行 */
     width: max-content;
     white-space: nowrap;
     line-height: 1.2;
@@ -210,114 +199,44 @@ const goBack = () => {
 
 .card-info { padding: 1rem; display: flex; flex-direction: column; flex-grow: 1; }
 .morph-name { margin: 0 0 0.5rem 0; font-size: 1.1rem; color: var(--txt); line-height: 1.3; }
-.gender-tag { font-size: 0.9rem; color: #888; }
-.morph-desc { color: #aaa; font-size: 0.9rem; margin-bottom: 1rem; line-height: 1.4; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.gender-tag { font-size: 0.9rem; color: var(--txt); opacity: 0.6; }
+.morph-desc { color: var(--txt); opacity: 0.7; font-size: 0.9rem; margin-bottom: 1rem; line-height: 1.4; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-/* 價格區域優化 */
-.price-info { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; background: rgba(255,255,255,0.03); padding: 8px 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); }
+/* 價格區域使用變數適配 */
+.price-info { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; background: var(--card-bg); padding: 8px 12px; border-radius: 8px; border: 1px solid var(--bd); }
 .price-col { display: flex; flex-direction: column; align-items: flex-start; flex: 1; }
 .price-col:last-child { align-items: flex-end; }
-.price-label { font-size: 0.75rem; color: #888; margin-bottom: 2px; }
-.price-val { font-size: 1.1rem; color: var(--pri); }
-.price-divider { width: 1px; height: 25px; background: rgba(255,255,255,0.1); margin: 0 10px; }
+.price-label { font-size: 0.75rem; color: var(--txt); opacity: 0.6; margin-bottom: 2px; }
+.price-val { font-size: 1.1rem; color: var(--pri); font-weight: bold; }
+.price-divider { width: 1px; height: 25px; background: var(--bd); margin: 0 10px; }
 
-.countdown { margin-top: auto; font-weight: bold; color: #ddd; text-align: center; padding: 8px; border-radius: 6px; background: rgba(255,255,255,0.05); border: 1px solid var(--bd); font-size: 0.95rem; }
+/* 倒數計時區塊使用變數適配 */
+.countdown { margin-top: auto; font-weight: bold; color: var(--txt); text-align: center; padding: 8px; border-radius: 6px; background: var(--card-bg); border: 1px solid var(--bd); font-size: 0.95rem; }
 .countdown.ending-soon { color: #fff; background: #e74c3c; border-color: #c0392b; animation: pulse 1.5s infinite; }
-.empty-state { text-align:center; padding: 3rem; color: #888; }
+.empty-state { text-align:center; padding: 3rem; color: var(--txt); opacity: 0.6; }
 
 @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.8; } 100% { opacity: 1; } }
 
-/* Day Mode */
-:global(body.day-mode) .app-back-btn { background: #fff; border-color: #ddd; color: #333; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
-:global(body.day-mode) .app-back-btn:active { background: #f0f0f0; }
-:global(body.day-mode) .auction-page { color: #333; }
-:global(body.day-mode) .auction-card { background: #fff; border-color: #ddd; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
-:global(body.day-mode) .auction-card:hover { box-shadow: 0 8px 25px rgba(0,0,0,0.1); border-color: var(--pri); }
-:global(body.day-mode) .card-img-box { background-color: #f4f4f4; border-bottom-color: #eee; }
-:global(body.day-mode) .morph-name { color: #111; }
-:global(body.day-mode) .morph-desc { color: #666; }
-:global(body.day-mode) .price-info { background: #f9f9f9; border-color: #eee; }
-:global(body.day-mode) .price-divider { background: #ddd; }
-:global(body.day-mode) .countdown { background: #eee; color: #444; border-color: #ddd; }
-:global(body.day-mode) .countdown.ending-soon { background: #e74c3c; color: #fff; border-color: #c0392b; }
-
-/* 🌟 Mobile Optimizations */
 @media (max-width: 768px) {
     .dt-only { display: none !important; }
     .m-only { display: flex !important; }
     
-    .auction-page {
-        padding: 5px 10px 15px 10px; /* 壓縮頂部與左右留白 */
-    }
+    .auction-page { padding: 5px 10px 15px 10px; }
+    .auction-grid { grid-template-columns: repeat(2, 1fr) !important; gap: 8px; }
+    .auction-card { border-radius: 8px; }
+    .card-img-box { aspect-ratio: 1 / 1; }
+    .card-info { padding: 6px 8px; }
+    .status-badge { padding: 2px 6px; font-size: 0.65rem; top: 4px; left: 4px; }
+    .morph-name { font-size: 0.85rem; margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .gender-tag { font-size: 0.75rem; }
+    .morph-desc { display: none; }
     
-    .auction-grid {
-        grid-template-columns: repeat(2, 1fr) !important; /* 強制雙欄 */
-        gap: 8px; /* 縮小卡片間距 */
-    }
+    .price-info { padding: 4px 6px; margin-bottom: 6px; flex-direction: column; align-items: flex-start; gap: 4px; }
+    .price-divider { display: none; }
+    .price-col, .price-col:last-child { align-items: flex-start; width: 100%; }
+    .price-label { font-size: 0.65rem; }
+    .price-val { font-size: 0.95rem; }
     
-    .auction-card {
-        border-radius: 8px; /* 卡片圓角縮小 */
-    }
-
-    .card-img-box {
-        aspect-ratio: 1 / 1; /* 圖片改為 1:1 正方形 */
-    }
-    
-    .card-info {
-        padding: 6px 8px; /* 極致壓縮內距 */
-    }
-    
-    .status-badge {
-        padding: 2px 6px;
-        font-size: 0.65rem;
-        top: 4px;
-        left: 4px;
-    }
-
-    .morph-name {
-        font-size: 0.85rem;
-        margin-bottom: 4px;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis; /* 單行文字防破版 */
-    }
-    
-    .gender-tag {
-        font-size: 0.75rem;
-    }
-    
-    .morph-desc {
-        display: none; /* 雙欄模式下隱藏備註，保持版面乾淨 */
-    }
-    
-    .price-info {
-        padding: 4px 6px;
-        margin-bottom: 6px;
-        flex-direction: column; /* 價格上下排列 */
-        align-items: flex-start;
-        gap: 4px;
-    }
-    
-    .price-divider {
-        display: none; /* 隱藏分隔線 */
-    }
-
-    .price-col, .price-col:last-child {
-        align-items: flex-start; /* 全部靠左對齊 */
-        width: 100%;
-    }
-    
-    .price-label {
-        font-size: 0.65rem;
-    }
-    
-    .price-val {
-        font-size: 0.95rem;
-    }
-    
-    .countdown {
-        padding: 4px;
-        font-size: 0.75rem;
-    }
+    .countdown { padding: 4px; font-size: 0.75rem; }
 }
 </style>
