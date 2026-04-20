@@ -119,7 +119,7 @@ const setBeginnerMode = () => {
 
             <div v-else-if="hotList.length > 0" class="hot-marquee-mask">
                 <div class="hot-track">
-                    <div class="hot-card-item" v-for="(i, idx) in[ ...hotList, ...hotList, ...hotList, ...hotList ]" :key="idx">
+                    <div class="hot-card-item" v-for="(i, idx) in [ ...hotList, ...hotList, ...hotList, ...hotList ]" :key="idx">
                         <NuxtLink :to="`/product/${i.ID}`" style="display:block; text-decoration:none; color:inherit; height:100%;">
                             <div style="position:relative;">
                                 <NuxtImg 
