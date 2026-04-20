@@ -95,44 +95,44 @@ useHead({
 </script>
 
 <template>
-    <div class="hosp-container">
-        <h1 class="page-title">特寵醫院搜尋地圖</h1>
+    <div class="hosp-page-wrapper">
+        <h1 class="page-title dt-only">特寵醫院搜尋地圖</h1>
         
-        <div style="background: rgba(255, 69, 0, 0.05); border: 1px dashed var(--pri); color: var(--txt); padding: 12px; border-radius: 8px; font-size: 0.85rem; margin-bottom: 20px; display: flex; align-items: flex-start; gap: 10px;">
-            <span style="font-size: 1.2rem; line-height: 1.2;">💡</span> 
-            <div>
-                <strong style="color: var(--pri);">收藏清單儲存於本機瀏覽器</strong><br>
-                <span style="opacity: 0.8;">若清除瀏覽器快取或更換手機/電腦，收藏紀錄將會消失喔！</span>
+        <div class="hosp-alert-box">
+            <span class="icon">💡</span> 
+            <div class="text-content">
+                <strong>收藏清單儲存於本機瀏覽器</strong>
+                <span>若清除瀏覽器快取或更換手機/電腦，收藏紀錄將會消失喔！</span>
             </div>
         </div>
 
         <!-- Filter Section -->
         <div class="hosp-filter-row">
             <div class="hosp-select-group">
-                <label class="hosp-label">Region & City / 區域與縣市</label>
+                <label class="hosp-label">區域與縣市</label>
                 <select class="hosp-select" :value="hospCity" @change="changeCity($event.target.value)">
-                    <option value="all">所有縣市 (ALL CITIES)</option>
+                    <option value="all">所有縣市</option>
                     <optgroup v-for="(cities, region) in HOSPITAL_REGIONS" :key="region" :label="region">
                         <option v-for="city in cities" :key="city" :value="city" v-show="hospAvailableCities.has(city)">
                             {{ city }}
                         </option>
                     </optgroup>
                 </select>
-                <div class="hosp-select-icon">➜</div>
+                <div class="hosp-select-icon">▼</div>
             </div>
             <div class="hosp-select-group">
-                <label class="hosp-label">District / 行政區</label>
+                <label class="hosp-label">行政區</label>
                 <select class="hosp-select" v-model="hospDistrict" :disabled="hospCity === 'all'">
-                    <option value="all">所有區域 (ALL DISTRICTS)</option>
+                    <option value="all">所有區域</option>
                     <option v-for="d in hospDistricts" :key="d" :value="d">{{ d }}</option>
                 </select>
-                <div class="hosp-select-icon">➜</div>
+                <div class="hosp-select-icon">▼</div>
             </div>
         </div>
 
         <!-- Results Info -->
         <div class="hosp-count-row">
-            <span class="hosp-count">RECORDS: {{ hospFiltered.length }}</span>
+            <span class="hosp-count">搜尋結果: {{ hospFiltered.length }} 間</span>
             <div class="hosp-divider"></div>
         </div>
 
@@ -142,7 +142,7 @@ useHead({
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:block; margin:0 auto 10px auto;">
                     <circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line>
                 </svg>
-                NO RESULTS FOUND
+                沒有找到符合的醫院
             </div>
 
             <article v-for="h in hospFiltered" :key="h.id" class="hosp-card">
@@ -166,54 +166,113 @@ useHead({
                             <span class="hosp-tag">{{ h.city }} {{ h.district }}</span>
                             <span class="fav-btn" :class="{active: hospWishlist.includes(h.id)}" @click.stop.prevent="toggleHospWishlist(h.id)" style="position: relative; top: auto; right: auto; z-index: 10; box-shadow: 0 2px 5px rgba(0,0,0,0.2);">❤</span>
                         </div>
-                        <a :href="'tel:' + h.phone.replace(/[^\d]/g, '')" class="hosp-call-btn" style="width: 100%; text-align: center;">Call Now</a>
+                        <a :href="'tel:' + h.phone.replace(/[^\d]/g, '')" class="hosp-call-btn" style="width: 100%; text-align: center;">撥打電話</a>
                     </div>
                 </div>
             </article>
         </div>
-
-        <footer class="hosp-footer">
-            <span>EXOTIC_VET_MAP_TW</span>
-            <div class="hosp-divider"></div>
-            <span>V4.0 (PORTED)</span>
-        </footer>
     </div>
 </template>
 
 <style scoped>
-.hosp-container { max-width: 900px; margin: 0 auto; padding-top: 15px; }
+.hosp-page-wrapper { max-width: 900px; margin: 0 auto; padding-top: 15px; }
+
+/* Responsive Utilities */
+.dt-only { display: block; }
+@media (max-width: 768px) {
+    .dt-only { display: none !important; }
+}
+
+/* Alert Box */
+.hosp-alert-box { background: rgba(255, 69, 0, 0.05); border: 1px dashed var(--pri); color: var(--txt); padding: 12px 15px; border-radius: 8px; font-size: 0.85rem; margin-bottom: 20px; display: flex; align-items: flex-start; gap: 10px; }
+.hosp-alert-box .icon { font-size: 1.2rem; line-height: 1.2; }
+.hosp-alert-box .text-content { display: flex; flex-direction: column; }
+.hosp-alert-box strong { color: var(--pri); margin-bottom: 4px; }
+.hosp-alert-box span { opacity: 0.8; }
+
+/* Filter Section */
 .hosp-filter-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
 .hosp-select-group { position: relative; }
-.hosp-label { display: block; font-size: 0.7rem; font-weight: 700; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 1px; color: #666; }
-.hosp-select { width: 100%; padding: 10px; background: var(--card-bg); border: 1px solid var(--bd); color: var(--txt); border-radius: 0; font-weight: bold; font-size: 0.9rem; outline: none; appearance: none; cursor: pointer; transition: 0.2s; }
+.hosp-label { display: block; font-size: 0.8rem; font-weight: 700; margin-bottom: 6px; color: #888; }
+.hosp-select { width: 100%; padding: 12px; background: var(--card-bg); border: 1px solid var(--bd); color: var(--txt); border-radius: 8px; font-weight: bold; font-size: 0.95rem; outline: none; appearance: none; cursor: pointer; transition: 0.2s; }
 .hosp-select:focus { border-color: var(--pri); }
 .hosp-select:disabled { opacity: 0.3; cursor: not-allowed; }
-.hosp-select-icon { position: absolute; right: 10px; bottom: 10px; pointer-events: none; opacity: 0.4; transform: rotate(90deg); color: var(--txt); }
-.hosp-count-row { display: flex; align-items: center; margin-bottom: 10px; padding: 0 5px; }
-.hosp-count { font-size: 0.7rem; font-family: monospace; opacity: 0.5; letter-spacing: 2px; text-transform: uppercase; white-space: nowrap; }
+.hosp-select-icon { position: absolute; right: 12px; bottom: 12px; pointer-events: none; opacity: 0.4; color: var(--txt); font-size: 0.8rem; }
+
+/* Results Info */
+.hosp-count-row { display: flex; align-items: center; margin-bottom: 12px; padding: 0 5px; }
+.hosp-count { font-size: 0.85rem; font-weight: bold; color: var(--pri); white-space: nowrap; }
 .hosp-divider { height: 1px; flex: 1; background: var(--bd); margin: 0 15px; opacity: 0.3; }
-.hosp-list { display: flex; flex-direction: column; gap: 8px; }
-.hosp-card { padding: 14px; border: 1px solid var(--bd); background: var(--card-bg); position: relative; transition: 0.3s; display: flex; flex-direction: column; }
-.hosp-card:hover { border-color: rgba(255, 69, 0, 0.4); transform: translateY(-2px); }
-.hosp-card::after { content: ''; position: absolute; top: 0; right: 0; width: 16px; height: 16px; border-right: 1px solid rgba(255,255,255,0.1); border-top: 1px solid rgba(255,255,255,0.1); }
-.hosp-card:hover::after { border-color: var(--pri); }
+
+/* Hospital List */
+.hosp-list { display: flex; flex-direction: column; gap: 10px; padding-bottom: 20px; }
+.hosp-empty { text-align: center; padding: 40px 0; border: 1px dashed var(--bd); opacity: 0.5; font-weight: bold; font-size: 0.9rem; border-radius: 8px; }
+
+.hosp-card { padding: 15px; border: 1px solid var(--bd); background: var(--card-bg); position: relative; transition: 0.3s; display: flex; flex-direction: column; border-radius: 10px; }
+.hosp-card:hover { border-color: rgba(255, 69, 0, 0.4); transform: translateY(-2px); box-shadow: 0 5px 15px rgba(0,0,0,0.3); }
+
 .hosp-content-row { display: flex; justify-content: space-between; gap: 12px; }
 .hosp-info { flex: 1; }
-.hosp-name { font-size: 1rem; font-weight: bold; margin-bottom: 6px; color: var(--txt); }
-.hosp-detail-row { display: flex; align-items: flex-start; gap: 6px; font-size: 0.8rem; color: #aaa; margin-bottom: 4px; line-height: 1.4; }
-.hosp-icon { width: 12px; height: 12px; flex-shrink: 0; margin-top: 2px; color: var(--pri); }
+.hosp-name { font-size: 1.1rem; font-weight: bold; margin-bottom: 8px; color: var(--txt); }
+.hosp-detail-row { display: flex; align-items: flex-start; gap: 6px; font-size: 0.85rem; color: #aaa; margin-bottom: 6px; line-height: 1.4; }
+.hosp-icon { width: 14px; height: 14px; flex-shrink: 0; margin-top: 2px; color: var(--pri); }
 .hosp-link { text-decoration: none; color: inherit; transition: 0.2s; display: flex; align-items: center; }
 .hosp-link:hover { color: var(--pri); }
-.hosp-actions { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; flex-shrink: 0; }
-.hosp-tag { font-size: 0.6rem; font-weight: bold; padding: 2px 5px; border: 1px solid var(--bd); background: var(--card-bg); color: var(--pri); font-family: monospace; }
-.hosp-call-btn { padding: 5px 10px; font-size: 0.6rem; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; border: 1px solid var(--pri); color: var(--pri); text-decoration: none; transition: 0.2s; }
-.hosp-call-btn:hover { background: var(--pri); color: #000; }
-.hosp-empty { text-align: center; padding: 40px 0; border: 1px dashed var(--bd); opacity: 0.5; font-family: monospace; letter-spacing: 2px; font-size: 0.8rem; }
-.hosp-footer { margin-top: 30px; padding-bottom: 15px; display: flex; justify-content: space-between; align-items: center; font-size: 0.6rem; font-family: monospace; opacity: 0.3; text-transform: uppercase; letter-spacing: 3px; }
+
+.hosp-actions { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; flex-shrink: 0; justify-content: center; }
+.hosp-tag { font-size: 0.75rem; font-weight: bold; padding: 4px 8px; border: 1px solid var(--bd); background: rgba(255,255,255,0.02); color: var(--pri); border-radius: 6px; }
+.hosp-call-btn { padding: 8px 15px; font-size: 0.85rem; font-weight: bold; border: 1px solid var(--pri); color: var(--pri); text-decoration: none; transition: 0.2s; border-radius: 6px; }
+.hosp-call-btn:hover { background: var(--pri); color: #fff; }
+
+/* Day Mode Overrides */
+:global(body.day-mode) .hosp-alert-box { background: #fff3e0; border-color: #ffb74d; color: #333; }
+:global(body.day-mode) .hosp-select { background: #fff; border-color: #ccc; color: #333; }
+:global(body.day-mode) .hosp-card { background: #fff; border-color: #ddd; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+:global(body.day-mode) .hosp-name { color: #222; }
+:global(body.day-mode) .hosp-tag { background: #fff; border-color: #ffb74d; }
+:global(body.day-mode) .hosp-call-btn { border-color: var(--pri); color: var(--pri); }
+:global(body.day-mode) .hosp-call-btn:hover { background: var(--pri); color: #fff; }
+:global(body.day-mode) .hosp-empty { border-color: #ccc; color: #666; }
 
 @media (max-width: 768px) {
-    .hosp-filter-row { grid-template-columns: 1fr; gap: 8px; }
+    /* 🌟 Mobile Optimizations for App-like feel */
+    .hosp-page-wrapper { padding-top: 0; }
+    
+    .hosp-alert-box {
+        padding: 10px;
+        margin-bottom: 15px;
+        font-size: 0.8rem;
+    }
+    
+    .hosp-filter-row { 
+        /* 🌟 保持並排，減少垂直高度佔用 */
+        grid-template-columns: 1fr 1fr; 
+        gap: 10px; 
+        margin-bottom: 15px;
+    }
+    
+    .hosp-select {
+        padding: 10px;
+        font-size: 0.9rem;
+    }
+    
     .hosp-content-row { flex-direction: column; }
-    .hosp-actions { flex-direction: row; justify-content: space-between; align-items: center; width: 100%; margin-top: 8px; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 8px; }
+    .hosp-actions { 
+        flex-direction: row; 
+        justify-content: space-between; 
+        align-items: center; 
+        width: 100%; 
+        margin-top: 10px; 
+        border-top: 1px solid rgba(255,255,255,0.05); 
+        padding-top: 10px; 
+    }
+    .hosp-call-btn {
+        width: auto !important;
+        padding: 8px 20px;
+    }
+}
+
+:global(body.day-mode) @media (max-width: 768px) {
+    .hosp-actions { border-top-color: #eee; }
 }
 </style>
