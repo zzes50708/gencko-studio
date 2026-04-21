@@ -92,7 +92,7 @@ const onTouchEnd = () => {
     position: fixed;
     top: 0; left: 0;
     width: 100%; height: 100%;
-    background: rgba(0, 0, 0, 0.95);
+    background: var(--card-bg);
     z-index: 999999;
     display: flex;
     justify-content: center;
@@ -133,13 +133,13 @@ const onTouchEnd = () => {
     width: 40px;
     height: 5px;
     border-radius: 5px;
-    background: #fff;
+    background: var(--txt);
     margin-bottom: 6px;
 }
 
 .swipe-text {
     font-size: 0.75rem;
-    color: #fff;
+    color: var(--txt);
     font-weight: bold;
     letter-spacing: 1px;
 }
@@ -151,14 +151,14 @@ const onTouchEnd = () => {
     height: auto; /* 🌟 高度跟著寬度等比例縮放，避免過高的黑邊 */
     max-height: 70vh; /* 防止直式照片超出螢幕 */
     border-radius: 16px; 
-    box-shadow: 0 10px 40px rgba(0,0,0,0.8);
+    box-shadow: 0 10px 40px rgba(0,0,0,0.15);
     object-fit: contain;
     /* 防止長按圖片時跳出系統選單，提升 App 沉浸感 */
     -webkit-touch-callout: none;
     -webkit-user-select: none;
     user-select: none;
-    background: #000;
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: var(--card-bg);
+    border: 1px solid var(--bd);
 }
 
 .lightbox-info {
@@ -170,11 +170,10 @@ const onTouchEnd = () => {
 }
 
 .lightbox-title {
-    color: #fff;
+    color: var(--txt);
     margin: 0 0 15px 0;
     font-size: 1.5rem;
     font-weight: 900;
-    text-shadow: 0 2px 10px rgba(0,0,0,0.5);
 }
 
 /* 🌟 App-like 購買按鈕 */
@@ -200,13 +199,6 @@ const onTouchEnd = () => {
     transform: scale(0.95);
     box-shadow: 0 2px 10px rgba(255, 69, 0, 0.3);
 }
-
-/* Day Mode Overrides */
-:global(body.day-mode) .lightbox-overlay { background: rgba(255, 255, 255, 0.98); }
-:global(body.day-mode) .lightbox-title { color: #111; text-shadow: none; }
-:global(body.day-mode) .swipe-indicator { background: #333; }
-:global(body.day-mode) .swipe-text { color: #555; }
-:global(body.day-mode) .lightbox-img { border-color: #ddd; box-shadow: 0 10px 40px rgba(0,0,0,0.15); background: #f9f9f9; }
 
 /* 🌟 Mobile Optimizations */
 @media (max-width: 768px) {

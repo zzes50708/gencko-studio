@@ -50,20 +50,13 @@ const isActive = (path) => {
         /* 基礎高度 65px + iOS 底部主畫面橫條的安全邊距 */
         height: calc(65px + env(safe-area-inset-bottom, 0px));
         padding-bottom: env(safe-area-inset-bottom, 0px);
-        background: rgba(8, 8, 8, 0.92);
+        background: var(--card-bg);
         backdrop-filter: blur(20px);
         -webkit-backdrop-filter: blur(20px);
-        border-top: 1px solid rgba(255, 255, 255, 0.1);
+        border-top: 1px solid var(--bd);
         z-index: 9999;
-        box-shadow: 0 -5px 20px rgba(0, 0, 0, 0.5);
+        box-shadow: 0 -5px 20px rgba(0, 0, 0, 0.1);
     }
-}
-
-/* 日間模式適配 */
-:global(body.day-mode) .bottom-nav {
-    background: rgba(255, 255, 255, 0.95);
-    border-top: 1px solid rgba(0, 0, 0, 0.1);
-    box-shadow: 0 -5px 20px rgba(0, 0, 0, 0.05);
 }
 
 .nav-item {
@@ -73,7 +66,8 @@ const isActive = (path) => {
     align-items: center;
     justify-content: center;
     text-decoration: none;
-    color: #888;
+    color: var(--txt);
+    opacity: 0.6;
     transition: 0.2s ease-in-out;
     gap: 4px;
     height: 100%;
@@ -99,18 +93,11 @@ const isActive = (path) => {
 /* 活躍狀態樣式 */
 .nav-item.active {
     color: var(--pri);
+    opacity: 1;
 }
 
 .nav-item.active .icon {
     transform: translateY(-3px) scale(1.15);
     filter: drop-shadow(0 2px 5px var(--pri-glow));
-}
-
-/* 日間模式文字顏色覆寫 */
-:global(body.day-mode) .nav-item {
-    color: #999;
-}
-:global(body.day-mode) .nav-item.active {
-    color: var(--pri);
 }
 </style>

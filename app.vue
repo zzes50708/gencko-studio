@@ -156,82 +156,65 @@ onUnmounted(() => {
 </template>
 
 <style scoped>
-/* 🌟 PWA 更新通知樣式 */
 .pwa-update-toast {
-  position: fixed;
-  bottom: 20px;
-  left: 50%;
-  transform: translateX(-50%);
-  background: rgba(20, 20, 20, 0.95);
-  backdrop-filter: blur(10px);
-  border: 1px solid var(--pri);
-  color: #fff;
-  padding: 15px 20px;
-  border-radius: 12px;
-  z-index: 100000;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 12px;
-  width: 90%;
-  max-width: 350px;
-  text-align: center;
-  animation: slideUpFade 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+position: fixed;
+bottom: 20px;
+left: 50%;
+transform: translateX(-50%);
+background: var(--card-bg);
+backdrop-filter: blur(10px);
+border: 1px solid var(--pri);
+color: var(--txt);
+padding: 15px 20px;
+border-radius: 12px;
+z-index: 100000;
+box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+display: flex;
+flex-direction: column;
+align-items: center;
+gap: 12px;
+width: 90%;
+max-width: 350px;
+text-align: center;
+animation: slideUpFade 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
-
 .pwa-update-actions {
-  display: flex;
-  gap: 10px;
-  width: 100%;
+display: flex;
+gap: 10px;
+width: 100%;
 }
-
 .pwa-btn-update {
-  flex: 1;
-  background: var(--pri);
-  color: #fff;
-  border: none;
-  padding: 10px;
-  border-radius: 8px;
-  font-weight: bold;
-  cursor: pointer;
-  box-shadow: 0 4px 10px var(--pri-glow);
+flex: 1;
+background: var(--pri);
+color: #fff;
+border: none;
+padding: 10px;
+border-radius: 8px;
+font-weight: bold;
+cursor: pointer;
+box-shadow: 0 4px 10px var(--pri-glow);
 }
-
 .pwa-btn-cancel {
-  flex: 1;
-  background: transparent;
-  color: #aaa;
-  border: 1px solid #555;
-  padding: 10px;
-  border-radius: 8px;
-  cursor: pointer;
+flex: 1;
+background: transparent;
+color: var(--txt);
+opacity: 0.8;
+border: 1px solid var(--bd);
+padding: 10px;
+border-radius: 8px;
+cursor: pointer;
 }
-
 @keyframes slideUpFade {
-  from { opacity: 0; transform: translate(-50%, 20px); }
-  to { opacity: 1; transform: translate(-50%, 0); }
+from { opacity: 0; transform: translate(-50%, 20px); }
+to { opacity: 1; transform: translate(-50%, 0); }
 }
-
-/* 日間模式的 PWA 更新通知 */
-:global(body.day-mode) .pwa-update-toast {
-  background: rgba(255, 255, 255, 0.95);
-  color: #000;
-  border-color: var(--pri);
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
-}
-:global(body.day-mode) .pwa-btn-cancel {
-  color: #555;
-  border-color: #ccc;
-}
-
 /* 🌟 行動端避開底部導航列 (TheBottomNav) 的遮擋 */
 @media (max-width: 768px) {
-  .floating-inquire-btn {
-    bottom: calc(85px + env(safe-area-inset-bottom, 0px)) !important;
-  }
-  .pwa-update-toast {
-    bottom: calc(85px + env(safe-area-inset-bottom, 0px)) !important;
-  }
+.floating-inquire-btn {
+bottom: calc(85px + env(safe-area-inset-bottom, 0px)) !important;
+}
+.pwa-update-toast {
+bottom: calc(85px + env(safe-area-inset-bottom, 0px)) !important;
+}
 }
 </style>
