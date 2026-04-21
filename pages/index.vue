@@ -378,7 +378,7 @@ const setBeginnerMode = () => {
     }
     
     .scenario-title { 
-        font-size: 0.rem; 
+        font-size: 0.9rem; 
         margin-bottom: 0px; 
     }
     

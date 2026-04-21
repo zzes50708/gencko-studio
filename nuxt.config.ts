@@ -36,7 +36,7 @@ export default defineNuxtConfig({
 
   // 🌟 PWA 模組設定 (Progressive Web App)
   pwa: {
-    registerType: 'autoUpdate',
+    registerType: 'prompt', /* 👇 改為 prompt，這樣才會完美觸發 app.vue 裡的更新提示氣泡 */
     manifest: {
       id: '/',             /* 👇 新增：強制綁定應用程式 ID 為根目錄 */
       start_url: '/',      /* 👇 新增：強制開啟 App 時從根目錄啟動，避免跳轉舊網址 */
