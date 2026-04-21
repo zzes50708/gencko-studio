@@ -259,6 +259,8 @@ const goBack = () => {
 
 .gene-text-content {
     flex: 1;
+    min-width: 0; /* 🌟 解決手機版 Flex 容器被文字撐破的黑魔法 */
+    width: 100%;
 }
 
 h3 {
@@ -267,15 +269,16 @@ h3 {
     margin: 0 0 10px 0;
 }
 
-/* 🌟 強制手機版自動折行，適配日夜模式變數 */
+/* 2. 找到 p 標籤，更新換行規則 */
 p {
     color: var(--txt);
     opacity: 0.9;
     line-height: 1.7;
     font-size: 1.05rem;
-    white-space: pre-line; /* 允許自動換行且保留換行符號 */
+    white-space: pre-wrap; /* 🌟 改用 pre-wrap，對手機瀏覽器相容性更好 */
+    overflow-wrap: anywhere; /* 🌟 絕對強制截斷過長的連續英文字或網址 */
     word-wrap: break-word;
-    word-break: break-word;
+    word-break: normal;
     text-align: justify;
 }
 
