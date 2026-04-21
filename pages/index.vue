@@ -285,7 +285,7 @@ const setBeginnerMode = () => {
     font-size: 0.95rem; 
 }
 .scenario-desc { 
-    font-size: 0.75rem; 
+    font-size: 0.8rem; 
     color: var(--txt); 
     opacity: 0.6; 
     white-space: nowrap; 
@@ -362,14 +362,14 @@ const setBeginnerMode = () => {
 
     .home-scenario-grid { 
         grid-template-columns: repeat(4, 1fr); 
-        gap: 3px; 
+        gap: 8px; 
         margin-bottom: 5px; 
-        padding: 0 20px; 
+        padding: 0 10px; 
     }
     
     .scenario-card { 
-        padding: 8px 0px; 
-        border-radius: 15px; 
+        padding: 6px 0px; 
+        border-radius: 20px; 
     }
     
     .scenario-icon { 
@@ -378,12 +378,12 @@ const setBeginnerMode = () => {
     }
     
     .scenario-title { 
-        font-size: 0.75rem; 
+        font-size: 0.rem; 
         margin-bottom: 0px; 
     }
     
     .scenario-desc { 
-        font-size: 0.6rem; 
+        font-size: 0rem; 
         white-space: nowrap; 
         overflow: hidden; 
         text-overflow: ellipsis; 
