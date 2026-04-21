@@ -75,37 +75,75 @@ useHead({
 </template>
 
 <style scoped>
-/* 強制警告區塊內的所有文字黑字 */
-:global(body.day-mode) .calc-warn,
-:global(body.day-mode) .calc-warn div,
-:global(body.day-mode) .calc-notice,
-:global(body.day-mode) .calc-notice div { color: #000 !important; text-shadow: none !important; }
-.breeders-page-wrapper { max-width: 1200px; margin: 0 auto; }
+/* 
+  [局部樣式修復] 
+  已清除錯誤貼上的 .calc-warn 樣式與多餘的 .card 全域定義。
+  全面導入 CSS 變數重構 .tabs，並移除所有 :global(body.day-mode) 的強制色彩覆寫。
+*/
+.breeders-page-wrapper { 
+    max-width: 1200px; 
+    margin: 0 auto; 
+}
 
 /* 🌟 Responsive Utilities */
 .dt-only { display: block; }
 
-.tabs { display: flex; gap: 0; margin-bottom: 15px; background: #111; border-radius: 8px; overflow: hidden; border: 1px solid var(--bd); }
-.tab { flex: 1; padding: 12px; text-align: center; cursor: pointer; color: #666; font-weight: 700; font-size: 1rem; transition: 0.3s; border-right: 1px solid #222; }
-.tab:last-child { border-right: none; }
-.tab.active { background: var(--pri); color: #000; box-shadow: inset 0 0 20px rgba(0,0,0,0.2); }
+/* 頁籤切換 (變數化) */
+.tabs { 
+    display: flex; 
+    gap: 0; 
+    margin-bottom: 15px; 
+    background: var(--card-bg); 
+    border-radius: 8px; 
+    overflow: hidden; 
+    border: 1px solid var(--bd); 
+}
+.tab { 
+    flex: 1; 
+    padding: 12px; 
+    text-align: center; 
+    cursor: pointer; 
+    color: var(--txt); 
+    opacity: 0.6;
+    font-weight: 700; 
+    font-size: 1rem; 
+    transition: 0.3s; 
+    border-right: 1px solid var(--bd); 
+}
+.tab:last-child { 
+    border-right: none; 
+}
+.tab.active { 
+    background: var(--pri); 
+    color: #fff; 
+    opacity: 1;
+    box-shadow: inset 0 0 20px rgba(0,0,0,0.1); 
+}
 
-/* 🌟 將原本的 repeat(4, 1fr) 改為 repeat(3, 1fr)，並稍微加大間距讓排版更大器 */
-.photo-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; }
-.photo-grid .card-img { width: 100%; height: auto; aspect-ratio: 1 / 1; object-fit: cover; cursor: pointer; background-color: #000; border-bottom: 1px solid var(--bd); transition: filter 0.3s; }
-.morph-title { margin: 0; font-weight: bold; color: var(--txt); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-
-/* Card Base Hover */
-.card { background: var(--card-bg); border: 1px solid var(--bd); border-radius: 10px; overflow: hidden; position: relative; transition: 0.3s; cursor: pointer; }
-.card:hover { transform: translateY(-3px); border-color: rgba(255, 87, 34, 0.8); box-shadow: 0 5px 15px rgba(0,0,0,0.3); }
-
-:global(body.day-mode) .tabs { background: #eee; border-color: #ccc; }
-:global(body.day-mode) .tab { border-right-color: #ccc; color: #666; }
-:global(body.day-mode) .tab.active { background: #ddd; color: #000; }
-:global(body.day-mode) .morph-title { color: #111; }
-:global(body.day-mode) .photo-grid .card-img { background-color: #f4f4f4; border-bottom-color: #eee; }
-:global(body.day-mode) .card { background: #fff; border-color: #ddd; }
-:global(body.day-mode) .card:hover { border-color: var(--pri); box-shadow: 0 5px 15px rgba(0,0,0,0.05); }
+/* 🌟 種群專屬的 3 欄排版微調 */
+.photo-grid { 
+    display: grid; 
+    grid-template-columns: repeat(3, 1fr); 
+    gap: 15px; 
+}
+.photo-grid .card-img { 
+    width: 100%; 
+    height: auto; 
+    aspect-ratio: 1 / 1; 
+    object-fit: cover; 
+    cursor: pointer; 
+    background-color: var(--card-bg); 
+    border-bottom: 1px solid var(--bd); 
+    transition: filter 0.3s; 
+}
+.morph-title { 
+    margin: 0; 
+    font-weight: bold; 
+    color: var(--txt); 
+    white-space: nowrap; 
+    overflow: hidden; 
+    text-overflow: ellipsis; 
+}
 
 /* 🌟 Mobile Optimizations */
 @media (max-width: 768px) {

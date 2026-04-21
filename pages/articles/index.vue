@@ -92,6 +92,11 @@ const fmtDate = (d) => {
 </template>
 
 <style scoped>
+/*
+  [局部樣式修復] 
+  已清除與 assets/css/style.css 重複的宣告與寫死色碼。
+  全面導入 CSS 變數，移除所有不必要的 :global(body.day-mode) 覆寫。
+*/
 .articles-page-wrapper {
     max-width: 1300px;
     margin: 0 auto;
@@ -105,14 +110,15 @@ const fmtDate = (d) => {
     align-items: center;
     gap: 12px;
     margin-bottom: 20px;
-    background: rgba(255, 255, 255, 0.03);
+    background: var(--card-bg);
     padding: 10px 15px;
     border-radius: 12px;
     border: 1px solid var(--bd);
 }
 
 .filter-label {
-    color: #888;
+    color: var(--txt);
+    opacity: 0.8;
     font-weight: bold;
     font-size: 0.95rem;
     white-space: nowrap;
@@ -126,10 +132,10 @@ const fmtDate = (d) => {
 
 .filter-select {
     width: 100%;
-    background: #111;
-    color: #fff;
+    background: var(--card-bg);
+    color: var(--txt);
     padding: 8px 30px 8px 12px;
-    border: 1px solid #333;
+    border: 1px solid var(--bd);
     border-radius: 8px;
     font-size: 0.95rem;
     font-weight: bold;
@@ -149,14 +155,16 @@ const fmtDate = (d) => {
     top: 50%;
     transform: translateY(-50%);
     font-size: 0.7rem;
-    color: #888;
+    color: var(--txt);
+    opacity: 0.6;
     pointer-events: none;
 }
 
 .empty-state {
     text-align: center;
     padding: 50px;
-    color: #666;
+    color: var(--txt);
+    opacity: 0.6;
     font-size: 1.1rem;
     background: var(--card-bg);
     border: 1px dashed var(--bd);
@@ -165,7 +173,8 @@ const fmtDate = (d) => {
 
 .date-text {
     font-size: 0.8rem;
-    color: #888;
+    color: var(--txt);
+    opacity: 0.6;
     margin-bottom: 8px;
     display: block;
 }
@@ -174,11 +183,13 @@ const fmtDate = (d) => {
     font-size: 1.15rem;
     margin: 0 0 8px 0;
     line-height: 1.3;
+    color: var(--txt);
 }
 
 .art-summary {
     margin: 0;
-    color: #aaa;
+    color: var(--txt);
+    opacity: 0.7;
     font-size: 0.9rem;
     line-height: 1.5;
     display: -webkit-box;
@@ -186,12 +197,6 @@ const fmtDate = (d) => {
     -webkit-box-orient: vertical;
     overflow: hidden;
 }
-
-/* Day Mode Overrides */
-:global(body.day-mode) .filter-row { background: #f9f9f9; border-color: #eee; }
-:global(body.day-mode) .filter-select { background: #fff; color: #333; border-color: #ccc; }
-:global(body.day-mode) .filter-label { color: #555; }
-:global(body.day-mode) .empty-state { background: #f9f9f9; border-color: #ccc; color: #666; }
 
 /* 🌟 Mobile Optimizations */
 @media (max-width: 768px) {

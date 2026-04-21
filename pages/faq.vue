@@ -73,6 +73,11 @@ const goBack = () => {
 </template>
 
 <style scoped>
+/*
+  [局部樣式修復] 
+  已清除寫死的深色背景與淺色字體色碼。
+  全面導入 CSS 變數，移除所有不必要的 :global(body.day-mode) 覆寫。
+*/
 .faq-page-wrapper {
     max-width: 900px;
     margin: 0 auto;
@@ -93,10 +98,10 @@ const goBack = () => {
 }
 
 .app-back-btn {
-    background: rgba(255, 255, 255, 0.05);
+    background: var(--card-bg);
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
-    border: 1px solid rgba(255, 255, 255, 0.15);
+    border: 1px solid var(--bd);
     color: var(--txt);
     font-size: 0.95rem;
     font-weight: bold;
@@ -107,12 +112,12 @@ const goBack = () => {
     padding: 8px 16px;
     border-radius: 30px;
     transition: 0.2s;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    box-shadow: 0 4px 10px rgba(0,0,0,0.05);
 }
 
 .app-back-btn:active {
     transform: scale(0.95);
-    background: rgba(255, 255, 255, 0.1);
+    background: var(--bd);
 }
 
 /* 卡片化內容 */
@@ -121,25 +126,26 @@ const goBack = () => {
     border: 1px solid var(--bd);
     border-radius: 16px;
     padding: 30px;
-    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
 }
 
 .page-title {
     font-size: 2.2rem;
     margin: 0 0 20px 0;
-    color: #fff;
+    color: var(--txt);
     line-height: 1.2;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    border-bottom: 1px solid var(--bd);
     padding-bottom: 15px;
 }
 
 .page-text-box {
-    background: rgba(255,255,255,0.02);
+    background: rgba(128, 128, 128, 0.05);
     padding: 15px 20px;
     border-radius: 10px;
     border: 1px solid var(--bd);
     margin-bottom: 25px;
-    color: #ccc;
+    color: var(--txt);
+    opacity: 0.8;
     font-size: 1rem;
     line-height: 1.6;
 }
@@ -152,7 +158,7 @@ const goBack = () => {
 }
 
 .faq-item {
-    background: rgba(255,255,255,0.03);
+    background: var(--card-bg);
     border: 1px solid var(--bd);
     border-radius: 10px;
     overflow: hidden;
@@ -166,7 +172,7 @@ const goBack = () => {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    color: #fff;
+    color: var(--txt);
     font-size: 1.05rem;
     background: transparent;
     transition: 0.2s;
@@ -178,7 +184,7 @@ const goBack = () => {
 }
 
 .faq-item.active .faq-q {
-    background: rgba(255,69,0,0.1);
+    background: rgba(255,69,0,0.05);
     color: var(--pri);
 }
 
@@ -215,23 +221,13 @@ const goBack = () => {
 
 .faq-a {
     padding: 20px;
-    background: rgba(0,0,0,0.2);
-    color: #ddd;
+    background: rgba(128, 128, 128, 0.05);
+    color: var(--txt);
+    opacity: 0.9;
     line-height: 1.7;
-    border-top: 1px dashed rgba(255,255,255,0.1);
+    border-top: 1px dashed var(--bd);
     font-size: 0.95rem;
 }
-
-/* Day Mode Overrides */
-:global(body.day-mode) .app-back-btn { background: #fff; border-color: #ddd; color: #333; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
-:global(body.day-mode) .app-back-btn:active { background: #f0f0f0; }
-:global(body.day-mode) .content-card { background: #fff; border-color: #ddd; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05); }
-:global(body.day-mode) .page-title { color: #111; border-bottom-color: #eee; }
-:global(body.day-mode) .page-text-box { background: #f9f9f9; border-color: #eee; color: #444; }
-:global(body.day-mode) .faq-item { background: #fff; border-color: #ddd; }
-:global(body.day-mode) .faq-item.active { border-color: var(--pri); }
-:global(body.day-mode) .faq-q { color: #111; }
-:global(body.day-mode) .faq-a { background: #f9f9f9; color: #333; border-top-color: #eee; font-weight: 500; }
 
 /* 🌟 Mobile Optimizations (極致壓縮高度) */
 @media (max-width: 768px) {

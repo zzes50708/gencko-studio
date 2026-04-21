@@ -61,26 +61,38 @@ useHead({
 </template>
 
 <style scoped>
-.merch-page-wrapper { max-width: 1200px; margin: 0 auto; }
+/* 
+  [局部樣式修復] 
+  此頁面原本重複宣告了全域已存在的 .card, .grid, .card-img 等類別，
+  且寫死了卡片底色與 hover 效果，導致必須依賴 :global(body.day-mode) 來強行蓋過。
+  現已移除重複宣告，將基礎樣式權重與日夜模式變數切換完美還給全域 style.css。
+*/
+.merch-page-wrapper { 
+    max-width: 1200px; 
+    margin: 0 auto; 
+}
 
 /* 🌟 Responsive Utilities */
 .dt-only { display: block; }
 
-.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 15px; }
+/* 針對周邊商品卡片的專屬文字排版微調 */
+.morph-title { 
+    font-size: 1.1rem; 
+    margin: 0 0 8px 0; 
+    font-weight: bold; 
+    color: var(--txt); 
+    white-space: nowrap; 
+    overflow: hidden; 
+    text-overflow: ellipsis; 
+    line-height: 1.3; 
+}
 
-.card { background: var(--card-bg); border: 1px solid var(--bd); border-radius: 10px; overflow: hidden; position: relative; transition: 0.3s; cursor: pointer; }
-.card:hover { transform: translateY(-3px); border-color: rgba(255, 87, 34, 0.8); box-shadow: 0 5px 15px rgba(0,0,0,0.3); }
-
-.card-img { width: 100%; height: 180px; object-fit: cover; background: #000; border-bottom: 1px solid var(--bd); transition: filter 0.3s; }
-.card-body { padding: 12px; position: relative; display: flex; flex-direction: column; justify-content: space-between; flex: 1; }
-
-.morph-title { font-size: 1.1rem; margin: 0 0 8px 0; font-weight: bold; color: var(--txt); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.3; }
-.price { font-size: 1.2rem; font-weight: bold; color: var(--pri); margin-top: auto; }
-
-:global(body.day-mode) .card { background: #fff; border-color: #ddd; }
-:global(body.day-mode) .card:hover { border-color: var(--pri); box-shadow: 0 5px 15px rgba(0,0,0,0.05); }
-:global(body.day-mode) .card-img { background: #f4f4f4; border-bottom-color: #eee; }
-:global(body.day-mode) .morph-title { color: #111; }
+.price { 
+    font-size: 1.2rem; 
+    font-weight: bold; 
+    color: var(--pri); 
+    margin-top: auto; 
+}
 
 /* 🌟 Mobile Optimizations */
 @media (max-width: 768px) {
@@ -91,7 +103,7 @@ useHead({
     }
     
     .grid { 
-        grid-template-columns: repeat(2, 1fr) !important; 
+        grid-template-columns: repeat(3, 1fr) !important; 
         gap: 8px; 
     }
     

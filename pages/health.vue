@@ -152,6 +152,12 @@ const healthResult = computed(() => {
 </template>
 
 <style scoped>
+/*
+  [局部樣式修復] 
+  已清除所有寫死深淺色的背景與文字色碼。
+  全面導入 CSS 變數，徹底移除所有不必要的 :global(body.day-mode) 覆寫。
+  （警告色 c-red、c-green 等代表嚴重程度，因此維持絕對色碼不受日夜模式影響）
+*/
 .health-container { max-width: 900px; margin: 0 auto; padding-top: 15px; }
 
 /* 🌟 Responsive Utilities */
@@ -161,29 +167,116 @@ const healthResult = computed(() => {
 .health-grid { display: grid; grid-template-columns: 1fr 1.2fr; gap: 20px; align-items: stretch; }
 
 /* Left Box (Result) */
-.health-res-box { background: var(--card-bg); border: 1px solid var(--bd); border-radius: 12px; padding: 25px; display: flex; flex-direction: column; position: relative; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
+.health-res-box { 
+    background: var(--card-bg); 
+    border: 1px solid var(--bd); 
+    border-radius: 12px; 
+    padding: 25px; 
+    display: flex; 
+    flex-direction: column; 
+    position: relative; 
+    overflow: hidden; 
+    box-shadow: 0 10px 30px rgba(0,0,0,0.1); 
+}
+
 .res-top { display: flex; flex-direction: column; margin-bottom: 20px; }
-.health-sys-text { font-family: monospace; font-size: 0.75rem; opacity: 0.5; letter-spacing: 2px; margin-bottom: 5px; }
-/* 減弱陰影並在日間模式移除 */
-.health-score-val { font-size: 3.5rem; font-weight: 900; line-height: 1; text-shadow: 0 0 5px rgba(0,0,0,0.6); font-family: 'Black Ops One', cursive, sans-serif; margin-bottom: 10px; }
-:global(body.day-mode) .health-score-val { text-shadow: none !important; color: #000 !important; }
+.health-sys-text { 
+    font-family: monospace; 
+    font-size: 0.75rem; 
+    color: var(--txt);
+    opacity: 0.5; 
+    letter-spacing: 2px; 
+    margin-bottom: 5px; 
+}
+/* 移除了強制文字陰影，依賴字體本身與顏色 */
+.health-score-val { 
+    font-size: 3.5rem; 
+    font-weight: 900; 
+    line-height: 1; 
+    font-family: 'Black Ops One', cursive, sans-serif; 
+    margin-bottom: 10px; 
+}
+
 .health-status-row { display: flex; align-items: center; gap: 8px; }
 .health-dot { width: 12px; height: 12px; border-radius: 50%; animation: pulse 2s infinite; }
 .health-status-text { font-size: 1.2rem; font-weight: 700; }
 
 .res-bottom { display: flex; flex-direction: column; flex: 1; justify-content: flex-end; }
-.health-suggestion { padding: 15px; border-radius: 8px; border: 1px dashed var(--bd); background: rgba(255,255,255,0.02); color: #ccc; line-height: 1.5; font-size: 0.95rem; margin-bottom: 15px; }
-.health-warning { padding: 10px; background: rgba(244, 67, 54, 0.1); border: 1px solid #f44336; color: #ef9a9a; text-align: center; font-size: 0.85rem; font-weight: bold; border-radius: 6px; animation: pulseRed 2s infinite; }
-.health-footer { margin-top: 25px; opacity: 0.3; border-top: 1px solid var(--txt); padding-top: 10px; display: flex; justify-content: space-between; font-size: 0.6rem; font-family: monospace; letter-spacing: 1px; }
+.health-suggestion { 
+    padding: 15px; 
+    border-radius: 8px; 
+    border: 1px dashed var(--bd); 
+    background: rgba(128, 128, 128, 0.05); 
+    color: var(--txt); 
+    opacity: 0.9;
+    line-height: 1.5; 
+    font-size: 0.95rem; 
+    margin-bottom: 15px; 
+}
+.health-warning { 
+    padding: 10px; 
+    background: rgba(244, 67, 54, 0.1); 
+    border: 1px solid #f44336; 
+    color: #ef5350; 
+    text-align: center; 
+    font-size: 0.85rem; 
+    font-weight: bold; 
+    border-radius: 6px; 
+    animation: pulseRed 2s infinite; 
+}
+.health-footer { 
+    margin-top: 25px; 
+    opacity: 0.4; 
+    border-top: 1px solid var(--bd); 
+    color: var(--txt);
+    padding-top: 10px; 
+    display: flex; 
+    justify-content: space-between; 
+    font-size: 0.6rem; 
+    font-family: monospace; 
+    letter-spacing: 1px; 
+}
 
 /* Right Box (Form) */
-.health-form-box { background: var(--card-bg); border: 1px solid var(--bd); border-radius: 12px; padding: 25px; display: flex; flex-direction: column; justify-content: center; gap: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
+.health-form-box { 
+    background: var(--card-bg); 
+    border: 1px solid var(--bd); 
+    border-radius: 12px; 
+    padding: 25px; 
+    display: flex; 
+    flex-direction: column; 
+    justify-content: center; 
+    gap: 15px; 
+    box-shadow: 0 10px 30px rgba(0,0,0,0.1); 
+}
 .form-item { display: flex; flex-direction: column; }
-.health-label { font-size: 0.85rem; font-weight: 700; color: var(--pri); margin-bottom: 6px; letter-spacing: 1px; }
-.health-select { width: 100%; padding: 12px; background: rgba(0,0,0,0.3); border: 1px solid var(--bd); color: var(--txt); border-radius: 8px; font-size: 0.95rem; font-weight: bold; cursor: pointer; transition: 0.3s; appearance: none; }
-.health-select:focus { border-color: var(--pri); outline: none; box-shadow: 0 0 10px var(--pri-glow); }
+.health-label { 
+    font-size: 0.85rem; 
+    font-weight: 700; 
+    color: var(--pri); 
+    margin-bottom: 6px; 
+    letter-spacing: 1px; 
+}
+.health-select { 
+    width: 100%; 
+    padding: 12px; 
+    background: rgba(128, 128, 128, 0.05); 
+    border: 1px solid var(--bd); 
+    color: var(--txt); 
+    border-radius: 8px; 
+    font-size: 0.95rem; 
+    font-weight: bold; 
+    cursor: pointer; 
+    transition: 0.3s; 
+    appearance: none; 
+}
+.health-select:focus { 
+    border-color: var(--pri); 
+    outline: none; 
+    box-shadow: 0 0 10px var(--pri-glow); 
+}
 
-/* Colors */
+/* 狀態色彩維持不變 (代表嚴重程度) */
 .c-green { color: #4ade80; } .bg-green { background-color: #4ade80; }
 .c-yellow { color: #facc15; } .bg-yellow { background-color: #facc15; }
 .c-orange { color: #fb923c; } .bg-orange { background-color: #fb923c; }
@@ -191,15 +284,6 @@ const healthResult = computed(() => {
 
 @keyframes pulse { 0% { opacity: 1; transform: scale(1); } 50% { opacity: 0.5; transform: scale(1.2); } 100% { opacity: 1; transform: scale(1); } }
 @keyframes pulseRed { 0% { box-shadow: 0 0 0 0 rgba(244, 67, 54, 0.4); } 70% { box-shadow: 0 0 0 10px rgba(244, 67, 54, 0); } 100% { box-shadow: 0 0 0 0 rgba(244, 67, 54, 0); } }
-
-/* Day Mode */
-:global(body.day-mode) .health-res-box { background: #fff; border-color: #ddd; box-shadow: 0 10px 30px rgba(0,0,0,0.05); }
-:global(body.day-mode) .health-form-box { background: #fff; border-color: #ddd; box-shadow: 0 10px 30px rgba(0,0,0,0.05); }
-:global(body.day-mode) .health-select { background: #f9f9f9; border-color: #ccc; color: #111; }
-:global(body.day-mode) .health-suggestion { background: #fff; border-color: var(--pri); border-style: solid; color: #222; font-weight: 500; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
-:global(body.day-mode) .health-sys-text { color: #666; opacity: 1; font-weight: bold; }
-:global(body.day-mode) .health-footer { color: #999; opacity: 1; border-top-color: #eee; }
-:global(body.day-mode) .health-warning { background: #ffebee; color: #c62828; border-color: #ef5350; }
 
 /* 🌟 Mobile App-like Optimizations (左結果、右選擇的緊湊並排) */
 @media (max-width: 768px) {
@@ -228,7 +312,7 @@ const healthResult = computed(() => {
         display: flex; 
         flex-direction: column; 
         gap: 8px; 
-        box-shadow: 0 4px 15px rgba(0,0,0,0.2); 
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1); 
     }
 
     /* 左方：精簡版分數框 */
@@ -244,7 +328,7 @@ const healthResult = computed(() => {
         justify-content: center; 
         align-items: center; 
         text-align: center; 
-        box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
         margin-bottom: 0; /* 覆寫桌機版 margin */
     }
 
@@ -265,10 +349,5 @@ const healthResult = computed(() => {
     /* 表單項目壓縮 */
     .health-label { font-size: 0.75rem; margin-bottom: 4px; }
     .health-select { padding: 8px; font-size: 0.85rem; }
-}
-
-:global(body.day-mode) @media (max-width: 768px) {
-    .res-top { background: #fff; border-color: #ddd; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
-    .health-form-box { background: #fff; border-color: #ddd; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
 }
 </style>

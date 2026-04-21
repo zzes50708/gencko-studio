@@ -132,7 +132,7 @@ const goBack = () => {
     width: 100%;
     display: flex;
     justify-content: flex-start;
-    margin-bottom: 10px;
+    margin-bottom: 5px;
 }
 
 .app-back-btn {
@@ -145,7 +145,7 @@ const goBack = () => {
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    padding: 8px 16px;
+    padding: 8px 8px;
     border-radius: 30px;
     transition: 0.2s;
     box-shadow: 0 4px 10px rgba(0,0,0,0.1);
@@ -262,7 +262,7 @@ const goBack = () => {
     }
     
     .nav-action-row {
-        margin-bottom: 5px;
+        margin-bottom: 0px;
     }
     
     .app-back-btn {
@@ -271,8 +271,8 @@ const goBack = () => {
     }
     
     .content-card {
-        padding: 15px;
-        border-radius: 12px;
+        padding: 5px;
+        border-radius: 5px;
     }
     
     .care-top-img {
@@ -282,15 +282,15 @@ const goBack = () => {
     
     .info-row {
         flex-direction: column;
-        gap: 6px;
-        padding: 12px;
+        gap: 0px;
+        padding: 8px;
     }
     
     .info-label {
         width: 100%;
-        font-size: 1.1rem;
+        font-size: 1rem;
         border-bottom: 1px solid var(--bd);
-        padding-bottom: 4px;
+        padding-bottom: 0px;
     }
     
     .info-val {
@@ -298,20 +298,20 @@ const goBack = () => {
     }
     
     .care-section {
-        padding: 15px;
+        padding: 10px;
     }
     
     .care-h {
-        font-size: 1.1rem;
+        font-size: 1rem;
     }
     
     .care-p {
-        font-size: 0.95rem;
+        font-size: 0.9rem;
     }
     
     .care-quote {
-        padding: 15px;
-        font-size: 0.95rem;
+        padding: 10px;
+        font-size: 0.9rem;
     }
 }
 </style>

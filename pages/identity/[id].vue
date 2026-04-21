@@ -187,6 +187,13 @@ const goBack = () => {
 </template>
 
 <style scoped>
+/*
+  [局部樣式修復] 
+  已將外圍 UI（返回按鈕、狀態文字、載入動畫）全面變數化。
+  徹底移除所有 :global(body.day-mode) 的強制覆寫。
+  （註：.id-card 本體保留絕對色碼，以確保實體電子身分證的視覺與列印一致性）
+*/
+
 /* 基本頁面設定 */
 .id-page-container {
     min-height: 50vh;
@@ -205,7 +212,7 @@ const goBack = () => {
     max-width: 800px;
 }
 
-/* 🌟 App-like 膠囊狀返回按鈕 */
+/* 🌟 App-like 膠囊狀返回按鈕 (已變數化) */
 .nav-action-row {
     width: 100%;
     display: flex;
@@ -214,11 +221,9 @@ const goBack = () => {
 }
 
 .app-back-btn {
-    background: rgba(255, 255, 255, 0.1);
-    backdrop-filter: blur(5px);
-    -webkit-backdrop-filter: blur(5px);
-    border: 1px solid rgba(255, 255, 255, 0.15);
-    color: #000;
+    background: var(--card-bg);
+    border: 1px solid var(--bd);
+    color: var(--txt);
     font-size: 0.95rem;
     font-weight: bold;
     cursor: pointer;
@@ -226,30 +231,37 @@ const goBack = () => {
     align-items: center;
     gap: 6px;
     padding: 8px 16px;
-    border-radius: 50px; /* 膠囊狀 */
+    border-radius: 50px;
     transition: 0.2s;
-    box-shadow: 0 4px 5px rgba(0,0,0,0.2);
+    box-shadow: 0 4px 5px rgba(0,0,0,0.05);
 }
 
 .app-back-btn:active {
     transform: scale(0.95);
-    opacity: 0.8;
+    background: var(--bd);
 }
 
-/* 🌟 日間模式強制黑字 */
-:global(body.day-mode) .app-back-btn {
-    background: rgba(0, 0, 0, 0.05);
-    border-color: rgba(0, 0, 0, 0.1);
-    color: #111 !important; /* 強制黑字 */
-    box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+/* Status (已變數化) */
+.status-msg { 
+    text-align: center; 
+    font-size: 1.2rem; 
+    color: var(--txt); 
+    display: flex; 
+    flex-direction: column; 
+    align-items: center; 
 }
-
-/* Status */
-.status-msg { text-align: center; font-size: 1.2rem; color: #fff; text-shadow: 0 2px 4px rgba(0,0,0,0.5); display: flex; flex-direction: column; align-items: center; }
-.loader { width: 40px; height: 40px; border: 4px solid rgba(255,255,255,0.3); border-top-color: #fff; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 10px; }
+.loader { 
+    width: 40px; 
+    height: 40px; 
+    border: 4px solid var(--bd); 
+    border-top-color: var(--pri); 
+    border-radius: 50%; 
+    animation: spin 1s linear infinite; 
+    margin: 0 auto 10px; 
+}
 @keyframes spin { to { transform: rotate(360deg); } }
 
-/* Card Design (預設電腦版：橫向) */
+/* Card Design (預設電腦版：橫向) - 保留實體卡片固定色彩設計 */
 .id-card {
     background: #fff;
     color: #1e293b;
@@ -269,7 +281,9 @@ const goBack = () => {
     background: #f8fafc;
     position: relative;
     min-height: 300px;
-    display: flex; align-items: center; justify-content: center;
+    display: flex; 
+    align-items: center; 
+    justify-content: center;
     overflow: hidden;
 }
 .card-photo-box img { width: 100%; height: 100%; object-fit: cover; display: block; }
@@ -306,12 +320,15 @@ const goBack = () => {
 .act-btn:active {
     transform: scale(0.95);
 }
-.id-hint { font-size: 0.8rem; color: rgba(255,255,255,0.8); margin-top: 15px; text-shadow: 0 1px 2px rgba(0,0,0,0.5); text-align: center; }
 
-/* Day Mode Body Overrides (Fallback text shadow) */
-:global(body.day-mode) .status-msg { color: #333; text-shadow: none; }
-:global(body.day-mode) .loader { border-color: rgba(0,0,0,0.1); border-top-color: var(--pri); }
-:global(body.day-mode) .id-hint { color: #666; text-shadow: none; }
+/* 提示文字 (已變數化) */
+.id-hint { 
+    font-size: 0.8rem; 
+    color: var(--txt); 
+    opacity: 0.6; 
+    margin-top: 15px; 
+    text-align: center; 
+}
 
 /* 🌟 Mobile Responsive (強制並排，左圖右文) */
 @media (max-width: 768px) {
@@ -362,60 +379,5 @@ const goBack = () => {
     .id-actions { margin-top: 20px; }
     .act-btn { padding: 10px 20px; font-size: 0.9rem; }
     .id-hint { font-size: 0.75rem; margin-top: 8px; }
-}
-</style>
-
-<!-- Print Styles -->
-<style>
-@media print {
-    @page {
-        size: A4 landscape;
-        margin: 10mm;
-    }
-
-    body, html {
-        width: 100% !important;
-        height: 100% !important;
-        margin: 0 !important;
-        padding: 0 !important;
-        overflow: hidden !important;
-        background: #fff !important;
-        display: flex !important;
-        align-items: center !important;
-        justify-content: center !important;
-    }
-
-    body * { visibility: hidden; }
-
-    .print-target, .print-target * { visibility: visible; }
-
-    .print-target {
-        display: flex !important;
-        flex-direction: row !important;
-        position: static !important;
-        transform: none !important;
-        width: 100% !important; 
-        height: 100% !important;
-        max-width: none !important;
-        min-width: 0 !important;
-        border: 2px solid #000 !important;
-        box-shadow: none !important;
-        margin: 0 !important;
-    }
-    
-    .card-photo-box {
-        height: 100% !important;
-        width: auto !important;
-        min-height: 0 !important;
-        flex: 1.2 !important;
-    }
-    
-    .card-info-box {
-        flex: 1 !important;
-    }
-
-    .id-actions, .id-hint, .status-msg, .loader, .floating-inquire-btn, .nav-action-row, .bottom-nav {
-        display: none !important;
-    }
 }
 </style>

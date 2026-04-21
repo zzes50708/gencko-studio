@@ -105,38 +105,168 @@ const resetQuiz = () => {
 </template>
 
 <style scoped>
+/*
+  [局部樣式修復] 
+  已清除寫死的深色背景、淺色字體色碼與多餘的全域覆寫。
+  全面導入 CSS 變數，徹底移除所有不必要的 :global(body.day-mode) 覆寫。
+*/
 .qs-container { max-width: 800px; margin: 0 auto; padding-top: 15px; min-height: 60vh; }
+
 .qs-progress-area { margin-bottom: 30px; }
-.qs-progress-labels { display: flex; justify-content: space-between; font-size: 0.75rem; font-weight: bold; color: var(--pri); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 1px; }
-.qs-progress-track { width: 100%; height: 5px; background: rgba(255,255,255,0.1); border-radius: 3px; overflow: hidden; }
-.qs-progress-fill { height: 100%; background: var(--pri); transition: width 0.5s ease; box-shadow: 0 0 10px var(--pri-glow); }
+.qs-progress-labels { 
+    display: flex; 
+    justify-content: space-between; 
+    font-size: 0.75rem; 
+    font-weight: bold; 
+    color: var(--pri); 
+    margin-bottom: 6px; 
+    text-transform: uppercase; 
+    letter-spacing: 1px; 
+}
+.qs-progress-track { 
+    width: 100%; 
+    height: 5px; 
+    background: rgba(128, 128, 128, 0.2); 
+    border-radius: 3px; 
+    overflow: hidden; 
+}
+.qs-progress-fill { 
+    height: 100%; 
+    background: var(--pri); 
+    transition: width 0.5s ease; 
+    box-shadow: 0 0 10px var(--pri-glow); 
+}
 
 .qs-question-box { animation: fadeIn 0.5s ease; }
-.qs-question-text { font-size: 1.3rem; font-weight: 700; margin-bottom: 25px; line-height: 1.4; color: var(--txt); }
+.qs-question-text { 
+    font-size: 1.3rem; 
+    font-weight: 700; 
+    margin-bottom: 25px; 
+    line-height: 1.4; 
+    color: var(--txt); 
+}
+
 .qs-options-grid { display: flex; flex-direction: column; gap: 12px; }
-.qs-option-btn { width: 100%; text-align: left; padding: 15px; background: var(--card-bg); border: 1px solid var(--bd); border-radius: 12px; cursor: pointer; transition: 0.2s; display: flex; justify-content: space-between; align-items: center; color: var(--txt); }
-.qs-option-btn:hover { border-color: var(--pri); background: rgba(255,255,255,0.05); transform: translateY(-2px); }
+.qs-option-btn { 
+    width: 100%; 
+    text-align: left; 
+    padding: 15px; 
+    background: var(--card-bg); 
+    border: 1px solid var(--bd); 
+    border-radius: 12px; 
+    cursor: pointer; 
+    transition: 0.2s; 
+    display: flex; 
+    justify-content: space-between; 
+    align-items: center; 
+    color: var(--txt); 
+}
+.qs-option-btn:hover { 
+    border-color: var(--pri); 
+    background: rgba(128, 128, 128, 0.05); 
+    transform: translateY(-2px); 
+    box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+}
 .qs-option-label { font-size: 1rem; font-weight: 500; }
-.qs-check-circle { width: 20px; height: 20px; border-radius: 50%; border: 2px solid var(--bd); display: flex; align-items: center; justify-content: center; transition: 0.2s; }
+.qs-check-circle { 
+    width: 20px; 
+    height: 20px; 
+    border-radius: 50%; 
+    border: 2px solid var(--bd); 
+    display: flex; 
+    align-items: center; 
+    justify-content: center; 
+    transition: 0.2s; 
+}
 .qs-option-btn:hover .qs-check-circle { border-color: var(--pri); background: var(--pri); }
 
-.qs-nav-btn { margin-top: 25px; background: transparent; border: none; color: #888; cursor: pointer; font-size: 0.85rem; display: flex; align-items: center; gap: 8px; padding: 8px 0; transition: 0.2s; }
-.qs-nav-btn:hover { color: var(--pri); }
+.qs-nav-btn { 
+    margin-top: 25px; 
+    background: transparent; 
+    border: none; 
+    color: var(--txt); 
+    opacity: 0.6;
+    cursor: pointer; 
+    font-size: 0.85rem; 
+    display: flex; 
+    align-items: center; 
+    gap: 8px; 
+    padding: 8px 0; 
+    transition: 0.2s; 
+}
+.qs-nav-btn:hover { color: var(--pri); opacity: 1; }
 
-.qs-result-box { text-align: center; padding: 20px; background: var(--card-bg); border: 1px solid var(--bd); border-radius: 16px; animation: slideUp 0.6s ease; max-width: 600px; margin: 0 auto; }
-.qs-score-display { font-size: 2.5rem; font-weight: 900; color: var(--pri); margin: 10px 0; font-family: 'Black Ops One', cursive; text-shadow: 0 0 20px var(--pri-glow); }
-.qs-res-desc { font-size: 0.95rem; line-height: 1.4; color: #ccc; margin-bottom: 15px; }
-.qs-hint-box { background: rgba(255,255,255,0.03); border: 1px dashed var(--bd); padding: 10px; border-radius: 8px; color: #888; font-size: 0.8rem; margin-bottom: 15px; }
-.qs-reset-btn { width: 100%; padding: 12px; background: var(--pri); color: #fff; border: none; border-radius: 12px; font-weight: bold; font-size: 1rem; cursor: pointer; transition: 0.3s; box-shadow: 0 5px 15px var(--pri-glow); }
-.qs-reset-btn:hover { transform: translateY(-3px); filter: brightness(1.1); }
+.qs-result-box { 
+    text-align: center; 
+    padding: 30px 20px; 
+    background: var(--card-bg); 
+    border: 1px solid var(--bd); 
+    border-radius: 16px; 
+    animation: slideUp 0.6s ease; 
+    max-width: 600px; 
+    margin: 0 auto; 
+    box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+}
+.qs-badge {
+    font-size: 0.8rem;
+    font-weight: bold;
+    color: var(--pri);
+    background: rgba(255, 69, 0, 0.1);
+    padding: 4px 10px;
+    border-radius: 20px;
+    margin-bottom: 15px;
+    display: inline-block;
+}
+.qs-res-title {
+    font-size: 1.8rem;
+    font-weight: bold;
+    color: var(--txt);
+}
+.qs-score-display { 
+    font-size: 3rem; 
+    font-weight: 900; 
+    color: var(--pri); 
+    margin: 10px 0; 
+    font-family: 'Black Ops One', cursive; 
+    text-shadow: 0 0 20px var(--pri-glow); 
+    line-height: 1;
+}
+.qs-res-desc { 
+    font-size: 1rem; 
+    line-height: 1.5; 
+    color: var(--txt); 
+    opacity: 0.8; 
+    margin-bottom: 20px; 
+}
+.qs-hint-box { 
+    background: rgba(128, 128, 128, 0.05); 
+    border: 1px dashed var(--bd); 
+    padding: 15px; 
+    border-radius: 8px; 
+    color: var(--txt); 
+    opacity: 0.7; 
+    font-size: 0.85rem; 
+    margin-bottom: 20px; 
+    line-height: 1.4;
+}
+.qs-reset-btn { 
+    width: 100%; 
+    padding: 14px; 
+    background: var(--pri); 
+    color: #fff; 
+    border: none; 
+    border-radius: 12px; 
+    font-weight: bold; 
+    font-size: 1.05rem; 
+    cursor: pointer; 
+    transition: 0.3s; 
+    box-shadow: 0 5px 15px var(--pri-glow); 
+}
+.qs-reset-btn:hover { 
+    transform: translateY(-3px); 
+    filter: brightness(1.1); 
+}
 
 @keyframes fadeIn { from { opacity: 0; transform: translateX(10px); } to { opacity: 1; transform: translateX(0); } }
 @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-
-/* Day Mode Overrides */
-:global(body.day-mode) .qs-progress-track { background: rgba(0,0,0,0.1); }
-:global(body.day-mode) .qs-option-btn { background: #fff; border-color: #ccc; }
-:global(body.day-mode) .qs-option-btn:hover { background: #f9f9f9; border-color: var(--pri); }
-:global(body.day-mode) .qs-res-desc { color: #555; }
-:global(body.day-mode) .qs-hint-box { background: #f9f9f9; border-color: #ccc; color: #666; }
 </style>

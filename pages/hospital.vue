@@ -175,6 +175,11 @@ useHead({
 </template>
 
 <style scoped>
+/*
+  [局部樣式修復] 
+  已清除所有寫死深淺色的背景與文字色碼。
+  全面導入 CSS 變數，徹底移除所有不必要的 :global(body.day-mode) 覆寫。
+*/
 .hosp-page-wrapper { max-width: 900px; margin: 0 auto; padding-top: 15px; }
 
 /* Responsive Utilities */
@@ -184,7 +189,18 @@ useHead({
 }
 
 /* Alert Box */
-.hosp-alert-box { background: rgba(255, 69, 0, 0.05); border: 1px dashed var(--pri); color: var(--txt); padding: 12px 15px; border-radius: 8px; font-size: 0.85rem; margin-bottom: 20px; display: flex; align-items: flex-start; gap: 10px; }
+.hosp-alert-box { 
+    background: rgba(128, 128, 128, 0.05); 
+    border: 1px dashed var(--pri); 
+    color: var(--txt); 
+    padding: 12px 15px; 
+    border-radius: 8px; 
+    font-size: 0.85rem; 
+    margin-bottom: 20px; 
+    display: flex; 
+    align-items: flex-start; 
+    gap: 10px; 
+}
 .hosp-alert-box .icon { font-size: 1.2rem; line-height: 1.2; }
 .hosp-alert-box .text-content { display: flex; flex-direction: column; }
 .hosp-alert-box strong { color: var(--pri); margin-bottom: 4px; }
@@ -193,8 +209,21 @@ useHead({
 /* Filter Section */
 .hosp-filter-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
 .hosp-select-group { position: relative; }
-.hosp-label { display: block; font-size: 0.8rem; font-weight: 700; margin-bottom: 6px; color: #888; }
-.hosp-select { width: 100%; padding: 12px; background: var(--card-bg); border: 1px solid var(--bd); color: var(--txt); border-radius: 8px; font-weight: bold; font-size: 0.95rem; outline: none; appearance: none; cursor: pointer; transition: 0.2s; }
+.hosp-label { display: block; font-size: 0.8rem; font-weight: 700; margin-bottom: 6px; color: var(--txt); opacity: 0.6; }
+.hosp-select { 
+    width: 100%; 
+    padding: 12px; 
+    background: var(--card-bg); 
+    border: 1px solid var(--bd); 
+    color: var(--txt); 
+    border-radius: 8px; 
+    font-weight: bold; 
+    font-size: 0.95rem; 
+    outline: none; 
+    appearance: none; 
+    cursor: pointer; 
+    transition: 0.2s; 
+}
 .hosp-select:focus { border-color: var(--pri); }
 .hosp-select:disabled { opacity: 0.3; cursor: not-allowed; }
 .hosp-select-icon { position: absolute; right: 12px; bottom: 12px; pointer-events: none; opacity: 0.4; color: var(--txt); font-size: 0.8rem; }
@@ -206,74 +235,105 @@ useHead({
 
 /* Hospital List */
 .hosp-list { display: flex; flex-direction: column; gap: 10px; padding-bottom: 20px; }
-.hosp-empty { text-align: center; padding: 40px 0; border: 1px dashed var(--bd); opacity: 0.5; font-weight: bold; font-size: 0.9rem; border-radius: 8px; }
+.hosp-empty { 
+    text-align: center; 
+    padding: 40px 0; 
+    border: 1px dashed var(--bd); 
+    opacity: 0.5; 
+    color: var(--txt);
+    font-weight: bold; 
+    font-size: 0.9rem; 
+    border-radius: 8px; 
+}
 
-.hosp-card { padding: 15px; border: 1px solid var(--bd); background: var(--card-bg); position: relative; transition: 0.3s; display: flex; flex-direction: column; border-radius: 10px; }
-.hosp-card:hover { border-color: rgba(255, 69, 0, 0.4); transform: translateY(-2px); box-shadow: 0 5px 15px rgba(0,0,0,0.3); }
+.hosp-card { 
+    padding: 15px; 
+    border: 1px solid var(--bd); 
+    background: var(--card-bg); 
+    position: relative; 
+    transition: 0.3s; 
+    display: flex; 
+    flex-direction: column; 
+    border-radius: 10px; 
+    box-shadow: 0 4px 15px rgba(0,0,0,0.05); 
+}
+.hosp-card:hover { 
+    border-color: var(--pri); 
+    transform: translateY(-2px); 
+    box-shadow: 0 5px 15px rgba(0,0,0,0.1); 
+}
 
 .hosp-content-row { display: flex; justify-content: space-between; gap: 12px; }
 .hosp-info { flex: 1; }
 .hosp-name { font-size: 1.1rem; font-weight: bold; margin-bottom: 8px; color: var(--txt); }
-.hosp-detail-row { display: flex; align-items: flex-start; gap: 6px; font-size: 0.85rem; color: #aaa; margin-bottom: 6px; line-height: 1.4; }
+.hosp-detail-row { display: flex; align-items: flex-start; gap: 6px; font-size: 0.85rem; color: var(--txt); opacity: 0.7; margin-bottom: 6px; line-height: 1.4; }
 .hosp-icon { width: 14px; height: 14px; flex-shrink: 0; margin-top: 2px; color: var(--pri); }
 .hosp-link { text-decoration: none; color: inherit; transition: 0.2s; display: flex; align-items: center; }
 .hosp-link:hover { color: var(--pri); }
 
 .hosp-actions { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; flex-shrink: 0; justify-content: center; }
-.hosp-tag { font-size: 0.75rem; font-weight: bold; padding: 4px 8px; border: 1px solid var(--bd); background: rgba(255,255,255,0.02); color: var(--pri); border-radius: 6px; }
-.hosp-call-btn { padding: 8px 15px; font-size: 0.85rem; font-weight: bold; border: 1px solid var(--pri); color: var(--pri); text-decoration: none; transition: 0.2s; border-radius: 6px; }
+.hosp-tag { 
+    font-size: 0.75rem; 
+    font-weight: bold; 
+    padding: 4px 8px; 
+    border: 1px solid var(--bd); 
+    background: rgba(128,128,128,0.05); 
+    color: var(--pri); 
+    border-radius: 6px; 
+}
+.hosp-call-btn { 
+    padding: 8px 15px; 
+    font-size: 0.85rem; 
+    font-weight: bold; 
+    border: 1px solid var(--pri); 
+    color: var(--pri); 
+    text-decoration: none; 
+    transition: 0.2s; 
+    border-radius: 6px; 
+    background: transparent; 
+}
 .hosp-call-btn:hover { background: var(--pri); color: #fff; }
-
-/* Day Mode Overrides */
-:global(body.day-mode) .hosp-alert-box { background: #fff3e0; border-color: #ffb74d; color: #333; }
-:global(body.day-mode) .hosp-select { background: #fff; border-color: #ccc; color: #333; }
-:global(body.day-mode) .hosp-card { background: #fff; border-color: #ddd; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
-:global(body.day-mode) .hosp-name { color: #222; }
-:global(body.day-mode) .hosp-tag { background: #fff; border-color: #ffb74d; }
-:global(body.day-mode) .hosp-call-btn { border-color: var(--pri); color: var(--pri); }
-:global(body.day-mode) .hosp-call-btn:hover { background: var(--pri); color: #fff; }
-:global(body.day-mode) .hosp-empty { border-color: #ccc; color: #666; }
 
 @media (max-width: 768px) {
     /* 🌟 Mobile Optimizations for App-like feel */
     .hosp-page-wrapper { padding-top: 0; }
     
     .hosp-alert-box {
-        padding: 10px;
-        margin-bottom: 12px; /* 縮減間距 */
+        padding: 0px;
+        margin-bottom: 0px; /* 縮減間距 */
         font-size: 0.8rem;
     }
     
     .hosp-filter-row { 
         /* 🌟 保持並排，減少垂直高度佔用 */
         grid-template-columns: 1fr 1fr; 
-        gap: 8px; /* 縮減間距 */
-        margin-bottom: 12px;
+        gap: 15px; /* 縮減間距 */
+        margin-bottom: 0px;
     }
     
     .hosp-select {
-        padding: 8px 10px; /* 縮小輸入框高度 */
+        padding: 6px 10px; /* 縮小輸入框高度 */
         font-size: 0.9rem;
     }
 
-    .hosp-label { margin-bottom: 4px; }
+    .hosp-label { margin-bottom: 0px; }
     
     /* 🌟 極致壓縮卡片高度 */
     .hosp-card {
-        padding: 10px 12px; /* 縮小內距 */
-        border-radius: 8px;
+        padding: 0px 12px; /* 縮小內距 */
+        border-radius: 15px;
     }
 
     .hosp-content-row { flex-direction: column; gap: 0; }
 
     .hosp-name {
         font-size: 1rem;
-        margin-bottom: 4px; /* 縮減標題下邊距 */
+        margin-bottom: 2px; /* 縮減標題下邊距 */
     }
 
     .hosp-detail-row {
         font-size: 0.8rem;
-        margin-bottom: 4px; /* 縮減文字行距 */
+        margin-bottom: 2px; /* 縮減文字行距 */
     }
 
     .hosp-icon {
@@ -287,21 +347,17 @@ useHead({
         justify-content: space-between; 
         align-items: center; 
         width: 100%; 
-        margin-top: 8px; /* 縮減按鈕區上間距 */
-        border-top: 1px solid rgba(255,255,255,0.05); 
-        padding-top: 8px; /* 縮減按鈕區內距 */
+        margin-top: 0px; /* 縮減按鈕區上間距 */
+        border-top: 1px solid var(--bd); 
+        padding-top: 0px; /* 縮減按鈕區內距 */
     }
 
     .hosp-call-btn {
         width: auto !important;
         padding: 6px 16px; /* 縮小按鈕高度 */
-        font-size: 0.8rem;
+        font-size: 0.7rem;
     }
     
     .hosp-tag { font-size: 0.7rem; padding: 2px 6px; }
-}
-
-:global(body.day-mode) @media (max-width: 768px) {
-    .hosp-actions { border-top-color: #eee; }
 }
 </style>

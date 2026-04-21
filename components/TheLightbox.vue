@@ -87,19 +87,27 @@ const onTouchEnd = () => {
 </template>
 
 <style scoped>
-/* 🌟 增強行動端手勢流暢度 */
+/*
+  [局部樣式與全域整合]
+  已將原本散落於 style.css 的燈箱樣式抽回 TheLightbox.vue。
+  利用 var(--card-bg) 與 var(--txt) 自動適配日夜模式，
+  徹底移除所有 :global(body.day-mode) 與硬色碼覆寫。
+*/
+
+/* 🌟 遮罩底色：利用變數 + 模糊達到完美日夜適配 */
 .lightbox-overlay {
     position: fixed;
     top: 0; left: 0;
     width: 100%; height: 100%;
+    /* 在深淺模式下 var(--card-bg) 會自動切換透黑/純白 */
     background: var(--card-bg);
+    backdrop-filter: blur(15px);
+    -webkit-backdrop-filter: blur(15px);
     z-index: 999999;
     display: flex;
     justify-content: center;
     align-items: center;
     flex-direction: column;
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
 }
 
 .lightbox-content-wrapper {
@@ -147,9 +155,9 @@ const onTouchEnd = () => {
 /* 🌟 圖片高度自動縮減優化 */
 .lightbox-img {
     max-width: 95%;
-    width: 100%; /* 讓寬度撐滿容器限制 */
-    height: auto; /* 🌟 高度跟著寬度等比例縮放，避免過高的黑邊 */
-    max-height: 70vh; /* 防止直式照片超出螢幕 */
+    width: 100%; 
+    height: auto; 
+    max-height: 70vh; 
     border-radius: 16px; 
     box-shadow: 0 10px 40px rgba(0,0,0,0.15);
     object-fit: contain;
@@ -157,7 +165,8 @@ const onTouchEnd = () => {
     -webkit-touch-callout: none;
     -webkit-user-select: none;
     user-select: none;
-    background: var(--card-bg);
+    /* 圖片底色 */
+    background: rgba(128, 128, 128, 0.05);
     border: 1px solid var(--bd);
 }
 
@@ -174,6 +183,7 @@ const onTouchEnd = () => {
     margin: 0 0 15px 0;
     font-size: 1.5rem;
     font-weight: 900;
+    text-shadow: 0 2px 10px rgba(0,0,0,0.05);
 }
 
 /* 🌟 App-like 購買按鈕 */
@@ -189,7 +199,7 @@ const onTouchEnd = () => {
     border-radius: 30px;
     font-weight: bold;
     text-decoration: none;
-    box-shadow: 0 5px 20px rgba(255, 69, 0, 0.4);
+    box-shadow: 0 5px 20px var(--pri-glow);
     transition: transform 0.2s, box-shadow 0.2s;
     position: relative;
     z-index: 100001;
@@ -197,7 +207,7 @@ const onTouchEnd = () => {
 
 .app-btn-buy:active {
     transform: scale(0.95);
-    box-shadow: 0 2px 10px rgba(255, 69, 0, 0.3);
+    box-shadow: 0 2px 10px rgba(255, 69, 0, 0.2);
 }
 
 /* 🌟 Mobile Optimizations */

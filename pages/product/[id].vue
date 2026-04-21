@@ -270,6 +270,11 @@ const goBack = () => {
 </template>
 
 <style scoped>
+/* 
+  [局部樣式修復] 
+  已清除與 assets/css/style.css 重複的宣告 (如 .price, .status-badge 等)。
+  全面導入 CSS 變數，移除所有不必要的 :global(body.day-mode) 覆寫。
+*/
 .product-page-wrapper { width: 100%; }
 
 /* 🌟 App-like 膠囊狀返回按鈕 */
@@ -281,10 +286,8 @@ const goBack = () => {
 }
 
 .app-back-btn {
-    background: rgba(255, 255, 255, 0.05);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    border: 1px solid rgba(255, 255, 255, 0.15);
+    background: var(--card-bg);
+    border: 1px solid var(--bd);
     color: var(--txt);
     font-size: 0.95rem;
     font-weight: bold;
@@ -295,84 +298,204 @@ const goBack = () => {
     padding: 8px 16px;
     border-radius: 30px;
     transition: 0.2s;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    box-shadow: 0 4px 10px rgba(0,0,0,0.05);
 }
 
 .app-back-btn:active {
     transform: scale(0.95);
-    background: rgba(255, 255, 255, 0.1);
+    background: var(--bd);
 }
 
 /* Product Detail Styles */
 .prod-container { max-width: 1100px; margin: 0 auto; padding-top: 15px; }
 .prod-layout { display: flex; gap: 30px; margin-top: 10px; align-items: flex-start; }
-.prod-img-box { flex: 1; position: relative; border-radius: 10px; overflow: hidden; border: 1px solid var(--bd); background: #000; }
-.prod-main-img { width: 100%; height: auto; max-height: 500px; object-fit: contain; cursor: zoom-in; display: block; }
-.prod-hint { text-align: center; color: #666; font-size: 0.75rem; padding: 4px; background: #111; }
-.prod-info-box { flex: 1; padding: 20px; background: rgba(255,255,255,0.02); border-radius: 12px; border: 1px solid var(--bd); box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
-.prod-header { border-bottom: 1px solid var(--bd); padding-bottom: 15px; margin-bottom: 15px; }
-.prod-id { color: #666; font-family: monospace; font-size: 0.85rem; margin-bottom: 4px; display: block; }
-.prod-title { font-size: 1.8rem; color: #fff; margin: 0 0 8px; line-height: 1.2; }
-.prod-note { margin-bottom: 15px; color: #aaa; font-size: 0.95rem; background: rgba(255,255,255,0.05); padding: 10px; border-radius: 6px; border: 1px solid var(--bd); white-space: pre-wrap; }
+
+.prod-img-box { 
+    flex: 1; 
+    position: relative; 
+    border-radius: 10px; 
+    overflow: hidden; 
+    border: 1px solid var(--bd); 
+    background: var(--card-bg); 
+}
+.prod-main-img { 
+    width: 100%; 
+    height: auto; 
+    max-height: 500px; 
+    object-fit: contain; 
+    cursor: zoom-in; 
+    display: block; 
+}
+.prod-hint { 
+    text-align: center; 
+    color: var(--txt); 
+    opacity: 0.6;
+    font-size: 0.75rem; 
+    padding: 8px; 
+    background: var(--card-bg); 
+    border-top: 1px solid var(--bd);
+}
+
+.prod-info-box { 
+    flex: 1; 
+    padding: 20px; 
+    background: var(--card-bg); 
+    border-radius: 12px; 
+    border: 1px solid var(--bd); 
+    box-shadow: 0 10px 30px rgba(0,0,0,0.1); 
+}
+.prod-header { 
+    border-bottom: 1px solid var(--bd); 
+    padding-bottom: 15px; 
+    margin-bottom: 15px; 
+}
+.prod-id { 
+    color: var(--txt); 
+    opacity: 0.6;
+    font-family: monospace; 
+    font-size: 0.85rem; 
+    margin-bottom: 4px; 
+    display: block; 
+}
+.prod-title { 
+    font-size: 1.8rem; 
+    color: var(--txt); 
+    margin: 0 0 8px; 
+    line-height: 1.2; 
+}
+.prod-note { 
+    margin-bottom: 15px; 
+    color: var(--txt); 
+    opacity: 0.8;
+    font-size: 0.95rem; 
+    background: var(--card-bg); 
+    padding: 10px; 
+    border-radius: 6px; 
+    border: 1px dashed var(--bd); 
+    white-space: pre-wrap; 
+}
 .prod-price-area { margin-bottom: 20px; }
+
 .spec-row { display: flex; padding: 5px 0 0 0; border: none; align-items: center; }
 .sex-val { font-size: 1.1rem; margin-right: 15px; }
-.birth-val { color: #888; font-size: 1rem; }
-.gene-tag-row { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
-.gene-pill { background: rgba(255,69,0,0.15); color: var(--pri); padding: 4px 12px; border-radius: 15px; font-size: 0.85rem; font-weight: bold; border: 1px solid rgba(255,69,0,0.3); }
+.birth-val { color: var(--txt); opacity: 0.6; font-size: 1rem; }
 
-.prod-guarantee { background: rgba(40, 167, 69, 0.1); color: #81c784; padding: 12px; border-radius: 8px; border-left: 4px solid #4caf50; display: flex; align-items: flex-start; line-height: 1.5; margin-bottom: 15px; font-size: 0.9rem; }
+.gene-tag-row { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+.gene-pill { 
+    background: transparent; 
+    color: var(--pri); 
+    padding: 4px 12px; 
+    border-radius: 15px; 
+    font-size: 0.85rem; 
+    font-weight: bold; 
+    border: 1px solid var(--pri); 
+}
+
+.prod-guarantee { 
+    background: transparent; 
+    color: var(--txt); 
+    border: 1px solid var(--bd);
+    padding: 12px; 
+    border-radius: 8px; 
+    border-left: 4px solid #4caf50; 
+    display: flex; 
+    align-items: flex-start; 
+    line-height: 1.5; 
+    margin-bottom: 15px; 
+    font-size: 0.9rem; 
+}
 
 .guarantee-icons-row { display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap; }
-.g-icon-pill { display: flex; align-items: center; gap: 5px; font-size: 0.85rem; padding: 5px 10px; border-radius: 20px; font-weight: bold; }
-.g-pill-green { color: #4caf50; background: rgba(76,175,80,0.1); }
-.g-pill-blue { color: #2196F3; background: rgba(33,150,243,0.1); }
-.g-pill-orange { color: #ff9800; background: rgba(255,152,0,0.1); }
+.g-icon-pill { 
+    display: flex; 
+    align-items: center; 
+    gap: 5px; 
+    font-size: 0.85rem; 
+    padding: 5px 10px; 
+    border-radius: 20px; 
+    font-weight: bold; 
+    background: transparent;
+    border: 1px solid var(--bd);
+}
+.g-pill-green { color: #4caf50; border-color: #4caf50; }
+.g-pill-blue { color: #2196F3; border-color: #2196F3; }
+.g-pill-orange { color: #ff9800; border-color: #ff9800; }
 
 .prod-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 15px; margin-top: 20px; }
-.btn-buy-lg { flex: 2; background: linear-gradient(135deg, #FF4500 0%, #d84315 100%); color: #fff; text-align: center; padding: 12px; font-size: 1.1rem; font-weight: bold; border-radius: 25px; text-decoration: none; transition: 0.3s; box-shadow: 0 4px 10px rgba(255,69,0,0.3); display: flex; align-items: center; justify-content: center; }
-.btn-buy-lg:hover { transform: translateY(-2px); box-shadow: 0 6px 15px rgba(255,69,0,0.5); }
-.btn-share { flex: 1; background: #333; color: #ccc; border: 1px solid #555; padding: 12px; border-radius: 25px; cursor: pointer; transition: 0.2s; font-weight: bold; font-size: 1rem; }
-.btn-share:hover { background: #444; color: #fff; }
+.btn-buy-lg { 
+    flex: 2; 
+    background: var(--pri); 
+    color: #fff; 
+    text-align: center; 
+    padding: 12px; 
+    font-size: 1.1rem; 
+    font-weight: bold; 
+    border-radius: 25px; 
+    text-decoration: none; 
+    transition: 0.3s; 
+    box-shadow: 0 4px 10px var(--pri-glow); 
+    display: flex; 
+    align-items: center; 
+    justify-content: center; 
+}
+.btn-buy-lg:hover { transform: translateY(-2px); box-shadow: 0 6px 15px var(--pri-glow); }
+.btn-share { 
+    flex: 1; 
+    background: var(--card-bg); 
+    color: var(--txt); 
+    border: 1px solid var(--bd); 
+    padding: 12px; 
+    border-radius: 25px; 
+    cursor: pointer; 
+    transition: 0.2s; 
+    font-weight: bold; 
+    font-size: 1rem; 
+}
+.btn-share:hover { border-color: var(--pri); color: var(--pri); }
 
-.prod-expect-notice { font-size: 0.8rem; color: #666; margin-top: 10px; }
+.prod-expect-notice { font-size: 0.8rem; color: var(--txt); opacity: 0.6; margin-top: 10px; }
 
-.prod-terms-box { margin-top: 30px; background: rgba(255,255,255,0.03); padding: 25px; border-radius: 12px; border: 1px solid var(--bd); box-shadow: 0 10px 30px rgba(0,0,0,0.2); }
-.terms-title { text-align: center; color: var(--pri); font-weight: 900; font-size: 1.1rem; margin-bottom: 15px; letter-spacing: 1px; }
-.terms-list { list-style: none; padding: 0; margin: 0; color: #bbb; line-height: 1.6; font-size: 0.9rem; }
+.prod-terms-box { 
+    margin-top: 30px; 
+    background: var(--card-bg); 
+    padding: 25px; 
+    border-radius: 12px; 
+    border: 1px solid var(--bd); 
+    box-shadow: 0 10px 30px rgba(0,0,0,0.1); 
+}
+.terms-title { 
+    text-align: center; 
+    color: var(--pri); 
+    font-weight: 900; 
+    font-size: 1.1rem; 
+    margin-bottom: 15px; 
+    letter-spacing: 1px; 
+}
+.terms-list { list-style: none; padding: 0; margin: 0; color: var(--txt); opacity: 0.8; line-height: 1.6; font-size: 0.9rem; }
 .terms-list li { margin-bottom: 8px; padding-left: 12px; position: relative; }
-.terms-list li::before { content: "•"; position: absolute; left: 0; color: #666; }
+.terms-list li::before { content: "•"; position: absolute; left: 0; color: var(--pri); }
 
-/* 🌟 取代原本 Inline style 的類別設定 */
-.sold-stamp { position: absolute; top: 15px; left: 15px; transform: none; border: 6px solid #f44336; color: #f44336; font-size: 3rem; font-weight: 900; padding: 5px 15px; border-radius: 8px; background: rgba(0,0,0,0.5); opacity: 1; pointer-events: none; z-index: 10; font-family: 'Black Ops One', sans-serif; letter-spacing: 2px; text-transform: uppercase; text-shadow: 2px 2px 5px rgba(0,0,0,1); }
-.price { font-size: 2.5rem; color: var(--pri); font-weight: 900; letter-spacing: 0.5px; white-space: nowrap; line-height: 1; }
-.status-badge { padding: 10px 20px; font-size: 1.2rem; font-weight: bold; border-radius: 4px; white-space: nowrap; }
-
-.s-sold { background: #333; color: #fff; border: 1px solid #666; }
-.s-res { background: #FFC107; color: #000; }
-.s-nfs { background: #9C27B0; color: #fff; box-shadow: 0 0 10px rgba(156, 39, 176, 0.4); }
-
-.male { color: #2196F3; font-weight: bold; }
-.female { color: #E91E63; font-weight: bold; }
-.mix { color: #9C27B0; font-weight: bold; }
-
-/* Day Mode Configuration */
-:global(body.day-mode) .app-back-btn { background: #fff; border-color: #ddd; color: #333; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
-:global(body.day-mode) .app-back-btn:active { background: #f0f0f0; }
-:global(body.day-mode) .prod-title { color: #111; }
-:global(body.day-mode) .prod-hint { background: #f0f0f0; color: #888; }
-:global(body.day-mode) .btn-share { background: #fff; color: #555; border-color: #ccc; }
-:global(body.day-mode) .btn-share:hover { background: #f0f0f0; color: #000; }
-:global(body.day-mode) .prod-guarantee { background: #e8f5e9; color: #2e7d32; border-color: #2e7d32; }
-:global(body.day-mode) .prod-terms-box { background: #fff; border-color: #ddd; color: #333; box-shadow: 0 5px 20px rgba(0,0,0,0.05); }
-:global(body.day-mode) .terms-list { color: #444; }
-:global(body.day-mode) .gene-pill { background: #fff3e0; color: #e65100; border-color: #ffb74d; }
-:global(body.day-mode) .g-pill-green { background: #e8f5e9; color: #2e7d32; }
-:global(body.day-mode) .g-pill-blue { background: #e3f2fd; color: #1565c0; }
-:global(body.day-mode) .g-pill-orange { background: #fff3e0; color: #ef6c00; }
-:global(body.day-mode) .prod-info-box { background: #fff; border-color: #ddd; box-shadow: 0 10px 30px rgba(0,0,0,0.05); }
-:global(body.day-mode) .prod-header { border-bottom-color: #eee; }
-:global(body.day-mode) .prod-note { background: #f9f9f9; border-color: #eee; color: #333; }
+/* 只覆寫此頁專屬的 sold-stamp (字體超大版本) */
+.sold-stamp { 
+    position: absolute; 
+    top: 15px; 
+    left: 15px; 
+    transform: none; 
+    border: 6px solid #f44336; 
+    color: #f44336; 
+    font-size: 3rem; 
+    font-weight: 900; 
+    padding: 5px 15px; 
+    border-radius: 8px; 
+    background: var(--card-bg); 
+    opacity: 0.9; 
+    pointer-events: none; 
+    z-index: 10; 
+    font-family: 'Black Ops One', sans-serif; 
+    letter-spacing: 2px; 
+    text-transform: uppercase; 
+    text-shadow: 2px 2px 5px rgba(0,0,0,0.2); 
+}
 
 /* 🌟 Mobile Optimizations (照片與資訊欄並排雙欄) */
 @media (max-width: 768px) {
@@ -381,7 +504,7 @@ const goBack = () => {
     .nav-action-row { margin-bottom: 5px; }
     .app-back-btn { padding: 6px 12px; font-size: 0.9rem; }
     
-    /* 🌟 改為並排雙欄 Grid，左側固定寬度放照片 */
+    /* 🌟 雙欄 Grid */
     .prod-layout { 
         display: grid; 
         grid-template-columns: 140px 1fr; 
@@ -401,7 +524,7 @@ const goBack = () => {
         max-height: none; 
     }
     
-    .prod-hint { display: none; } /* 手機版並排時隱藏文字以省空間 */
+    .prod-hint { display: none; }
     
     .sold-stamp {
         font-size: 1.2rem;
@@ -432,8 +555,6 @@ const goBack = () => {
     .birth-val { font-size: 0.8rem; }
     
     .prod-price-area { margin-bottom: 10px; }
-    .price { font-size: 1.4rem; }
-    .status-badge { font-size: 0.9rem !important; padding: 6px 12px !important; }
     
     .g-icon-pill { font-size: 0.65rem; padding: 4px 6px; }
     .prod-guarantee { font-size: 0.75rem; padding: 8px; margin-bottom: 10px; }
@@ -446,8 +567,9 @@ const goBack = () => {
     
     /* 購買須知放置於雙欄下方滿版顯示 */
     .prod-terms-box { 
+        grid-column: 1 / -1;
         padding: 15px; 
-        margin-top: 15px; 
+        margin-top: 5px; 
     }
 }
 </style>

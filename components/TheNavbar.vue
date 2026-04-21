@@ -150,10 +150,243 @@ const closeMobileMenu = () => {
 </template>
 
 <style scoped>
+/*
+  [局部樣式與全域整合]
+  已將原本散落於 style.css 的導覽列專屬樣式抽回 TheNavbar.vue。
+  全面導入 CSS 變數，解決日夜模式強制切換的色碼衝突。
+*/
+
+/* Sticky Navigation */
+.sticky-nav { 
+    position: fixed; 
+    top: calc(40px + env(safe-area-inset-top, 0px)); 
+    left: 0; 
+    width: 100%; 
+    height: 50px; 
+    z-index: 1000; 
+    background: var(--card-bg); 
+    backdrop-filter: blur(10px); 
+    -webkit-backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--bd); 
+    padding: 0 15px; 
+    box-shadow: 0 4px 10px rgba(0,0,0,0.05); 
+    transition: transform 0.3s ease;
+}
+.sticky-nav.nav-hidden { 
+    transform: translateY(-100%); 
+}
+
+.nav-container { 
+    max-width: 1300px; 
+    margin: 0 auto; 
+    display: flex; 
+    justify-content: space-between; 
+    align-items: center; 
+    height: 50px; 
+}
+
+.nav-left { 
+    display: flex; 
+    align-items: center; 
+    gap: 10px; 
+}
+
+/* Desktop Navigation */
+.dt-nav { 
+    display: flex; 
+    gap: 5px; 
+    height: 100%; 
+    align-items: center; 
+}
+
+.nav-item-dt { 
+    padding: 0 12px; 
+    height: 100%; 
+    display: flex; 
+    align-items: center; 
+    font-size: 0.95rem; 
+    font-weight: 700; 
+    color: var(--txt); 
+    opacity: 0.8;
+    cursor: pointer; 
+    transition: 0.2s; 
+    position: relative; 
+    white-space: nowrap; 
+}
+
+.nav-item-dt:hover, .nav-item-dt.active { 
+    color: var(--pri); 
+    opacity: 1;
+    background: rgba(128, 128, 128, 0.05); 
+}
+
+.nav-item-dt.active { 
+    border-bottom: 3px solid var(--pri); 
+}
+
+/* Dropdown */
+.dropdown-hover { position: relative; }
+.dt-dropdown { 
+    position: absolute; 
+    top: 100%; 
+    left: 0; 
+    background: var(--card-bg); 
+    border: 1px solid var(--bd); 
+    min-width: 140px; 
+    flex-direction: column; 
+    border-radius: 0 0 8px 8px; 
+    overflow: hidden; 
+    box-shadow: 0 5px 20px rgba(0,0,0,0.1); 
+    visibility: hidden; 
+    opacity: 0; 
+    transform: translateY(-5px); 
+    transition: all 0.2s ease; 
+    display: flex; 
+    z-index: 100; 
+}
+.dropdown-hover:hover .dt-dropdown { 
+    visibility: visible; 
+    opacity: 1; 
+    transform: translateY(0); 
+}
+.dt-dropdown a { 
+    display: block; 
+    padding: 15px; 
+    color: var(--txt); 
+    opacity: 0.8;
+    cursor: pointer; 
+    transition: 0.2s; 
+    font-size: 0.95rem; 
+    font-weight: bold;
+    border-bottom: 1px solid var(--bd); 
+    text-decoration: none; 
+    white-space: nowrap; 
+}
+.dt-dropdown a:last-child { border-bottom: none; }
+.dt-dropdown a:hover { 
+    background: rgba(255, 69, 0, 0.05); 
+    color: var(--pri); 
+    opacity: 1;
+}
+
+/* Right Controls */
+.nav-right { display: flex; align-items: center; gap: 12px; }
+.hamburger { display: none; }
+
+/* Reading Progress Bar */
+.reading-progress-bar { 
+    position: absolute; 
+    bottom: 0; left: 0; 
+    width: 100%; 
+    height: 2px; 
+    background: var(--bd); 
+}
+.progress-fill { 
+    height: 100%; 
+    background: var(--pri); 
+    width: 0%; 
+    transition: width 0.1s linear; 
+    box-shadow: 0 0 10px var(--pri-glow);
+}
+
+/* 🌟 Mobile Menu Overlay & Responsive */
 @media (max-width: 768px) {
-    /* 🌟 在手機版隱藏頂部的「我的專區」圖示 */
+    /* 在手機版隱藏頂部的「我的專區」圖示，交給底部導航列 */
     .profile-link-dt {
         display: none !important;
+    }
+
+    .dt-nav { display: none; }
+    
+    .hamburger { 
+        display: block; 
+        font-size: 1.6rem; 
+        cursor: pointer; 
+        color: var(--txt); 
+        padding: 10px; 
+        margin-right: -10px; 
+    }
+
+    .mobile-menu-overlay { 
+        display: flex; 
+        position: fixed; 
+        top: calc(90px + env(safe-area-inset-top, 0px)); 
+        left: 0; 
+        width: 100%; 
+        height: calc(100vh - 90px - env(safe-area-inset-top, 0px)); 
+        background: var(--card-bg); 
+        backdrop-filter: blur(15px); 
+        -webkit-backdrop-filter: blur(15px);
+        z-index: 2000; 
+        transform: translateX(100%); 
+        transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1); 
+        padding: 5px 15px 100px 15px; 
+        overflow-y: auto; 
+        flex-direction: column; 
+        gap: 0; 
+        border-top: 1px solid var(--bd); 
+        box-shadow: 0 10px 30px rgba(0,0,0,0.1); 
+    }
+    .mobile-menu-overlay.open { transform: translateX(0); }
+
+    .mm-summary { 
+        font-size: 1.1rem; 
+        font-weight: bold; 
+        padding: 15px 10px; 
+        border-bottom: 1px solid var(--bd); 
+        color: var(--txt); 
+        cursor: pointer; 
+        display: flex; 
+        justify-content: space-between; 
+        align-items: center; 
+    }
+    .mm-group.active .mm-summary { 
+        color: var(--pri); 
+        border-bottom: none; 
+    }
+    
+    .mm-arrow { 
+        transition: transform 0.3s ease; 
+        font-size: 0.8rem; 
+        opacity: 0.6; 
+    }
+    .mm-group.active .mm-arrow { 
+        transform: rotate(180deg); 
+        opacity: 1; 
+        color: var(--pri); 
+    }
+
+    .mm-anim-wrapper { 
+        display: grid; 
+        grid-template-rows: 0fr; 
+        transition: grid-template-rows 0.3s ease-out; 
+    }
+    .mm-group.active .mm-anim-wrapper { 
+        grid-template-rows: 1fr; 
+    }
+    .mm-anim-inner { 
+        overflow: hidden; 
+        background: rgba(128, 128, 128, 0.05); 
+        border-radius: 8px; 
+    }
+
+    .mm-sub { 
+        display: block; 
+        padding: 15px 20px; 
+        color: var(--txt); 
+        opacity: 0.8;
+        font-size: 1rem; 
+        border-bottom: 1px dashed var(--bd); 
+        cursor: pointer; 
+        font-weight: bold; 
+        text-decoration: none; 
+        transition: 0.2s; 
+    }
+    .mm-sub:last-child { border-bottom: none; }
+    .mm-sub:active, .mm-summary:active { 
+        background: rgba(255, 69, 0, 0.1); 
+        color: var(--pri); 
+        opacity: 1;
     }
 }
 </style>

@@ -33,7 +33,10 @@ const isActive = (path) => {
 </template>
 
 <style scoped>
-/* 預設在桌機版隱藏 */
+/*[局部樣式與全域整合]
+  手機版底部導航列，此元件已高度變數化，完美適配日夜模式。
+  確保無任何寫死色碼與強制覆寫。
+*/
 .bottom-nav {
     display: none;
 }
@@ -55,7 +58,8 @@ const isActive = (path) => {
         -webkit-backdrop-filter: blur(20px);
         border-top: 1px solid var(--bd);
         z-index: 9999;
-        box-shadow: 0 -5px 20px rgba(0, 0, 0, 0.1);
+        /* 微調陰影，使其在日夜模式下都顯得輕盈 */
+        box-shadow: 0 -5px 20px rgba(0, 0, 0, 0.05);
     }
 }
 

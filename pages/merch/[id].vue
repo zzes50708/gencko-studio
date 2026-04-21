@@ -197,6 +197,12 @@ const goBack = () => {
 </template>
 
 <style scoped>
+/* 
+  [局部樣式修復] 
+  已清除寫死的深色背景與淺色字體色碼。
+  全面導入 CSS 變數，移除所有不必要的 :global(body.day-mode) 覆寫。
+  【行動端優化】已將手機版排版改為「左圖右文」的雙欄網格設計。
+*/
 .merch-detail-wrapper { width: 100%; }
 
 /* 🌟 App-like 膠囊狀返回按鈕 */
@@ -208,10 +214,8 @@ const goBack = () => {
 }
 
 .app-back-btn {
-    background: rgba(255, 255, 255, 0.05);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    border: 1px solid rgba(255, 255, 255, 0.15);
+    background: var(--card-bg);
+    border: 1px solid var(--bd);
     color: var(--txt);
     font-size: 0.95rem;
     font-weight: bold;
@@ -222,67 +226,195 @@ const goBack = () => {
     padding: 8px 16px;
     border-radius: 30px;
     transition: 0.2s;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    box-shadow: 0 4px 10px rgba(0,0,0,0.05);
 }
 
 .app-back-btn:active {
     transform: scale(0.95);
-    background: rgba(255, 255, 255, 0.1);
+    background: var(--bd);
 }
 
 /* Container & Layout */
 .prod-container { max-width: 1100px; margin: 0 auto; padding-top: 15px; }
 .prod-layout { display: flex; gap: 30px; margin-top: 10px; align-items: flex-start; }
-.prod-img-box { flex: 1; position: relative; border-radius: 12px; overflow: hidden; border: 1px solid var(--bd); background: #000; box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
-.prod-main-img { width: 100%; height: auto; max-height: 500px; object-fit: contain; display: block; cursor: zoom-in; }
-.prod-hint { text-align: center; color: #888; font-size: 0.8rem; padding: 8px; background: #111; }
 
-.prod-info-box { flex: 1; padding: 20px; background: rgba(255,255,255,0.02); border-radius: 12px; border: 1px solid var(--bd); box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
-.prod-title { font-size: 1.8rem; color: #fff; margin: 0 0 15px 0; line-height: 1.3; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 15px; }
-.merch-desc { color: #eee; font-size: 1.05rem; line-height: 1.7; margin-bottom: 25px; white-space: pre-wrap; }
+.prod-img-box { 
+    flex: 1; 
+    position: relative; 
+    border-radius: 12px; 
+    overflow: hidden; 
+    border: 1px solid var(--bd); 
+    background: var(--card-bg); 
+    box-shadow: 0 10px 30px rgba(0,0,0,0.1); 
+}
 
-.prod-price-area { margin-bottom: 25px; padding-top: 15px; border-top: 1px dashed rgba(255,255,255,0.1); }
-.price { font-size: 2.5rem; color: var(--pri); font-weight: 900; letter-spacing: 0.5px; white-space: nowrap; line-height: 1; text-shadow: 0 0 10px rgba(255,69,0,0.3); }
+.prod-main-img { 
+    width: 100%; 
+    height: auto; 
+    max-height: 500px; 
+    object-fit: contain; 
+    display: block; 
+    cursor: zoom-in; 
+}
+
+.prod-hint { 
+    text-align: center; 
+    color: var(--txt); 
+    opacity: 0.6;
+    font-size: 0.8rem; 
+    padding: 8px; 
+    background: var(--card-bg);
+    border-top: 1px solid var(--bd);
+}
+
+.prod-info-box { 
+    flex: 1; 
+    padding: 20px; 
+    background: var(--card-bg); 
+    border-radius: 12px; 
+    border: 1px solid var(--bd); 
+    box-shadow: 0 10px 30px rgba(0,0,0,0.1); 
+}
+
+.prod-title { 
+    font-size: 1.8rem; 
+    color: var(--txt); 
+    margin: 0 0 15px 0; 
+    line-height: 1.3; 
+    border-bottom: 1px solid var(--bd); 
+    padding-bottom: 15px; 
+}
+
+.merch-desc { 
+    color: var(--txt); 
+    opacity: 0.9;
+    font-size: 1.05rem; 
+    line-height: 1.7; 
+    margin-bottom: 25px; 
+    white-space: pre-wrap; 
+}
+
+.prod-price-area { 
+    margin-bottom: 25px; 
+    padding-top: 15px; 
+    border-top: 1px dashed var(--bd); 
+}
+
+.price { 
+    font-size: 2.5rem; 
+    color: var(--pri); 
+    font-weight: 900; 
+    letter-spacing: 0.5px; 
+    white-space: nowrap; 
+    line-height: 1; 
+    text-shadow: 0 0 10px var(--pri-glow); 
+}
 
 /* Buttons */
-.prod-actions { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 5px; }
-.btn-buy-lg { flex: 2; background: linear-gradient(135deg, #FF4500 0%, #d84315 100%); color: #fff; text-align: center; padding: 14px; font-size: 1.1rem; font-weight: bold; border-radius: 8px; text-decoration: none; transition: 0.3s; box-shadow: 0 4px 10px rgba(255,69,0,0.3); display: flex; justify-content: center; align-items: center; white-space: nowrap; }
-.btn-buy-lg:hover { transform: translateY(-2px); box-shadow: 0 6px 15px rgba(255,69,0,0.5); }
-.btn-share { flex: 1; background: transparent; color: #ccc; border: 1px solid #555; padding: 14px; border-radius: 8px; cursor: pointer; transition: 0.2s; font-weight: bold; font-size: 1rem; white-space: nowrap; }
-.btn-share:hover { background: rgba(255,255,255,0.05); color: #fff; border-color: #888; }
+.prod-actions { 
+    display: flex; 
+    gap: 12px; 
+    flex-wrap: wrap; 
+    margin-bottom: 5px; 
+}
 
-/* Day Mode Configuration */
-:global(body.day-mode) .app-back-btn { background: #fff; border-color: #ddd; color: #333; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
-:global(body.day-mode) .app-back-btn:active { background: #f0f0f0; }
-:global(body.day-mode) .prod-title { color: #111; border-bottom-color: #eee; }
-:global(body.day-mode) .merch-desc { color: #333; }
-:global(body.day-mode) .prod-hint { background: #f0f0f0; color: #888; }
-:global(body.day-mode) .btn-share { background: #fff; color: #555; border-color: #ccc; }
-:global(body.day-mode) .btn-share:hover { background: #f9f9f9; color: #333; border-color: #999; }
-:global(body.day-mode) .prod-info-box { background: #fff; border-color: #ddd; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
-:global(body.day-mode) .prod-price-area { border-top-color: #eee; }
-:global(body.day-mode) .prod-img-box { background-color: #f4f4f4; border-color: #eee; }
+.btn-buy-lg { 
+    flex: 2; 
+    background: var(--pri); 
+    color: #fff; 
+    text-align: center; 
+    padding: 14px; 
+    font-size: 1.1rem; 
+    font-weight: bold; 
+    border-radius: 8px; 
+    text-decoration: none; 
+    transition: 0.3s; 
+    box-shadow: 0 4px 10px var(--pri-glow); 
+    display: flex; 
+    justify-content: center; 
+    align-items: center; 
+    white-space: nowrap; 
+}
 
-/* 🌟 Mobile Optimizations (極致壓縮版面) */
+.btn-buy-lg:hover { 
+    transform: translateY(-2px); 
+    box-shadow: 0 6px 15px var(--pri-glow); 
+}
+
+.btn-share { 
+    flex: 1; 
+    background: var(--card-bg); 
+    color: var(--txt); 
+    border: 1px solid var(--bd); 
+    padding: 14px; 
+    border-radius: 8px; 
+    cursor: pointer; 
+    transition: 0.2s; 
+    font-weight: bold; 
+    font-size: 1rem; 
+    white-space: nowrap; 
+}
+
+.btn-share:hover { 
+    border-color: var(--pri); 
+    color: var(--pri); 
+}
+
+/* 🌟 Mobile Optimizations (左圖右文雙欄) */
 @media (max-width: 768px) {
     .merch-detail-wrapper { padding: 0 10px 15px 10px; }
     
     .nav-action-row { margin-bottom: 8px; }
-    .app-back-btn { padding: 6px 12px; font-size: 0.9rem; }
+    .app-back-btn { padding: 6px px; font-size: 0.9rem; }
     
-    .prod-layout { flex-direction: column; gap: 15px; margin-top: 5px; }
-    .prod-img-box { border-radius: 8px; }
-    .prod-main-img { max-height: 350px; } /* 限制手機版圖片最大高度 */
+    /* 🌟 改為並排雙欄 Grid，左側固定寬度放照片 */
+    .prod-layout { 
+        display: grid; 
+        grid-template-columns: 200px 1fr; 
+        gap: 12px; 
+        align-items: start;
+        margin-top: 5px;
+    }
     
-    .prod-info-box { padding: 15px; border-radius: 8px; }
-    .prod-title { font-size: 1.5rem; margin-bottom: 10px; padding-bottom: 10px; }
-    .merch-desc { font-size: 0.95rem; margin-bottom: 15px; }
+    .prod-img-box { 
+        border-radius: 8px; 
+    }
     
-    .prod-price-area { margin-bottom: 15px; padding-top: 10px; }
-    .price { font-size: 2rem; }
+    .prod-main-img { 
+        width: 100%; 
+        aspect-ratio: 1 / 1; 
+        object-fit: cover; 
+        max-height: none; 
+    }
     
-    .prod-actions { flex-direction: column; gap: 8px; }
-    .btn-buy-lg { width: 100%; flex: auto; padding: 12px; font-size: 1.05rem; }
-    .btn-share { width: 100%; flex: auto; padding: 12px; font-size: 0.95rem; }
+    .prod-hint { display: none; } /* 手機版並排時隱藏文字以省空間 */
+    
+    .prod-info-box { 
+        padding: 10px; 
+        border-radius: px; 
+    }
+    
+    .prod-title { 
+        font-size: 1.15rem; 
+        margin-bottom: 6px; 
+        padding-bottom: 6px; 
+    }
+    
+    .merch-desc { 
+        font-size: 0.85rem; 
+        margin-bottom: 10px; 
+        line-height: 1.4;
+    }
+    
+    .prod-price-area { 
+        margin-bottom: 10px; 
+        padding-top: 8px; 
+        white-space: pre-wrap;
+    }
+    .price { font-size: 1.4rem; }
+    
+    .prod-actions { flex-direction: column; gap: 6px; }
+    .btn-buy-lg { width: 100%; flex: auto; padding: 8px; font-size: 0.95rem; }
+    .btn-share { width: 100%; flex: auto; padding: 8px; font-size: 0.85rem; }
 }
 </style>

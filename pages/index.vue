@@ -186,6 +186,11 @@ const setBeginnerMode = () => {
 </template>
 
 <style scoped>
+/* 
+  [局部樣式修復] 
+  已清除與 assets/css/style.css 重複的宣告，
+  專注於首頁專屬的特殊元素佈局與行動端 App 化覆寫。
+*/
 .home-page-wrapper {
     width: 100%;
     overflow-x: hidden;
@@ -195,7 +200,7 @@ const setBeginnerMode = () => {
     position: absolute;
     top: -5px;
     right: -5px;
-    background: #e74c3c;
+    background: #e74c3c; /* 狀態警告色，保留 */
     color: #fff;
     font-size: 0.7rem;
     font-weight: bold;
@@ -211,47 +216,98 @@ const setBeginnerMode = () => {
     100% { transform: scale(1); opacity: 1; }
 }
 
-.home-header-wrap { padding: 0 10px 20px 10px; text-align: center; }
-.hero-content-inner { max-width: 700px; margin: 0 auto; }
-.hero-main-title { font-size: 2.5rem; font-weight: 900; margin-bottom: 10px; letter-spacing: 1px; text-shadow: 0 0 25px rgba(255, 69, 0, 0.4); color: var(--txt); line-height: 1.1; }
+.home-header-wrap { 
+    padding: 0 10px 20px 10px; 
+    text-align: center; 
+}
 
-.hero-btn-group { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
-.btn-line-join { background: var(--pri) !important; color: #fff !important; padding: 12px 30px; font-size: 1.1rem; border-radius: 30px; box-shadow: 0 0 15px var(--pri-glow); border: none; display: inline-flex; align-items: center; justify-content: center; text-decoration: none; font-weight: bold; }
-.btn-soc { background: var(--card-bg); border: 1px solid var(--bd); padding: 10px 20px; font-size: 0.9rem; border-radius: 30px; color: var(--txt); text-decoration: none; font-weight: bold; transition: 0.2s; opacity: 0.9; }
-.btn-soc:hover, .btn-line-join:hover { transform: scale(1.05); opacity: 1; }
+.hero-main-title { 
+    font-size: 2.5rem; 
+    font-weight: 900; 
+    margin-bottom: 10px; 
+    letter-spacing: 1px; 
+    text-shadow: 0 0 25px var(--pri-glow); 
+    color: var(--txt); 
+    line-height: 1.1; 
+}
 
-/* Scenarios */
-.home-scenario-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 30px; }
-.scenario-card { background: var(--card-bg); border: 1px solid var(--bd); padding: 15px 10px; border-radius: 12px; text-align: center; cursor: pointer; transition: 0.3s; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
-.scenario-card:active { transform: scale(0.95); }
-.scenario-icon { font-size: 2rem; margin-bottom: 8px; }
-.scenario-title { font-weight: bold; color: var(--pri); margin-bottom: 4px; font-size: 0.95rem; }
-.scenario-desc { font-size: 0.75rem; color: var(--txt); opacity: 0.6; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* 首頁社群按鈕微調覆寫 */
+.btn-soc { 
+    background: var(--card-bg); 
+    border: 1px solid var(--bd); 
+    padding: 10px 20px; 
+    font-size: 0.9rem; 
+    border-radius: 30px; 
+    color: var(--txt); 
+    text-decoration: none; 
+    font-weight: bold; 
+    transition: 0.2s; 
+    opacity: 0.9; 
+}
+.btn-soc:hover { 
+    transform: scale(1.05); 
+    opacity: 1; 
+    border-color: var(--pri); 
+    color: var(--pri); 
+}
 
-/* Sections */
-.home-section { margin-bottom: 30px; background: var(--card-bg); padding: 20px; border-radius: 12px; border: 1px solid var(--bd); box-shadow: 0 4px 20px rgba(0,0,0,0.1); }
-.section-head { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 15px; border-bottom: 1px solid var(--bd); padding-bottom: 10px; }
-.sec-title { font-size: 1.4rem; font-weight: 900; color: var(--txt); border-left: 4px solid var(--pri); padding-left: 12px; line-height: 1; margin: 0; }
-.sec-more { color: var(--txt); opacity: 0.8; font-size: 0.9rem; font-weight: bold; }
+/* 首頁專屬卡片微調 */
+.scenario-card { 
+    background: var(--card-bg); 
+    border: 1px solid var(--bd); 
+    padding: 15px 10px; 
+    border-radius: 12px; 
+    text-align: center; 
+    cursor: pointer; 
+    transition: 0.3s; 
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1); 
+}
+.scenario-card:active { 
+    transform: scale(0.95); 
+}
+.scenario-icon { 
+    font-size: 2rem; 
+    margin-bottom: 8px; 
+}
+.scenario-title { 
+    font-weight: bold; 
+    color: var(--pri); 
+    margin-bottom: 4px; 
+    font-size: 0.95rem; 
+}
+.scenario-desc { 
+    font-size: 0.75rem; 
+    color: var(--txt); 
+    opacity: 0.6; 
+    white-space: nowrap; 
+    overflow: hidden; 
+    text-overflow: ellipsis; 
+}
 
-/* Hot Track */
-.hot-skeleton-wrapper { display:flex; gap:15px; overflow:hidden; padding:10px 0; }
-.hot-marquee-mask { overflow: hidden; width: 100%; position: relative; padding: 5px 0; mask-image: linear-gradient(to right, transparent, #000 5%, #000 95%, transparent); -webkit-mask-image: linear-gradient(to right, transparent, #000 5%, #000 95%, transparent); }
-.hot-track { display: grid; grid-template-rows: repeat(2, 1fr); grid-auto-flow: column; gap: 12px; width: max-content; animation: hotScroll 60s linear infinite; }
-.hot-track:hover { animation-play-state: paused; }
-.hot-card-item { width: 220px; flex-shrink: 0; background: var(--card-bg); border: 1px solid var(--bd); border-radius: 10px; overflow: hidden; transition: 0.3s; }
-@keyframes hotScroll { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
+/* 首頁區塊微調 */
+.home-section { 
+    margin-bottom: 30px; 
+    background: var(--card-bg); 
+    padding: 20px; 
+    border-radius: 12px; 
+    border: 1px solid var(--bd); 
+    box-shadow: 0 4px 20px rgba(0,0,0,0.1); 
+}
 
-/* Cards inside Track */
-.card-img { width: 100%; height: 160px; object-fit: cover; border-bottom: 1px solid var(--bd); background: var(--card-bg); color: var(--txt); }
-.trust-badge { position: absolute; bottom: 5px; left: 5px; background: rgba(0,0,0,0.8); border: 1px solid #FFD700; color: #FFD700; font-size: 0.6rem; padding: 2px 5px; border-radius: 4px; z-index: 5; }
-.empty-state-text { text-align:center; padding:20px; color: var(--txt); opacity: 0.6; font-weight: bold; }
+.hot-skeleton-wrapper { 
+    display: flex; 
+    gap: 15px; 
+    overflow: hidden; 
+    padding: 10px 0; 
+}
 
-/* Article Grid */
-.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 15px; }
-.article-card { background: var(--card-bg); border: 1px solid var(--bd); border-radius: 10px; overflow: hidden; transition: 0.3s; }
-.art-cat-tag { position: absolute; top: 10px; left: 10px; background: var(--card-bg); color: var(--pri); border: 1px solid var(--pri); padding: 4px 8px; font-size: 0.75rem; border-radius: 4px; z-index: 2; font-weight: bold; }
-.art-summary { font-size: 0.9rem; color: var(--txt); opacity: 0.7; line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.empty-state-text { 
+    text-align: center; 
+    padding: 20px; 
+    color: var(--txt); 
+    opacity: 0.6; 
+    font-weight: bold; 
+}
 
 /* 🌟 Mobile App-like Optimizations */
 @media (max-width: 768px) {
@@ -259,23 +315,71 @@ const setBeginnerMode = () => {
         padding: 0;
     }
 
-    /* 縮減 GENCKO STUDIO 標題與上下行距 */
-    .hero-main-title { font-size: 2rem; margin-top: -5px; margin-bottom: -5px; }
+    .hero-main-title { 
+        font-size: 2rem; 
+        margin-top: -5px; 
+        margin-bottom: -5px; 
+    }
 
-    /* 縮減加入社群按鈕與 IG FB 賣貨便的上下行距、高度 */
-    .mobile-row-nowrap .btn-line-join { width: 100%; padding: 5px 0; font-size: 0.95rem; height: auto; line-height: 1.2; }
-    .hero-btn-group { margin-bottom: 8px !important; }
-    .social-group { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; width: 100%; margin-bottom: 15px; }
-    .social-group .btn-soc { padding: 5px 0; font-size: 0.85rem; width: 100%; text-align: center; height: auto; line-height: 1.2; margin-bottom: -25px;}
+    .mobile-row-nowrap .btn-line-join { 
+        width: 100%; 
+        padding: 5px 0; 
+        font-size: 0.95rem; 
+        height: auto; 
+        line-height: 1.2; 
+    }
+    
+    .hero-btn-group { 
+        margin-bottom: 8px !important; 
+    }
+    
+    .social-group { 
+        display: grid; 
+        grid-template-columns: 1fr 1fr 1fr; 
+        gap: 10px; 
+        width: 100%; 
+        margin-bottom: 15px; 
+    }
+    
+    .social-group .btn-soc { 
+        padding: 5px 0; 
+        font-size: 0.85rem; 
+        width: 100%; 
+        text-align: center; 
+        height: auto; 
+        line-height: 1.2; 
+        margin-bottom: -25px;
+    }
 
-    /* 4 個按鈕並排 */
-    .home-scenario-grid { grid-template-columns: repeat(4, 1fr); gap: 3px; margin-bottom: 5px; padding: 0 20px; }
-    .scenario-card { padding: 8px 0px; border-radius: 15px; }
-    .scenario-icon { font-size: 1rem; margin-bottom: 3px; }
-    .scenario-title { font-size: 0.75rem; margin-bottom: 0px; }
-    .scenario-desc { font-size: 0.6rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .home-scenario-grid { 
+        grid-template-columns: repeat(4, 1fr); 
+        gap: 3px; 
+        margin-bottom: 5px; 
+        padding: 0 20px; 
+    }
+    
+    .scenario-card { 
+        padding: 8px 0px; 
+        border-radius: 15px; 
+    }
+    
+    .scenario-icon { 
+        font-size: 1rem; 
+        margin-bottom: 3px; 
+    }
+    
+    .scenario-title { 
+        font-size: 0.75rem; 
+        margin-bottom: 0px; 
+    }
+    
+    .scenario-desc { 
+        font-size: 0.6rem; 
+        white-space: nowrap; 
+        overflow: hidden; 
+        text-overflow: ellipsis; 
+    }
 
-    /* Edge-to-Edge 滿版設計 */
     .home-section {
         padding: 0px 0;
         margin-bottom: 5px;
@@ -299,19 +403,19 @@ const setBeginnerMode = () => {
         -webkit-mask-image: linear-gradient(to right, #000 90%, transparent);
     }
     
-    /* 熱門精選卡片高度寬度縮減 1/3 */
     .hot-card-item {
-        width: 100px; /* 約原 160px 的 2/3 */
+        width: 100px;
         border-radius: 6px;
     }
 
     .card-img {
-        height: 93px; /* 約原 140px 的 2/3 */
+        height: 93px;
     }
     
-    .card-body { padding: 6px !important; }
+    .card-body { 
+        padding: 6px !important; 
+    }
     
-    /* 品系欄單行、縮減行距 */
     .slim-title { 
         font-size: 0.8rem !important; 
         line-height: 1.2 !important; 
