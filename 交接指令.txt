@@ -1,0 +1,18 @@
+【Gencko Studio 專案狀態交接與開發規範】
+1. 專案背景與技術棧：
+框架：Nuxt 3 (SSR/SSG) + Vue 3 (Composition API) + Pinia + Supabase
+核心功能：PWA (Progressive Web App)、守宮商城、線上競標、基因計算機、特寵醫院地圖。
+UI 架構：已完成全站「App 化」行動端體驗優化（包含手機底部導航列、圖片燈箱下拉手勢關閉、PWA 更新提示氣泡）。
+2. 已完成之架構升級 (CSS 與 UI)：
+CSS 權重與全域變數化：全站 14+ 個主要頁面與 6+ 個全域組件已徹底重構。所有寫死的色碼（如 #fff, #111）皆已替換為 CSS 變數（var(--card-bg), var(--txt), var(--bd), var(--pri)）。
+日夜模式無縫切換：已全數消滅 <style scoped> 內依賴 :global(body.day-mode) 的強制覆寫，全站色彩交由變數系統自動接管。
+行動端排版 (Mobile-First)：商品清單、周邊商品、關於我們等頁面已全面實作「手機版並排雙欄（左圖右文或網格）」設計。
+效能優化 (LCP)：首屏（第一眼看見）的圖片改用原生 <img> 搭配 fetchpriority="high" 直接請求 Git CDN，其餘圖片則維持 <NuxtImg loading="lazy">。
+3. 開發嚴格規範 (Strict Rules)：
+局部樣式隔離：新開發的頁面或元件，樣式必須寫在 <style scoped> 內，禁止污染全域 style.css。
+嚴禁絕對色碼：禁止使用黑白灰等絕對色碼，必須使用系統變數確保日夜模式相容。
+禁止強硬覆寫：禁止使用 !important 或 :global 覆寫主題色。
+4. 本次待辦任務 (Next Tasks)：
+👉 （請 AI 根據以下我提供的需求進行開發或修改：）
+[我會在這裡補充...]
+[我會在這裡補充...]

@@ -38,32 +38,37 @@ export default defineNuxtConfig({
   pwa: {
     registerType: 'autoUpdate',
     manifest: {
+      id: '/',             /* 👇 新增：強制綁定應用程式 ID 為根目錄 */
+      start_url: '/',      /* 👇 新增：強制開啟 App 時從根目錄啟動，避免跳轉舊網址 */
+      scope: '/',          /* 👇 新增：限制 App 的作用域 */
       name: 'Gencko Studio',
       short_name: 'Gencko',
       description: 'Gencko Studio 提供專業的豹紋守宮繁育、基因計算機與特寵飼養知識。',
-      theme_color: '#d4d4d4', // 配合深色背景的沉浸感
-      background_color: '#d4d4d4',
-      display: 'standalone', // 隱藏瀏覽器網址列，呈現 App 外觀
-      orientation: 'portrait', // 鎖定為直向顯示
+      theme_color: '#080808', 
+      background_color: '#080808',
+      display: 'standalone', 
+      orientation: 'portrait', 
       icons:[
         {
-          src: 'https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/%E6%9C%AA%E5%91%BD%E5%90%8D%E8%A8%AD%E8%A8%88.png',
+          /* ⚠️ 提醒：這裡的網址請務必換成您重新製作好的 1:1 正方形圖片網址 */
+          src: 'https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/11.png',
           sizes: '192x192',
           type: 'image/png'
         },
         {
-          src: 'https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/%E6%9C%AA%E5%91%BD%E5%90%8D%E8%A8%AD%E8%A8%88.png',
+          src: 'https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/11.png',
           sizes: '512x512',
           type: 'image/png'
         },
         {
-          src: 'https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/%E6%9C%AA%E5%91%BD%E5%90%8D%E8%A8%AD%E8%A8%88.png',
+          src: 'https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/11.png',
           sizes: '512x512',
           type: 'image/png',
           purpose: 'any maskable'
         }
       ]
     },
+    // ... 後面 workbox 等設定維持不變 ...
     workbox: {
       navigateFallback: '/',
       globPatterns: ['**/*.{js,css,html,png,svg,ico,webp}'],
