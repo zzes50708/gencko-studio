@@ -41,8 +41,8 @@ export default defineNuxtConfig({
       name: 'Gencko Studio',
       short_name: 'Gencko',
       description: 'Gencko Studio 提供專業的豹紋守宮繁育、基因計算機與特寵飼養知識。',
-      theme_color: '#080808', // 配合深色背景的沉浸感
-      background_color: '#080808',
+      theme_color: '#d4d4d4', // 配合深色背景的沉浸感
+      background_color: '#d4d4d4',
       display: 'standalone', // 隱藏瀏覽器網址列，呈現 App 外觀
       orientation: 'portrait', // 鎖定為直向顯示
       icons:[
