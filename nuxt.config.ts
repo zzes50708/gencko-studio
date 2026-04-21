@@ -44,8 +44,8 @@ export default defineNuxtConfig({
       name: 'Gencko Studio',
       short_name: 'Gencko',
       description: 'Gencko Studio 提供專業的豹紋守宮繁育、基因計算機與特寵飼養知識。',
-      theme_color: '#080808', 
-      background_color: '#080808',
+      theme_color: '#e6e3e3', 
+      background_color: '#e6e3e3', 
       display: 'standalone', 
       orientation: 'portrait', 
       icons:[
@@ -70,7 +70,6 @@ export default defineNuxtConfig({
     },
     // ... 後面 workbox 等設定維持不變 ...
     workbox: {
-      navigateFallback: '/',
       globPatterns: ['**/*.{js,css,html,png,svg,ico,webp}'],
       // 設定動態 API 與圖片的快取策略，讓斷網時也能觀看已載入的內容
       runtimeCaching:[
@@ -151,7 +150,7 @@ export default defineNuxtConfig({
         { name: 'apple-mobile-web-app-capable', content: 'yes' },
         { name: 'apple-mobile-web-app-status-bar-style', content: 'black-translucent' },
         { name: 'apple-mobile-web-app-title', content: 'Gencko' },
-        { name: 'theme-color', content: '#080808' }
+        { name: 'theme-color', content: '#e6e3e3' }
       ],
       link:[
         { rel: 'preconnect', href: 'https://cdn.jsdelivr.net' },

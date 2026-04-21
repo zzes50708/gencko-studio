@@ -143,7 +143,6 @@ const setBeginnerMode = () => {
                     format="webp" 
                 />
                                 <div v-else class="card-img" style="display:flex;align-items:center;justify-content:center;color:#333;font-size:3rem;background:#000;">🦎</div>
-                                <div v-if="i.Status === 'ForSale'" class="trust-badge">🛡️ 100% HEALTH</div>
                             </div>
                             <div class="card-body" style="padding:12px; text-align:center;">
                                 <h3 class="slim-title" style="margin:0; font-size:1.05rem; white-space:normal; line-height:1.2;">{{ i.Morph }}</h3>
@@ -363,13 +362,13 @@ const setBeginnerMode = () => {
     .home-scenario-grid { 
         grid-template-columns: repeat(4, 1fr); 
         gap: 8px; 
-        margin-bottom: 5px; 
-        padding: 0 10px; 
+        margin-bottom: 2px; 
+        padding: 0 5px; 
     }
     
     .scenario-card { 
-        padding: 6px 0px; 
-        border-radius: 20px; 
+        padding: 5px 0px; 
+        border-radius: 10px; 
     }
     
     .scenario-icon { 
