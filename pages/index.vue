@@ -119,20 +119,29 @@ const setBeginnerMode = () => {
 
             <div v-else-if="hotList.length > 0" class="hot-marquee-mask">
                 <div class="hot-track">
-                    <div class="hot-card-item" v-for="(i, idx) in [ ...hotList, ...hotList, ...hotList, ...hotList ]" :key="idx">
-                        <NuxtLink :to="`/product/${i.ID}`" style="display:block; text-decoration:none; color:inherit; height:100%;">
-                            <div style="position:relative;">
-                                <NuxtImg 
-                                    v-if="i.ImageURL" 
-                                    :src="getCleanUrl(i.ImageURL)" 
-                                    :alt="i.Morph + ' 守宮'" 
-                                    class="card-img" 
-                                    loading="lazy" 
-                                    width="220" 
-                                    height="180" 
-                                    fit="cover" 
-                                    format="webp" 
-                                />
+    <div class="hot-card-item" v-for="(i, idx) in [ ...hotList, ...hotList, ...hotList, ...hotList ]" :key="idx">
+        <NuxtLink :to="`/product/${i.ID}`" style="display:block; text-decoration:none; color:inherit; height:100%;">
+            <div style="position:relative;">
+                <!-- 跑馬燈的前 4 張圖直接原生直連 CDN，後面的懶載入 -->
+                <img 
+                    v-if="i.ImageURL && idx < 4" 
+                    :src="getCleanUrl(i.ImageURL)" 
+                    :alt="i.Morph + ' 守宮'" 
+                    class="card-img" 
+                    loading="eager" 
+                    fetchpriority="high" 
+                />
+                <NuxtImg 
+                    v-else-if="i.ImageURL" 
+                    :src="getCleanUrl(i.ImageURL)" 
+                    :alt="i.Morph + ' 守宮'" 
+                    class="card-img" 
+                    loading="lazy" 
+                    width="220" 
+                    height="180" 
+                    fit="cover" 
+                    format="webp" 
+                />
                                 <div v-else class="card-img" style="display:flex;align-items:center;justify-content:center;color:#333;font-size:3rem;background:#000;">🦎</div>
                                 <div v-if="i.Status === 'ForSale'" class="trust-badge">🛡️ 100% HEALTH</div>
                             </div>

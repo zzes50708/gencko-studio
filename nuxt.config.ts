@@ -149,6 +149,8 @@ export default defineNuxtConfig({
         { name: 'theme-color', content: '#080808' }
       ],
       link:[
+        { rel: 'preconnect', href: 'https://cdn.jsdelivr.net' },
+        { rel: 'dns-prefetch', href: 'https://cdn.jsdelivr.net' },
         { rel: 'icon', href: 'https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/%E6%9C%AA%E5%91%BD%E5%90%8D%E8%A8%AD%E8%A8%88.png' },
         { rel: 'apple-touch-icon', href: 'https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/%E6%9C%AA%E5%91%BD%E5%90%8D%E8%A8%AD%E8%A8%88.png' }, // 🌟 iOS 桌面圖標
         { rel: 'preconnect', href: 'https://fonts.googleapis.com' },

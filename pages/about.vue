@@ -18,14 +18,8 @@ useHead({
     ]
 })
 
-const convertLink = (url) => {
-    if (!url) return ''
-    const driveRegex = /file\/d\/([a-zA-Z0-9_-]+)\//
-    const match = url.match(driveRegex)
-    let target = url
-    if (match && match[1]) target = 'https://drive.google.com/uc?id=' + match[1]
-    return `https://wsrv.nl/?url=${encodeURIComponent(target)}&w=1000&output=webp&q=80`
-}
+import { getCleanUrl } from '~/utils/image.js'
+// 直接刪除 convertLink 函數，我們統一用 util 裡的 getCleanUrl
 
 const openLineGroup = () => {
     window.open('https://line.me/ti/g2/x4QpkWPJTXYr87U_jHyxSrBLTeVYMdwwlPF9qg?utm_source=invitation&utm_medium=link_copy&utm_campaign=default')
@@ -36,7 +30,20 @@ const openLineGroup = () => {
     <div>
         <div class="page-text-box">
             <div class="about-layout">
-                <img v-if="aboutImg" :src="convertLink(aboutImg)" alt="Gencko 豹紋守宮成體" class="about-img" title="點擊加入社群" @click="openLineGroup" style="cursor:pointer;">
+                <!-- 使用 NuxtImg 接管壓縮，並強制首屏載入 -->
+<NuxtImg 
+    v-if="aboutImg" 
+    :src="getCleanUrl(aboutImg)" 
+    alt="Gencko 豹紋守宮成體" 
+    class="about-img" 
+    title="點擊加入社群" 
+    @click="openLineGroup" 
+    style="cursor:pointer;"
+    width="600"
+    format="webp"
+    loading="eager"
+    fetchpriority="high"
+/>
                 <div class="about-content">
                     <p>Gencko 致力於建立嚴謹的爬蟲繁殖標準。</p>
                     <p>我們重視每一個成長環節，從環境、營養到日常照護皆以最高標準執行，確保個體呈現穩定的狀態與良好的體質。</p>
