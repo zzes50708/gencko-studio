@@ -76,8 +76,7 @@ const siteData = computed(() => {
     if (currentProduct.value) {
         const p = currentProduct.value
         const title = `${p.Morph} ${p.GenderType === '公' ? '♂' : p.GenderType === '母' ? '♀' : ''}`
-        const desc = ` ${p.Morph} (${p.GenderType}) 售價 NT$${p.ListingPrice}`
-        const desc = ` Gencko Studio 專業繁育 100% 健康保證`
+        const desc = `${p.Morph} (${p.GenderType}) 售價 NT$${p.ListingPrice}\nGencko Studio 專業繁育，100% 健康保證。`
         const img = getCleanUrl(p.ImageURL)
         const url = `https://www.genckobreeding.com/product/${p.ID}`
         
