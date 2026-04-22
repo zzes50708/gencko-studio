@@ -254,11 +254,118 @@ const buyNow = () => {
         window.open(`https://line.me/R/ti/p/@219abdzn?text=${encodeURIComponent(`Hi, 我要直購競標個體！\n編號：${currentAuction.value.id}`)}`, '_blank')
     }
 }
+
+// 🌟 方案一：原生系統分享
+const shareLink = async () => {
+    if (navigator.share) {
+        try {
+            await navigator.share({
+                title: siteData.value.title,
+                text: siteData.value.desc,
+                url: window.location.href,
+            })
+        } catch (err) {
+            console.log('分享已取消或失敗', err)
+        }
+    } else {
+        try {
+            await navigator.clipboard.writeText(window.location.href)
+            store.triggerToast()
+        } catch (err) {
+            console.error('複製失敗:', err)
+        }
+    }
+}
+
+// 🌟 方案二：生成正方形 IG 宣傳圖卡 (Canvas 升級版)
+const generatedImage = ref(null)
+const isGenerating = ref(false)
+
+const generatePromo = async () => {
+    if (!currentAuction.value) return
+    isGenerating.value = true
+    
+    try {
+        const canvas = document.createElement('canvas')
+        canvas.width = 1080
+        canvas.height = 1080
+        const ctx = canvas.getContext('2d')
+
+        const img = new Image()
+        img.crossOrigin = "Anonymous"
+        const targetUrl = currentAuction.value.images && currentAuction.value.images.length > 0
+            ? getCleanUrl(currentAuction.value.images[0]) 
+            : 'https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/placeholder.jpg'
+
+        img.src = targetUrl
+
+        await new Promise((resolve, reject) => {
+            img.onload = resolve
+            img.onerror = reject
+        })
+
+        const imgAreaHeight = 820
+
+        // 背景高斯模糊
+        ctx.filter = 'blur(40px)'
+        const bgScale = Math.max(1080 / img.width, imgAreaHeight / img.height)
+        const bgW = img.width * bgScale
+        const bgH = img.height * bgScale
+        ctx.drawImage(img, (1080 - bgW) / 2, (imgAreaHeight - bgH) / 2, bgW, bgH)
+        
+        ctx.filter = 'none'
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.4)'
+        ctx.fillRect(0, 0, 1080, imgAreaHeight)
+
+        // 完整呈現主圖
+        const scale = Math.min(1080 / img.width, imgAreaHeight / img.height)
+        const w = img.width * scale
+        const h = img.height * scale
+        const x = (1080 - w) / 2
+        const y = (imgAreaHeight - h) / 2
+        
+        ctx.shadowColor = 'rgba(0, 0, 0, 0.5)'
+        ctx.shadowBlur = 20
+        ctx.shadowOffsetY = 10
+        ctx.drawImage(img, x, y, w, h)
+        ctx.shadowColor = 'transparent'
+
+        // 底部資訊背景
+        ctx.fillStyle = '#FF4500'
+        ctx.fillRect(0, imgAreaHeight, 1080, 1080 - imgAreaHeight)
+
+        // 繪製文字
+        ctx.fillStyle = '#FFFFFF'
+        ctx.textAlign = 'left'
+        
+        ctx.font = 'bold 75px sans-serif'
+        ctx.fillText(currentAuction.value.morph.substring(0, 16), 50, 930)
+
+        // 不顯示價格，顯示狀態與性別
+        ctx.font = 'bold 45px sans-serif'
+        const statusTxt = getAuctionStatus(currentAuction.value).status === 'active' ? '🔥 競標中' : '🚫 已結標'
+        const genderTxt = currentAuction.value.gender && currentAuction.value.gender !== '未定' ? `(${currentAuction.value.gender})` : ''
+        ctx.fillText(`${statusTxt}   ${genderTxt}`, 50, 1010)
+
+        // 品牌 Logo 文字
+        ctx.textAlign = 'right'
+        ctx.font = '900 65px Arial, sans-serif'
+        ctx.fillText('GENCKO', 1030, 930)
+        ctx.font = 'bold 35px Arial, sans-serif'
+        ctx.fillText('STUDIO', 1030, 1000)
+
+        generatedImage.value = canvas.toDataURL('image/jpeg', 0.9)
+    } catch (err) {
+        console.error('圖卡生成失敗', err)
+        alert('圖片生成失敗，可能是因為網路跨域限制。')
+    } finally {
+        isGenerating.value = false
+    }
+}
 </script>
 
 <template>
     <div class="auction-page-wrapper">
-        <!-- 🌟 引入全域共用的 App-like 返回按鈕 -->
         <TheBackButton fallback="/auction" text="返回列表" />
 
         <div v-if="pending" class="loading-state" style="text-align:center; padding:100px 0; color:var(--txt); opacity:0.6;">
@@ -280,7 +387,6 @@ const buyNow = () => {
                     />
                     <div class="zoom-hint">🔍 點擊放大圖片</div>
                 </div>
-                <!-- 歷史出價在桌機放左邊，手機會被排到最下面 -->
                 <div class="bid-history">
                     <div class="history-header">
                         <h3>出價紀錄 ({{ currentBids.length }})</h3>
@@ -318,7 +424,6 @@ const buyNow = () => {
 
             <div class="right-col">
                 <div class="header-info">
-                    <!-- 🌟 狀態標籤也依賴時間，包覆 ClientOnly -->
                     <ClientOnly>
                         <div class="status-badge" :class="getAuctionStatus(currentAuction).class">
                             {{ getAuctionStatus(currentAuction).text }}
@@ -328,6 +433,14 @@ const buyNow = () => {
                         </template>
                     </ClientOnly>
                     <h2>{{ currentAuction.morph }} <span class="m-gender" v-if="currentAuction.gender && currentAuction.gender !== '未定'">({{ currentAuction.gender }})</span></h2>
+                </div>
+
+                <!-- 🌟 行銷操作按鈕 (分享與產生圖卡) -->
+                <div class="action-sub-buttons" style="margin-bottom: 1.5rem;">
+                    <button class="btn-share" @click="shareLink">分享連結</button>
+                    <button class="btn-promo" @click="generatePromo" :disabled="isGenerating">
+                        {{ isGenerating ? '⏳ 生成中...' : '產生圖卡' }}
+                    </button>
                 </div>
 
                 <div class="price-dashboard">
@@ -341,7 +454,6 @@ const buyNow = () => {
                     </div>
                 </div>
 
-                <!-- 🌟 倒數計時包覆 ClientOnly 解決 Hydration 報錯 -->
                 <ClientOnly>
                     <div class="timer-box" :class="{ 'ending-soon': isEndingSoon(currentAuction) }">
                         <div class="timer-title">剩餘時間</div>
@@ -419,6 +531,16 @@ const buyNow = () => {
             <h2>找不到此競標商品</h2>
             <TheBackButton fallback="/auction" text="返回列表" style="margin-top: 20px; justify-content: center;" />
         </div>
+
+        <!-- 🌟 宣傳圖卡彈窗 Modal -->
+        <div v-if="generatedImage" class="promo-modal-overlay" @click="generatedImage = null">
+            <div class="promo-modal-content" @click.stop>
+                <button class="btn-close-promo" @click="generatedImage = null">✕</button>
+                <h3 style="color: var(--txt); margin-top: 10px;">📸 宣傳圖卡已生成</h3>
+                <p style="color: var(--txt); opacity: 0.8; font-size: 0.9rem;">請長按圖片儲存（或點擊右鍵另存），<br>即可完美分享至 IG 限時動態！</p>
+                <img :src="generatedImage" alt="Promo Result" class="promo-result-img" />
+            </div>
+        </div>
     </div>
 </template>
 
@@ -426,7 +548,7 @@ const buyNow = () => {
 .auction-page-wrapper { max-width: 1200px; margin: 0 auto; padding: 15px; color: var(--txt); }
 
 /* 🌟 Desktop Layout */
-.detail-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; }
+.detail-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-top: 10px; }
 .left-col .main-img { position: relative; border-radius: 12px; overflow: hidden; cursor: zoom-in; margin-bottom: 2rem; width: 100%; aspect-ratio: 4 / 3; background-color: var(--card-bg); border: 1px solid var(--bd); box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
 .main-img img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .zoom-hint { position: absolute; bottom: 0; left: 0; right: 0; background: rgba(0,0,0,0.5); color: #fff; text-align: center; padding: 0.5rem; font-size: 0.9rem; }
@@ -449,6 +571,12 @@ const buyNow = () => {
 .badge-active { background: var(--pri); box-shadow: 0 0 10px rgba(255, 69, 0, 0.4); }
 .badge-ended { background: #666; }
 
+/* 🌟 行銷操作按鈕 (與商品頁一致) */
+.action-sub-buttons { display: flex; gap: 10px; width: 100%; }
+.btn-share, .btn-promo { flex: 1; background: var(--card-bg); color: var(--txt); border: 1px solid var(--bd); padding: 12px; border-radius: 25px; cursor: pointer; transition: 0.2s; font-weight: bold; font-size: 0.95rem; white-space: nowrap; }
+.btn-share:hover, .btn-promo:hover { border-color: var(--pri); color: var(--pri); }
+.btn-promo:disabled { opacity: 0.5; cursor: not-allowed; }
+
 .price-dashboard { margin-bottom: 1.5rem; background: var(--card-bg); border: 1px solid var(--bd); padding: 15px; border-radius: 12px; }
 .price-row { display: flex; justify-content: space-between; align-items: center; font-size: 1.1rem; }
 .p-lbl { color: var(--txt); opacity: 0.6; }
@@ -460,7 +588,6 @@ const buyNow = () => {
 .timer-value { font-size: 2rem; font-weight: bold; letter-spacing: 2px; font-family: monospace; color: var(--txt); }
 .timer-note { font-size: 0.8rem; color: var(--txt); opacity: 0.6; margin-top: 0.5rem; }
 
-/* 倒數快結束時維持紅底白字 (此為警告狀態不吃日夜變數) */
 .timer-box.ending-soon { color: #fff; background: #e74c3c; border-color: #c0392b; animation: pulse 1.5s infinite; }
 .timer-box.ending-soon .timer-title, 
 .timer-box.ending-soon .timer-value, 
@@ -505,19 +632,47 @@ const buyNow = () => {
 .specs-list li { background: var(--card-bg); padding: 12px; border-radius: 8px; font-size: 0.95rem; border: 1px solid var(--bd); color: var(--txt); }
 .note-box { margin-top: 15px; padding: 12px 15px; background: var(--card-bg); border-radius: 8px; font-size: 0.95rem; line-height: 1.5; border: 1px solid var(--bd); border-left: 4px solid var(--pri); color: var(--txt); }
 
-/* 🌟 Mobile UI (The 2-Column Grid Layout) */
+/* 🌟 圖卡彈窗 Modal 樣式 */
+.promo-modal-overlay {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100vh;
+    background: rgba(0,0,0,0.8); backdrop-filter: blur(8px);
+    z-index: 999999; display: flex; justify-content: center; align-items: center;
+    padding: 20px;
+}
+.promo-modal-content {
+    background: var(--card-bg); border: 1px solid var(--pri);
+    border-radius: 16px; padding: 20px; width: 100%; max-width: 400px;
+    text-align: center; position: relative;
+    box-shadow: 0 10px 40px rgba(255, 69, 0, 0.2);
+    animation: zoomIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+.btn-close-promo {
+    position: absolute; top: 10px; right: 10px;
+    background: transparent; border: none; color: var(--txt);
+    font-size: 1.4rem; cursor: pointer; opacity: 0.6;
+}
+.promo-result-img {
+    width: 100%; height: auto; border-radius: 8px; margin-top: 15px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.3); border: 1px solid var(--bd);
+}
+
+@keyframes zoomIn {
+    from { opacity: 0; transform: scale(0.9); }
+    to { opacity: 1; transform: scale(1); }
+}
+
 @media (max-width: 768px) {
     .auction-page-wrapper { padding: 0 10px 15px 10px; }
     
     .detail-layout {
         display: grid;
-        /* 圖片固定寬度 110px，其餘空間給文字與價格 */
         grid-template-columns: 110px 1fr;
         gap: 10px;
         align-items: start;
+        margin-top: 5px;
     }
     
-    .left-col, .right-col { display: contents; } /* 解除 DOM 限制，讓子元素直接參與 Grid */
+    .left-col, .right-col { display: contents; }
 
     .main-img {
         grid-column: 1 / 2;
@@ -543,26 +698,34 @@ const buyNow = () => {
     .right-col h2 { font-size: 1.1rem; line-height: 1.2; }
     .m-gender { font-size: 0.85rem; }
 
-    .price-dashboard {
+    .action-sub-buttons { 
         grid-column: 2 / 3;
         grid-row: 2 / 3;
-        margin-bottom: 0;
-        padding: 0;
-        background: transparent;
-        border: none;
+        margin-bottom: 0 !important;
+        gap: 6px; 
     }
-    .price-row { font-size: 0.9rem; flex-direction: column; align-items: flex-start; gap: 2px; }
-    .p-lbl { font-size: 0.75rem; }
-    .price-row .highest-price { font-size: 1.35rem; line-height: 1; }
-    .price-row.sub { display: none; /* 手機版隱藏次要價格以節省高度 */ }
+    .btn-share, .btn-promo { padding: 8px 5px; font-size: 0.8rem; }
 
-    /* 滿版區塊 */
-    .timer-box { grid-column: 1 / -1; grid-row: 3 / 4; margin: 10px 0; padding: 10px; border-radius: 8px; }
+    .price-dashboard {
+        grid-column: 1 / -1;
+        grid-row: 3 / 4;
+        margin-bottom: 0;
+        margin-top: 5px;
+        padding: 10px;
+        background: var(--card-bg);
+        border: 1px solid var(--bd);
+    }
+    .price-row { font-size: 0.9rem; flex-direction: row; align-items: center; justify-content: space-between; }
+    .p-lbl { font-size: 0.85rem; }
+    .price-row .highest-price { font-size: 1.35rem; line-height: 1; }
+    .price-row.sub { display: none; }
+
+    .timer-box { grid-column: 1 / -1; grid-row: 4 / 5; margin: 10px 0; padding: 10px; border-radius: 8px; }
     .timer-title { font-size: 0.8rem; margin-bottom: 2px; }
     .timer-value { font-size: 1.5rem; }
     .timer-note { font-size: 0.7rem; }
 
-    .action-box { grid-column: 1 / -1; grid-row: 4 / 5; padding: 12px; border-radius: 10px; margin-bottom: 10px; }
+    .action-box { grid-column: 1 / -1; grid-row: 5 / 6; padding: 12px; border-radius: 10px; margin-bottom: 10px; }
     .user-info-box { padding: 8px; font-size: 0.85rem; margin-bottom: 10px; }
     .nick-input-wrap { margin-bottom: 10px; }
     .nick-input { padding: 8px 12px; font-size: 0.9rem; }
@@ -575,12 +738,12 @@ const buyNow = () => {
     .btn-buy-now { padding: 12px; font-size: 0.85rem; flex: 1; }
     .bid-hint { font-size: 0.75rem; margin-top: 6px; }
 
-    .info-section { grid-column: 1 / -1; grid-row: 5 / 6; margin-bottom: 10px; }
+    .info-section { grid-column: 1 / -1; grid-row: 6 / 7; margin-bottom: 10px; }
     .specs-list { grid-template-columns: 1fr 1fr; gap: 6px; }
     .specs-list li { padding: 8px; font-size: 0.85rem; border-radius: 6px; }
     .note-box { padding: 10px; font-size: 0.85rem; margin-top: 10px; }
 
-    .bid-history { grid-column: 1 / -1; grid-row: 6 / 7; padding: 12px; border-radius: 10px; }
+    .bid-history { grid-column: 1 / -1; grid-row: 7 / 8; padding: 12px; border-radius: 10px; }
     .history-header h3 { font-size: 1rem; }
     .btn-toggle { font-size: 0.75rem; padding: 3px 8px; }
     .history-list li { padding: 8px 0; font-size: 0.85rem; }
