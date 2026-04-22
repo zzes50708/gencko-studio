@@ -1,10 +1,10 @@
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useHead, useSupabaseClient } from '#imports'
 import { useMainStore } from '~/stores/useMainStore'
 import { HOSPITAL_DATA } from '~/utils/hospitals.js'
-import { getCleanUrl } from '~/utils/image.js' // 🌟 引入新的圖片處理函數
+import { getCleanUrl } from '~/utils/image.js'
 
 const store = useMainStore()
 const router = useRouter()
@@ -20,51 +20,22 @@ useHead({
 })
 
 // 狀態管理
-const currentUser = ref(null)
 const activeTab = ref('wishlist')
 const myBids = ref([])
 const isLoadingBids = ref(false)
 
-// 檢查登入狀態 (Google + LINE)
-const checkAuth = async () => {
-    if (!import.meta.client) return
-
-    // 檢查 Supabase (Google)
-    const { data } = await supabase.auth.getSession()
-    if (data.session?.user) {
-        currentUser.value = { 
-            type: 'google', 
-            email: data.session.user.email, 
-            name: data.session.user.email.split('@')[0] 
-        }
-        fetchMyBids(currentUser.value.email)
-        return
+// 監聽 Store 中的 currentUser 變化，以載入或清除競標紀錄
+watch(() => store.currentUser, (user) => {
+    if (user && user.email) {
+        fetchMyBids(user.email)
+    } else {
+        myBids.value =[]
     }
-    
-    // 檢查 LINE LIFF
-    if (window.liff && window.liff.isLoggedIn()) {
-        const profile = await window.liff.getProfile()
-        const idToken = window.liff.getDecodedIDToken()
-        const emailOrId = (idToken && idToken.email) ? idToken.email : profile.userId
-        currentUser.value = { 
-            type: 'line', 
-            name: profile.displayName, 
-            email: emailOrId,
-            picture: profile.pictureUrl
-        }
-        fetchMyBids(currentUser.value.email)
-    }
-}
-
-onMounted(() => {
-    // 延遲一點執行確保 LIFF 已載入完畢
-    setTimeout(() => {
-        checkAuth()
-    }, 500)
-})
+}, { immediate: true })
 
 // 抓取使用者的競標紀錄
 const fetchMyBids = async (emailOrId) => {
+    if (!emailOrId) return
     isLoadingBids.value = true
     try {
         const { data, error } = await supabase
@@ -103,6 +74,8 @@ const fetchMyBids = async (emailOrId) => {
     }
 }
 
+// --- LocalStorage 快取資料計算 ---
+
 // 從 store 取得使用者的收藏清單
 const wishlistItems = computed(() => {
     return store.inv.filter(item => store.wishlist.includes(item.ID))
@@ -113,26 +86,12 @@ const hospWishlistItems = computed(() => {
     return HOSPITAL_DATA.filter(h => store.hospWishlist.includes(h.id))
 })
 
-// 登入與登出邏輯
-const loginWithLine = () => {
-    if (window.liff && !window.liff.isLoggedIn()) {
-        localStorage.setItem('gencko_line_redirect', window.location.href)
-        window.liff.login({ redirectUri: window.location.href })
-    }
-}
+// 從 store 取得最近瀏覽紀錄 (反轉陣列確保最新在最前)
+const historyItems = computed(() => {
+    return store.history.map(id => store.inv.find(item => item.ID === id)).filter(Boolean).reverse()
+})
 
-const loginWithGoogle = async () => {
-    await supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: window.location.href } })
-}
-
-const logout = async () => {
-    if (currentUser.value?.type === 'line' && window.liff) window.liff.logout()
-    else await supabase.auth.signOut()
-    currentUser.value = null
-    myBids.value =[]
-}
-
-// 收藏操作
+// --- 收藏操作邏輯 ---
 const toggleWishlist = (id) => {
     if (store.wishlist.includes(id)) {
         store.wishlist = store.wishlist.filter(x => x !== id)
@@ -165,56 +124,62 @@ const getMapLink = (h) => {
 
 <template>
     <div class="profile-page-wrapper">
-        <!-- 🌟 手機版隱藏大標題 -->
+        <!-- 標題 -->
         <h1 class="page-title dt-only">我的專區 <span>Personal Dashboard</span></h1>
         
-        <!-- 未登入畫面 -->
-        <div v-if="!currentUser" class="login-prompt-box">
-            <div class="empty-icon">🔐</div>
-            <h3 style="margin-bottom: 10px; color: var(--txt);">登入解鎖專屬功能</h3>
-            <p style="color: #888; font-size: 0.9rem; margin-bottom: 25px;">請先登入以查看您的收藏清單與競標紀錄。</p>
+        <!-- 🌟 App-like 使用者資訊卡片 (包含訪客狀態) -->
+        <div class="user-card" :class="{'guest-card': !store.currentUser}">
+            <div class="user-info">
+                <template v-if="store.currentUser">
+                    <img v-if="store.currentUser.picture" :src="store.currentUser.picture" alt="Avatar" class="user-avatar">
+                    <div v-else class="user-avatar-placeholder">{{ store.currentUser.name.charAt(0).toUpperCase() }}</div>
+                    <div class="user-text">
+                        <h2 class="user-name">{{ store.currentUser.name }}</h2>
+                        <span class="user-type">{{ store.currentUser.type === 'line' ? 'LINE 登入' : 'Google 登入' }}</span>
+                    </div>
+                </template>
+                <template v-else>
+                    <div class="user-avatar-placeholder" style="background:var(--bd); color:var(--txt);">👤</div>
+                    <div class="user-text">
+                        <h2 class="user-name">訪客</h2>
+                        <span class="user-type">登入解鎖競標與雲端同步</span>
+                    </div>
+                </template>
+            </div>
             
-            <div class="login-buttons">
-                <button @click="loginWithLine" class="btn-login line">
-                    <img src="https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/line.png" alt="LINE" style="width: 24px; height: 24px; object-fit: contain;">
-                    使用 LINE 帳號登入
-                </button>
-                <button @click="loginWithGoogle" class="btn-login google">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
-                    使用 Google 帳號登入
-                </button>
+            <div class="header-actions">
+                <button v-if="store.currentUser" @click="store.logout" class="btn-logout">登出</button>
+                <div v-else class="quick-login-row">
+                    <button @click="store.loginWithLine" class="btn-quick line" title="LINE 登入">
+                        <img src="https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/line.png" alt="LINE">
+                    </button>
+                    <button @click="store.loginWithGoogle" class="btn-quick google" title="Google 登入">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
+                    </button>
+                </div>
             </div>
         </div>
 
-        <!-- 已登入畫面 -->
-        <div v-else>
-            <!-- 🌟 App-like 使用者資訊卡片 -->
-            <div class="user-card">
-                <div class="user-info">
-                    <img v-if="currentUser.picture" :src="currentUser.picture" alt="Avatar" class="user-avatar">
-                    <div v-else class="user-avatar-placeholder">{{ currentUser.name.charAt(0).toUpperCase() }}</div>
-                    <div class="user-text">
-                        <h2 class="user-name">{{ currentUser.name }}</h2>
-                        <span class="user-type">{{ currentUser.type === 'line' ? 'LINE 登入' : 'Google 登入' }}</span>
-                    </div>
-                </div>
-                <button @click="logout" class="btn-logout">登出</button>
+        <!-- 🌟 App-like 分段切換器 (新增歷史紀錄) -->
+        <div class="segmented-tabs">
+            <div class="seg-tab" :class="{active: activeTab === 'wishlist'}" @click="activeTab = 'wishlist'">
+                收藏 <span>{{ wishlistItems.length }}</span>
             </div>
-
-            <!-- 🌟 App-like 分段切換器 (Segmented Control) -->
-            <div class="segmented-tabs">
-                <div class="seg-tab" :class="{active: activeTab === 'wishlist'}" @click="activeTab = 'wishlist'">
-                    商品收藏 <span>{{ wishlistItems.length }}</span>
-                </div>
-                <div class="seg-tab" :class="{active: activeTab === 'hospitals'}" @click="activeTab = 'hospitals'">
-                    醫院名單 <span>{{ hospWishlistItems.length }}</span>
-                </div>
-                <div class="seg-tab" :class="{active: activeTab === 'bids'}" @click="activeTab = 'bids'">
-                    競標紀錄 <span>{{ myBids.length }}</span>
-                </div>
+            <div class="seg-tab" :class="{active: activeTab === 'history'}" @click="activeTab = 'history'">
+                瀏覽 <span>{{ historyItems.length }}</span>
             </div>
+            <div class="seg-tab" :class="{active: activeTab === 'hospitals'}" @click="activeTab = 'hospitals'">
+                醫院 <span>{{ hospWishlistItems.length }}</span>
+            </div>
+            <div class="seg-tab" :class="{active: activeTab === 'bids'}" @click="activeTab = 'bids'">
+                競標 <span v-if="store.currentUser">{{ myBids.length }}</span><span v-else>🔒</span>
+            </div>
+        </div>
 
-            <!-- Tab 1: 收藏清單 -->
+        <!-- 🌟 內容顯示區 -->
+        <div class="tab-content-area">
+            
+            <!-- Tab 1: 商品收藏 (本機) -->
             <div v-show="activeTab === 'wishlist'">
                 <div v-if="wishlistItems.length === 0" class="empty-state">
                     <div class="empty-icon">❤</div>
@@ -229,17 +194,12 @@ const getMapLink = (h) => {
                             <span class="fav-btn active" @click.stop.prevent="toggleWishlist(i.ID)">❤</span>
                         </div>
                         <div style="position:relative;">
-                            <!-- 🌟 使用 NuxtImg 進行圖片最佳化 -->
                             <NuxtImg 
                                 v-if="i.ImageURL" 
                                 :src="getCleanUrl(i.ImageURL)" 
                                 :alt="i.Morph" 
                                 class="card-img slim-img" 
-                                loading="lazy"
-                                width="220"
-                                height="220"
-                                fit="cover"
-                                format="webp"
+                                loading="lazy" width="220" height="220" fit="cover" format="webp"
                             />
                             <div v-else class="card-img slim-img" style="display:flex;align-items:center;justify-content:center;font-size:2rem;background:#000;">🦎</div>
                         </div>
@@ -258,7 +218,46 @@ const getMapLink = (h) => {
                 </div>
             </div>
 
-            <!-- Tab 2: 收藏醫院 -->
+            <!-- Tab 2: 瀏覽紀錄 (本機 - 新增功能) -->
+            <div v-show="activeTab === 'history'">
+                <div v-if="historyItems.length === 0" class="empty-state">
+                    <div class="empty-icon">👀</div>
+                    <p>您還沒有看過任何守宮喔！</p>
+                    <button class="btn-hero" @click="router.push('/shop')" style="margin-top: 15px;">前往商城探索</button>
+                </div>
+                
+                <div v-else class="grid photo-grid">
+                    <NuxtLink :to="`/product/${i.ID}`" class="card slim-card" v-for="i in historyItems" :key="`hist-${i.ID}`" style="text-decoration:none; color:inherit;">
+                        <div v-if="i.Status === 'Sold'" class="sold-stamp">SOLD</div>
+                        <div style="position:absolute;top:5px;right:5px;z-index:10;">
+                            <span class="fav-btn" :class="{active: store.wishlist.includes(i.ID)}" @click.stop.prevent="toggleWishlist(i.ID)">❤</span>
+                        </div>
+                        <div style="position:relative;">
+                            <NuxtImg 
+                                v-if="i.ImageURL" 
+                                :src="getCleanUrl(i.ImageURL)" 
+                                :alt="i.Morph" 
+                                class="card-img slim-img" 
+                                loading="lazy" width="220" height="220" fit="cover" format="webp"
+                            />
+                            <div v-else class="card-img slim-img" style="display:flex;align-items:center;justify-content:center;font-size:2rem;background:#000;">🦎</div>
+                        </div>
+                        <div class="card-body slim-body">
+                            <h3 class="slim-title" style="margin:0;">{{ i.Morph }}</h3>
+                            <div class="slim-price-row" style="margin-top:4px;">
+                                <div v-if="i.Status !== 'ForSale'">
+                                    <span v-if="i.Status === 'Sold'" class="status-badge s-sold">已售出</span>
+                                    <span v-else-if="i.Status === 'Reserved'" class="status-badge s-res">預訂</span>
+                                    <span v-else-if="i.Status === 'NotForSale'" class="status-badge s-nfs">非賣</span>
+                                </div>
+                                <div v-else class="price slim-price">${{ i.ListingPrice }}</div>
+                            </div>
+                        </div>
+                    </NuxtLink>
+                </div>
+            </div>
+
+            <!-- Tab 3: 收藏醫院 (本機) -->
             <div v-show="activeTab === 'hospitals'">
                 <div v-if="hospWishlistItems.length === 0" class="empty-state">
                     <div class="empty-icon">🏥</div>
@@ -295,9 +294,27 @@ const getMapLink = (h) => {
                 </div>
             </div>
 
-            <!-- Tab 3: 競標紀錄 -->
+            <!-- Tab 4: 競標紀錄 (雲端 - 需登入) -->
             <div v-show="activeTab === 'bids'">
-                <div v-if="isLoadingBids" style="text-align: center; padding: 40px; color: #888;">
+                <!-- 🌟 將登入區塊移至此，保護雲端資料 -->
+                <div v-if="!store.currentUser" class="login-prompt-box">
+                    <div class="empty-icon">🔐</div>
+                    <h3 style="margin-bottom: 10px; color: var(--txt);">登入解鎖競標紀錄</h3>
+                    <p style="color: #888; font-size: 0.9rem; margin-bottom: 25px;">查看參與過的拍賣與出價進度。</p>
+                    
+                    <div class="login-buttons">
+                        <button @click="store.loginWithLine" class="btn-login line">
+                            <img src="https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/line.png" alt="LINE" style="width: 24px; height: 24px; object-fit: contain;">
+                            使用 LINE 帳號登入
+                        </button>
+                        <button @click="store.loginWithGoogle" class="btn-login google">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
+                            使用 Google 帳號登入
+                        </button>
+                    </div>
+                </div>
+
+                <div v-else-if="isLoadingBids" style="text-align: center; padding: 40px; color: #888;">
                     <div class="loader" style="margin: 0 auto 15px auto;"></div>
                     讀取中...
                 </div>
@@ -310,15 +327,10 @@ const getMapLink = (h) => {
                 
                 <div v-else class="bid-list">
                     <NuxtLink :to="`/auction/${bid.auction_id}`" class="bid-card" v-for="bid in myBids" :key="bid.auction_id">
-                        <!-- 🌟 使用 NuxtImg 進行圖片最佳化 -->
                         <NuxtImg 
                             :src="bid.image ? getCleanUrl(bid.image) : 'https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/placeholder.jpg'" 
                             class="bid-img"
-                            loading="lazy"
-                            width="120"
-                            height="120"
-                            fit="cover"
-                            format="webp"
+                            loading="lazy" width="120" height="120" fit="cover" format="webp"
                         />
                         <div class="bid-info">
                             <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
@@ -341,34 +353,14 @@ const getMapLink = (h) => {
 </template>
 
 <style scoped>
-/*
-  [局部樣式修復] 
-  已清除與 assets/css/style.css 重複的宣告 (如 .grid, .card, .status-badge, .fav-btn 等)。
-  全面導入 CSS 變數，徹底移除所有不必要的 :global(body.day-mode) 覆寫。
+/*[局部樣式修復] 
+  已清除所有重複的宣告與不必要的 :global(body.day-mode) 覆寫。
 */
-.profile-page-wrapper { max-width: 900px; margin: 0 auto; padding: 20px 15px; }
+.profile-page-wrapper { max-width: 900px; margin: 0 auto; padding: 20px 15px; min-height: 70vh; }
 .dt-only { display: block; }
 .page-title span { font-size: 1rem; color: var(--txt); opacity: 0.5; font-weight: normal; margin-left: 10px; }
 
-/* 登入區塊 */
-.login-prompt-box { 
-    background: var(--card-bg); 
-    border: 1px solid var(--bd); 
-    border-radius: 12px; 
-    padding: 40px 20px; 
-    text-align: center; 
-    max-width: 500px; 
-    margin: 40px auto; 
-    box-shadow: 0 10px 30px rgba(0,0,0,0.1); 
-}
-.login-buttons { display: flex; flex-direction: column; gap: 15px; }
-.btn-login { padding: 12px; border-radius: 8px; font-size: 1rem; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px; border: none; transition: 0.2s; }
-.btn-login.line { background: #06C755; color: #fff; }
-.btn-login.line:hover { background: #05b04a; transform: translateY(-2px); }
-.btn-login.google { background: var(--card-bg); color: var(--txt); border: 1px solid var(--bd); }
-.btn-login.google:hover { background: rgba(128,128,128,0.05); transform: translateY(-2px); box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
-
-/* 🌟 App-like 使用者卡片 */
+/* App-like 使用者卡片 */
 .user-card { 
     display: flex; 
     justify-content: space-between; 
@@ -380,11 +372,18 @@ const getMapLink = (h) => {
     margin-bottom: 25px; 
     box-shadow: 0 4px 15px rgba(255, 69, 0, 0.05); 
 }
+.user-card.guest-card {
+    border-color: var(--bd);
+    box-shadow: none;
+}
+
 .user-info { display: flex; align-items: center; gap: 15px; }
 .user-avatar { width: 50px; height: 50px; border-radius: 50%; object-fit: cover; border: 2px solid var(--pri); }
 .user-avatar-placeholder { width: 50px; height: 50px; border-radius: 50%; background: var(--pri); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; font-weight: bold; }
 .user-name { margin: 0; font-size: 1.2rem; color: var(--txt); }
 .user-type { font-size: 0.8rem; color: var(--txt); opacity: 0.6; }
+
+.header-actions { display: flex; align-items: center; }
 .btn-logout { 
     background: transparent; 
     border: 1px solid var(--bd); 
@@ -399,7 +398,24 @@ const getMapLink = (h) => {
 }
 .btn-logout:hover { border-color: #f44336; color: #f44336; background: rgba(244,67,54,0.1); opacity: 1; }
 
-/* 🌟 App-like 頁籤 (Segmented Control) */
+.quick-login-row {
+    display: flex;
+    gap: 8px;
+}
+.btn-quick {
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    border: none;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    transition: 0.2s;
+}
+.btn-quick.line { background: #06C755; }
+.btn-quick.line img { width: 18px; height: 18px; object-fit: contain; }
+.btn-quick.google { background: var(--card-bg); border: 1px solid var(--bd); }
+.btn-quick:hover { transform: translateY(-2px); box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+
+/* App-like 頁籤 (Segmented Control) */
 .segmented-tabs { 
     display: flex; 
     background: rgba(128, 128, 128, 0.05); 
@@ -407,7 +423,11 @@ const getMapLink = (h) => {
     border-radius: 30px; 
     padding: 4px; 
     margin-bottom: 20px; 
+    overflow-x: auto;
+    scrollbar-width: none;
 }
+.segmented-tabs::-webkit-scrollbar { display: none; }
+
 .seg-tab { 
     flex: 1; 
     text-align: center; 
@@ -423,6 +443,8 @@ const getMapLink = (h) => {
     align-items: center; 
     justify-content: center; 
     gap: 6px; 
+    white-space: nowrap;
+    min-width: 80px;
 }
 .seg-tab span { background: rgba(128,128,128,0.2); padding: 2px 6px; border-radius: 10px; font-size: 0.75rem; color: var(--txt); }
 .seg-tab.active { background: var(--pri); color: #fff; opacity: 1; box-shadow: 0 4px 10px rgba(255, 69, 0, 0.2); }
@@ -439,6 +461,24 @@ const getMapLink = (h) => {
     opacity: 0.8;
 }
 .empty-icon { font-size: 3rem; margin-bottom: 10px; opacity: 0.5; }
+
+/* 登入區塊 (移入內容區) */
+.login-prompt-box { 
+    background: var(--card-bg); 
+    border: 1px dashed var(--bd); 
+    border-radius: 12px; 
+    padding: 40px 20px; 
+    text-align: center; 
+    max-width: 500px; 
+    margin: 20px auto; 
+}
+.login-buttons { display: flex; flex-direction: column; gap: 15px; }
+.btn-login { padding: 12px; border-radius: 8px; font-size: 1rem; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px; border: none; transition: 0.2s; }
+.btn-login.line { background: #06C755; color: #fff; }
+.btn-login.line:hover { background: #05b04a; transform: translateY(-2px); }
+.btn-login.google { background: var(--card-bg); color: var(--txt); border: 1px solid var(--bd); }
+.btn-login.google:hover { background: rgba(128,128,128,0.05); transform: translateY(-2px); box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
+
 
 /* 競標列表 */
 .bid-list { display: flex; flex-direction: column; gap: 15px; }
@@ -512,12 +552,12 @@ const getMapLink = (h) => {
 }
 .hosp-call-btn:hover { background: var(--pri); color: #fff; }
 
-/* 🌟 Mobile Optimizations */
+/* Mobile Optimizations */
 @media (max-width: 768px) {
     .dt-only { display: none !important; }
     
     .profile-page-wrapper {
-        padding-top: 5px; /* 移除頂部多餘空間 */
+        padding-top: 5px; 
     }
     
     .user-card { padding: 12px 15px; margin-bottom: 15px; }
@@ -526,7 +566,7 @@ const getMapLink = (h) => {
     .btn-logout { padding: 6px 10px; font-size: 0.8rem; }
     
     .segmented-tabs { margin-bottom: 15px; }
-    .seg-tab { font-size: 0.85rem; padding: 8px 0; flex-direction: column; gap: 2px; }
+    .seg-tab { font-size: 0.85rem; padding: 8px 0; flex-direction: column; gap: 2px; min-width: 0; }
     .seg-tab span { padding: 1px 5px; }
 
     .bid-card { flex-direction: column; }

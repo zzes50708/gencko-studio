@@ -1,12 +1,11 @@
 <script setup>
 import { computed } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { useRoute } from 'vue-router'
 import { useHead, useAsyncData, useSupabaseClient } from '#imports'
 import { useMainStore } from '~/stores/useMainStore'
 import { getCleanUrl } from '~/utils/image.js'
 
 const route = useRoute()
-const router = useRouter()
 const store = useMainStore()
 const supabase = useSupabaseClient()
 const merchId = route.params.id
@@ -116,15 +115,6 @@ const copyCurrentLink = async () => {
         console.error('複製失敗:', err)
     }
 }
-
-// 🌟 返回邏輯優化：如果是從商城點進來的就回上一頁，否則預設回 /merch
-const goBack = () => {
-    if (window.history.state && window.history.state.back) {
-        router.back()
-    } else {
-        router.push('/merch')
-    }
-}
 </script>
 
 <template>
@@ -133,25 +123,20 @@ const goBack = () => {
         <div v-if="pending" style="text-align:center; padding:100px 0; color:#888;">
             <div class="loader" style="margin:0 auto 20px auto;"></div>
             <p>正在載入周邊商品...</p>
-            <button class="app-back-btn" @click="goBack" style="margin: 20px auto; justify-content: center;">返回周邊列表</button>
+            <TheBackButton fallback="/merch" text="返回周邊列表" style="justify-content: center; margin-top: 20px;" />
         </div>
 
         <!-- Not Found State -->
         <div v-else-if="!currentMerch" style="text-align:center; padding:100px 0; color:#888;">
             <h2>找不到此周邊商品</h2>
             <p>該商品可能已下架或不存在。</p>
-            <button class="app-back-btn" @click="goBack" style="margin: 20px auto; justify-content: center;">返回周邊列表</button>
+            <TheBackButton fallback="/merch" text="返回周邊列表" style="justify-content: center; margin-top: 20px;" />
         </div>
 
         <!-- Detail View -->
         <div v-else class="prod-container">
-            <!-- 🌟 App-like 膠囊返回按鈕 -->
-            <div class="nav-action-row">
-                <button class="app-back-btn" @click="goBack">
-                    <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
-                    返回列表
-                </button>
-            </div>
+            <!-- 🌟 引入全域共用的 App-like 返回按鈕 -->
+            <TheBackButton fallback="/merch" text="返回列表" />
 
             <div class="prod-layout">
                 <div class="prod-img-box">
@@ -201,38 +186,9 @@ const goBack = () => {
   [局部樣式修復] 
   已清除寫死的深色背景與淺色字體色碼。
   全面導入 CSS 變數，移除所有不必要的 :global(body.day-mode) 覆寫。
-  【行動端優化】已將手機版排版改為「左圖右文」的雙欄網格設計。
+  已刪除重複的 app-back-btn 相關樣式。
 */
 .merch-detail-wrapper { width: 100%; }
-
-/* 🌟 App-like 膠囊狀返回按鈕 */
-.nav-action-row {
-    width: 100%;
-    display: flex;
-    justify-content: flex-start;
-    margin-bottom: 10px;
-}
-
-.app-back-btn {
-    background: var(--card-bg);
-    border: 1px solid var(--bd);
-    color: var(--txt);
-    font-size: 0.95rem;
-    font-weight: bold;
-    cursor: pointer;
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 8px 16px;
-    border-radius: 30px;
-    transition: 0.2s;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.05);
-}
-
-.app-back-btn:active {
-    transform: scale(0.95);
-    background: var(--bd);
-}
 
 /* Container & Layout */
 .prod-container { max-width: 1100px; margin: 0 auto; padding-top: 15px; }
@@ -364,10 +320,7 @@ const goBack = () => {
 @media (max-width: 768px) {
     .merch-detail-wrapper { padding: 0 10px 15px 10px; }
     
-    .nav-action-row { margin-bottom: 8px; }
-    .app-back-btn { padding: 6px px; font-size: 0.9rem; }
-    
-    /* 🌟 改為並排雙欄 Grid，左側固定寬度放照片 */
+    /* 改為並排雙欄 Grid，左側固定寬度放照片 */
     .prod-layout { 
         display: grid; 
         grid-template-columns: 200px 1fr; 
@@ -391,7 +344,7 @@ const goBack = () => {
     
     .prod-info-box { 
         padding: 10px; 
-        border-radius: px; 
+        border-radius: 8px; 
     }
     
     .prod-title { 

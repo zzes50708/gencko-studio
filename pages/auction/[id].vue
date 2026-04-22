@@ -1,17 +1,16 @@
 <script setup>
 import { computed, ref, onMounted, onUnmounted, watch } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { useRoute } from 'vue-router'
 import { useHead, useAsyncData, useSupabaseClient } from '#imports'
 import { useMainStore } from '~/stores/useMainStore'
 import { getCleanUrl } from '~/utils/image.js'
 
 const route = useRoute()
-const router = useRouter()
 const store = useMainStore()
 const supabase = useSupabaseClient()
 const auctionId = route.params.id
 
-// [SEO] 為了在伺服器端渲染 (SSR) 期間就能拿到該商品資料以產生正確的 Meta
+//[SEO] 為了在伺服器端渲染 (SSR) 期間就能拿到該商品資料以產生正確的 Meta
 const { data: currentAuction, pending } = await useAsyncData(`auction-${auctionId}`, async () => {
     if (store.auctionList && store.auctionList.length > 0) {
         const found = store.auctionList.find(a => a.id === auctionId)
@@ -32,47 +31,7 @@ const { data: currentAuction, pending } = await useAsyncData(`auction-${auctionI
 const realBids = ref([ ])
 let bidsSubscription = null
 
-// 存放當前登入使用者狀態 (Google 或 LINE 統一格式)
-const currentUser = ref(null)
 const isPlacingBid = ref(false) 
-
-// 1. 檢查 Google 登入狀態 (Supabase原生)
-if (import.meta.client) {
-    supabase.auth.getSession().then(({ data }) => {
-        if (data.session?.user) {
-            currentUser.value = { type: 'google', email: data.session.user.email }
-        }
-    })
-    supabase.auth.onAuthStateChange((_, session) => {
-        if (session?.user) {
-            currentUser.value = { type: 'google', email: session.user.email }
-        } else if (currentUser.value?.type === 'google') {
-            currentUser.value = null
-        }
-    })
-}
-
-// 2. 檢查並初始化 LINE 登入狀態 (動態引入 LIFF)
-onMounted(() => {
-    if (import.meta.client) {
-        const script = document.createElement('script')
-        script.src = 'https://static.line-scdn.net/liff/edge/2/sdk.js'
-        script.onload = async () => {
-            try {
-                await window.liff.init({ liffId: '2009804483-8KRouTSr' })
-                if (window.liff.isLoggedIn()) {
-                    const profile = await window.liff.getProfile()
-                    const idToken = window.liff.getDecodedIDToken()
-                    const emailOrId = (idToken && idToken.email) ? idToken.email : profile.userId
-                    currentUser.value = { type: 'line', name: profile.displayName, email: emailOrId }
-                }
-            } catch (err) {
-                console.error('LIFF 初始化失敗', err)
-            }
-        }
-        document.head.appendChild(script)
-    }
-})
 
 const currentBids = computed(() => {
     return[ ...realBids.value ].sort((a, b) => b.amount - a.amount)
@@ -218,48 +177,8 @@ useHead({
     ]
 })
 
-// 🌟 App-like 返回邏輯
-const goBack = () => {
-    if (window.history.state && window.history.state.back) {
-        router.back()
-    } else {
-        router.push('/auction')
-    }
-}
-
-const loginWithGoogle = async () => {
-    try {
-        const { error } = await supabase.auth.signInWithOAuth({
-            provider: 'google',
-            options: { redirectTo: window.location.href }
-        })
-        if (error) throw error
-    } catch (err) {
-        alert('登入失敗，請稍後再試！')
-        console.error(err)
-    }
-}
-
-const loginWithLine = () => {
-    if (window.liff && !window.liff.isLoggedIn()) {
-        localStorage.setItem('gencko_line_redirect', window.location.href)
-        window.liff.login({ redirectUri: window.location.href })
-    }
-}
-
-const logout = async () => {
-    if (currentUser.value?.type === 'line' && window.liff) {
-        window.liff.logout()
-    } else {
-        await supabase.auth.signOut()
-    }
-    currentUser.value = null
-    alert('您已成功登出！')
-    window.location.reload() 
-}
-
 const placeBid = async () => {
-    if (!currentUser.value) {
+    if (!store.currentUser) {
         alert('請先點擊按鈕登入後，再進行出價！')
         return
     }
@@ -270,7 +189,7 @@ const placeBid = async () => {
     }
 
     isPlacingBid.value = true 
-    const emailOrId = currentUser.value.email
+    const emailOrId = store.currentUser.email
 
     try {
         const { data: blacklistData, error: blacklistError } = await supabase
@@ -290,8 +209,8 @@ const placeBid = async () => {
         if (customNickname.value && customNickname.value.trim() !== '') {
             finalName = customNickname.value.trim()
         } else {
-            if (currentUser.value.type === 'line') {
-                const name = currentUser.value.name
+            if (store.currentUser.type === 'line') {
+                const name = store.currentUser.name
                 if (name.length <= 1) finalName = name + '***'
                 else if (name.length === 2) finalName = name.charAt(0) + '*'
                 else finalName = name.charAt(0) + 'O' + name.charAt(name.length - 1)
@@ -339,20 +258,14 @@ const buyNow = () => {
 
 <template>
     <div class="auction-page-wrapper">
-        <!-- 🌟 App-like 返回按鈕 -->
-        <div class="nav-action-row">
-            <button class="app-back-btn" @click="goBack">
-                <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
-                返回列表
-            </button>
-        </div>
+        <!-- 🌟 引入全域共用的 App-like 返回按鈕 -->
+        <TheBackButton fallback="/auction" text="返回列表" />
 
         <div v-if="pending" class="loading-state" style="text-align:center; padding:100px 0; color:var(--txt); opacity:0.6;">
             <div class="loader" style="margin:0 auto 20px auto;"></div>
             <p>載入競標資料中...</p>
         </div>
 
-        <!-- 🌟 重構的 HTML 結構：讓 Mobile Grid 能完美拆分左右 -->
         <div v-else-if="currentAuction" class="detail-layout">
             
             <div class="left-col">
@@ -405,9 +318,15 @@ const buyNow = () => {
 
             <div class="right-col">
                 <div class="header-info">
-                    <div class="status-badge" :class="getAuctionStatus(currentAuction).class">
-                        {{ getAuctionStatus(currentAuction).text }}
-                    </div>
+                    <!-- 🌟 狀態標籤也依賴時間，包覆 ClientOnly -->
+                    <ClientOnly>
+                        <div class="status-badge" :class="getAuctionStatus(currentAuction).class">
+                            {{ getAuctionStatus(currentAuction).text }}
+                        </div>
+                        <template #fallback>
+                            <div class="status-badge badge-active">計算中</div>
+                        </template>
+                    </ClientOnly>
                     <h2>{{ currentAuction.morph }} <span class="m-gender" v-if="currentAuction.gender && currentAuction.gender !== '未定'">({{ currentAuction.gender }})</span></h2>
                 </div>
 
@@ -422,52 +341,63 @@ const buyNow = () => {
                     </div>
                 </div>
 
-                <div class="timer-box" :class="{ 'ending-soon': isEndingSoon(currentAuction) }">
-                    <div class="timer-title">剩餘時間</div>
-                    <div class="timer-value">{{ getCountdownText(currentAuction) }}</div>
-                    <div class="timer-note">結標前3分鐘喊標自動延長。</div>
-                </div>
+                <!-- 🌟 倒數計時包覆 ClientOnly 解決 Hydration 報錯 -->
+                <ClientOnly>
+                    <div class="timer-box" :class="{ 'ending-soon': isEndingSoon(currentAuction) }">
+                        <div class="timer-title">剩餘時間</div>
+                        <div class="timer-value">{{ getCountdownText(currentAuction) }}</div>
+                        <div class="timer-note">結標前3分鐘喊標自動延長。</div>
+                    </div>
+                    <template #fallback>
+                        <div class="timer-box">
+                            <div class="timer-title">剩餘時間</div>
+                            <div class="timer-value">⏳ 計算中...</div>
+                        </div>
+                    </template>
+                </ClientOnly>
 
-                <div class="action-box" v-if="getAuctionStatus(currentAuction).status === 'active'">
-                    <template v-if="currentUser">
-                        <div class="user-info-box">
-                            <span v-if="currentUser.type === 'line'" class="u-name">✅ LINE：{{ currentUser.name }}</span>
-                            <span v-else class="u-name">✅ Google：{{ currentUser.email }}</span>
-                            <button @click="logout" class="btn-logout">登出</button>
-                        </div>
-                        <div class="nick-input-wrap">
-                            <input type="text" v-model="customNickname" placeholder="自訂顯示暱稱 (未填則遮蔽本名)" class="nick-input" maxlength="15" />
-                        </div>
-                        <div class="input-group">
-                            <span class="currency">$</span>
-                            <input type="number" v-model="myBidAmount" :min="minNextBid" :step="currentAuction.min_increment" />
-                        </div>
-                        <div class="action-buttons">
-                            <button class="btn-bid" @click="placeBid" :disabled="isPlacingBid">
-                                {{ isPlacingBid ? '處理中...' : '確認出價' }}
-                            </button>
-                            <button class="btn-buy-now" @click="buyNow">直購 (${{ currentAuction.buy_now_price }})</button>
-                        </div>
-                        <div class="bid-hint">您的出價必須 ≥ ${{ minNextBid }}</div>
-                    </template>
-                    
-                    <template v-else>
-                        <div class="login-prompt">
-                            <p>⚠️ 為遏止惡意棄標，請先登入</p>
-                            <button @click="loginWithLine" class="btn-login-line">
-                                <img src="https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/line.png" alt="LINE" />
-                                LINE 登入
-                            </button>
-                            <button @click="loginWithGoogle" class="btn-login-google">
-                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
-                                Google 登入
-                            </button>
-                        </div>
-                    </template>
-                </div>
-                <div class="action-box ended" v-else>
-                    競標已結束，得標者為：<br><span style="color:var(--pri); font-size:1.2rem; display:block; margin-top:5px;">{{ highestBidAmount > 0 && currentBids.length > 0 ? currentBids[0].user_name : '流標' }}</span>
-                </div>
+                <ClientOnly>
+                    <div class="action-box" v-if="getAuctionStatus(currentAuction).status === 'active'">
+                        <template v-if="store.currentUser">
+                            <div class="user-info-box">
+                                <span v-if="store.currentUser.type === 'line'" class="u-name">✅ LINE：{{ store.currentUser.name }}</span>
+                                <span v-else class="u-name">✅ Google：{{ store.currentUser.email }}</span>
+                                <button @click="store.logout" class="btn-logout">登出</button>
+                            </div>
+                            <div class="nick-input-wrap">
+                                <input type="text" v-model="customNickname" placeholder="自訂顯示暱稱 (未填則遮蔽本名)" class="nick-input" maxlength="15" />
+                            </div>
+                            <div class="input-group">
+                                <span class="currency">$</span>
+                                <input type="number" v-model="myBidAmount" :min="minNextBid" :step="currentAuction.min_increment" />
+                            </div>
+                            <div class="action-buttons">
+                                <button class="btn-bid" @click="placeBid" :disabled="isPlacingBid">
+                                    {{ isPlacingBid ? '處理中...' : '確認出價' }}
+                                </button>
+                                <button class="btn-buy-now" @click="buyNow">直購 (${{ currentAuction.buy_now_price }})</button>
+                            </div>
+                            <div class="bid-hint">您的出價必須 ≥ ${{ minNextBid }}</div>
+                        </template>
+                        
+                        <template v-else>
+                            <div class="login-prompt">
+                                <p>⚠️ 為遏止惡意棄標，請先登入</p>
+                                <button @click="store.loginWithLine" class="btn-login-line">
+                                    <img src="https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/line.png" alt="LINE" />
+                                    LINE 登入
+                                </button>
+                                <button @click="store.loginWithGoogle" class="btn-login-google">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
+                                    Google 登入
+                                </button>
+                            </div>
+                        </template>
+                    </div>
+                    <div class="action-box ended" v-else>
+                        競標已結束，得標者為：<br><span style="color:var(--pri); font-size:1.2rem; display:block; margin-top:5px;">{{ highestBidAmount > 0 && currentBids.length > 0 ? currentBids[0].user_name : '流標' }}</span>
+                    </div>
+                </ClientOnly>
 
                 <div class="info-section">
                     <ul class="specs-list">
@@ -487,18 +417,13 @@ const buyNow = () => {
 
         <div v-else class="not-found" style="text-align:center; padding:100px 0; color:var(--txt); opacity:0.6;">
             <h2>找不到此競標商品</h2>
-            <button @click="goBack" class="app-back-btn" style="margin: 20px auto;">回列表</button>
+            <TheBackButton fallback="/auction" text="返回列表" style="margin-top: 20px; justify-content: center;" />
         </div>
     </div>
 </template>
 
 <style scoped>
 .auction-page-wrapper { max-width: 1200px; margin: 0 auto; padding: 15px; color: var(--txt); }
-
-/* 🌟 App-like 膠囊返回按鈕 (全面使用變數) */
-.nav-action-row { width: 100%; display: flex; justify-content: flex-start; margin-bottom: 15px; }
-.app-back-btn { background: var(--card-bg); border: 1px solid var(--bd); color: var(--txt); font-size: 0.95rem; font-weight: bold; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; border-radius: 30px; transition: 0.2s; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
-.app-back-btn:active { transform: scale(0.95); background: var(--bd); }
 
 /* 🌟 Desktop Layout */
 .detail-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; }
@@ -583,8 +508,6 @@ const buyNow = () => {
 /* 🌟 Mobile UI (The 2-Column Grid Layout) */
 @media (max-width: 768px) {
     .auction-page-wrapper { padding: 0 10px 15px 10px; }
-    .nav-action-row { margin-bottom: 8px; }
-    .app-back-btn { padding: 6px 12px; font-size: 0.9rem; }
     
     .detail-layout {
         display: grid;

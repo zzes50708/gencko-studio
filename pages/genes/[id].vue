@@ -1,12 +1,11 @@
 <script setup>
 import { computed } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { useRoute } from 'vue-router'
 import { useHead, useAsyncData, useSupabaseClient } from '#imports'
 import { useMainStore } from '~/stores/useMainStore'
 import { getCleanUrl } from '~/utils/image.js'
 
 const route = useRoute()
-const router = useRouter()
 const store = useMainStore()
 const supabase = useSupabaseClient()
 
@@ -66,7 +65,7 @@ const siteData = computed(() => {
             "@context": "https://schema.org",
             "@type": "Article",
             "headline": `${g.Name} - 守宮基因圖鑑`,
-            "image": [img],
+            "image":[img],
             "author": {
                 "@type": "Organization",
                 "name": "Gencko Studio"
@@ -109,11 +108,6 @@ useHead({
     ],
     script: computed(() => siteData.value.script)
 })
-
-const goBack = () => {
-    store.viewingGene = null
-    router.push('/genes')
-}
 </script>
 
 <template>
@@ -126,17 +120,12 @@ const goBack = () => {
         <div v-else-if="!viewingGene" style="text-align:center; padding:100px 0; color:var(--txt); opacity:0.6;">
             <h2>找不到「{{ geneName }}」的資料</h2>
             <p>可能該基因條目尚未建立或已被移除。</p>
-            <button @click="goBack" class="app-back-btn" style="margin: 20px auto; justify-content: center;">
-                <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none"><polyline points="15 18 9 12 15 6"></polyline></svg> 返回圖鑑列表
-            </button>
+            <TheBackButton fallback="/genes" text="返回圖鑑列表" style="justify-content: center; margin-top: 20px;" />
         </div>
 
         <div v-else class="gene-container">
-            <!-- 🌟 App-like 返回按鈕 -->
-            <button class="app-back-btn" @click="goBack">
-                <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
-                返回圖鑑
-            </button>
+            <!-- 🌟 引入全域共用的 App-like 返回按鈕 -->
+            <TheBackButton fallback="/genes" text="返回圖鑑" style="margin-bottom: 10px;" />
 
             <!-- 🌟 集中閱讀的卡片化設計 -->
             <div class="content-card">
@@ -186,29 +175,6 @@ const goBack = () => {
     margin: 0 auto;
     padding-top: 5px;
     padding-bottom: 20px;
-}
-
-/* 🌟 App-like 返回按鈕 (適配日夜變數) */
-.app-back-btn {
-    background: var(--card-bg);
-    border: 1px solid var(--bd);
-    color: var(--txt);
-    font-size: 1.1rem;
-    font-weight: bold;
-    cursor: pointer;
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 8px 16px;
-    margin-bottom: 10px;
-    border-radius: 30px;
-    transition: 0.2s;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.05);
-}
-
-.app-back-btn:active {
-    transform: scale(0.95);
-    background: var(--bd);
 }
 
 /* 🌟 卡片化內容 (適配日夜變數) */
@@ -299,12 +265,6 @@ p {
 @media (max-width: 768px) {
     .gene-detail-wrapper {
         padding-top: 0;
-    }
-    
-    .app-back-btn {
-        padding: 6px 12px;
-        margin-bottom: 5px;
-        font-size: 0.95rem;
     }
     
     .content-card {

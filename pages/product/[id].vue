@@ -157,15 +157,6 @@ const copyCurrentLink = async () => {
         console.error('複製失敗:', err)
     }
 }
-
-// 🌟 返回邏輯優化：如果是從商城點進來的就回上一頁，否則預設回 /shop
-const goBack = () => {
-    if (window.history.state && window.history.state.back) {
-        router.back()
-    } else {
-        router.push('/shop')
-    }
-}
 </script>
 
 <template>
@@ -173,23 +164,18 @@ const goBack = () => {
         <div v-if="pending" style="text-align:center; padding:100px 0; color:#888;">
             <div class="loader" style="margin:0 auto 20px auto;"></div>
             <p>正在尋找這隻守宮的資料...</p>
-            <button class="app-back-btn" @click="goBack" style="margin: 20px auto; justify-content: center;">返回商城列表</button>
+            <TheBackButton fallback="/shop" text="返回商城列表" style="margin: 20px auto; justify-content: center;" />
         </div>
 
         <div v-else-if="!currentProduct" style="text-align:center; padding:100px 0; color:#888;">
             <h2>找不到此守宮</h2>
             <p>該商品可能已下架或不存在。</p>
-            <button class="app-back-btn" @click="goBack" style="margin: 20px auto; justify-content: center;">返回商城列表</button>
+            <TheBackButton fallback="/shop" text="返回商城列表" style="margin: 20px auto; justify-content: center;" />
         </div>
 
         <div v-else class="prod-container">
-            <!-- 🌟 App-like 膠囊返回按鈕 -->
-            <div class="nav-action-row">
-                <button class="app-back-btn" @click="goBack">
-                    <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
-                    返回列表
-                </button>
-            </div>
+            <!-- 🌟 引入全域共用的 App-like 返回按鈕 -->
+            <TheBackButton fallback="/shop" text="返回列表" />
 
             <div class="prod-layout">
                 <div class="prod-img-box">
@@ -274,37 +260,9 @@ const goBack = () => {
   [局部樣式修復] 
   已清除與 assets/css/style.css 重複的宣告 (如 .price, .status-badge 等)。
   全面導入 CSS 變數，移除所有不必要的 :global(body.day-mode) 覆寫。
+  （已移除重複的 nav-action-row 與 app-back-btn 樣式）
 */
 .product-page-wrapper { width: 100%; }
-
-/* 🌟 App-like 膠囊狀返回按鈕 */
-.nav-action-row {
-    width: 100%;
-    display: flex;
-    justify-content: flex-start;
-    margin-bottom: 10px;
-}
-
-.app-back-btn {
-    background: var(--card-bg);
-    border: 1px solid var(--bd);
-    color: var(--txt);
-    font-size: 0.95rem;
-    font-weight: bold;
-    cursor: pointer;
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 8px 16px;
-    border-radius: 30px;
-    transition: 0.2s;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.05);
-}
-
-.app-back-btn:active {
-    transform: scale(0.95);
-    background: var(--bd);
-}
 
 /* Product Detail Styles */
 .prod-container { max-width: 1100px; margin: 0 auto; padding-top: 15px; }
@@ -500,9 +458,6 @@ const goBack = () => {
 /* 🌟 Mobile Optimizations (照片與資訊欄並排雙欄) */
 @media (max-width: 768px) {
     .product-page-wrapper { padding-top: 0; padding-bottom: 15px; }
-    
-    .nav-action-row { margin-bottom: 5px; }
-    .app-back-btn { padding: 6px 12px; font-size: 0.9rem; }
     
     /* 🌟 雙欄 Grid */
     .prod-layout { 

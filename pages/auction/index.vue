@@ -14,7 +14,6 @@ useHead({
         { name: 'description', content: 'Gencko Studio 限時競標專區，參與拍賣把心儀的守宮帶回家！結標前 3 分鐘出價自動延長。' },
         { property: 'og:title', content: '線上競標 | Gencko Studio' },
         { property: 'og:description', content: 'Gencko Studio 限時競標專區，參與拍賣把心儀的守宮帶回家！' },
-        { property: 'og:image', content: 'https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/%E6%AD%A3%E9%9D%A2.png' },
         { property: 'og:url', content: 'https://www.genckobreeding.com/auction' },
         { property: 'og:type', content: 'website' }
     ]
@@ -63,24 +62,12 @@ const getCountdownText = (item) => {
 const goToDetail = (id) => {
     router.push(`/auction/${id}`)
 }
-
-const goBack = () => {
-    if (window.history.state && window.history.state.back) {
-        router.back()
-    } else {
-        router.push('/')
-    }
-}
 </script>
 
 <template>
     <div class="auction-page">
-        <div class="nav-action-row m-only">
-            <button class="app-back-btn" @click="goBack">
-                <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
-                返回
-            </button>
-        </div>
+        <!-- 🌟 引入全域共用的 App-like 返回按鈕 (僅手機版顯示) -->
+        <TheBackButton wrapper-class="m-only" fallback="/" text="返回" />
 
         <div v-if="loading && displayAuctions.length === 0" class="loading-state" style="text-align:center; padding:100px 0;">
             <div class="loader" style="margin:0 auto 20px auto;"></div>
@@ -103,9 +90,15 @@ const goBack = () => {
                             fit="cover"
                             format="webp"
                         />
-                        <div class="status-badge" :class="getAuctionStatus(item).class">
-                            {{ getAuctionStatus(item).text }}
-                        </div>
+                        <!-- 🌟 狀態標籤也依賴時間，包覆 ClientOnly -->
+                        <ClientOnly>
+                            <div class="status-badge" :class="getAuctionStatus(item).class">
+                                {{ getAuctionStatus(item).text }}
+                            </div>
+                            <template #fallback>
+                                <div class="status-badge badge-active">計算中</div>
+                            </template>
+                        </ClientOnly>
                     </div>
                     <div class="card-info">
                         <h3 class="morph-name">{{ item.morph }} <span class="gender-tag" v-if="item.gender && item.gender !== '未定'">({{ item.gender }})</span></h3>
@@ -121,9 +114,16 @@ const goBack = () => {
                                 <strong class="price-val">${{ item.buy_now_price }}</strong>
                             </div>
                         </div>
-                        <div class="countdown" :class="{ 'ending-soon': isEndingSoon(item) }">
-                            ⏳ {{ getCountdownText(item) }}
-                        </div>
+                        
+                        <!-- 🌟 倒數計時包覆 ClientOnly 解決 Hydration 報錯 -->
+                        <ClientOnly>
+                            <div class="countdown" :class="{ 'ending-soon': isEndingSoon(item) }">
+                                ⏳ {{ getCountdownText(item) }}
+                            </div>
+                            <template #fallback>
+                                <div class="countdown">⏳ 計算時間中...</div>
+                            </template>
+                        </ClientOnly>
                     </div>
                 </div>
             </div>
@@ -136,38 +136,10 @@ const goBack = () => {
 </template>
 
 <style scoped>
-/* 徹底移除寫死的顏色，使用 CSS 變數自動適配日夜模式 */
 .auction-page { max-width: 1200px; margin: 0 auto; padding: 2rem 1rem; color: var(--txt); }
 
 .dt-only { display: block; }
 .m-only { display: none !important; }
-
-.nav-action-row {
-    width: 100%;
-    display: flex;
-    justify-content: flex-start;
-    margin-bottom: 10px;
-}
-
-.app-back-btn {
-    background: var(--card-bg);
-    border: 1px solid var(--bd);
-    color: var(--txt);
-    font-size: 0.95rem;
-    font-weight: bold;
-    cursor: pointer;
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 8px 16px;
-    border-radius: 30px;
-    transition: 0.2s;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.05);
-}
-
-.app-back-btn:active {
-    transform: scale(0.95);
-}
 
 .page-title { font-size: 2rem; margin-bottom: 0.5rem; display: flex; align-items: baseline; gap: 1rem; color: var(--txt); }
 .page-title span { font-size: 1rem; color: var(--txt); opacity: 0.5; }
@@ -202,7 +174,6 @@ const goBack = () => {
 .gender-tag { font-size: 0.9rem; color: var(--txt); opacity: 0.6; }
 .morph-desc { color: var(--txt); opacity: 0.7; font-size: 0.9rem; margin-bottom: 1rem; line-height: 1.4; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-/* 價格區域使用變數適配 */
 .price-info { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; background: var(--card-bg); padding: 8px 12px; border-radius: 8px; border: 1px solid var(--bd); }
 .price-col { display: flex; flex-direction: column; align-items: flex-start; flex: 1; }
 .price-col:last-child { align-items: flex-end; }
@@ -210,7 +181,6 @@ const goBack = () => {
 .price-val { font-size: 1.1rem; color: var(--pri); font-weight: bold; }
 .price-divider { width: 1px; height: 25px; background: var(--bd); margin: 0 10px; }
 
-/* 倒數計時區塊使用變數適配 */
 .countdown { margin-top: auto; font-weight: bold; color: var(--txt); text-align: center; padding: 8px; border-radius: 6px; background: var(--card-bg); border: 1px solid var(--bd); font-size: 0.95rem; }
 .countdown.ending-soon { color: #fff; background: #e74c3c; border-color: #c0392b; animation: pulse 1.5s infinite; }
 .empty-state { text-align:center; padding: 3rem; color: var(--txt); opacity: 0.6; }

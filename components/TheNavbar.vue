@@ -1,5 +1,6 @@
 <script setup>
 import { ref, computed, watch } from 'vue'
+import { useMainStore } from '~/stores/useMainStore' // 🌟 引入 store
 
 const props = defineProps({
     navHidden: { type: Boolean, default: false },
@@ -13,6 +14,7 @@ const props = defineProps({
 
 const emit = defineEmits(['toggle-theme', 'update:mobileMenuOpen', 'scroll-top'])
 
+const store = useMainStore() // 🌟 取得安裝狀態與方法
 const mobileExpanded = ref(null)
 
 const isShopActive = computed(() =>['shop', 'auction', 'breeders', 'merch'].includes(props.curTab))
@@ -77,10 +79,20 @@ const closeMobileMenu = () => {
 
                 <!-- Right Controls -->
                 <div class="nav-right">
-                    <!-- 🌟 增加 profile-link-dt 類別，在手機版隱藏此圖示以交給底部導航列 -->
-                    <NuxtLink to="/profile" class="profile-link-dt" style="text-decoration:none; margin-right:15px; font-size:1.2rem; display:flex; align-items:center;" title="我的專區">👤</NuxtLink>
+                    <button v-if="store.canInstall" @click="store.installApp" class="dt-install-btn dt-only">
+                        📲 下載 App
+                    </button>
+                    
+                    <NuxtLink to="/profile" class="profile-link-dt dt-only" style="text-decoration:none; margin-right:15px; font-size:1.2rem; display:flex; align-items:center;" title="我的專區">👤</NuxtLink>
+                    
+                    <!-- 🌟 加入 ClientOnly 解決伺服器與瀏覽器文字不一致的 Mismatch -->
                     <div class="theme-toggle" @click="$emit('toggle-theme')" style="cursor:pointer;font-size:1rem;font-weight:bold;margin-right:15px;color:var(--txt);display:flex;align-items:center;border:1px solid var(--bd);padding:4px 10px;border-radius:20px;">
-                        {{ isDayMode ? '夜間' : '日間' }}
+                        <ClientOnly>
+                            {{ isDayMode ? '夜間' : '日間' }}
+                            <template #fallback>
+                                <span>切換</span>
+                            </template>
+                        </ClientOnly>
                     </div>
                     <div class="hamburger" @click="$emit('update:mobileMenuOpen', !mobileMenuOpen)">☰</div>
                 </div>
@@ -88,9 +100,17 @@ const closeMobileMenu = () => {
         </div>
 
         <!-- Mobile Menu -->
-        <!-- 🌟 增加 padding-bottom: 100px 確保滑到底部時不會被底部導航列擋住 -->
         <div class="mobile-menu-overlay" :class="{open: mobileMenuOpen}" style="position:fixed; top:90px; left:0; width:100%; height:calc(100vh - 90px); overflow-y:auto; padding-bottom: 100px;">
-            <!-- 🌟 已移除首頁與我的專區，簡化手機選單 -->
+            
+            <!-- 🌟 手機版的下載 App 按鈕 (展開選單時顯示在最上面) -->
+            <div v-if="store.canInstall" class="mobile-install-banner" @click="store.installApp(); closeMobileMenu();">
+                <span style="font-size:1.5rem;">📲</span>
+                <div style="flex:1;">
+                    <div style="font-weight:bold; color:var(--pri);">下載 Gencko 專屬 App</div>
+                    <div style="font-size:0.8rem; opacity:0.8;">享有無廣告全螢幕最佳體驗</div>
+                </div>
+                <span style="font-weight:bold; background:var(--pri); color:#fff; padding:4px 12px; border-radius:20px; font-size:0.85rem;">安裝</span>
+            </div>
 
             <!-- Group 1: Shop -->
             <div class="mm-group" :class="{active: mobileExpanded === 'shop' || (mobileExpanded === null && isShopActive)}">
@@ -150,12 +170,6 @@ const closeMobileMenu = () => {
 </template>
 
 <style scoped>
-/*
-  [局部樣式與全域整合]
-  已將原本散落於 style.css 的導覽列專屬樣式抽回 TheNavbar.vue。
-  全面導入 CSS 變數，解決日夜模式強制切換的色碼衝突。
-*/
-
 /* Sticky Navigation */
 .sticky-nav { 
     position: fixed; 
@@ -172,221 +186,89 @@ const closeMobileMenu = () => {
     box-shadow: 0 4px 10px rgba(0,0,0,0.05); 
     transition: transform 0.3s ease;
 }
-.sticky-nav.nav-hidden { 
-    transform: translateY(-100%); 
-}
+.sticky-nav.nav-hidden { transform: translateY(-100%); }
 
-.nav-container { 
-    max-width: 1300px; 
-    margin: 0 auto; 
-    display: flex; 
-    justify-content: space-between; 
-    align-items: center; 
-    height: 50px; 
-}
-
-.nav-left { 
-    display: flex; 
-    align-items: center; 
-    gap: 10px; 
-}
+.nav-container { max-width: 1300px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; height: 50px; }
+.nav-left { display: flex; align-items: center; gap: 10px; }
 
 /* Desktop Navigation */
-.dt-nav { 
-    display: flex; 
-    gap: 5px; 
-    height: 100%; 
-    align-items: center; 
-}
-
-.nav-item-dt { 
-    padding: 0 12px; 
-    height: 100%; 
-    display: flex; 
-    align-items: center; 
-    font-size: 0.95rem; 
-    font-weight: 700; 
-    color: var(--txt); 
-    opacity: 0.8;
-    cursor: pointer; 
-    transition: 0.2s; 
-    position: relative; 
-    white-space: nowrap; 
-}
-
-.nav-item-dt:hover, .nav-item-dt.active { 
-    color: var(--pri); 
-    opacity: 1;
-    background: rgba(128, 128, 128, 0.05); 
-}
-
-.nav-item-dt.active { 
-    border-bottom: 3px solid var(--pri); 
-}
+.dt-nav { display: flex; gap: 5px; height: 100%; align-items: center; }
+.nav-item-dt { padding: 0 12px; height: 100%; display: flex; align-items: center; font-size: 0.95rem; font-weight: 700; color: var(--txt); opacity: 0.8; cursor: pointer; transition: 0.2s; position: relative; white-space: nowrap; }
+.nav-item-dt:hover, .nav-item-dt.active { color: var(--pri); opacity: 1; background: rgba(128, 128, 128, 0.05); }
+.nav-item-dt.active { border-bottom: 3px solid var(--pri); }
 
 /* Dropdown */
 .dropdown-hover { position: relative; }
-.dt-dropdown { 
-    position: absolute; 
-    top: 100%; 
-    left: 0; 
-    background: var(--card-bg); 
-    border: 1px solid var(--bd); 
-    min-width: 140px; 
-    flex-direction: column; 
-    border-radius: 0 0 8px 8px; 
-    overflow: hidden; 
-    box-shadow: 0 5px 20px rgba(0,0,0,0.1); 
-    visibility: hidden; 
-    opacity: 0; 
-    transform: translateY(-5px); 
-    transition: all 0.2s ease; 
-    display: flex; 
-    z-index: 100; 
-}
-.dropdown-hover:hover .dt-dropdown { 
-    visibility: visible; 
-    opacity: 1; 
-    transform: translateY(0); 
-}
-.dt-dropdown a { 
-    display: block; 
-    padding: 15px; 
-    color: var(--txt); 
-    opacity: 0.8;
-    cursor: pointer; 
-    transition: 0.2s; 
-    font-size: 0.95rem; 
-    font-weight: bold;
-    border-bottom: 1px solid var(--bd); 
-    text-decoration: none; 
-    white-space: nowrap; 
-}
+.dt-dropdown { position: absolute; top: 100%; left: 0; background: var(--card-bg); border: 1px solid var(--bd); min-width: 140px; flex-direction: column; border-radius: 0 0 8px 8px; overflow: hidden; box-shadow: 0 5px 20px rgba(0,0,0,0.1); visibility: hidden; opacity: 0; transform: translateY(-5px); transition: all 0.2s ease; display: flex; z-index: 100; }
+.dropdown-hover:hover .dt-dropdown { visibility: visible; opacity: 1; transform: translateY(0); }
+.dt-dropdown a { display: block; padding: 15px; color: var(--txt); opacity: 0.8; cursor: pointer; transition: 0.2s; font-size: 0.95rem; font-weight: bold; border-bottom: 1px solid var(--bd); text-decoration: none; white-space: nowrap; }
 .dt-dropdown a:last-child { border-bottom: none; }
-.dt-dropdown a:hover { 
-    background: rgba(255, 69, 0, 0.05); 
-    color: var(--pri); 
-    opacity: 1;
-}
+.dt-dropdown a:hover { background: rgba(255, 69, 0, 0.05); color: var(--pri); opacity: 1; }
 
 /* Right Controls */
 .nav-right { display: flex; align-items: center; gap: 12px; }
 .hamburger { display: none; }
 
+/* 🌟 桌機版安裝按鈕 */
+.dt-install-btn {
+    background: var(--pri);
+    color: #fff;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: bold;
+    cursor: pointer;
+    box-shadow: 0 2px 10px var(--pri-glow);
+    transition: 0.2s;
+    margin-right: 10px;
+}
+.dt-install-btn:hover {
+    transform: scale(1.05);
+}
+
+.dt-only { display: block; }
+
 /* Reading Progress Bar */
-.reading-progress-bar { 
-    position: absolute; 
-    bottom: 0; left: 0; 
-    width: 100%; 
-    height: 2px; 
-    background: var(--bd); 
-}
-.progress-fill { 
-    height: 100%; 
-    background: var(--pri); 
-    width: 0%; 
-    transition: width 0.1s linear; 
-    box-shadow: 0 0 10px var(--pri-glow);
-}
+.reading-progress-bar { position: absolute; bottom: 0; left: 0; width: 100%; height: 2px; background: var(--bd); }
+.progress-fill { height: 100%; background: var(--pri); width: 0%; transition: width 0.1s linear; box-shadow: 0 0 10px var(--pri-glow); }
 
-/* 🌟 Mobile Menu Overlay & Responsive */
+/* Mobile Menu Overlay & Responsive */
 @media (max-width: 768px) {
-    /* 在手機版隱藏頂部的「我的專區」圖示，交給底部導航列 */
-    .profile-link-dt {
-        display: none !important;
-    }
-
+    .dt-only { display: none !important; }
     .dt-nav { display: none; }
     
-    .hamburger { 
-        display: block; 
-        font-size: 1.6rem; 
-        cursor: pointer; 
-        color: var(--txt); 
-        padding: 10px; 
-        margin-right: -10px; 
-    }
+    .hamburger { display: block; font-size: 1.6rem; cursor: pointer; color: var(--txt); padding: 10px; margin-right: -10px; }
 
-    .mobile-menu-overlay { 
-        display: flex; 
-        position: fixed; 
-        top: calc(90px + env(safe-area-inset-top, 0px)); 
-        left: 0; 
-        width: 100%; 
-        height: calc(100vh - 90px - env(safe-area-inset-top, 0px)); 
-        background: var(--card-bg); 
-        backdrop-filter: blur(15px); 
-        -webkit-backdrop-filter: blur(15px);
-        z-index: 2000; 
-        transform: translateX(100%); 
-        transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1); 
-        padding: 5px 15px 100px 15px; 
-        overflow-y: auto; 
-        flex-direction: column; 
-        gap: 0; 
-        border-top: 1px solid var(--bd); 
-        box-shadow: 0 10px 30px rgba(0,0,0,0.1); 
-    }
+    .mobile-menu-overlay { display: flex; position: fixed; top: calc(90px + env(safe-area-inset-top, 0px)); left: 0; width: 100%; height: calc(100vh - 90px - env(safe-area-inset-top, 0px)); background: var(--card-bg); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); z-index: 2000; transform: translateX(100%); transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1); padding: 5px 15px 100px 15px; overflow-y: auto; flex-direction: column; gap: 0; border-top: 1px solid var(--bd); box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
     .mobile-menu-overlay.open { transform: translateX(0); }
 
-    .mm-summary { 
-        font-size: 1.1rem; 
-        font-weight: bold; 
-        padding: 15px 10px; 
-        border-bottom: 1px solid var(--bd); 
-        color: var(--txt); 
-        cursor: pointer; 
-        display: flex; 
-        justify-content: space-between; 
-        align-items: center; 
+    /* 🌟 手機版安裝橫幅 */
+    .mobile-install-banner {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        background: rgba(255, 69, 0, 0.05);
+        border: 1px solid var(--pri);
+        padding: 15px;
+        border-radius: 12px;
+        margin: 10px 0 20px 0;
+        cursor: pointer;
+        color: var(--txt);
     }
-    .mm-group.active .mm-summary { 
-        color: var(--pri); 
-        border-bottom: none; 
-    }
+
+    .mm-summary { font-size: 1.1rem; font-weight: bold; padding: 15px 10px; border-bottom: 1px solid var(--bd); color: var(--txt); cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
+    .mm-group.active .mm-summary { color: var(--pri); border-bottom: none; }
     
-    .mm-arrow { 
-        transition: transform 0.3s ease; 
-        font-size: 0.8rem; 
-        opacity: 0.6; 
-    }
-    .mm-group.active .mm-arrow { 
-        transform: rotate(180deg); 
-        opacity: 1; 
-        color: var(--pri); 
-    }
+    .mm-arrow { transition: transform 0.3s ease; font-size: 0.8rem; opacity: 0.6; }
+    .mm-group.active .mm-arrow { transform: rotate(180deg); opacity: 1; color: var(--pri); }
 
-    .mm-anim-wrapper { 
-        display: grid; 
-        grid-template-rows: 0fr; 
-        transition: grid-template-rows 0.3s ease-out; 
-    }
-    .mm-group.active .mm-anim-wrapper { 
-        grid-template-rows: 1fr; 
-    }
-    .mm-anim-inner { 
-        overflow: hidden; 
-        background: rgba(128, 128, 128, 0.05); 
-        border-radius: 8px; 
-    }
+    .mm-anim-wrapper { display: grid; grid-template-rows: 0fr; transition: grid-template-rows 0.3s ease-out; }
+    .mm-group.active .mm-anim-wrapper { grid-template-rows: 1fr; }
+    .mm-anim-inner { overflow: hidden; background: rgba(128, 128, 128, 0.05); border-radius: 8px; }
 
-    .mm-sub { 
-        display: block; 
-        padding: 15px 20px; 
-        color: var(--txt); 
-        opacity: 0.8;
-        font-size: 1rem; 
-        border-bottom: 1px dashed var(--bd); 
-        cursor: pointer; 
-        font-weight: bold; 
-        text-decoration: none; 
-        transition: 0.2s; 
-    }
+    .mm-sub { display: block; padding: 15px 20px; color: var(--txt); opacity: 0.8; font-size: 1rem; border-bottom: 1px dashed var(--bd); cursor: pointer; font-weight: bold; text-decoration: none; transition: 0.2s; }
     .mm-sub:last-child { border-bottom: none; }
-    .mm-sub:active, .mm-summary:active { 
-        background: rgba(255, 69, 0, 0.1); 
-        color: var(--pri); 
-        opacity: 1;
-    }
+    .mm-sub:active, .mm-summary:active { background: rgba(255, 69, 0, 0.1); color: var(--pri); opacity: 1; }
 }
 </style>

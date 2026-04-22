@@ -1,10 +1,9 @@
 <script setup>
 import { computed } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { useRoute } from 'vue-router'
 import { useHead, useAsyncData, useSupabaseClient } from '#imports'
 
 const route = useRoute()
-const router = useRouter() // 🌟 引入 router 處理返回
 const supabase = useSupabaseClient()
 const identityId = route.params.id
 
@@ -97,15 +96,6 @@ const triggerPrint = () => {
         window.print()
     }
 }
-
-// 🌟 返回上一頁的邏輯
-const goBack = () => {
-    if (window.history.state && window.history.state.back) {
-        router.back()
-    } else {
-        router.push('/')
-    }
-}
 </script>
 
 <template>
@@ -117,19 +107,14 @@ const goBack = () => {
         </div>
         <div v-else-if="error" class="status-msg err">
             ⚠️ {{ error.message || '找不到此個體資料或已下架' }}
-            <button @click="goBack" class="app-back-btn" style="margin-top: 20px;">返回上一頁</button>
+            <TheBackButton fallback="/" text="返回上一頁" style="margin-top: 20px; justify-content: center;" />
         </div>
 
         <!-- Identity Content -->
         <div v-else-if="item" class="id-content-wrap">
             
-            <!-- 🌟 App-like 返回按鈕 -->
-            <div class="nav-action-row">
-                <button class="app-back-btn" @click="goBack">
-                    <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
-                    返回上一頁
-                </button>
-            </div>
+            <!-- 🌟 引入全域共用的 App-like 返回按鈕 -->
+            <TheBackButton fallback="/" text="返回上一頁" />
 
             <!-- 卡片本體 -->
             <div class="id-card print-target">
@@ -189,8 +174,8 @@ const goBack = () => {
 <style scoped>
 /*
   [局部樣式修復] 
-  已將外圍 UI（返回按鈕、狀態文字、載入動畫）全面變數化。
-  徹底移除所有 :global(body.day-mode) 的強制覆寫。
+  已將外圍 UI（狀態文字、載入動畫）全面變數化。
+  徹底移除所有 :global(body.day-mode) 的強制覆寫與重複的返回按鈕樣式。
   （註：.id-card 本體保留絕對色碼，以確保實體電子身分證的視覺與列印一致性）
 */
 
@@ -210,35 +195,6 @@ const goBack = () => {
 .id-content-wrap {
     width: 100%;
     max-width: 800px;
-}
-
-/* 🌟 App-like 膠囊狀返回按鈕 (已變數化) */
-.nav-action-row {
-    width: 100%;
-    display: flex;
-    justify-content: flex-start;
-    margin-bottom: 15px;
-}
-
-.app-back-btn {
-    background: var(--card-bg);
-    border: 1px solid var(--bd);
-    color: var(--txt);
-    font-size: 0.95rem;
-    font-weight: bold;
-    cursor: pointer;
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 8px 16px;
-    border-radius: 50px;
-    transition: 0.2s;
-    box-shadow: 0 4px 5px rgba(0,0,0,0.05);
-}
-
-.app-back-btn:active {
-    transform: scale(0.95);
-    background: var(--bd);
 }
 
 /* Status (已變數化) */
@@ -333,9 +289,6 @@ const goBack = () => {
 /* 🌟 Mobile Responsive (強制並排，左圖右文) */
 @media (max-width: 768px) {
     .id-page-container { padding-top: 0; padding-bottom: 15px; }
-
-    .nav-action-row { margin-bottom: 8px; }
-    .app-back-btn { padding: 6px 12px; font-size: 0.9rem; }
 
     .id-card {
         flex-direction: row; /* 強制左右排列 */

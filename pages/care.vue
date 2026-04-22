@@ -1,12 +1,10 @@
 <script setup>
 import { computed } from 'vue'
-import { useRouter } from 'vue-router'
 import { useHead } from '#imports'
 import { useMainStore } from '~/stores/useMainStore'
 import { getCleanUrl } from '~/utils/image.js'
 
 const store = useMainStore()
-const router = useRouter()
 
 // 取出全域狀態中的 careImg
 const careImg = computed(() => store.careImg)
@@ -20,27 +18,13 @@ useHead({
         { property: 'og:url', content: 'https://www.genckobreeding.com/care' }
     ]
 })
-
-// 🌟 返回邏輯
-const goBack = () => {
-    if (window.history.state && window.history.state.back) {
-        router.back()
-    } else {
-        router.push('/')
-    }
-}
 </script>
 
 <template>
     <div class="care-page-wrapper">
         
-        <!-- 手機版顯示的 App-like 返回按鈕 -->
-        <div class="nav-action-row m-only">
-            <button class="app-back-btn" @click="goBack">
-                <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
-                返回
-            </button>
-        </div>
+        <!-- 🌟 引入全域共用的 App-like 返回按鈕 -->
+        <TheBackButton wrapper-class="m-only" fallback="/" />
 
         <div class="content-card">
             <!-- 🌟 已依據需求刪除所有 H1 標題 -->
@@ -126,35 +110,6 @@ const goBack = () => {
 /* Responsive Utilities */
 .dt-only { display: block; }
 .m-only { display: none !important; }
-
-/* 🌟 全面採用 var(--card-bg) 與 var(--txt) 自動處理日夜模式 */
-.nav-action-row {
-    width: 100%;
-    display: flex;
-    justify-content: flex-start;
-    margin-bottom: 5px;
-}
-
-.app-back-btn {
-    background: var(--card-bg);
-    border: 1px solid var(--bd);
-    color: var(--txt);
-    font-size: 0.95rem;
-    font-weight: bold;
-    cursor: pointer;
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 8px 8px;
-    border-radius: 30px;
-    transition: 0.2s;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-}
-
-.app-back-btn:active {
-    transform: scale(0.95);
-    background: var(--bd);
-}
 
 .content-card {
     background: var(--card-bg);
@@ -259,15 +214,6 @@ const goBack = () => {
     
     .care-page-wrapper {
         padding-top: 0;
-    }
-    
-    .nav-action-row {
-        margin-bottom: 0px;
-    }
-    
-    .app-back-btn {
-        padding: 6px 12px;
-        font-size: 0.95rem;
     }
     
     .content-card {

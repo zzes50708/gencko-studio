@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useHead } from '#imports'
 import { useMainStore } from '~/stores/useMainStore'
@@ -40,14 +40,44 @@ const tags = {
     '肥尾守宮':[ '幽靈', '橘白', '無紋', '立可白' ]
 }
 
-// 處理首頁傳過來的新手推薦參數
+// 🌟 將 URL Query 初始化至 State
 onMounted(() => {
-    if (route.query.beginner === 'true') {
-        fil.value.beginner = true
+    const q = route.query
+    if (q.sp) sp.value = q.sp
+    if (q.kw) kw.value = q.kw
+    if (q.stock !== undefined) fil.value.stock = q.stock === 'true'
+    if (q.sold !== undefined) fil.value.sold = q.sold === 'true'
+    if (q.minP) fil.value.minP = q.minP
+    if (q.maxP) fil.value.maxP = q.maxP
+    if (q.sexM !== undefined) fil.value.sexM = q.sexM === 'true'
+    if (q.sexF !== undefined) fil.value.sexF = q.sexF === 'true'
+    if (q.beginner !== undefined) fil.value.beginner = q.beginner === 'true'
+    if (q.genes) fil.value.genes = Array.isArray(q.genes) ? q.genes : q.genes.split(',')
+    if (q.sort) sortOrder.value = q.sort
+
+    // 若是從首頁帶 beginner 參數過來，在手機版自動彈出面板
+    if (q.beginner === 'true') {
         showMobileFilter.value = true
-        router.replace({ path: '/shop' }) 
     }
 })
+
+// 🌟 監聽 State 變化，即時反向寫入 URL Query (使用 replace 避免產生過多歷史紀錄)
+watch([sp, kw, fil, sortOrder], () => {
+    const query = {}
+    if (sp.value !== '豹紋守宮') query.sp = sp.value
+    if (kw.value) query.kw = kw.value
+    if (!fil.value.stock) query.stock = 'false'
+    if (fil.value.sold) query.sold = 'true'
+    if (fil.value.minP) query.minP = fil.value.minP
+    if (fil.value.maxP) query.maxP = fil.value.maxP
+    if (!fil.value.sexM) query.sexM = 'false'
+    if (!fil.value.sexF) query.sexF = 'false'
+    if (fil.value.beginner) query.beginner = 'true'
+    if (fil.value.genes.length) query.genes = fil.value.genes.join(',')
+    if (sortOrder.value !== 'default') query.sort = sortOrder.value
+
+    router.replace({ query }).catch(() => {})
+}, { deep: true })
 
 // --- 計算屬性 ---
 const maxPrice = computed(() => {
@@ -138,8 +168,15 @@ const onSearchInput = (e) => {
 const resetFilters = () => {
     fil.value = { stock: true, sold: false, minP: '', maxP: '', sexM: true, sexF: true, genes: [ ], beginner: false }
     kw.value = ''
+    sortOrder.value = 'default'
+    showOnlyFav.value = false
+    showOnlyHistory.value = false
     store.displayLimit = 20
     showMobileFilter.value = false
+    
+    // 清空網址參數
+    router.replace({ query: {} }).catch(() => {})
+    
     if (import.meta.client) window.scrollTo({ top: 0, behavior: 'smooth' })
 }
 
@@ -155,11 +192,10 @@ const toggleWishlist = (id) => {
 
 <template>
     <div class="shop-page-wrapper">
-        <!-- 桌機版保留的標題，手機版隱藏以節省空間 -->
         <h1 class="page-title dt-only">線上選購守宮</h1>
 
         <div class="shop-layout">
-            <!-- 🌟 Left Filter Panel (Desktop View & Mobile Modal View) -->
+            <!-- 🌟 Left Filter Panel -->
             <div class="filter-panel" :class="{ 'm-show': showMobileFilter }">
                 <div class="f-header m-only">
                     <span>進階篩選</span>
@@ -212,21 +248,19 @@ const toggleWishlist = (id) => {
                 <button class="btn-hero dt-only" style="width:100%;margin-top:20px;font-size:0.9rem;padding:10px;" @click="resetFilters">清除所有條件</button>
             </div>
 
-            <!-- 🌟 Right Content (Search, Chips, Grid) -->
+            <!-- 🌟 Right Content -->
             <div style="flex:1; min-width:0; display: flex; flex-direction: column;">
                 
-                <!-- 🌟 App-like 控制列：合併搜尋框與篩選按鈕 -->
                 <div class="search-filter-row">
                     <div class="inp-wrap">
                         <span class="search-icon">🔍</span>
                         <input class="inp" :value="kw" @input="onSearchInput" placeholder="搜尋品系、基因、ID...">
                     </div>
-                    <button class="btn-filter-icon m-only" :class="{active: fil.genes.length > 0 || fil.beginner}" @click="showMobileFilter = true" aria-label="進階篩選">
+                    <button class="btn-filter-icon m-only" :class="{active: fil.genes.length > 0 || fil.beginner || fil.minP || fil.maxP}" @click="showMobileFilter = true" aria-label="進階篩選">
                         <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon></svg>
                     </button>
                 </div>
                 
-                <!-- 🌟 App-like 水平捲動 Chips -->
                 <div class="scroll-chips-row">
                     <div class="chip-tab main-tab" :class="{active: sp === '豹紋守宮'}" @click="sp = '豹紋守宮'; store.displayLimit = 20">豹紋守宮</div>
                     <div class="chip-tab main-tab" :class="{active: sp === '肥尾守宮'}" @click="sp = '肥尾守宮'; store.displayLimit = 20">肥尾守宮</div>
@@ -247,7 +281,6 @@ const toggleWishlist = (id) => {
                     <span v-for="t in tags[sp]" :key="t" class="chip-tag" :class="{sel: kw === t}" @click="toggleTag(t)">{{ t }}</span>
                 </div>
 
-                <!-- Shop Grid (Photo Grid) -->
                 <transition-group tag="div" name="list" class="grid photo-grid">
                     <div v-if="shopList.length === 0" key="empty-msg" class="shop-empty-state">
                         <div class="empty-icon">🦎💤</div>
@@ -256,7 +289,6 @@ const toggleWishlist = (id) => {
                         <button class="btn-hero" @click="resetFilters" style="margin-top:20px;">🔄 清除篩選條件</button>
                     </div>
                     
-                    <!-- 1. v-for 增加 index -->
                     <NuxtLink :to="`/product/${i.ID}`" class="card slim-card" v-for="(i, index) in shopList" :key="i.ID" style="text-decoration:none; color:inherit;">
                         <div v-if="i.Status === 'Sold'" class="sold-stamp">SOLD</div>
                         <div style="position:absolute;top:5px;right:5px;z-index:10;">
@@ -297,12 +329,6 @@ const toggleWishlist = (id) => {
 </template>
 
 <style scoped>
-/* 
-  [局部樣式修復] 
-  已清除與 assets/css/style.css 重複的宣告與寫死色碼。
-  全面導入 CSS 變數，移除所有不必要的 :global(body.day-mode) 覆寫。
-*/
-
 .shop-page-wrapper { 
     display: flex; 
     flex-direction: column; 
@@ -316,11 +342,9 @@ const toggleWishlist = (id) => {
     align-items: flex-start; 
 }
 
-/* 🌟 Responsive Utilities */
 .dt-only { display: block; }
 .m-only { display: none !important; }
 
-/* 🌟 App-like Search Row */
 .search-filter-row { 
     display: flex; 
     gap: 10px; 
@@ -382,7 +406,6 @@ const toggleWishlist = (id) => {
     box-shadow: 0 0 8px var(--pri-glow); 
 }
 
-/* 🌟 Horizontal Scrolling Chips */
 .scroll-chips-row { 
     display: flex; 
     gap: 6px; 
@@ -441,9 +464,7 @@ const toggleWishlist = (id) => {
     appearance: none; 
     text-align: center; 
 }
-.chip-select:focus { 
-    border-color: var(--pri); 
-}
+.chip-select:focus { border-color: var(--pri); }
 
 .chip-toggle { 
     padding: 6px 10px; 
@@ -489,7 +510,6 @@ const toggleWishlist = (id) => {
     opacity: 1;
 }
 
-/* Desktop Filter Panel */
 .filter-panel { 
     width: 240px; 
     flex-shrink: 0; 
@@ -548,7 +568,6 @@ const toggleWishlist = (id) => {
 }
 .f-inp:focus { border-color: var(--pri); outline: none; }
 
-/* 🌟 Mobile View 核心覆寫 (強制雙欄 2-columns) */
 @media (max-width: 768px) {
     .dt-only { display: none !important; }
     .m-only { display: flex !important; }
@@ -556,7 +575,6 @@ const toggleWishlist = (id) => {
     .shop-page-wrapper { padding: 5px 10px 15px 10px; }
     .shop-layout { flex-direction: column; align-items: stretch; gap: 0; }
     
-    /* Mobile App-like Modal for Filters */
     .filter-panel { 
         display: none; 
         position: fixed; 
@@ -634,28 +652,21 @@ const toggleWishlist = (id) => {
         box-shadow: 0 4px 10px var(--pri-glow); 
     }
 
-    /* 🌟 強制完美的雙欄配置 */
     .grid.photo-grid { 
         display: grid !important;
-        grid-template-columns: repeat(2, 1fr) !important; 
+        grid-template-columns: repeat(3, 1fr) !important; 
         gap: 8px !important; 
     }
     
-    .card-img.slim-img {
-        height: auto !important;
-        aspect-ratio: 1 / 1 !important; /* 確保圖片絕對正方形 */
-    }
-    
+    .card-img.slim-img { height: auto !important; aspect-ratio: 1 / 1 !important; }
     .slim-body { padding: 6px !important; }
     .slim-title { font-size: 0.85rem !important; margin-bottom: 2px !important; }
     .slim-price { font-size: 1rem !important; }
     
-    /* 縮小標籤避免在雙欄模式下擠壓版面 */
     .trust-badge { font-size: 0.5rem; padding: 2px 4px; bottom: 2px; left: 2px; }
     .fav-btn { font-size: 1rem; width: 26px; height: 26px; top: 3px; right: 3px; }
     .sold-stamp { font-size: 0.55rem; padding: 2px 4px; top: 4px; left: 4px; }
     .status-badge { padding: 2px 6px !important; font-size: 0.75rem !important; }
-    
     .shop-empty-state { grid-column: 1 / -1 !important; }
 }
 </style>

@@ -8,12 +8,10 @@ useHead({
         { name: 'description', content: 'Gencko Studio 守宮健康評估系統。透過外觀與行為快速自我檢測您的豹紋/肥尾守宮是否健康，或是否需要立即就醫。' },
         { property: 'og:title', content: '健康評估系統 | Gencko Studio' },
         { property: 'og:description', content: '透過外觀與行為快速自我檢測您的守宮是否健康。' },
-        { property: 'og:image', content: 'https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/%E5%AE%98%E7%B6%B2%E8%83%8C%E6%99%AF.png' },
         { property: 'og:url', content: 'https://www.genckobreeding.com/health' }
     ]
 })
 
-// 健康評估狀態
 const health = ref({
     activity: 'MEDIUM',
     movement: 'NORMAL',
@@ -21,12 +19,10 @@ const health = ref({
     droppings: 'SOLID'
 })
 
-// 計算評估結果
 const healthResult = computed(() => {
     const d = health.value
     let score = 0
     
-    // 計分邏輯
     if (d.activity === 'HIGH') score += 25; else if (d.activity === 'MEDIUM') score += 15; else score += 5;
     if (d.movement === 'NORMAL') score += 25; else score += 0;
     if (d.tail === 'PLUMP') score += 25; else if (d.tail === 'NORMAL') score += 20; else if (d.tail === 'THIN') score += 10; else score += 0;
@@ -79,14 +75,15 @@ const healthResult = computed(() => {
 
 <template>
     <div class="health-container">
-        <!-- 🌟 手機版隱藏標題與說明，節省高度 -->
+        <!-- 🌟 引入全域共用的 App-like 返回按鈕 (僅手機版顯示) -->
+        <TheBackButton wrapper-class="m-only" fallback="/" />
+
         <h1 class="page-title dt-only">健康評估系統</h1>
         <div class="page-text-box dt-only" style="margin-bottom:20px; text-align:center;">
             <p>本工具僅供自我檢測參考，若有嚴重異常請務必尋求特寵獸醫協助。</p>
         </div>
 
         <div class="health-grid">
-            <!-- 🌟 左邊：顯示結果 -->
             <div class="health-res-box">
                 <div class="res-top">
                     <span class="health-sys-text">GE-SYS</span>
@@ -105,13 +102,18 @@ const healthResult = computed(() => {
                         {{ healthResult.warning }}
                     </div>
                     <div class="health-footer dt-only">
-                        <span>REPORT ID: GE-{{ Math.floor(Math.random() * 9000) + 1000 }}</span>
+                        <!-- 🌟 使用 ClientOnly 避免隨機 ID 造成 Mismatch -->
+                        <ClientOnly>
+                            <span>REPORT ID: GE-{{ Math.floor(Math.random() * 9000) + 1000 }}</span>
+                            <template #fallback>
+                                <span>REPORT ID: GENERATING...</span>
+                            </template>
+                        </ClientOnly>
                         <span>SYSTEM CALIBRATED</span>
                     </div>
                 </div>
             </div>
 
-            <!-- 🌟 右邊：表單選擇 -->
             <div class="health-form-box">
                 <div class="form-item">
                     <div class="health-label">活躍程度</div>
@@ -152,131 +154,36 @@ const healthResult = computed(() => {
 </template>
 
 <style scoped>
-/*
-  [局部樣式修復] 
-  已清除所有寫死深淺色的背景與文字色碼。
-  全面導入 CSS 變數，徹底移除所有不必要的 :global(body.day-mode) 覆寫。
-  （警告色 c-red、c-green 等代表嚴重程度，因此維持絕對色碼不受日夜模式影響）
-*/
 .health-container { max-width: 900px; margin: 0 auto; padding-top: 15px; }
-
-/* 🌟 Responsive Utilities */
 .dt-only { display: block; }
+.m-only { display: none !important; }
 
-/* Desktop Grid: 左結果，右表單 */
 .health-grid { display: grid; grid-template-columns: 1fr 1.2fr; gap: 20px; align-items: stretch; }
 
-/* Left Box (Result) */
 .health-res-box { 
-    background: var(--card-bg); 
-    border: 1px solid var(--bd); 
-    border-radius: 12px; 
-    padding: 25px; 
-    display: flex; 
-    flex-direction: column; 
-    position: relative; 
-    overflow: hidden; 
-    box-shadow: 0 10px 30px rgba(0,0,0,0.1); 
+    background: var(--card-bg); border: 1px solid var(--bd); border-radius: 12px; 
+    padding: 25px; display: flex; flex-direction: column; position: relative; 
+    overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.1); 
 }
 
 .res-top { display: flex; flex-direction: column; margin-bottom: 20px; }
-.health-sys-text { 
-    font-family: monospace; 
-    font-size: 0.75rem; 
-    color: var(--txt);
-    opacity: 0.5; 
-    letter-spacing: 2px; 
-    margin-bottom: 5px; 
-}
-/* 移除了強制文字陰影，依賴字體本身與顏色 */
-.health-score-val { 
-    font-size: 3.5rem; 
-    font-weight: 900; 
-    line-height: 1; 
-    font-family: 'Black Ops One', cursive, sans-serif; 
-    margin-bottom: 10px; 
-}
-
+.health-sys-text { font-family: monospace; font-size: 0.75rem; color: var(--txt); opacity: 0.5; letter-spacing: 2px; margin-bottom: 5px; }
+.health-score-val { font-size: 3.5rem; font-weight: 900; line-height: 1; font-family: 'Black Ops One', cursive, sans-serif; margin-bottom: 10px; }
 .health-status-row { display: flex; align-items: center; gap: 8px; }
 .health-dot { width: 12px; height: 12px; border-radius: 50%; animation: pulse 2s infinite; }
 .health-status-text { font-size: 1.2rem; font-weight: 700; }
 
 .res-bottom { display: flex; flex-direction: column; flex: 1; justify-content: flex-end; }
-.health-suggestion { 
-    padding: 15px; 
-    border-radius: 8px; 
-    border: 1px dashed var(--bd); 
-    background: rgba(128, 128, 128, 0.05); 
-    color: var(--txt); 
-    opacity: 0.9;
-    line-height: 1.5; 
-    font-size: 0.95rem; 
-    margin-bottom: 15px; 
-}
-.health-warning { 
-    padding: 10px; 
-    background: rgba(244, 67, 54, 0.1); 
-    border: 1px solid #f44336; 
-    color: #ef5350; 
-    text-align: center; 
-    font-size: 0.85rem; 
-    font-weight: bold; 
-    border-radius: 6px; 
-    animation: pulseRed 2s infinite; 
-}
-.health-footer { 
-    margin-top: 25px; 
-    opacity: 0.4; 
-    border-top: 1px solid var(--bd); 
-    color: var(--txt);
-    padding-top: 10px; 
-    display: flex; 
-    justify-content: space-between; 
-    font-size: 0.6rem; 
-    font-family: monospace; 
-    letter-spacing: 1px; 
-}
+.health-suggestion { padding: 15px; border-radius: 8px; border: 1px dashed var(--bd); background: rgba(128, 128, 128, 0.05); color: var(--txt); opacity: 0.9; line-height: 1.5; font-size: 0.95rem; margin-bottom: 15px; }
+.health-warning { padding: 10px; background: rgba(244, 67, 54, 0.1); border: 1px solid #f44336; color: #ef5350; text-align: center; font-size: 0.85rem; font-weight: bold; border-radius: 6px; animation: pulseRed 2s infinite; }
+.health-footer { margin-top: 25px; opacity: 0.4; border-top: 1px solid var(--bd); color: var(--txt); padding-top: 10px; display: flex; justify-content: space-between; font-size: 0.6rem; font-family: monospace; letter-spacing: 1px; }
 
-/* Right Box (Form) */
-.health-form-box { 
-    background: var(--card-bg); 
-    border: 1px solid var(--bd); 
-    border-radius: 12px; 
-    padding: 25px; 
-    display: flex; 
-    flex-direction: column; 
-    justify-content: center; 
-    gap: 15px; 
-    box-shadow: 0 10px 30px rgba(0,0,0,0.1); 
-}
+.health-form-box { background: var(--card-bg); border: 1px solid var(--bd); border-radius: 12px; padding: 25px; display: flex; flex-direction: column; justify-content: center; gap: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
 .form-item { display: flex; flex-direction: column; }
-.health-label { 
-    font-size: 0.85rem; 
-    font-weight: 700; 
-    color: var(--pri); 
-    margin-bottom: 6px; 
-    letter-spacing: 1px; 
-}
-.health-select { 
-    width: 100%; 
-    padding: 12px; 
-    background: rgba(128, 128, 128, 0.05); 
-    border: 1px solid var(--bd); 
-    color: var(--txt); 
-    border-radius: 8px; 
-    font-size: 0.95rem; 
-    font-weight: bold; 
-    cursor: pointer; 
-    transition: 0.3s; 
-    appearance: none; 
-}
-.health-select:focus { 
-    border-color: var(--pri); 
-    outline: none; 
-    box-shadow: 0 0 10px var(--pri-glow); 
-}
+.health-label { font-size: 0.85rem; font-weight: 700; color: var(--pri); margin-bottom: 6px; letter-spacing: 1px; }
+.health-select { width: 100%; padding: 12px; background: rgba(128, 128, 128, 0.05); border: 1px solid var(--bd); color: var(--txt); border-radius: 8px; font-size: 0.95rem; font-weight: bold; cursor: pointer; transition: 0.3s; appearance: none; }
+.health-select:focus { border-color: var(--pri); outline: none; box-shadow: 0 0 10px var(--pri-glow); }
 
-/* 狀態色彩維持不變 (代表嚴重程度) */
 .c-green { color: #4ade80; } .bg-green { background-color: #4ade80; }
 .c-yellow { color: #facc15; } .bg-yellow { background-color: #facc15; }
 .c-orange { color: #fb923c; } .bg-orange { background-color: #fb923c; }
@@ -285,68 +192,19 @@ const healthResult = computed(() => {
 @keyframes pulse { 0% { opacity: 1; transform: scale(1); } 50% { opacity: 0.5; transform: scale(1.2); } 100% { opacity: 1; transform: scale(1); } }
 @keyframes pulseRed { 0% { box-shadow: 0 0 0 0 rgba(244, 67, 54, 0.4); } 70% { box-shadow: 0 0 0 10px rgba(244, 67, 54, 0); } 100% { box-shadow: 0 0 0 0 rgba(244, 67, 54, 0); } }
 
-/* 🌟 Mobile App-like Optimizations (左結果、右選擇的緊湊並排) */
 @media (max-width: 768px) {
     .dt-only { display: none !important; }
-    
     .health-container { padding: 5px 15px 15px 15px; }
-
-    /* 黑魔法：重構 DOM 排版順序 */
-    .health-grid { 
-        grid-template-columns: 120px 1fr; /* 左 120px (結果), 右 1fr (表單) */
-        gap: 12px; 
-    }
-
-    /* 將外框解體，讓子元素直接參與外層的 Grid 排版 */
-    .health-res-box { 
-        display: contents; 
-    }
-
-    .health-form-box { 
-        grid-column: 2 / 3; 
-        grid-row: 1 / 2; 
-        background: var(--card-bg); 
-        border: 1px solid var(--bd); 
-        border-radius: 12px; 
-        padding: 12px; 
-        display: flex; 
-        flex-direction: column; 
-        gap: 8px; 
-        box-shadow: 0 4px 15px rgba(0,0,0,0.1); 
-    }
-
-    /* 左方：精簡版分數框 */
-    .res-top { 
-        grid-column: 1 / 2; 
-        grid-row: 1 / 2; 
-        background: var(--card-bg); 
-        border: 1px solid var(--bd); 
-        border-radius: 12px; 
-        padding: 15px 10px; 
-        display: flex; 
-        flex-direction: column; 
-        justify-content: center; 
-        align-items: center; 
-        text-align: center; 
-        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-        margin-bottom: 0; /* 覆寫桌機版 margin */
-    }
-
+    .health-grid { grid-template-columns: 120px 1fr; gap: 12px; }
+    .health-res-box { display: contents; }
+    .health-form-box { grid-column: 2 / 3; grid-row: 1 / 2; background: var(--card-bg); border: 1px solid var(--bd); border-radius: 12px; padding: 12px; display: flex; flex-direction: column; gap: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+    .res-top { grid-column: 1 / 2; grid-row: 1 / 2; background: var(--card-bg); border: 1px solid var(--bd); border-radius: 12px; padding: 15px 10px; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; box-shadow: 0 4px 15px rgba(0,0,0,0.1); margin-bottom: 0; }
     .health-score-val { font-size: 2.2rem; margin-bottom: 6px; }
     .health-status-text { font-size: 0.9rem; }
     .health-sys-text { font-size: 0.6rem; margin-bottom: 8px; }
-
-    /* 下方：滿版建議文字 */
-    .res-bottom { 
-        grid-column: 1 / -1; 
-        grid-row: 2 / 3; 
-        margin-top: 5px;
-    }
-    
+    .res-bottom { grid-column: 1 / -1; grid-row: 2 / 3; margin-top: 5px; }
     .health-suggestion { font-size: 0.85rem; padding: 12px; margin-bottom: 10px; }
     .health-warning { font-size: 0.8rem; padding: 10px; }
-
-    /* 表單項目壓縮 */
     .health-label { font-size: 0.75rem; margin-bottom: 4px; }
     .health-select { padding: 8px; font-size: 0.85rem; }
 }

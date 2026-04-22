@@ -1,9 +1,11 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { useSupabaseClient } from '#imports'
+import { useRouter } from 'vue-router'
 
 export const useMainStore = defineStore('main', () => {
   const supabase = useSupabaseClient()
+  const router = useRouter()
 
   // --- 核心狀態 ---
   const loading = ref(false)
@@ -19,10 +21,14 @@ export const useMainStore = defineStore('main', () => {
   const hotList = ref([])
   const auctionList = ref([])
 
-  // --- 使用者狀態 ---
+  // --- 使用者狀態 (Auth) ---
+  const currentUser = ref(null)
   const wishlist = ref([])
   const hospWishlist = ref([])
   const history = ref([])
+  
+  const isLiffInitialized = ref(false)
+  const isAuctionSubscribed = ref(false)
 
   // --- 全域 UI 狀態 ---
   const showToast = ref(false)
@@ -35,9 +41,13 @@ export const useMainStore = defineStore('main', () => {
   const readingProgress = ref(0)
   const viewingGene = ref(null)
   const geneSpecies = ref('豹紋守宮')
-  
-  // 記錄是否已訂閱過競標頻道
-  const isAuctionSubscribed = ref(false)
+
+  // 🌟 PWA 安裝相關狀態
+  const deferredPrompt = ref(null)
+  const canInstall = ref(false)
+  const isIOS = ref(false)
+  const isStandalone = ref(false)
+  const showIOSGuide = ref(false)
 
   // --- 資源連結 ---
   const careImg = ref('https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/%E7%92%B0%E5%A2%83.png')
@@ -45,8 +55,7 @@ export const useMainStore = defineStore('main', () => {
   const logoUrl = ref('https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/%E6%9C%AA%E5%91%BD%E5%90%8D%E8%A8%AD%E8%A8%88.png')
   const lineLink = ref('https://line.me/R/ti/p/@219abdzn')
 
-  // --- Actions ---
-
+  // --- Actions (Data Loading) ---
   async function loadDataFromAPI() {
     loading.value = true
     try {
@@ -139,7 +148,6 @@ export const useMainStore = defineStore('main', () => {
       
       auctionList.value = auctionsData
 
-      // 修正：檢查是否已經訂閱過，避免重複註冊報錯
       if (import.meta.client && !isAuctionSubscribed.value) {
         supabase.channel('public:auctions')
           .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'auctions' }, payload => {
@@ -161,15 +169,106 @@ export const useMainStore = defineStore('main', () => {
     }
   }
 
+  function initLiff() {
+    if (!import.meta.client || isLiffInitialized.value) return
+    const script = document.createElement('script')
+    script.src = 'https://static.line-scdn.net/liff/edge/2/sdk.js'
+    script.onload = async () => {
+      try {
+        await window.liff.init({ liffId: '2009804483-8KRouTSr' })
+        isLiffInitialized.value = true
+        checkAuthStatus()
+        if (window.liff.isLoggedIn()) {
+          const redirectUrl = localStorage.getItem('gencko_line_redirect')
+          if (redirectUrl) {
+            localStorage.removeItem('gencko_line_redirect')
+            const urlObj = new URL(redirectUrl)
+            if (urlObj.pathname !== window.location.pathname) {
+              router.push(urlObj.pathname + urlObj.search + urlObj.hash)
+            }
+          }
+        }
+      } catch (err) {
+        console.error('LIFF 初始化失敗', err)
+      }
+    }
+    document.head.appendChild(script)
+  }
+
+  async function checkAuthStatus() {
+    if (!import.meta.client) return
+    const { data } = await supabase.auth.getSession()
+    if (data.session?.user) {
+      currentUser.value = { 
+        type: 'google', 
+        email: data.session.user.email, 
+        name: data.session.user.email.split('@')[0] 
+      }
+      return
+    }
+    if (window.liff && window.liff.isLoggedIn()) {
+      const profile = await window.liff.getProfile()
+      const idToken = window.liff.getDecodedIDToken()
+      const emailOrId = (idToken && idToken.email) ? idToken.email : profile.userId
+      currentUser.value = { 
+        type: 'line', 
+        name: profile.displayName, 
+        email: emailOrId,
+        picture: profile.pictureUrl
+      }
+    }
+  }
+
+  if (import.meta.client) {
+    supabase.auth.onAuthStateChange((_, session) => {
+      if (session?.user) {
+        currentUser.value = { 
+          type: 'google', 
+          email: session.user.email,
+          name: session.user.email.split('@')[0]
+        }
+      } else if (currentUser.value?.type === 'google') {
+        currentUser.value = null
+      }
+    })
+  }
+
+  const loginWithLine = () => {
+    if (window.liff && !window.liff.isLoggedIn()) {
+        localStorage.setItem('gencko_line_redirect', window.location.href)
+        window.liff.login({ redirectUri: window.location.href })
+    }
+  }
+
+  const loginWithGoogle = async () => {
+    try {
+        const { error } = await supabase.auth.signInWithOAuth({ 
+            provider: 'google', 
+            options: { redirectTo: window.location.href } 
+        })
+        if (error) throw error
+    } catch (err) {
+        console.error('Google 登入失敗:', err)
+        alert('登入失敗，請稍後再試！')
+    }
+  }
+
+  const logout = async () => {
+    if (currentUser.value?.type === 'line' && window.liff) window.liff.logout()
+    else await supabase.auth.signOut()
+    currentUser.value = null
+  }
+
+  // 🌟 將 document.body 改為 document.documentElement
   function initTheme() {
     if (import.meta.client) {
       const savedTheme = localStorage.getItem('gencko_theme')
       if (savedTheme === 'dark') {
         isDayMode.value = false
-        document.body.classList.remove('day-mode')
+        document.documentElement.classList.remove('day-mode')
       } else {
         isDayMode.value = true
-        document.body.classList.add('day-mode')
+        document.documentElement.classList.add('day-mode')
       }
     }
   }
@@ -178,72 +277,85 @@ export const useMainStore = defineStore('main', () => {
     isDayMode.value = !isDayMode.value
     if (import.meta.client) {
       if (isDayMode.value) {
-        document.body.classList.add('day-mode')
+        document.documentElement.classList.add('day-mode')
       } else {
-        document.body.classList.remove('day-mode')
+        document.documentElement.classList.remove('day-mode')
       }
       localStorage.setItem('gencko_theme', isDayMode.value ? 'light' : 'dark')
     }
   }
 
-  function openLightbox(item) {
-    lightboxItem.value = item
-    // 修正：改用 window.history 確認存在再操作，避免 SSR 期間報錯
-    if (import.meta.client && window && window.history) {
-      window.history.pushState({ lightbox: true }, '')
+  // 🌟 初始化 PWA 安裝攔截器
+  function initPWAInstallPrompt() {
+    if (!import.meta.client) return
+
+    // 判斷是否為獨立 App 模式 (已安裝)
+    isStandalone.value = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone
+
+    // 判斷是否為 iOS 裝置
+    const ua = window.navigator.userAgent.toLowerCase()
+    isIOS.value = /iphone|ipad|ipod/.test(ua)
+
+    // 如果已經是 App 模式，就不需要顯示安裝按鈕
+    if (isStandalone.value) {
+      canInstall.value = false
+      return
+    }
+
+    // 針對 Android / Chrome 攔截原生安裝事件
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault()
+      deferredPrompt.value = e
+      canInstall.value = true
+    })
+
+    // 針對 iOS，如果不是 standalone 模式，開放顯示引導按鈕
+    if (isIOS.value) {
+      canInstall.value = true
     }
   }
 
-  function closeLightbox() {
-    // 修正：增加對 window.history.state 的安全檢查
-    if (import.meta.client && window && window.history && window.history.state?.lightbox) {
-      window.history.back()
+  // 🌟 執行安裝或顯示教學
+  async function installApp() {
+    if (isIOS.value && !isStandalone.value) {
+      // iOS 無法主動觸發，顯示我們自訂的教學視窗
+      showIOSGuide.value = true
+    } else if (deferredPrompt.value) {
+      // Android / 電腦版：觸發剛剛攔截的系統安裝視窗
+      deferredPrompt.value.prompt()
+      const { outcome } = await deferredPrompt.value.userChoice
+      if (outcome === 'accepted') {
+        canInstall.value = false // 安裝成功後隱藏按鈕
+      }
+      deferredPrompt.value = null
     } else {
-      lightboxItem.value = null
+      // 若瀏覽器不支援 PWA，跳出提示
+      alert('您的瀏覽器目前不支援快捷安裝，請嘗試從瀏覽器選單中選擇「加到主畫面」或「安裝應用程式」。')
     }
+  }
+
+  function openLightbox(item) {
+    lightboxItem.value = item
+    if (import.meta.client && window && window.history) window.history.pushState({ lightbox: true }, '')
+  }
+
+  function closeLightbox() {
+    if (import.meta.client && window && window.history && window.history.state?.lightbox) window.history.back()
+    else lightboxItem.value = null
   }
 
   function triggerToast() {
     showToast.value = true
-    setTimeout(() => {
-      showToast.value = false
-    }, 2000)
+    setTimeout(() => showToast.value = false, 2000)
   }
 
   return {
-    loading,
-    isDayMode,
-    curTab,
-    inv,
-    merchList,
-    articlesList,
-    genePages,
-    marqueeList,
-    hotList,
-    auctionList,
-    wishlist,
-    hospWishlist,
-    history,
-    showToast,
-    lightboxItem,
-    navHidden,
-    mobileMenuOpen,
-    lastScrollY,
-    displayLimit,
-    readingArticle,
-    readingProgress,
-    viewingGene,
-    geneSpecies,
-    careImg,
-    aboutImg,
-    logoUrl,
-    lineLink,
-    loadDataFromAPI,
-    loadAuctions,
-    initTheme,
-    toggleTheme,
-    openLightbox,
-    closeLightbox,
-    triggerToast
+    loading, isDayMode, curTab, inv, merchList, articlesList, genePages, marqueeList, hotList, auctionList,
+    currentUser, wishlist, hospWishlist, history, showToast, lightboxItem, navHidden, mobileMenuOpen, lastScrollY,
+    displayLimit, readingArticle, readingProgress, viewingGene, geneSpecies, careImg, aboutImg, logoUrl, lineLink,
+    canInstall, showIOSGuide, // 🌟 匯出安裝相關狀態
+    loadDataFromAPI, loadAuctions, initLiff, checkAuthStatus, loginWithLine, loginWithGoogle, logout,
+    initTheme, toggleTheme, initPWAInstallPrompt, installApp, // 🌟 匯出安裝相關函式
+    openLightbox, closeLightbox, triggerToast
   }
 })

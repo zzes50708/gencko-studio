@@ -1,10 +1,7 @@
 <script setup>
 import { ref } from 'vue'
-import { useRouter } from 'vue-router'
 import { useHead } from '#imports'
 import { FAQ_DATA } from '~/utils/faq.js'
-
-const router = useRouter()
 
 useHead({
     title: '常見問題',
@@ -22,30 +19,16 @@ const activeIndex = ref(null)
 const toggle = (idx) => {
     activeIndex.value = activeIndex.value === idx ? null : idx
 }
-
-// 🌟 返回邏輯
-const goBack = () => {
-    if (window.history.state && window.history.state.back) {
-        router.back()
-    } else {
-        router.push('/')
-    }
-}
 </script>
 
 <template>
     <div class="faq-page-wrapper">
         
-        <!-- 🌟 手機版顯示的 App-like 返回按鈕 -->
-        <div class="nav-action-row m-only">
-            <button class="app-back-btn" @click="goBack">
-                <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
-                返回
-            </button>
-        </div>
+        <!-- 🌟 引入全域共用的 App-like 返回按鈕 -->
+        <TheBackButton wrapper-class="m-only" fallback="/" />
 
         <div class="content-card">
-            <!-- 🌟 桌機版顯示標題與前言，手機版直接隱藏節省高度 -->
+            <!-- 桌機版顯示標題與前言，手機版直接隱藏節省高度 -->
             <h1 class="page-title dt-only">常見問題 FAQ</h1>
             <div class="page-text-box dt-only">
                 <p>這裡整理了關於購買流程、運送方式以及售後服務的常見問題。</p>
@@ -73,10 +56,10 @@ const goBack = () => {
 </template>
 
 <style scoped>
-/*
-  [局部樣式修復] 
+/*[局部樣式修復] 
   已清除寫死的深色背景與淺色字體色碼。
   全面導入 CSS 變數，移除所有不必要的 :global(body.day-mode) 覆寫。
+  （已移除重複的 app-back-btn 相關樣式）
 */
 .faq-page-wrapper {
     max-width: 900px;
@@ -88,37 +71,6 @@ const goBack = () => {
 /* 🌟 Responsive Utilities */
 .dt-only { display: block; }
 .m-only { display: none !important; }
-
-/* 🌟 App-like 返回按鈕 */
-.nav-action-row {
-    width: 100%;
-    display: flex;
-    justify-content: flex-start;
-    margin-bottom: 10px;
-}
-
-.app-back-btn {
-    background: var(--card-bg);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    border: 1px solid var(--bd);
-    color: var(--txt);
-    font-size: 0.95rem;
-    font-weight: bold;
-    cursor: pointer;
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 8px 16px;
-    border-radius: 30px;
-    transition: 0.2s;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.05);
-}
-
-.app-back-btn:active {
-    transform: scale(0.95);
-    background: var(--bd);
-}
 
 /* 卡片化內容 */
 .content-card {
@@ -236,15 +188,6 @@ const goBack = () => {
     
     .faq-page-wrapper {
         padding-top: 0;
-    }
-    
-    .nav-action-row {
-        margin-bottom: 5px;
-    }
-    
-    .app-back-btn {
-        padding: 6px 12px;
-        font-size: 0.95rem;
     }
     
     .content-card {
