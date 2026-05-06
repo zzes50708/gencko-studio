@@ -222,173 +222,6 @@ const goBack = () => {
 </style>
 </file>
 
-<file path="pages/articles/[id].vue">
-<script setup>
-import { computed } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
-import { useHead, useAsyncData, useSupabaseClient } from '#imports'
-import { useMainStore } from '~/stores/useMainStore'
-
-const route = useRoute()
-const router = useRouter()
-const store = useMainStore()
-const supabase = useSupabaseClient()
-const articleId = route.params.id
-
-// [SEO] 為了在伺服器端渲染 (SSR) 期間就能拿到該文章資料以產生正確的 Meta，
-// 我們使用 useAsyncData 獨立向 Supabase 請求單篇文章資料。
-const { data: readingArticle, pending } = await useAsyncData(`article-${articleId}`, async () => {
-    // 若 Store 已經有了，可以直接用 (CSR 場景)
-    if (store.articlesList && store.articlesList.length > 0) {
-        const found = store.articlesList.find(a => a.ID === articleId)
-        if (found) return found
-    }
-
-    // 若 Store 沒有 (SSR 場景或直接進入內頁)，則直接去資料庫撈
-    const { data, error } = await supabase
-        .from('articles')
-        .select('*')
-        .eq('id', articleId)
-        .eq('status', 'Published')
-        .single()
-
-    if (error || !data) return null
-
-    return {
-        ID: data.id,
-        Title: data.title,
-        Category: data.category,
-        Summary: data.summary,
-        Content: data.content,
-        ImageURL: data.image_url,
-        Author: data.author,
-        PublishDate: data.publish_date
-    }
-})
-
-// 當文章被載入後，將其存入 Store 以供全域 Navbar 計算進度條使用
-if (readingArticle.value && import.meta.client) {
-    store.readingArticle = readingArticle.value
-}
-
-const getMetaImg = (url) => {
-    if (!url) return 'https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/%E6%9C%AA%E5%91%BD%E5%90%8D%E8%A8%AD%E8%A8%88.png'
-    const driveRegex = /file\/d\/([a-zA-Z0-9_-]+)\//
-    const match = url.match(driveRegex)
-    let target = url
-    if (match && match[1]) target = 'https://drive.google.com/uc?id=' + match[1]
-    return `https://wsrv.nl/?url=${encodeURIComponent(target)}&w=1200&output=webp&q=80`
-}
-
-const convertLink = (url) => {
-    if (!url) return ''
-    const driveRegex = /file\/d\/([a-zA-Z0-9_-]+)\//
-    const match = url.match(driveRegex)
-    let target = url
-    if (match && match[1]) target = 'https://drive.google.com/uc?id=' + match[1]
-    return `https://wsrv.nl/?url=${encodeURIComponent(target)}&w=1000&output=webp&q=80`
-}
-
-const fmtDate = (d) => {
-    try { return new Date(d).toISOString().split('T')[0] } catch(e) { return '' }
-}
-
-const siteData = computed(() => {
-    if (readingArticle.value) {
-        const art = readingArticle.value
-        const imgUrl = getMetaImg(art.ImageURL)
-        const artUrl = `https://www.genckobreeding.com/articles/${art.ID}`
-        const isoDate = new Date(art.PublishDate).toISOString()
-
-        const jsonLd = {
-            "@context": "https://schema.org",
-            "@type": "BlogPosting",
-            "headline": art.Title,
-            "image": [imgUrl],
-            "datePublished": isoDate,
-            "dateModified": isoDate,
-            "author":[{
-                "@type": "Person",
-                "name": art.Author || "Gencko Studio",
-                "url": "https://www.genckobreeding.com/about"
-            }],
-            "description": art.Summary
-        }
-
-        return {
-            title: art.Title,
-            desc: art.Summary || 'Gencko Studio 專業爬蟲與守宮飼養專欄。',
-            img: imgUrl,
-            url: artUrl,
-            script:[{ type: 'application/ld+json', children: JSON.stringify(jsonLd) }]
-        }
-    }
-    
-    // Fallback if not found
-    return {
-        title: '文章不存在',
-        desc: '找不到此文章',
-        img: 'https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/%E6%9C%AA%E5%91%BD%E5%90%8D%E8%A8%AD%E8%A8%88.png',
-        url: `https://www.genckobreeding.com/articles/${articleId}`,
-        script:[]
-    }
-})
-
-useHead({
-    title: computed(() => siteData.value.title),
-    meta:[
-        { name: 'description', content: computed(() => siteData.value.desc) },
-        { property: 'og:title', content: computed(() => `${siteData.value.title} | Gencko Studio`) },
-        { property: 'og:description', content: computed(() => siteData.value.desc) },
-        { property: 'og:image', content: computed(() => siteData.value.img) },
-        { property: 'og:url', content: computed(() => siteData.value.url) },
-        { property: 'og:type', content: 'article' }
-    ],
-    link:[
-        { rel: 'canonical', href: computed(() => siteData.value.url) }
-    ],
-    script: computed(() => siteData.value.script)
-})
-
-const goBack = () => {
-    store.readingArticle = null
-    router.push('/articles')
-}
-</script>
-
-<template>
-    <div>
-        <div v-if="pending" style="text-align:center; padding:100px 0; color:#888;">
-            <div class="loader" style="margin:0 auto 20px auto;"></div>
-            <p>文章載入中...</p>
-        </div>
-
-        <div v-else-if="!readingArticle" style="text-align:center; padding:100px 0; color:#888;">
-            <h2>找不到此文章或文章已下架</h2>
-            <button @click="goBack" class="btn-back" style="margin-top:20px;">← 返回列表</button>
-        </div>
-
-        <div v-else>
-            <button @click="goBack" class="btn-back">← 返回列表</button>
-            <article class="reader-container">
-                <div v-if="readingArticle.ImageURL" class="article-hero-image">
-                    <img :src="convertLink(readingArticle.ImageURL)" :alt="readingArticle.Title" style="width:100%; height:auto; max-height:200px; object-fit:cover; border-radius:8px; margin-bottom:0px;" loading="eager">
-                </div>
-                <h1 style="color:var(--txt);font-size:2rem;margin-bottom:15px;">{{ readingArticle.Title }}</h1>
-                <div style="color:#666;font-size:0.9rem;margin-bottom:20px;">
-                    <time :datetime="readingArticle.PublishDate">📅 {{ fmtDate(readingArticle.PublishDate) }}</time>
-                    <span style="margin-left:15px;">👤 {{ readingArticle.Author }}</span>
-                    <span style="margin-left:15px;">📂 {{ readingArticle.Category }}</span>
-                </div>
-                <hr style="border-color:rgba(255,255,255,0.1); margin: 0px 0;">
-                <div class="reader-content" v-html="readingArticle.Content"></div>
-            </article>
-            <button @click="goBack" class="btn-back" style="margin-top:30px;">← 返回列表</button>
-        </div>
-    </div>
-</template>
-</file>
-
 <file path="utils/calcUtils.js">
 import { CALC_SPECIES, CALC_TYPES, ZYG, CALC_COMBO_RULES } from './genes.js';
 
@@ -1193,6 +1026,178 @@ const props = defineProps({
 </style>
 </file>
 
+<file path="pages/articles/[id].vue">
+<script setup>
+import { computed } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import { useHead, useAsyncData, useSupabaseClient } from '#imports'
+import { useMainStore } from '~/stores/useMainStore'
+
+const route = useRoute()
+const router = useRouter()
+const store = useMainStore()
+const supabase = useSupabaseClient()
+const articleId = route.params.id
+
+// [SEO] 為了在伺服器端渲染 (SSR) 期間就能拿到該文章資料以產生正確的 Meta，
+// 我們使用 useAsyncData 獨立向 Supabase 請求單篇文章資料。
+const { data: readingArticle, pending } = await useAsyncData(`article-${articleId}`, async () => {
+    // 若 Store 已經有了，可以直接用 (CSR 場景)
+    if (store.articlesList && store.articlesList.length > 0) {
+        const found = store.articlesList.find(a => a.ID === articleId)
+        if (found) return found
+    }
+
+    // 若 Store 沒有 (SSR 場景或直接進入內頁)，則直接去資料庫撈
+    const { data, error } = await supabase
+        .from('articles')
+        .select('*')
+        .eq('id', articleId)
+        .eq('status', 'Published')
+        .single()
+
+    if (error || !data) return null
+
+    return {
+        ID: data.id,
+        Title: data.title,
+        Category: data.category,
+        Summary: data.summary,
+        Content: data.content,
+        ImageURL: data.image_url,
+        Author: data.author,
+        PublishDate: data.publish_date,
+        Keywords: data.keywords // 🌟 新增：撈取隱藏的關鍵字欄位
+    }
+})
+
+// 當文章被載入後，將其存入 Store 以供全域 Navbar 計算進度條使用
+if (readingArticle.value && import.meta.client) {
+    store.readingArticle = readingArticle.value
+}
+
+const getMetaImg = (url) => {
+    if (!url) return 'https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/%E6%9C%AA%E5%91%BD%E5%90%8D%E8%A8%AD%E8%A8%88.png'
+    const driveRegex = /file\/d\/([a-zA-Z0-9_-]+)\//
+    const match = url.match(driveRegex)
+    let target = url
+    if (match && match[1]) target = 'https://drive.google.com/uc?id=' + match[1]
+    return `https://wsrv.nl/?url=${encodeURIComponent(target)}&w=1200&output=webp&q=80`
+}
+
+const convertLink = (url) => {
+    if (!url) return ''
+    const driveRegex = /file\/d\/([a-zA-Z0-9_-]+)\//
+    const match = url.match(driveRegex)
+    let target = url
+    if (match && match[1]) target = 'https://drive.google.com/uc?id=' + match[1]
+    return `https://wsrv.nl/?url=${encodeURIComponent(target)}&w=1000&output=webp&q=80`
+}
+
+const fmtDate = (d) => {
+    try { return new Date(d).toISOString().split('T')[0] } catch(e) { return '' }
+}
+
+const siteData = computed(() => {
+    if (readingArticle.value) {
+        const art = readingArticle.value
+        const imgUrl = getMetaImg(art.ImageURL)
+        const artUrl = `https://www.genckobreeding.com/articles/${art.ID}`
+        const isoDate = new Date(art.PublishDate).toISOString()
+
+        const jsonLd = {
+            "@context": "https://schema.org",
+            "@type": "BlogPosting",
+            "headline": art.Title,
+            "image": [imgUrl],
+            "datePublished": isoDate,
+            "dateModified": isoDate,
+            "author":[{
+                "@type": "Person",
+                "name": art.Author || "Gencko Studio",
+                "url": "https://www.genckobreeding.com/about"
+            }],
+            "description": art.Summary,
+            "keywords": art.Keywords || "" // 🌟 新增：注入 JSON-LD
+        }
+
+        return {
+            title: art.Title,
+            desc: art.Summary || 'Gencko Studio 專業爬蟲與守宮飼養專欄。',
+            keywords: art.Keywords || 'Gencko Studio, 豹紋守宮, 肥尾守宮, 爬蟲, 飼養教學', // 🌟 預設備用關鍵字
+            img: imgUrl,
+            url: artUrl,
+            script:[{ type: 'application/ld+json', children: JSON.stringify(jsonLd) }]
+        }
+    }
+    
+    // Fallback if not found
+    return {
+        title: '文章不存在',
+        desc: '找不到此文章',
+        keywords: '',
+        img: 'https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/%E6%9C%AA%E5%91%BD%E5%90%8D%E8%A8%AD%E8%A8%88.png',
+        url: `https://www.genckobreeding.com/articles/${articleId}`,
+        script:[]
+    }
+})
+
+useHead({
+    title: computed(() => siteData.value.title),
+    meta:[
+        { name: 'description', content: computed(() => siteData.value.desc) },
+        { name: 'keywords', content: computed(() => siteData.value.keywords) }, // 🌟 新增：Meta Keywords
+        { property: 'og:title', content: computed(() => `${siteData.value.title} | Gencko Studio`) },
+        { property: 'og:description', content: computed(() => siteData.value.desc) },
+        { property: 'og:image', content: computed(() => siteData.value.img) },
+        { property: 'og:url', content: computed(() => siteData.value.url) },
+        { property: 'og:type', content: 'article' }
+    ],
+    link:[
+        { rel: 'canonical', href: computed(() => siteData.value.url) }
+    ],
+    script: computed(() => siteData.value.script)
+})
+
+const goBack = () => {
+    store.readingArticle = null
+    router.push('/articles')
+}
+</script>
+
+<template>
+    <div>
+        <div v-if="pending" style="text-align:center; padding:100px 0; color:#888;">
+            <div class="loader" style="margin:0 auto 20px auto;"></div>
+            <p>文章載入中...</p>
+        </div>
+
+        <div v-else-if="!readingArticle" style="text-align:center; padding:100px 0; color:#888;">
+            <h2>找不到此文章或文章已下架</h2>
+            <button @click="goBack" class="btn-back" style="margin-top:20px;">← 返回列表</button>
+        </div>
+
+        <div v-else>
+            <button @click="goBack" class="btn-back">← 返回列表</button>
+            <article class="reader-container">
+                <div v-if="readingArticle.ImageURL" class="article-hero-image">
+                    <img :src="convertLink(readingArticle.ImageURL)" :alt="readingArticle.Title" style="width:100%; height:auto; max-height:200px; object-fit:cover; border-radius:8px; margin-bottom:0px;" loading="eager">
+                </div>
+                <h1 style="color:var(--txt);font-size:2rem;margin-bottom:15px;">{{ readingArticle.Title }}</h1>
+                <div style="color:#666;font-size:0.9rem;margin-bottom:20px;">
+                    <time :datetime="readingArticle.PublishDate">📅 {{ fmtDate(readingArticle.PublishDate) }}</time>
+                    <span style="margin-left:15px;">👤 {{ readingArticle.Author }}</span>
+                    <span style="margin-left:15px;">📂 {{ readingArticle.Category }}</span>
+                </div>
+                <hr style="border-color:rgba(255,255,255,0.1); margin: 0px 0;">
+                <div class="reader-content" v-html="readingArticle.Content"></div>
+            </article>
+            <button @click="goBack" class="btn-back" style="margin-top:30px;">← 返回列表</button>
+        </div>
+    </div>
+</template>
+</file>
+
 <file path="server/api/_sitemap-urls.ts">
 import { serverSupabaseClient } from '#supabase/server'
 
@@ -1315,370 +1320,6 @@ export default defineEventHandler(async (event) => {
   }
 
   return urls
-})
-</file>
-
-<file path="stores/useMainStore.js">
-import { defineStore } from 'pinia'
-import { ref } from 'vue'
-import { useSupabaseClient } from '#imports'
-import { useRouter } from 'vue-router'
-
-export const useMainStore = defineStore('main', () => {
-  const supabase = useSupabaseClient()
-  const router = useRouter()
-
-  // --- 核心狀態 ---
-  const loading = ref(false)
-  const isDayMode = ref(true)
-  const curTab = ref('home')
-
-  // --- 資料儲存 ---
-  const inv = ref([])
-  const merchList = ref([])
-  const articlesList = ref([])
-  const genePages = ref([])
-  const marqueeList = ref([])
-  const hotList = ref([])
-  const auctionList = ref([])
-
-  // --- 使用者狀態 (Auth) ---
-  const currentUser = ref(null)
-  const wishlist = ref([])
-  const hospWishlist = ref([])
-  const history = ref([])
-  
-  const isLiffInitialized = ref(false)
-  const isAuctionSubscribed = ref(false)
-
-  // --- 全域 UI 狀態 ---
-  const showToast = ref(false)
-  const lightboxItem = ref(null)
-  const navHidden = ref(false)
-  const mobileMenuOpen = ref(false)
-  const lastScrollY = ref(0)
-  const displayLimit = ref(20)
-  const readingArticle = ref(null)
-  const readingProgress = ref(0)
-  const viewingGene = ref(null)
-  const geneSpecies = ref('豹紋守宮')
-
-  // 🌟 PWA 安裝相關狀態
-  const deferredPrompt = ref(null)
-  const canInstall = ref(false)
-  const isIOS = ref(false)
-  const isStandalone = ref(false)
-  const showIOSGuide = ref(false)
-
-  // --- 資源連結 ---
-  const careImg = ref('https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/%E7%92%B0%E5%A2%83.png')
-  const aboutImg = ref('https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/324500%20(1).png')
-  const logoUrl = ref('https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/%E6%9C%AA%E5%91%BD%E5%90%8D%E8%A8%AD%E8%A8%88.png')
-  const lineLink = ref('https://line.me/R/ti/p/@219abdzn')
-
-  // --- Actions (Data Loading) ---
-  async function loadDataFromAPI() {
-    loading.value = true
-    try {
-      const { data: invData, error: invErr } = await supabase.from('inventory').select('*')
-      if (invErr) throw invErr
-
-      inv.value = invData.map(i => ({
-        ID: String(i.id || '').trim(),
-        Source: i.source,
-        Species: i.species,
-        Morph: i.morph,
-        Genes: i.genes ? JSON.parse(i.genes) :[],
-        GenderType: i.gender_type,
-        GenderValue: i.gender_value,
-        Birthday: i.birthday,
-        CostPrice: i.cost_price,
-        ListingPrice: i.listing_price,
-        SoldPrice: i.sold_price,
-        Status: i.status,
-        Note: i.note,
-        ImageURL: i.image_url,
-        IsHot: String(i.is_hot || '').trim(),
-        CreatedDate: i.created_at || new Date().toISOString()
-      }))
-
-      hotList.value = inv.value.filter(i => i.IsHot === 'Hot')
-
-      const { data: merchData } = await supabase.from('merchandise').select('*')
-      if (merchData) {
-        merchList.value = merchData.map(m => ({
-          ItemID: m.item_id,
-          Name: m.name,
-          Description: m.description,
-          Price: m.price,
-          ImageURL: m.image_url,
-          Category: m.category,
-          Available: m.available,
-          ExternalLink: m.external_link
-        }))
-      }
-
-      const { data: artData } = await supabase.from('articles').select('*')
-      if (artData) {
-        articlesList.value = artData
-          .filter(a => a.status === 'Published')
-          .map(a => ({
-            ID: a.id,
-            Title: a.title,
-            Category: a.category,
-            Summary: a.summary,
-            Content: a.content,
-            ImageURL: a.image_url,
-            Author: a.author,
-            PublishDate: a.publish_date
-          }))
-          .reverse()
-      }
-
-      const { data: geneData } = await supabase.from('genetic_pages').select('*')
-      if (geneData) {
-        genePages.value = geneData.map(g => ({
-          Name: g.name,
-          ImageURL: g.image_url,
-          Warning: g.warning,
-          Brief: g.brief,
-          Detail: g.detail,
-          Source: g.source
-        }))
-      }
-
-      const { data: configData } = await supabase.from('config').select('*')
-      if (configData) {
-        marqueeList.value = configData.map(c => ({ text: c.text, url: c.url }))
-      }
-    } catch (e) {
-      console.error('Supabase 讀取失敗:', e)
-    } finally {
-      loading.value = false
-    }
-  }
-
-  async function loadAuctions() {
-    try {
-      const { data: auctionsData, error } = await supabase
-        .from('auctions')
-        .select('*')
-        .order('created_at', { ascending: false })
-        
-      if (error) throw error
-      
-      auctionList.value = auctionsData
-
-      if (import.meta.client && !isAuctionSubscribed.value) {
-        supabase.channel('public:auctions')
-          .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'auctions' }, payload => {
-            const updatedAuction = payload.new
-            const idx = auctionList.value.findIndex(a => a.id === updatedAuction.id)
-            if (idx !== -1) {
-              auctionList.value[idx] = { ...auctionList.value[idx], ...updatedAuction }
-            }
-          })
-          .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'auctions' }, payload => {
-            auctionList.value.unshift(payload.new)
-          })
-          .subscribe()
-          
-        isAuctionSubscribed.value = true
-      }
-    } catch (error) {
-      console.error('讀取競標資料失敗:', error)
-    }
-  }
-
-  function initLiff() {
-    if (!import.meta.client || isLiffInitialized.value) return
-    const script = document.createElement('script')
-    script.src = 'https://static.line-scdn.net/liff/edge/2/sdk.js'
-    script.onload = async () => {
-      try {
-        await window.liff.init({ liffId: '2009804483-8KRouTSr' })
-        isLiffInitialized.value = true
-        checkAuthStatus()
-        if (window.liff.isLoggedIn()) {
-          const redirectUrl = localStorage.getItem('gencko_line_redirect')
-          if (redirectUrl) {
-            localStorage.removeItem('gencko_line_redirect')
-            const urlObj = new URL(redirectUrl)
-            if (urlObj.pathname !== window.location.pathname) {
-              router.push(urlObj.pathname + urlObj.search + urlObj.hash)
-            }
-          }
-        }
-      } catch (err) {
-        console.error('LIFF 初始化失敗', err)
-      }
-    }
-    document.head.appendChild(script)
-  }
-
-  async function checkAuthStatus() {
-    if (!import.meta.client) return
-    const { data } = await supabase.auth.getSession()
-    if (data.session?.user) {
-      currentUser.value = { 
-        type: 'google', 
-        email: data.session.user.email, 
-        name: data.session.user.email.split('@')[0] 
-      }
-      return
-    }
-    if (window.liff && window.liff.isLoggedIn()) {
-      const profile = await window.liff.getProfile()
-      const idToken = window.liff.getDecodedIDToken()
-      const emailOrId = (idToken && idToken.email) ? idToken.email : profile.userId
-      currentUser.value = { 
-        type: 'line', 
-        name: profile.displayName, 
-        email: emailOrId,
-        picture: profile.pictureUrl
-      }
-    }
-  }
-
-  if (import.meta.client) {
-    supabase.auth.onAuthStateChange((_, session) => {
-      if (session?.user) {
-        currentUser.value = { 
-          type: 'google', 
-          email: session.user.email,
-          name: session.user.email.split('@')[0]
-        }
-      } else if (currentUser.value?.type === 'google') {
-        currentUser.value = null
-      }
-    })
-  }
-
-  const loginWithLine = () => {
-    if (window.liff && !window.liff.isLoggedIn()) {
-        localStorage.setItem('gencko_line_redirect', window.location.href)
-        window.liff.login({ redirectUri: window.location.href })
-    }
-  }
-
-  const loginWithGoogle = async () => {
-    try {
-        const { error } = await supabase.auth.signInWithOAuth({ 
-            provider: 'google', 
-            options: { redirectTo: window.location.href } 
-        })
-        if (error) throw error
-    } catch (err) {
-        console.error('Google 登入失敗:', err)
-        alert('登入失敗，請稍後再試！')
-    }
-  }
-
-  const logout = async () => {
-    if (currentUser.value?.type === 'line' && window.liff) window.liff.logout()
-    else await supabase.auth.signOut()
-    currentUser.value = null
-  }
-
-  // 🌟 將 document.body 改為 document.documentElement
-  function initTheme() {
-    if (import.meta.client) {
-      const savedTheme = localStorage.getItem('gencko_theme')
-      if (savedTheme === 'dark') {
-        isDayMode.value = false
-        document.documentElement.classList.remove('day-mode')
-      } else {
-        isDayMode.value = true
-        document.documentElement.classList.add('day-mode')
-      }
-    }
-  }
-
-  function toggleTheme() {
-    isDayMode.value = !isDayMode.value
-    if (import.meta.client) {
-      if (isDayMode.value) {
-        document.documentElement.classList.add('day-mode')
-      } else {
-        document.documentElement.classList.remove('day-mode')
-      }
-      localStorage.setItem('gencko_theme', isDayMode.value ? 'light' : 'dark')
-    }
-  }
-
-  // 🌟 初始化 PWA 安裝攔截器
-  function initPWAInstallPrompt() {
-    if (!import.meta.client) return
-
-    // 判斷是否為獨立 App 模式 (已安裝)
-    isStandalone.value = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone
-
-    // 判斷是否為 iOS 裝置
-    const ua = window.navigator.userAgent.toLowerCase()
-    isIOS.value = /iphone|ipad|ipod/.test(ua)
-
-    // 如果已經是 App 模式，就不需要顯示安裝按鈕
-    if (isStandalone.value) {
-      canInstall.value = false
-      return
-    }
-
-    // 針對 Android / Chrome 攔截原生安裝事件
-    window.addEventListener('beforeinstallprompt', (e) => {
-      e.preventDefault()
-      deferredPrompt.value = e
-      canInstall.value = true
-    })
-
-    // 針對 iOS，如果不是 standalone 模式，開放顯示引導按鈕
-    if (isIOS.value) {
-      canInstall.value = true
-    }
-  }
-
-  // 🌟 執行安裝或顯示教學
-  async function installApp() {
-    if (isIOS.value && !isStandalone.value) {
-      // iOS 無法主動觸發，顯示我們自訂的教學視窗
-      showIOSGuide.value = true
-    } else if (deferredPrompt.value) {
-      // Android / 電腦版：觸發剛剛攔截的系統安裝視窗
-      deferredPrompt.value.prompt()
-      const { outcome } = await deferredPrompt.value.userChoice
-      if (outcome === 'accepted') {
-        canInstall.value = false // 安裝成功後隱藏按鈕
-      }
-      deferredPrompt.value = null
-    } else {
-      // 若瀏覽器不支援 PWA，跳出提示
-      alert('您的瀏覽器目前不支援快捷安裝，請嘗試從瀏覽器選單中選擇「加到主畫面」或「安裝應用程式」。')
-    }
-  }
-
-  function openLightbox(item) {
-    lightboxItem.value = item
-    if (import.meta.client && window && window.history) window.history.pushState({ lightbox: true }, '')
-  }
-
-  function closeLightbox() {
-    if (import.meta.client && window && window.history && window.history.state?.lightbox) window.history.back()
-    else lightboxItem.value = null
-  }
-
-  function triggerToast() {
-    showToast.value = true
-    setTimeout(() => showToast.value = false, 2000)
-  }
-
-  return {
-    loading, isDayMode, curTab, inv, merchList, articlesList, genePages, marqueeList, hotList, auctionList,
-    currentUser, wishlist, hospWishlist, history, showToast, lightboxItem, navHidden, mobileMenuOpen, lastScrollY,
-    displayLimit, readingArticle, readingProgress, viewingGene, geneSpecies, careImg, aboutImg, logoUrl, lineLink,
-    canInstall, showIOSGuide, // 🌟 匯出安裝相關狀態
-    loadDataFromAPI, loadAuctions, initLiff, checkAuthStatus, loginWithLine, loginWithGoogle, logout,
-    initTheme, toggleTheme, initPWAInstallPrompt, installApp, // 🌟 匯出安裝相關函式
-    openLightbox, closeLightbox, triggerToast
-  }
 })
 </file>
 
@@ -3020,6 +2661,359 @@ const resetQuiz = () => {
 </style>
 </file>
 
+<file path="stores/useMainStore.js">
+import { defineStore } from 'pinia'
+import { ref } from 'vue'
+import { useSupabaseClient } from '#imports'
+import { useRouter } from 'vue-router'
+
+export const useMainStore = defineStore('main', () => {
+  const supabase = useSupabaseClient()
+  const router = useRouter()
+
+  // --- 核心狀態 ---
+  const loading = ref(false)
+  const isDayMode = ref(true)
+  const curTab = ref('home')
+
+  // --- 資料儲存 ---
+  const inv = ref([])
+  const merchList = ref([])
+  const articlesList = ref([])
+  const genePages = ref([])
+  const marqueeList = ref([])
+  const hotList = ref([])
+  const auctionList = ref([])
+
+  // --- 使用者狀態 (Auth) ---
+  const currentUser = ref(null)
+  const wishlist = ref([])
+  const hospWishlist = ref([])
+  const history = ref([])
+  
+  const isLiffInitialized = ref(false)
+  const isAuctionSubscribed = ref(false)
+
+  // --- 全域 UI 狀態 ---
+  const showToast = ref(false)
+  const lightboxItem = ref(null)
+  const navHidden = ref(false)
+  const mobileMenuOpen = ref(false)
+  const lastScrollY = ref(0)
+  const displayLimit = ref(20)
+  const readingArticle = ref(null)
+  const readingProgress = ref(0)
+  const viewingGene = ref(null)
+  const geneSpecies = ref('豹紋守宮')
+
+  // 🌟 PWA 安裝相關狀態
+  const deferredPrompt = ref(null)
+  const canInstall = ref(false)
+  const isIOS = ref(false)
+  const isStandalone = ref(false)
+  const showIOSGuide = ref(false)
+
+  // --- 資源連結 ---
+  const careImg = ref('https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/%E7%92%B0%E5%A2%83.png')
+  const aboutImg = ref('https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/324500%20(1).png')
+  const logoUrl = ref('https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/%E6%9C%AA%E5%91%BD%E5%90%8D%E8%A8%AD%E8%A8%88.png')
+  const lineLink = ref('https://line.me/R/ti/p/@219abdzn')
+
+  // --- Actions (Data Loading) ---
+  async function loadDataFromAPI() {
+    loading.value = true
+    try {
+      const { data: invData, error: invErr } = await supabase.from('inventory').select('*')
+      if (invErr) throw invErr
+
+      inv.value = invData.map(i => ({
+        ID: String(i.id || '').trim(),
+        Source: i.source,
+        Species: i.species,
+        Morph: i.morph,
+        Genes: i.genes ? JSON.parse(i.genes) :[],
+        GenderType: i.gender_type,
+        GenderValue: i.gender_value,
+        Birthday: i.birthday,
+        CostPrice: i.cost_price,
+        ListingPrice: i.listing_price,
+        SoldPrice: i.sold_price,
+        Status: i.status,
+        Note: i.note,
+        ImageURL: i.image_url,
+        IsHot: String(i.is_hot || '').trim(),
+        CreatedDate: i.created_at || new Date().toISOString()
+      }))
+
+      hotList.value = inv.value.filter(i => i.IsHot === 'Hot')
+
+      const { data: merchData } = await supabase.from('merchandise').select('*')
+      if (merchData) {
+        merchList.value = merchData.map(m => ({
+          ItemID: m.item_id,
+          Name: m.name,
+          Description: m.description,
+          Price: m.price,
+          ImageURL: m.image_url,
+          Category: m.category,
+          Available: m.available,
+          ExternalLink: m.external_link
+        }))
+      }
+
+      const { data: artData } = await supabase.from('articles').select('*')
+      if (artData) {
+        articlesList.value = artData
+          .filter(a => a.status === 'Published')
+          .map(a => ({
+            ID: a.id,
+            Title: a.title,
+            Category: a.category,
+            Summary: a.summary,
+            Content: a.content,
+            ImageURL: a.image_url,
+            Author: a.author,
+            PublishDate: a.publish_date,
+            Keywords: a.keywords // 🌟 新增：撈取隱藏的關鍵字欄位
+          }))
+          .reverse()
+      }
+
+      const { data: geneData } = await supabase.from('genetic_pages').select('*')
+      if (geneData) {
+        genePages.value = geneData.map(g => ({
+          Name: g.name,
+          ImageURL: g.image_url,
+          Warning: g.warning,
+          Brief: g.brief,
+          Detail: g.detail,
+          Source: g.source
+        }))
+      }
+
+      const { data: configData } = await supabase.from('config').select('*')
+      if (configData) {
+        marqueeList.value = configData.map(c => ({ text: c.text, url: c.url }))
+      }
+    } catch (e) {
+      console.error('Supabase 讀取失敗:', e)
+    } finally {
+      loading.value = false
+    }
+  }
+
+  async function loadAuctions() {
+    try {
+      const { data: auctionsData, error } = await supabase
+        .from('auctions')
+        .select('*')
+        .order('created_at', { ascending: false })
+        
+      if (error) throw error
+      
+      auctionList.value = auctionsData
+
+      if (import.meta.client && !isAuctionSubscribed.value) {
+        supabase.channel('public:auctions')
+          .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'auctions' }, payload => {
+            const updatedAuction = payload.new
+            const idx = auctionList.value.findIndex(a => a.id === updatedAuction.id)
+            if (idx !== -1) {
+              auctionList.value[idx] = { ...auctionList.value[idx], ...updatedAuction }
+            }
+          })
+          .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'auctions' }, payload => {
+            auctionList.value.unshift(payload.new)
+          })
+          .subscribe()
+          
+        isAuctionSubscribed.value = true
+      }
+    } catch (error) {
+      console.error('讀取競標資料失敗:', error)
+    }
+  }
+
+  function initLiff() {
+    if (!import.meta.client || isLiffInitialized.value) return
+    const script = document.createElement('script')
+    script.src = 'https://static.line-scdn.net/liff/edge/2/sdk.js'
+    script.onload = async () => {
+      try {
+        await window.liff.init({ liffId: '2009804483-8KRouTSr' })
+        isLiffInitialized.value = true
+        checkAuthStatus()
+        if (window.liff.isLoggedIn()) {
+          const redirectUrl = localStorage.getItem('gencko_line_redirect')
+          if (redirectUrl) {
+            localStorage.removeItem('gencko_line_redirect')
+            const urlObj = new URL(redirectUrl)
+            if (urlObj.pathname !== window.location.pathname) {
+              router.push(urlObj.pathname + urlObj.search + urlObj.hash)
+            }
+          }
+        }
+      } catch (err) {
+        console.error('LIFF 初始化失敗', err)
+      }
+    }
+    document.head.appendChild(script)
+  }
+
+  async function checkAuthStatus() {
+    if (!import.meta.client) return
+    const { data } = await supabase.auth.getSession()
+    if (data.session?.user) {
+      currentUser.value = { 
+        type: 'google', 
+        email: data.session.user.email, 
+        name: data.session.user.email.split('@')[0] 
+      }
+      return
+    }
+    if (window.liff && window.liff.isLoggedIn()) {
+      const profile = await window.liff.getProfile()
+      const idToken = window.liff.getDecodedIDToken()
+      const emailOrId = (idToken && idToken.email) ? idToken.email : profile.userId
+      currentUser.value = { 
+        type: 'line', 
+        name: profile.displayName, 
+        email: emailOrId,
+        picture: profile.pictureUrl
+      }
+    }
+  }
+
+  if (import.meta.client) {
+    supabase.auth.onAuthStateChange((_, session) => {
+      if (session?.user) {
+        currentUser.value = { 
+          type: 'google', 
+          email: session.user.email,
+          name: session.user.email.split('@')[0]
+        }
+      } else if (currentUser.value?.type === 'google') {
+        currentUser.value = null
+      }
+    })
+  }
+
+  const loginWithLine = () => {
+    if (window.liff && !window.liff.isLoggedIn()) {
+        localStorage.setItem('gencko_line_redirect', window.location.href)
+        window.liff.login({ redirectUri: window.location.href })
+    }
+  }
+
+  const loginWithGoogle = async () => {
+    try {
+        const { error } = await supabase.auth.signInWithOAuth({ 
+            provider: 'google', 
+            options: { redirectTo: window.location.href } 
+        })
+        if (error) throw error
+    } catch (err) {
+        console.error('Google 登入失敗:', err)
+        alert('登入失敗，請稍後再試！')
+    }
+  }
+
+  const logout = async () => {
+    if (currentUser.value?.type === 'line' && window.liff) window.liff.logout()
+    else await supabase.auth.signOut()
+    currentUser.value = null
+  }
+
+  function initTheme() {
+    if (import.meta.client) {
+      const savedTheme = localStorage.getItem('gencko_theme')
+      if (savedTheme === 'dark') {
+        isDayMode.value = false
+        document.documentElement.classList.remove('day-mode')
+      } else {
+        isDayMode.value = true
+        document.documentElement.classList.add('day-mode')
+      }
+    }
+  }
+
+  function toggleTheme() {
+    isDayMode.value = !isDayMode.value
+    if (import.meta.client) {
+      if (isDayMode.value) {
+        document.documentElement.classList.add('day-mode')
+      } else {
+        document.documentElement.classList.remove('day-mode')
+      }
+      localStorage.setItem('gencko_theme', isDayMode.value ? 'light' : 'dark')
+    }
+  }
+
+  function initPWAInstallPrompt() {
+    if (!import.meta.client) return
+
+    isStandalone.value = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone
+    const ua = window.navigator.userAgent.toLowerCase()
+    isIOS.value = /iphone|ipad|ipod/.test(ua)
+
+    if (isStandalone.value) {
+      canInstall.value = false
+      return
+    }
+
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault()
+      deferredPrompt.value = e
+      canInstall.value = true
+    })
+
+    if (isIOS.value) {
+      canInstall.value = true
+    }
+  }
+
+  async function installApp() {
+    if (isIOS.value && !isStandalone.value) {
+      showIOSGuide.value = true
+    } else if (deferredPrompt.value) {
+      deferredPrompt.value.prompt()
+      const { outcome } = await deferredPrompt.value.userChoice
+      if (outcome === 'accepted') {
+        canInstall.value = false 
+      }
+      deferredPrompt.value = null
+    } else {
+      alert('您的瀏覽器目前不支援快捷安裝，請嘗試從瀏覽器選單中選擇「加到主畫面」或「安裝應用程式」。')
+    }
+  }
+
+  function openLightbox(item) {
+    lightboxItem.value = item
+    if (import.meta.client && window && window.history) window.history.pushState({ lightbox: true }, '')
+  }
+
+  function closeLightbox() {
+    if (import.meta.client && window && window.history && window.history.state?.lightbox) window.history.back()
+    else lightboxItem.value = null
+  }
+
+  function triggerToast() {
+    showToast.value = true
+    setTimeout(() => showToast.value = false, 2000)
+  }
+
+  return {
+    loading, isDayMode, curTab, inv, merchList, articlesList, genePages, marqueeList, hotList, auctionList,
+    currentUser, wishlist, hospWishlist, history, showToast, lightboxItem, navHidden, mobileMenuOpen, lastScrollY,
+    displayLimit, readingArticle, readingProgress, viewingGene, geneSpecies, careImg, aboutImg, logoUrl, lineLink,
+    canInstall, showIOSGuide,
+    loadDataFromAPI, loadAuctions, initLiff, checkAuthStatus, loginWithLine, loginWithGoogle, logout,
+    initTheme, toggleTheme, initPWAInstallPrompt, installApp,
+    openLightbox, closeLightbox, triggerToast
+  }
+})
+</file>
+
 <file path="app.vue">
 <script setup>
 import { onMounted, onUnmounted, watch } from 'vue'
@@ -3490,299 +3484,6 @@ const closeMobileMenu = () => {
     .mm-sub { display: block; padding: 15px 20px; color: var(--txt); opacity: 0.8; font-size: 1rem; border-bottom: 1px dashed var(--bd); cursor: pointer; font-weight: bold; text-decoration: none; transition: 0.2s; }
     .mm-sub:last-child { border-bottom: none; }
     .mm-sub:active, .mm-summary:active { background: rgba(255, 69, 0, 0.1); color: var(--pri); opacity: 1; }
-}
-</style>
-</file>
-
-<file path="package.json">
-{
-  "name": "gencko-studio-nuxt",
-  "private": true,
-  "type": "module",
-  "scripts": {
-    "build": "nuxt build",
-    "dev": "nuxt dev",
-    "generate": "nuxt generate",
-    "preview": "nuxt preview",
-    "postinstall": "nuxt prepare"
-  },
-  "dependencies": {
-    "@nuxt/image": "^2.0.0",
-    "@nuxtjs/robots": "^6.0.7",
-    "@nuxtjs/sitemap": "^8.0.13",
-    "@nuxtjs/supabase": "^1.4.0",
-    "@pinia/nuxt": "^0.9.0",
-    "@vite-pwa/nuxt": "^0.6.0",
-    "@vueuse/nuxt": "^12.0.0",
-    "nuxt": "^3.15.0",
-    "pinia": "^2.3.0"
-  }
-}
-</file>
-
-<file path="pages/articles/index.vue">
-<script setup>
-import { ref, computed } from 'vue'
-import { useHead } from '#imports'
-import { useMainStore } from '~/stores/useMainStore'
-import { getCleanUrl } from '~/utils/image.js'
-
-const store = useMainStore()
-const artCat = ref('All')
-
-// 文章分類選項
-const articleCats = computed(() => {
-    if (!store.articlesList.length) return[]
-    return[...new Set(store.articlesList.map(i => i.Category).filter(c => c))]
-})
-
-// 篩選後的文章列表
-const filteredArticles = computed(() => {
-    if (!store.articlesList || store.articlesList.length === 0) return[]
-    let list = store.articlesList
-    if (artCat.value !== 'All') {
-        list = list.filter(i => i.Category === artCat.value)
-    }
-    return list
-})
-
-useHead({
-    title: '專欄文章',
-    meta:[
-        { name: 'description', content: 'Gencko Studio 文章專欄，提供豹紋守宮、肥尾守宮飼養教學、基因解析、疾病預防與市場趨勢分析。' },
-        { property: 'og:title', content: '專欄文章 | Gencko Studio' },
-        { property: 'og:description', content: 'Gencko Studio 文章專欄，提供豹紋守宮、肥尾守宮飼養教學、基因解析、疾病預防與市場趨勢分析。' },
-        { property: 'og:image', content: 'https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/%E6%AD%A3%E9%9D%A2.png' },
-        { property: 'og:url', content: 'https://www.genckobreeding.com/articles' }
-    ]
-})
-
-const fmtDate = (d) => {
-    try { return new Date(d).toISOString().split('T')[0] } catch(e) { return '' }
-}
-</script>
-
-<template>
-    <div class="articles-page-wrapper">
-        <!-- 🌟 桌機版顯示標題，手機版隱藏 -->
-        <h1 class="page-title dt-only">專欄文章</h1>
-        
-        <!-- 🌟 App-like 分類選單 -->
-        <div class="filter-row">
-            <label class="filter-label">分類篩選</label>
-            <div class="select-wrapper">
-                <select v-model="artCat" class="filter-select">
-                    <option value="All">全部文章</option>
-                    <option v-for="c in articleCats" :key="c" :value="c">{{ c }}</option>
-                </select>
-                <span class="select-icon">▼</span>
-            </div>
-        </div>
-
-        <div v-if="filteredArticles.length === 0" class="empty-state">
-            此分類尚無文章 (或正在載入中...)
-        </div>
-
-        <transition-group tag="div" name="list" class="grid" v-else>
-            <article class="card article-card" v-for="item in filteredArticles" :key="item.ID">
-                <NuxtLink :to="`/articles/${item.ID}`" style="display:block; text-decoration:none; color:inherit; height:100%;">
-                    <div style="position:relative; overflow:hidden;">
-                        <!-- 使用 NuxtImg 進行圖片最佳化 -->
-                        <NuxtImg 
-                            v-if="item.ImageURL" 
-                            :src="getCleanUrl(item.ImageURL)" 
-                            :alt="item.Title" 
-                            class="card-img" 
-                            style="height:180px;" 
-                            loading="lazy"
-                            width="400"
-                            height="180"
-                            fit="cover"
-                            format="webp"
-                        />
-                        <div v-else class="card-img" style="height:180px;display:flex;align-items:center;justify-content:center;font-size:3rem;background:#1a1a1a;">📝</div>
-                        <div class="art-cat-tag">{{ item.Category }}</div>
-                    </div>
-                    <div class="card-body">
-                        <time :datetime="item.PublishDate" class="date-text">{{ fmtDate(item.PublishDate) }}</time>
-                        <h2 class="morph-title">{{ item.Title }}</h2>
-                        <p class="art-summary">{{ item.Summary }}</p>
-                    </div>
-                </NuxtLink>
-            </article>
-        </transition-group>
-    </div>
-</template>
-
-<style scoped>
-/*
-  [局部樣式修復] 
-  已清除與 assets/css/style.css 重複的宣告與寫死色碼。
-  全面導入 CSS 變數，移除所有不必要的 :global(body.day-mode) 覆寫。
-*/
-.articles-page-wrapper {
-    max-width: 1300px;
-    margin: 0 auto;
-}
-
-.dt-only { display: block; }
-
-/* 🌟 App-like 分類選單 */
-.filter-row {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    margin-bottom: 20px;
-    background: var(--card-bg);
-    padding: 10px 15px;
-    border-radius: 12px;
-    border: 1px solid var(--bd);
-}
-
-.filter-label {
-    color: var(--txt);
-    opacity: 0.8;
-    font-weight: bold;
-    font-size: 0.95rem;
-    white-space: nowrap;
-}
-
-.select-wrapper {
-    position: relative;
-    flex: 1;
-    max-width: 200px;
-}
-
-.filter-select {
-    width: 100%;
-    background: var(--card-bg);
-    color: var(--txt);
-    padding: 8px 30px 8px 12px;
-    border: 1px solid var(--bd);
-    border-radius: 8px;
-    font-size: 0.95rem;
-    font-weight: bold;
-    appearance: none;
-    outline: none;
-    cursor: pointer;
-    transition: border-color 0.2s;
-}
-
-.filter-select:focus {
-    border-color: var(--pri);
-}
-
-.select-icon {
-    position: absolute;
-    right: 12px;
-    top: 50%;
-    transform: translateY(-50%);
-    font-size: 0.7rem;
-    color: var(--txt);
-    opacity: 0.6;
-    pointer-events: none;
-}
-
-.empty-state {
-    text-align: center;
-    padding: 50px;
-    color: var(--txt);
-    opacity: 0.6;
-    font-size: 1.1rem;
-    background: var(--card-bg);
-    border: 1px dashed var(--bd);
-    border-radius: 12px;
-}
-
-.date-text {
-    font-size: 0.8rem;
-    color: var(--txt);
-    opacity: 0.6;
-    margin-bottom: 8px;
-    display: block;
-}
-
-.morph-title {
-    font-size: 1.15rem;
-    margin: 0 0 8px 0;
-    line-height: 1.3;
-    color: var(--txt);
-}
-
-.art-summary {
-    margin: 0;
-    color: var(--txt);
-    opacity: 0.7;
-    font-size: 0.9rem;
-    line-height: 1.5;
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-}
-
-/* 🌟 Mobile Optimizations */
-@media (max-width: 768px) {
-    .dt-only { display: none !important; }
-    
-    .articles-page-wrapper {
-        padding: 5px 10px 15px 10px; /* 壓縮頂部與兩側留白 */
-    }
-    
-    .filter-row {
-        margin-bottom: 12px;
-        padding: 8px 12px;
-    }
-    
-    .select-wrapper {
-        max-width: 100%;
-    }
-    
-    .filter-select {
-        padding: 8px 30px 8px 12px;
-        font-size: 0.95rem;
-    }
-
-    /* 🌟 強制雙欄排版與縮小內容 */
-    .grid {
-        grid-template-columns: repeat(2, 1fr) !important;
-        gap: 8px !important;
-    }
-
-    .card-img {
-        height: 120px !important; /* 縮減圖片高度，避免卡片過長 */
-    }
-
-    .card-body {
-        padding: 8px !important; /* 縮減內距 */
-    }
-
-    .date-text {
-        font-size: 0.7rem !important;
-        margin-bottom: 4px !important;
-    }
-
-    .morph-title {
-        font-size: 0.95rem !important;
-        margin-bottom: 4px !important;
-        line-height: 1.2 !important;
-        white-space: nowrap; /* 強制單行避免撐破 */
-        overflow: hidden;
-        text-overflow: ellipsis;
-    }
-
-    .art-summary {
-        font-size: 0.8rem !important;
-        line-height: 1.4 !important;
-        -webkit-line-clamp: 2 !important; /* 確保簡介最多兩行 */
-    }
-    
-    .art-cat-tag {
-        font-size: 0.65rem !important;
-        padding: 2px 6px !important;
-        top: 6px !important;
-        left: 6px !important;
-    }
 }
 </style>
 </file>
@@ -5605,6 +5306,374 @@ html.day-mode .scenario-title { color: #d84315; }
 html.day-mode .g-pill-green { background: #e8f5e9; color: #2e7d32; }
 html.day-mode .g-pill-blue { background: #e3f2fd; color: #1565c0; }
 html.day-mode .g-pill-orange { background: #fff3e0; color: #ef6c00; }
+</file>
+
+<file path="package.json">
+{
+  "name": "gencko-studio-nuxt",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "nuxt build",
+    "dev": "nuxt dev",
+    "generate": "nuxt generate",
+    "preview": "nuxt preview",
+    "postinstall": "nuxt prepare"
+  },
+  "dependencies": {
+    "@nuxt/image": "^2.0.0",
+    "@nuxtjs/robots": "^6.0.7",
+    "@nuxtjs/sitemap": "^8.0.13",
+    "@nuxtjs/supabase": "^1.4.0",
+    "@pinia/nuxt": "^0.9.0",
+    "@supabase/supabase-js": "^2.105.3",
+    "@vite-pwa/nuxt": "^0.6.0",
+    "@vueuse/nuxt": "^12.0.0",
+    "dotenv": "^17.4.2",
+    "nuxt": "^3.15.0",
+    "pinia": "^2.3.0"
+  }
+}
+</file>
+
+<file path="pages/articles/index.vue">
+<script setup>
+import { ref, computed } from 'vue'
+import { useHead } from '#imports'
+import { useMainStore } from '~/stores/useMainStore'
+import { getCleanUrl } from '~/utils/image.js'
+
+const store = useMainStore()
+const artCat = ref('All')
+const searchQuery = ref('')
+
+// 1. 固定分類清單 (包含虛擬的新手必看)
+const fixedCats = [
+    { label: '全部文章', value: 'All' },
+    { label: '新手必看', value: 'Beginner' },
+    { label: '行為與互動', value: '行為與互動' },
+    { label: '健康照護', value: '健康照護' },
+    { label: '環境布置', value: '環境布置' },
+    { label: '餵食與營養', value: '餵食與營養' }
+]
+
+// 2. 切換分類並清空搜尋欄
+const setCategory = (catValue) => {
+    artCat.value = catValue
+    searchQuery.value = '' // 🌟 點選分類時清空搜尋欄
+}
+
+// 3. 自動分析最高頻率的熱門標籤 (供搜尋欄下方使用)
+const popularTags = computed(() => {
+    if (!store.articlesList.length) return []
+    const counts = {}
+    store.articlesList.forEach(a => {
+        if (a.Keywords) {
+            const kws = a.Keywords.split(',').map(k => k.trim()).filter(k => k)
+            kws.forEach(k => {
+                if (k && !k.includes('新手')) {
+                    counts[k] = (counts[k] || 0) + 1
+                }
+            })
+        }
+    })
+    return Object.entries(counts)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 5)
+        .map(item => item[0])
+})
+
+// 4. 極致寬鬆搜尋與分類邏輯
+const filteredArticles = computed(() => {
+    if (!store.articlesList || store.articlesList.length === 0) return []
+    let list = store.articlesList
+
+    // 🌟 分類篩選邏輯
+    if (artCat.value === 'Beginner') {
+        // 新手必看：只要 Keywords 包含 "新手"
+        list = list.filter(i => (i.Keywords || '').includes('新手'))
+    } else if (artCat.value !== 'All') {
+        // 一般分類：比對 Category 欄位
+        list = list.filter(i => i.Category === artCat.value)
+    }
+
+    // 🌟 搜尋過濾邏輯
+    if (searchQuery.value) {
+        const terms = searchQuery.value.toLowerCase().split(/\s+/).filter(t => t)
+        list = list.filter(i => {
+            const t = (i.Title || '').toLowerCase()
+            const s = (i.Summary || '').toLowerCase()
+            const k = (i.Keywords || '').toLowerCase()
+            return terms.every(term => t.includes(term) || s.includes(term) || k.includes(term))
+        })
+    }
+
+    return list
+})
+
+const toggleQuickTag = (tag) => {
+    if (searchQuery.value === tag) {
+        searchQuery.value = ''
+    } else {
+        searchQuery.value = tag
+        artCat.value = 'All' // 點擊標籤時回到全部分類
+    }
+}
+
+useHead({
+    title: '專欄文章',
+    meta: [
+        { name: 'description', content: 'Gencko Studio 專欄，提供守宮飼養教學、健康照護與環境布置知識。' }
+    ]
+})
+
+const fmtDate = (d) => {
+    try { return new Date(d).toISOString().split('T')[0] } catch(e) { return '' }
+}
+</script>
+
+<template>
+    <div class="articles-page-wrapper">
+        <h1 class="page-title dt-only">專欄文章</h1>
+        
+        <!-- 🌟 第一層：搜尋欄 -->
+        <div class="search-bar-wrap">
+            <span class="search-icon">🔍</span>
+            <input 
+                type="text" 
+                v-model="searchQuery" 
+                placeholder="搜尋標題或隱藏關鍵字..." 
+                class="search-input" 
+            />
+            <button v-if="searchQuery" @click="searchQuery = ''" class="clear-btn">✕</button>
+        </div>
+
+        <!-- 🌟 第二層：固定六大分類 (固定一行) -->
+        <div class="category-nav-row">
+            <div 
+                v-for="cat in fixedCats" 
+                :key="cat.value"
+                class="nav-chip"
+                :class="{ active: artCat === cat.value, beginner: cat.value === 'Beginner' }"
+                @click="setCategory(cat.value)"
+            >
+                {{ cat.label }}
+            </div>
+        </div>
+
+        <!-- 🌟 第三層：熱門搜尋 -->
+        <div class="quick-tags" v-if="popularTags.length > 0">
+            <span class="tag-label">猜你想找：</span>
+            <div class="tags-scroll">
+                <span 
+                    v-for="t in popularTags" 
+                    :key="t" 
+                    class="q-tag" 
+                    :class="{ active: searchQuery === t }" 
+                    @click="toggleQuickTag(t)"
+                >
+                    {{ t }}
+                </span>
+            </div>
+        </div>
+
+        <!-- 文章列表標題 -->
+        <div class="main-list-head" v-if="searchQuery || artCat !== 'All'">
+            <h2 class="list-title">
+                {{ searchQuery ? `搜尋：${searchQuery}` : (artCat === 'All' ? '全部文章' : fixedCats.find(c=>c.value===artCat)?.label) }}
+            </h2>
+        </div>
+
+        <transition-group tag="div" name="list" class="grid">
+            <div v-if="filteredArticles.length === 0" key="empty-msg" class="empty-state" style="grid-column: 1 / -1;">
+                找不到相關文章
+            </div>
+
+            <article class="card article-card" v-for="item in filteredArticles" :key="item.ID">
+                <NuxtLink :to="`/articles/${item.ID}`" style="display:block; text-decoration:none; color:inherit; height:100%;">
+                    <div style="position:relative; overflow:hidden;">
+                        <NuxtImg 
+                            v-if="item.ImageURL" 
+                            :src="getCleanUrl(item.ImageURL)" 
+                            :alt="item.Title" 
+                            class="card-img" 
+                            style="height:180px;" 
+                            loading="lazy"
+                            width="400"
+                            height="180"
+                            fit="cover"
+                            format="webp"
+                        />
+                        <div v-else class="card-img" style="height:180px;display:flex;align-items:center;justify-content:center;font-size:3rem;background:#1a1a1a;">📝</div>
+                        <div class="art-cat-tag">{{ item.Category }}</div>
+                    </div>
+                    <div class="card-body">
+                        <time :datetime="item.PublishDate" class="date-text">{{ fmtDate(item.PublishDate) }}</time>
+                        <h2 class="morph-title">{{ item.Title }}</h2>
+                        <p class="art-summary">{{ item.Summary }}</p>
+                    </div>
+                </NuxtLink>
+            </article>
+        </transition-group>
+    </div>
+</template>
+
+<style scoped>
+.articles-page-wrapper {
+    max-width: 1300px;
+    margin: 0 auto;
+    padding-bottom: 30px;
+}
+.dt-only { display: block; }
+
+/* 🌟 Search Bar */
+.search-bar-wrap {
+    position: relative;
+    margin-bottom: 15px;
+    width: 100%;
+}
+.search-icon {
+    position: absolute;
+    left: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 1.1rem;
+    color: var(--txt);
+    opacity: 0.5;
+}
+.search-input {
+    width: 100%;
+    padding: 14px 45px;
+    background: var(--card-bg);
+    border: 1px solid var(--bd);
+    color: var(--txt);
+    border-radius: 12px;
+    font-size: 1rem;
+    font-weight: bold;
+    outline: none;
+    transition: 0.3s;
+}
+.search-input:focus {
+    border-color: var(--pri);
+    box-shadow: 0 0 10px var(--pri-glow);
+}
+.clear-btn {
+    position: absolute;
+    right: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: rgba(128,128,128,0.2);
+    border: none;
+    color: var(--txt);
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    cursor: pointer;
+}
+
+/* 🌟 固定一行分類導覽 */
+.category-nav-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 15px;
+    padding-bottom: 5px;
+    /* 為了在手機版強行擠在同一行，允許微小的捲動防止跑版 */
+    overflow-x: auto;
+    scrollbar-width: none;
+    flex-wrap: nowrap;
+}
+.category-nav-row::-webkit-scrollbar { display: none; }
+
+.nav-chip {
+    flex: 1;
+    min-width: max-content;
+    padding: 10px 12px;
+    background: var(--card-bg);
+    border: 1px solid var(--bd);
+    border-radius: 8px;
+    color: var(--txt);
+    opacity: 0.7;
+    font-weight: bold;
+    font-size: 0.9rem;
+    text-align: center;
+    cursor: pointer;
+    transition: 0.2s;
+    white-space: nowrap;
+}
+.nav-chip.active {
+    background: var(--pri);
+    color: #fff;
+    border-color: var(--pri);
+    opacity: 1;
+    box-shadow: 0 4px 10px var(--pri-glow);
+}
+.nav-chip.beginner {
+    border-color: #4caf50;
+    color: #4caf50;
+}
+.nav-chip.beginner.active {
+    background: #4caf50;
+    color: #fff;
+    border-color: #4caf50;
+}
+
+/* 🌟 Quick Tags */
+.quick-tags {
+    display: flex;
+    align-items: center;
+    margin-bottom: 25px;
+    background: rgba(128,128,128,0.05);
+    padding: 8px 12px;
+    border-radius: 8px;
+}
+.tag-label { font-size: 0.8rem; font-weight: bold; opacity: 0.5; margin-right: 8px; white-space: nowrap; }
+.tags-scroll { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; }
+.tags-scroll::-webkit-scrollbar { display: none; }
+.q-tag {
+    padding: 4px 10px;
+    background: var(--card-bg);
+    border: 1px solid var(--bd);
+    border-radius: 12px;
+    font-size: 0.8rem;
+    color: var(--txt);
+    cursor: pointer;
+    white-space: nowrap;
+}
+.q-tag.active { border-color: var(--pri); color: var(--pri); }
+
+/* 文章列表與卡片 */
+.list-title {
+    font-size: 1.2rem;
+    color: var(--txt);
+    border-left: 4px solid var(--pri);
+    padding-left: 10px;
+    margin-bottom: 15px;
+}
+.empty-state {
+    text-align: center;
+    padding: 50px;
+    color: var(--txt);
+    opacity: 0.5;
+    background: var(--card-bg);
+    border-radius: 12px;
+}
+.date-text { font-size: 0.8rem; opacity: 0.5; margin-bottom: 5px; display: block; }
+.morph-title { font-size: 1.1rem; margin-bottom: 5px; color: var(--txt); }
+.art-summary { font-size: 0.85rem; opacity: 0.7; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+
+@media (max-width: 768px) {
+    .dt-only { display: none !important; }
+    .articles-page-wrapper { padding: 5px 10px; }
+    .nav-chip {
+        padding: 8px 10px;
+        font-size: 0.75rem; /* 手機版縮小字體以塞進更多內容 */
+        border-radius: 6px;
+    }
+    .grid { grid-template-columns: repeat(2, 1fr) !important; gap: 8px !important; }
+    .card-img { height: 120px !important; }
+    .morph-title { font-size: 0.9rem !important; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+}
+</style>
 </file>
 
 <file path="pages/breeders.vue">
