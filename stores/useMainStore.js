@@ -109,7 +109,8 @@ export const useMainStore = defineStore('main', () => {
             Content: a.content,
             ImageURL: a.image_url,
             Author: a.author,
-            PublishDate: a.publish_date
+            PublishDate: a.publish_date,
+            Keywords: a.keywords // 🌟 新增：撈取隱藏的關鍵字欄位
           }))
           .reverse()
       }
@@ -259,7 +260,6 @@ export const useMainStore = defineStore('main', () => {
     currentUser.value = null
   }
 
-  // 🌟 將 document.body 改為 document.documentElement
   function initTheme() {
     if (import.meta.client) {
       const savedTheme = localStorage.getItem('gencko_theme')
@@ -285,51 +285,40 @@ export const useMainStore = defineStore('main', () => {
     }
   }
 
-  // 🌟 初始化 PWA 安裝攔截器
   function initPWAInstallPrompt() {
     if (!import.meta.client) return
 
-    // 判斷是否為獨立 App 模式 (已安裝)
     isStandalone.value = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone
-
-    // 判斷是否為 iOS 裝置
     const ua = window.navigator.userAgent.toLowerCase()
     isIOS.value = /iphone|ipad|ipod/.test(ua)
 
-    // 如果已經是 App 模式，就不需要顯示安裝按鈕
     if (isStandalone.value) {
       canInstall.value = false
       return
     }
 
-    // 針對 Android / Chrome 攔截原生安裝事件
     window.addEventListener('beforeinstallprompt', (e) => {
       e.preventDefault()
       deferredPrompt.value = e
       canInstall.value = true
     })
 
-    // 針對 iOS，如果不是 standalone 模式，開放顯示引導按鈕
     if (isIOS.value) {
       canInstall.value = true
     }
   }
 
-  // 🌟 執行安裝或顯示教學
   async function installApp() {
     if (isIOS.value && !isStandalone.value) {
-      // iOS 無法主動觸發，顯示我們自訂的教學視窗
       showIOSGuide.value = true
     } else if (deferredPrompt.value) {
-      // Android / 電腦版：觸發剛剛攔截的系統安裝視窗
       deferredPrompt.value.prompt()
       const { outcome } = await deferredPrompt.value.userChoice
       if (outcome === 'accepted') {
-        canInstall.value = false // 安裝成功後隱藏按鈕
+        canInstall.value = false 
       }
       deferredPrompt.value = null
     } else {
-      // 若瀏覽器不支援 PWA，跳出提示
       alert('您的瀏覽器目前不支援快捷安裝，請嘗試從瀏覽器選單中選擇「加到主畫面」或「安裝應用程式」。')
     }
   }
@@ -353,9 +342,9 @@ export const useMainStore = defineStore('main', () => {
     loading, isDayMode, curTab, inv, merchList, articlesList, genePages, marqueeList, hotList, auctionList,
     currentUser, wishlist, hospWishlist, history, showToast, lightboxItem, navHidden, mobileMenuOpen, lastScrollY,
     displayLimit, readingArticle, readingProgress, viewingGene, geneSpecies, careImg, aboutImg, logoUrl, lineLink,
-    canInstall, showIOSGuide, // 🌟 匯出安裝相關狀態
+    canInstall, showIOSGuide,
     loadDataFromAPI, loadAuctions, initLiff, checkAuthStatus, loginWithLine, loginWithGoogle, logout,
-    initTheme, toggleTheme, initPWAInstallPrompt, installApp, // 🌟 匯出安裝相關函式
+    initTheme, toggleTheme, initPWAInstallPrompt, installApp,
     openLightbox, closeLightbox, triggerToast
   }
 })

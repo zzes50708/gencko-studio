@@ -37,7 +37,8 @@ const { data: readingArticle, pending } = await useAsyncData(`article-${articleI
         Content: data.content,
         ImageURL: data.image_url,
         Author: data.author,
-        PublishDate: data.publish_date
+        PublishDate: data.publish_date,
+        Keywords: data.keywords // 🌟 新增：撈取隱藏的關鍵字欄位
     }
 })
 
@@ -87,12 +88,14 @@ const siteData = computed(() => {
                 "name": art.Author || "Gencko Studio",
                 "url": "https://www.genckobreeding.com/about"
             }],
-            "description": art.Summary
+            "description": art.Summary,
+            "keywords": art.Keywords || "" // 🌟 新增：注入 JSON-LD
         }
 
         return {
             title: art.Title,
             desc: art.Summary || 'Gencko Studio 專業爬蟲與守宮飼養專欄。',
+            keywords: art.Keywords || 'Gencko Studio, 豹紋守宮, 肥尾守宮, 爬蟲, 飼養教學', // 🌟 預設備用關鍵字
             img: imgUrl,
             url: artUrl,
             script:[{ type: 'application/ld+json', children: JSON.stringify(jsonLd) }]
@@ -103,6 +106,7 @@ const siteData = computed(() => {
     return {
         title: '文章不存在',
         desc: '找不到此文章',
+        keywords: '',
         img: 'https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/%E6%9C%AA%E5%91%BD%E5%90%8D%E8%A8%AD%E8%A8%88.png',
         url: `https://www.genckobreeding.com/articles/${articleId}`,
         script:[]
@@ -113,6 +117,7 @@ useHead({
     title: computed(() => siteData.value.title),
     meta:[
         { name: 'description', content: computed(() => siteData.value.desc) },
+        { name: 'keywords', content: computed(() => siteData.value.keywords) }, // 🌟 新增：Meta Keywords
         { property: 'og:title', content: computed(() => `${siteData.value.title} | Gencko Studio`) },
         { property: 'og:description', content: computed(() => siteData.value.desc) },
         { property: 'og:image', content: computed(() => siteData.value.img) },
