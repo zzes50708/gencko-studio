@@ -46,8 +46,9 @@ export function calculateGenetics(species, maleGenes, femaleGenes, defs) {
     if(allGenes.some(g => g.geneId === 'enigman')) notices.push("謎 (Enigma) 可能伴隨神經症狀 (ES)。");
     if(allGenes.some(g => g.geneId === 'whiteandyellow')) notices.push("白黃 (W&Y) 可能伴隨輕微神經症狀。");
     
-    const fWhiteout = femaleGenes.find(g => g.geneId === 'aft_whiteout');
-    if(fWhiteout && fWhiteout.zygosity === ZYG.SUP) warning += "超級立可白為致死基因。\n";
+    // 🌟 修正 Bug：超級立可白致死基因應檢查雙親 (allGenes)，而非僅檢查母代
+    const hasSuperWhiteout = allGenes.some(g => g.geneId === 'aft_whiteout' && g.zygosity === ZYG.SUP);
+    if(hasSuperWhiteout) warning += "超級立可白為致死基因。\n";
 
     // 新增：檢查是否存在多遺傳基因，並顯示警告
     const hasPolygenicGene = allGenes.some(g => {
