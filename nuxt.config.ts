@@ -16,10 +16,11 @@ export default defineNuxtConfig({
 
   // 🌟 Nuxt Image 設定
   image: {
-    provider: 'ipx', // 🌟 核心修復：強制使用 Nuxt 內建的 IPX，徹底繞開 Vercel 單月 1000 張優化的收費限制 (402 Error)
+    provider: 'ipx', 
     domains:[
       'cdn.jsdelivr.net',
-      'drive.google.com'
+      'drive.google.com',
+      'wsrv.nl' // 🌟 必須加入白名單，讓 Vercel 允許讀取被壓縮後的圖片
     ],
     screens: {
       xs: 320, sm: 640, md: 768, lg: 1024, xl: 1280, xxl: 1536,
