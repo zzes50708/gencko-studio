@@ -37,11 +37,18 @@ const onTouchEnd = () => {
     // 恢復原位，若沒有被關閉則利用 CSS transition 彈回
     touchDeltaY.value = 0
 }
+
+// 🌟 安全取得圖片網址邏輯：確保 GitHub 與舊有網址皆能直接顯示
+const getImgSrc = (item) => {
+    if (!item) return ''
+    // 同時檢查大寫與小寫欄位
+    const rawUrl = item.ImageURL || item.image_url || ''
+    return getCleanUrl(rawUrl)
+}
 </script>
 
 <template>
     <div v-if="item" class="lightbox-overlay" @click="emit('close')">
-        <!-- 🌟 移除 ✕ 按鈕，改用全手勢操作 -->
         
         <div class="lightbox-content-wrapper"
              :style="{
@@ -54,21 +61,20 @@ const onTouchEnd = () => {
              @touchend="onTouchEnd"
              @click.stop
         >
-            <!-- 🌟 新增：下滑關閉的小提示 -->
+            <!-- 🌟 下滑關閉的小提示 -->
             <div class="swipe-hint-container">
                 <div class="swipe-indicator"></div>
                 <span class="swipe-text">下拉關閉圖片</span>
             </div>
 
-            <!-- 使用 NuxtImg 進行放大預覽圖的最佳化 -->
-            <NuxtImg 
-                v-if="item.ImageURL"
-                :src="getCleanUrl(item.ImageURL)" 
+            <!-- 🌟 使用原生 img 以確保 GitHub 直連網址的最高穩定性，不經過 Nuxt Image 處理 -->
+            <img 
+                v-if="getImgSrc(item)"
+                :src="getImgSrc(item)" 
+                :alt="item.Morph || item.Name || 'Gencko Showcase'"
                 class="lightbox-img" 
-                width="1000"
-                height="800"
-                fit="contain"
-                format="webp"
+                loading="lazy"
+                decoding="async"
                 draggable="false"
             />
             
@@ -87,19 +93,10 @@ const onTouchEnd = () => {
 </template>
 
 <style scoped>
-/*
-  [局部樣式與全域整合]
-  已將原本散落於 style.css 的燈箱樣式抽回 TheLightbox.vue。
-  利用 var(--card-bg) 與 var(--txt) 自動適配日夜模式，
-  徹底移除所有 :global(body.day-mode) 與硬色碼覆寫。
-*/
-
-/* 🌟 遮罩底色：利用變數 + 模糊達到完美日夜適配 */
 .lightbox-overlay {
     position: fixed;
     top: 0; left: 0;
     width: 100%; height: 100%;
-    /* 在深淺模式下 var(--card-bg) 會自動切換透黑/純白 */
     background: var(--card-bg);
     backdrop-filter: blur(15px);
     -webkit-backdrop-filter: blur(15px);
@@ -116,12 +113,10 @@ const onTouchEnd = () => {
     align-items: center;
     justify-content: center;
     width: 100%;
-    /* 禁用預設的瀏覽器捲動/下拉更新，確保滑動手勢專屬於拖曳圖片 */
     touch-action: none;
     will-change: transform, opacity;
 }
 
-/* 🌟 下拉提示容器與動畫 */
 .swipe-hint-container {
     display: flex;
     flex-direction: column;
@@ -152,20 +147,17 @@ const onTouchEnd = () => {
     letter-spacing: 1px;
 }
 
-/* 🌟 圖片高度自動縮減優化 */
 .lightbox-img {
     max-width: 95%;
-    width: 100%; 
+    width: auto; 
     height: auto; 
     max-height: 70vh; 
     border-radius: 16px; 
     box-shadow: 0 10px 40px rgba(0,0,0,0.15);
     object-fit: contain;
-    /* 防止長按圖片時跳出系統選單，提升 App 沉浸感 */
     -webkit-touch-callout: none;
     -webkit-user-select: none;
     user-select: none;
-    /* 圖片底色 */
     background: rgba(128, 128, 128, 0.05);
     border: 1px solid var(--bd);
 }
@@ -186,7 +178,6 @@ const onTouchEnd = () => {
     text-shadow: 0 2px 10px rgba(0,0,0,0.05);
 }
 
-/* 🌟 App-like 購買按鈕 */
 .app-btn-buy {
     display: inline-flex;
     align-items: center;
@@ -210,10 +201,9 @@ const onTouchEnd = () => {
     box-shadow: 0 2px 10px rgba(255, 69, 0, 0.2);
 }
 
-/* 🌟 Mobile Optimizations */
 @media (max-width: 768px) {
     .lightbox-img {
-        max-height: 60vh; /* 手機版進一步限制最大高度，保留空間給標題與按鈕 */
+        max-height: 60vh;
     }
     
     .lightbox-title {
