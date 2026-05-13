@@ -19,7 +19,8 @@ const mobileExpanded = ref(null)
 
 const isShopActive = computed(() =>['shop', 'auction', 'breeders', 'merch'].includes(props.curTab))
 const isToolActive = computed(() =>['calculator', 'genes', 'health', 'qs', 'hospital'].includes(props.curTab))
-const isServiceActive = computed(() =>['about', 'care', 'articles', 'faq'].includes(props.curTab))
+// 🌟 移除 articles，專欄文章現在是獨立項目
+const isServiceActive = computed(() =>['about', 'care', 'faq'].includes(props.curTab))
 
 watch(() => props.mobileMenuOpen, (val) => {
     if (!val) mobileExpanded.value = null
@@ -47,15 +48,11 @@ const closeMobileMenu = () => {
 
                 <!-- Desktop Menu -->
                 <div class="dt-nav">
-                    <div class="nav-item-dt dropdown-hover" :class="{active: isServiceActive}">
-                        品牌服務 ▾
-                        <div class="dt-dropdown">
-                            <NuxtLink to="/about">關於我們</NuxtLink>
-                            <NuxtLink to="/care">飼養方式</NuxtLink>
-                            <NuxtLink to="/articles">專欄文章</NuxtLink>
-                            <NuxtLink to="/faq">常見問題</NuxtLink>
-                        </div>
-                    </div>
+                    <!-- 🌟 專欄文章獨立到第一層 -->
+                    <NuxtLink to="/articles" class="nav-item-dt" :class="{active: curTab === 'articles'}">
+                        專欄文章
+                    </NuxtLink>
+
                     <div class="nav-item-dt dropdown-hover" :class="{active: isShopActive}">
                         探索選購 ▾
                         <div class="dt-dropdown">
@@ -75,6 +72,14 @@ const closeMobileMenu = () => {
                             <NuxtLink to="/hospital">特寵醫院</NuxtLink>
                         </div>
                     </div>                    
+                    <div class="nav-item-dt dropdown-hover" :class="{active: isServiceActive}">
+                        品牌服務 ▾
+                        <div class="dt-dropdown">
+                            <NuxtLink to="/about">關於我們</NuxtLink>
+                            <NuxtLink to="/care">飼養方式</NuxtLink>
+                            <NuxtLink to="/faq">常見問題</NuxtLink>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Right Controls -->
@@ -112,7 +117,28 @@ const closeMobileMenu = () => {
                 <span style="font-weight:bold; background:var(--pri); color:#fff; padding:4px 12px; border-radius:20px; font-size:0.85rem;">安裝</span>
             </div>
 
-            <!-- Group 1: Shop -->
+            <!-- 🌟 手機版：專欄文章改為獨立大項目 -->
+            <NuxtLink to="/articles" class="mm-summary" @click="closeMobileMenu" style="text-decoration: none;">
+                專欄文章
+                <span class="mm-arrow" style="transform: rotate(-90deg); opacity: 0.3;">▼</span>
+            </NuxtLink>
+
+            <!-- Group 1: Service -->
+            <div class="mm-group" :class="{active: mobileExpanded === 'service' || (mobileExpanded === null && isServiceActive)}">
+                <div class="mm-summary" @click="toggleMobileGroup('service')">
+                    品牌服務
+                    <span class="mm-arrow">▼</span>
+                </div>
+                <div class="mm-anim-wrapper">
+                    <div class="mm-anim-inner">
+                        <NuxtLink to="/about" class="mm-sub" @click="closeMobileMenu">關於我們</NuxtLink>
+                        <NuxtLink to="/care" class="mm-sub" @click="closeMobileMenu">飼養方式</NuxtLink>
+                        <NuxtLink to="/faq" class="mm-sub" @click="closeMobileMenu">常見問題</NuxtLink>
+                    </div>
+                </div>
+            </div>
+    
+            <!-- Group 2: Shop -->
             <div class="mm-group" :class="{active: mobileExpanded === 'shop' || (mobileExpanded === null && isShopActive)}">
                 <div class="mm-summary" @click="toggleMobileGroup('shop')">
                     探索選購
@@ -128,7 +154,7 @@ const closeMobileMenu = () => {
                 </div>
             </div>
 
-            <!-- Group 2: Tools -->
+            <!-- Group 3: Tools -->
             <div class="mm-group" :class="{active: mobileExpanded === 'tool' || (mobileExpanded === null && isToolActive)}">
                 <div class="mm-summary" @click="toggleMobileGroup('tool')">
                     工具知識
@@ -141,22 +167,6 @@ const closeMobileMenu = () => {
                         <NuxtLink to="/health" class="mm-sub" @click="closeMobileMenu">健康評估</NuxtLink>
                         <NuxtLink to="/qs" class="mm-sub" @click="closeMobileMenu">飼養評估</NuxtLink>
                         <NuxtLink to="/hospital" class="mm-sub" @click="closeMobileMenu">特寵醫院</NuxtLink>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Group 3: Service -->
-            <div class="mm-group" :class="{active: mobileExpanded === 'service' || (mobileExpanded === null && isServiceActive)}">
-                <div class="mm-summary" @click="toggleMobileGroup('service')">
-                    品牌服務
-                    <span class="mm-arrow">▼</span>
-                </div>
-                <div class="mm-anim-wrapper">
-                    <div class="mm-anim-inner">
-                        <NuxtLink to="/about" class="mm-sub" @click="closeMobileMenu">關於我們</NuxtLink>
-                        <NuxtLink to="/care" class="mm-sub" @click="closeMobileMenu">飼養方式</NuxtLink>
-                        <NuxtLink to="/articles" class="mm-sub" @click="closeMobileMenu">專欄文章</NuxtLink>
-                        <NuxtLink to="/faq" class="mm-sub" @click="closeMobileMenu">常見問題</NuxtLink>
                     </div>
                 </div>
             </div>
@@ -193,7 +203,7 @@ const closeMobileMenu = () => {
 
 /* Desktop Navigation */
 .dt-nav { display: flex; gap: 5px; height: 100%; align-items: center; }
-.nav-item-dt { padding: 0 12px; height: 100%; display: flex; align-items: center; font-size: 0.95rem; font-weight: 700; color: var(--txt); opacity: 0.8; cursor: pointer; transition: 0.2s; position: relative; white-space: nowrap; }
+.nav-item-dt { padding: 0 12px; height: 100%; display: flex; align-items: center; font-size: 0.95rem; font-weight: 700; color: var(--txt); opacity: 0.8; cursor: pointer; transition: 0.2s; position: relative; white-space: nowrap; text-decoration: none; }
 .nav-item-dt:hover, .nav-item-dt.active { color: var(--pri); opacity: 1; background: rgba(128, 128, 128, 0.05); }
 .nav-item-dt.active { border-bottom: 3px solid var(--pri); }
 

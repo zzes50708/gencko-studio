@@ -14,7 +14,7 @@ const fixedCats = [
     { label: '新手必看', value: 'Beginner' },
     { label: '行為與互動', value: '行為與互動' },
     { label: '健康照護', value: '健康照護' },
-    { label: '環境布置', value: '環境布置' },
+    { label: '環境佈置', value: '環境佈置' },
     { label: '餵食與營養', value: '餵食與營養' }
 ]
 
