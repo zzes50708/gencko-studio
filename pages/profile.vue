@@ -132,9 +132,10 @@ const getMapLink = (h) => {
             <div class="user-info">
                 <template v-if="store.currentUser">
                     <img v-if="store.currentUser.picture" :src="store.currentUser.picture" alt="Avatar" class="user-avatar">
-                    <div v-else class="user-avatar-placeholder">{{ store.currentUser.name.charAt(0).toUpperCase() }}</div>
+                    <!-- 🌟 修正 Bug：加入短路求值保護，避免 name 為空導致 charAt 報錯白畫面 -->
+                    <div v-else class="user-avatar-placeholder">{{ (store.currentUser.name || '?').charAt(0).toUpperCase() }}</div>
                     <div class="user-text">
-                        <h2 class="user-name">{{ store.currentUser.name }}</h2>
+                        <h2 class="user-name">{{ store.currentUser.name || 'User' }}</h2>
                         <span class="user-type">{{ store.currentUser.type === 'line' ? 'LINE 登入' : 'Google 登入' }}</span>
                     </div>
                 </template>

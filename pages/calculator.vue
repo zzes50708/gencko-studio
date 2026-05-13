@@ -236,7 +236,9 @@ const formatWarningText = (text) => {
                                                     
                                                     <Transition name="slide-anim">
                                                         <div v-if="calcExpandGroup === group">
+                                                            <!-- 🌟 修正：補上 :key="g.id" -->
                                                             <div v-for="g in calcGroupedGenes[type].filter(x => x.group === group && x.id !== 'normal' && x.id !== 'aft_normal')" 
+                                                                :key="g.id"
                                                                 class="calc-dd-item" 
                                                                 :class="{disabled: calcIsGeneDisabled(g.id, 'Male')}"
                                                                 @click.stop="!calcIsGeneDisabled(g.id, 'Male') && calcAddGene(g.id, 'Male')">
@@ -247,7 +249,9 @@ const formatWarningText = (text) => {
                                                 </div>
                                             </template>
                                             <template v-else>
+                                                <!-- 🌟 修正：補上 :key="g.id" -->
                                                 <div v-for="g in calcGroupedGenes[type].filter(x => x.id !== 'normal' && x.id !== 'aft_normal')" 
+                                                    :key="g.id"
                                                     class="calc-dd-item"
                                                     :class="{disabled: calcIsGeneDisabled(g.id, 'Male')}"
                                                     @click.stop="!calcIsGeneDisabled(g.id, 'Male') && calcAddGene(g.id, 'Male')">
@@ -324,7 +328,9 @@ const formatWarningText = (text) => {
                                                     
                                                     <Transition name="slide-anim">
                                                         <div v-if="calcExpandGroup === group">
+                                                            <!-- 🌟 修正：補上 :key="g.id" -->
                                                             <div v-for="g in calcGroupedGenes[type].filter(x => x.group === group && x.id !== 'normal' && x.id !== 'aft_normal')" 
+                                                                :key="g.id"
                                                                 class="calc-dd-item" 
                                                                 :class="{disabled: calcIsGeneDisabled(g.id, 'Female')}"
                                                                 @click.stop="!calcIsGeneDisabled(g.id, 'Female') && calcAddGene(g.id, 'Female')">
@@ -335,7 +341,9 @@ const formatWarningText = (text) => {
                                                 </div>
                                             </template>
                                             <template v-else>
+                                                <!-- 🌟 修正：補上 :key="g.id" -->
                                                 <div v-for="g in calcGroupedGenes[type].filter(x => x.id !== 'normal' && x.id !== 'aft_normal')" 
+                                                    :key="g.id"
                                                     class="calc-dd-item"
                                                     :class="{disabled: calcIsGeneDisabled(g.id, 'Female')}"
                                                     @click.stop="!calcIsGeneDisabled(g.id, 'Female') && calcAddGene(g.id, 'Female')">
@@ -386,7 +394,6 @@ const formatWarningText = (text) => {
                 <div class="calc-res-count">組合數: {{ calcResult.totalCombos }}</div>
             </div>
 
-            <!-- 強制鎖定文字與背景顏色的極致對比度 -->
             <div v-if="calcResult.warning" class="calc-warn">
                 <div style="font-size:1.8rem; line-height:1;">⚠️</div>
                 <div style="white-space:pre-line">{{ formatWarningText(calcResult.warning) }}</div>

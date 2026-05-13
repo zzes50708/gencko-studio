@@ -1,10 +1,10 @@
-This file is a merged representation of the entire codebase, combined into a single document by Repomix.
+This file is a merged representation of a subset of the codebase, containing files not matching ignore patterns, combined into a single document by Repomix.
 
 <file_summary>
 This section contains a summary of this file.
 
 <purpose>
-This file contains a packed representation of the entire repository's contents.
+This file contains a packed representation of a subset of the repository's contents that is considered the most important context.
 It is designed to be easily consumable by AI systems for analysis, code review,
 or other automated processes.
 </purpose>
@@ -32,6 +32,7 @@ The content is organized as follows:
 <notes>
 - Some files may have been excluded based on .gitignore rules and Repomix's configuration
 - Binary files are not included in this packed representation. Please refer to the Repository Structure section for a complete list of file paths, including binary files
+- Files matching these patterns are excluded: legacy_backup
 - Files matching patterns in .gitignore are excluded
 - Files matching default ignore patterns are excluded
 - Files are sorted by Git change count (files with more changes are at the bottom)
@@ -100,11 +101,6 @@ npx repomix --ignore legacy_backup
 1. 架構說明 (Architecture & Tech Stack)
 核心技術：Nuxt 3 (SSR/SSG) + Vue 3 (Composition API) + Pinia + Supabase。
 重點功能：PWA (設定為 prompt 觸發無感熱更新)、全站 App 化行動端體驗（手機底部導航、手勢下拉燈箱、提示氣泡等）。
-UI 與 CSS 系統：
-採用 CSS 全域變數 控制日夜模式 (var(--card-bg), var(--txt), var(--bd), var(--pri))，結合 opacity 做視覺層次。
-絕對禁止：寫死絕對色碼 (如 #fff, #333, #000)，以及嚴禁使用 :global(body.day-mode) 或 !important 進行樣式強制覆寫。所有顏色必須由變數系統自動接管。
-排版原則：Mobile-First (手機優先)，大量運用 Grid 雙欄並排與 Flexbox，組件樣式需高度封裝在 <style scoped> 內。
-效能考量：首屏圖片 (LCP) 使用原生 <img> 搭配 fetchpriority="high" 直連 CDN，非首屏維持 <NuxtImg loading="lazy"> 延遲載入。
 2. 輸出規則 (Strict Output Rules)
 單一檔案處理：一次僅處理「一個檔案」的建立或修改。完成後必須停下來，等待我回覆「下一個」或給予反饋後才能繼續。
 禁止省略代碼：輸出程式碼片段時，絕對禁止使用「...」、「// 省略」等方式，必須給出該區塊（例如整個 <style scoped> 或完整 <template>）的完整程式碼，以便直接複製貼上。
@@ -234,362 +230,6 @@ const goBack = () => {
     }
 }
 </style>
-</file>
-
-<file path="utils/calcUtils.js">
-import { CALC_SPECIES, CALC_TYPES, ZYG, CALC_COMBO_RULES } from './genes.js';
-
-// --- 輔助函式：取得機率分數顯示 ---
-export function getProbFraction(prob) {
-    if (prob >= 0.99) return '';
-    const frac = Math.round(1 / prob);
-    if ([ 2, 3, 4, 8, 16, 32, 64, 128, 256 ].includes(frac)) return `1/${frac}`;
-    return '';
-}
-
-// --- 核心運算函式 ---
-export function calculateGenetics(species, maleGenes, femaleGenes, defs) {
-    if (maleGenes.length === 0 && femaleGenes.length === 0) {
-        return null;
-    }
-
-    // 展開 Combo 基因
-    const expand = (list) => {
-        let res =[ ];
-        list.forEach(s => {
-            const d = defs.find(k => k.id === s.geneId);
-            if (d && d.components) {
-                d.components.forEach(c => {
-                    let z = ZYG.VIS;
-                    if (c.type === 'Het') z = ZYG.HET;
-                    if (c.type === 'Super') z = ZYG.SUP;
-                    res.push({ geneId: c.geneId, zygosity: z });
-                });
-            } else {
-                res.push(s);
-            }
-        });
-        return res;
-    };
-
-    const mExpanded = expand(maleGenes);
-    const fExpanded = expand(femaleGenes);
-    const allGenes = [ ...maleGenes, ...femaleGenes ];
-
-    // 1. 警告與提示檢查
-    let warning = '';
-    let notices = [ ];
-
-    if(allGenes.some(g => g.geneId === 'lemonfrost')) warning += "檸檬霜 (Lemon Frost) 易導致腫瘤。\n";
-    if(allGenes.some(g => g.geneId === 'ndbe')) warning += "慾望黑眼 (NDBE) 母體不孕且子代易眼部萎縮。\n";
-    if(allGenes.some(g => g.geneId === 'enigman')) notices.push("謎 (Enigma) 可能伴隨神經症狀 (ES)。");
-    if(allGenes.some(g => g.geneId === 'whiteandyellow')) notices.push("白黃 (W&Y) 可能伴隨輕微神經症狀。");
-    
-    const fWhiteout = femaleGenes.find(g => g.geneId === 'aft_whiteout');
-    if(fWhiteout && fWhiteout.zygosity === ZYG.SUP) warning += "超級立可白為致死基因。\n";
-
-    // 新增：檢查是否存在多遺傳基因，並顯示警告
-    const hasPolygenicGene = allGenes.some(g => {
-        const def = defs.find(d => d.id === g.geneId);
-        return def && (def.type === CALC_TYPES.POLY || def.type === CALC_TYPES.BLOOD);
-    });
-    if (hasPolygenicGene) {
-        warning += "含有多遺傳基因之品系需視表現而定。\n";
-    }
-
-    if (species === CALC_SPECIES.LG) {
-        const albinoTypes =[ 'tremper', 'bell', 'rainwater' ];
-        const getAlbinos = (list) => {
-             const rawIds = list.map(g => g.geneId);
-             const expandedIds = expand(list).map(g => g.geneId);
-             return new Set([ ...rawIds, ...expandedIds ].filter(id => albinoTypes.includes(id)));
-        };
-        const mAlbinos = getAlbinos(maleGenes);
-        const fAlbinos = getAlbinos(femaleGenes);
-        const union = new Set([ ...mAlbinos, ...fAlbinos ]);
-        if(union.size > 1) {
-             warning += "不同白化基因 (川普/貝爾/雨水) 互配，子代將不表現白化且造成基因混亂。\n";
-        }
-    }
-
-    if (species === CALC_SPECIES.AFT) {
-        const fHasCaramel = femaleGenes.some(g => g.geneId === 'aft_caramel');
-        const fHasGhost = femaleGenes.some(g => g.geneId === 'aft_ghost');
-        if(fHasCaramel) warning += "母焦糖 (Caramel) 會有不孕問題。\n";
-        if(fHasGhost) warning += "母幽靈 (Ghost) 會有不孕問題。\n";
-    }
-
-    // 2. 孟德爾遺傳計算
-    const allIds = new Set([ ...mExpanded.map(g => g.geneId), ...fExpanded.map(g => g.geneId) ]);
-    const mendelianResults = [ ];
-    const polyInheritance = {};
-
-    allIds.forEach(id => {
-        const def = defs.find(d => d.id === id);
-        if(!def) return;
-        
-        const mG = mExpanded.find(g => g.geneId === id);
-        const fG = fExpanded.find(g => g.geneId === id);
-
-        // 多遺傳與血系：取平均值
-        if (def.type === CALC_TYPES.POLY || def.type === CALC_TYPES.BLOOD) {
-            const mP = mG ? 100 : 0;
-            const fP = fG ? 100 : 0;
-            const avg = (mP + fP) / 2;
-            if (avg > 0) polyInheritance[id] = avg;
-        } else {
-            const getAlleles = (z) => {
-                if (!z) return [ 0, 0 ];
-                if (def.type === CALC_TYPES.REC) {
-                    if (z === ZYG.VIS) return [ 1, 1 ];
-                    if (z === ZYG.HET) return [ 1, 0 ];
-                } else if (def.type === CALC_TYPES.CODOM) {
-                    if (z === ZYG.SUP) return [ 1, 1 ];
-                    if (z === ZYG.VIS || z === ZYG.SGL) return [ 1, 0 ];
-                } else { 
-                    if (z === ZYG.VIS) return[ 1, 0 ]; 
-                }
-                return [ 0, 0 ];
-            };
-            const p1 = getAlleles(mG?.zygosity);
-            const p2 = getAlleles(fG?.zygosity);
-            const counts = {};
-            
-            for(let a of p1) {
-                for(let b of p2) {
-                    const sum = a+b;
-                    let k = '';
-                    if(def.type === CALC_TYPES.REC) {
-                        if(sum===2) k=ZYG.VIS; else if(sum===1) k=ZYG.HET; else k='Wild';
-                    } else if(def.type === CALC_TYPES.CODOM) {
-                        if(sum===2) k=ZYG.SUP; else if(sum===1) k=ZYG.SGL; else k='Wild';
-                    } else {
-                        if(sum>=1) k=ZYG.VIS; else k='Wild';
-                    }
-                    counts[k] = (counts[k]||0)+1;
-                }
-            }
-            const locRes = [ ];
-            Object.keys(counts).forEach(k => {
-                if(k!=='Wild') locRes.push({ geneId: id, zygosity: k, prob: counts[k]/4 });
-            });
-            if(locRes.length > 0) mendelianResults.push(locRes);
-        }
-    });
-
-    // 3. 組合結果
-    let rawOutcomes = [ { gens: [ ], prob: 1 } ];
-    mendelianResults.forEach(opts => {
-        const nextOutcomes = [ ];
-        const sumProb = opts.reduce((s,o) => s + o.prob, 0);
-        const wildProb = 1 - sumProb;
-        
-        rawOutcomes.forEach(ex => {
-            opts.forEach(o => {
-                nextOutcomes.push({ 
-                    gens:[ ...ex.gens, { geneId: o.geneId, zygosity: o.zygosity } ], 
-                    prob: ex.prob * o.prob 
-                });
-            });
-            if(wildProb > 0.0001) {
-                nextOutcomes.push({ gens: [ ...ex.gens ], prob: ex.prob * wildProb });
-            }
-        });
-        rawOutcomes = nextOutcomes;
-    });
-
-    // 4. 表型對應 (Phenotype Mapping)
-    const phenoMap = new Map();
-    rawOutcomes.forEach(o => {
-        const active = o.gens;
-        
-        // 篩選單基因遺傳的 Visual
-        const visualGenes = active.filter(a => {
-            const d = defs.find(k => k.id === a.geneId);
-            if (!d) return false;
-            if (d.type === CALC_TYPES.REC) return a.zygosity === ZYG.VIS;
-            if (d.type === CALC_TYPES.CODOM) return[ ZYG.VIS, ZYG.SGL, ZYG.SUP ].includes(a.zygosity);
-            return true;
-        });
-
-        // 收集當前組合中，所有多遺傳和血系基因的 ID，用於後續 descParts 的生成
-        const polygenicGeneIdsInPhenotype = new Set();
-        Object.keys(polyInheritance).forEach(pid => {
-            const val = polyInheritance[pid];
-            const def = defs.find(d => d.id === pid);
-            
-            if (def.type === CALC_TYPES.BLOOD) {
-                if (val >= 100) {
-                    polygenicGeneIdsInPhenotype.add(pid);
-                } else {
-                    if (def.baseGeneId) {
-                        polygenicGeneIdsInPhenotype.add(def.baseGeneId);
-                    }
-                }
-            } else {
-                polygenicGeneIdsInPhenotype.add(pid);
-            }
-        });
-
-        const descParts = [ ];
-        const consumed = new Set();
-
-        CALC_COMBO_RULES.forEach(rule => {
-            const met = rule.required.every(r => {
-                const match = visualGenes.find(a => a.geneId === r.id);
-                if(!match || consumed.has(match.geneId)) return false;
-                if(r.z === 'Any') return true;
-                return match.zygosity === r.z;
-            });
-            if(met) {
-                descParts.push(rule.name);
-                rule.required.forEach(r => consumed.add(r.id));
-            }
-        });
-        
-        // 處理非多遺傳/血系的視覺表現基因
-        visualGenes.forEach(a => {
-            if(consumed.has(a.geneId)) return;
-            const d = defs.find(k => k.id === a.geneId);
-            if(!d) return;
-            let geneDisplayName = d.name.split(' (')[0];
-            
-            if(d.type === CALC_TYPES.CODOM) {
-                if(a.zygosity === ZYG.SUP) descParts.push('超級' + geneDisplayName);
-                else descParts.push(geneDisplayName);
-            } else if(d.type === CALC_TYPES.REC) {
-                descParts.push(geneDisplayName);
-            } else {
-                descParts.push(geneDisplayName);
-            }
-        });
-        
-        // 將多遺傳基因的名稱添加到 descParts，但要確保它們不會被 consumed 掉
-        polygenicGeneIdsInPhenotype.forEach(pid => {
-            const d = defs.find(k => k.id === pid);
-            if (d && !consumed.has(pid)) {
-                const geneDisplayName = d.name.split(' (')[0];
-                if (!descParts.includes(geneDisplayName)) { // 避免重複添加
-                    descParts.push(geneDisplayName);
-                }
-            }
-        });
-
-        const name = descParts.join(' + ') || '原色';
-        
-        if(!phenoMap.has(name)) phenoMap.set(name, { prob: 0, raw: [ ] });
-        const entry = phenoMap.get(name);
-        entry.prob += o.prob;
-        entry.raw.push(o);
-    });
-
-    // 5. 整理最終輸出
-    const finalOutcomes = [ ];
-    phenoMap.forEach((data, name) => {
-        const { prob, raw } = data;
-        const hetStats = {};
-        
-        // Het 計算
-        const potentialHets = new Set([ ...mExpanded.map(x=>x.geneId), ...fExpanded.map(x=>x.geneId) ]);
-        potentialHets.forEach(id => {
-            const d = defs.find(k => k.id === id);
-            if(!d || d.type !== CALC_TYPES.REC) return;
-            
-            const isVisualInThisGroup = raw.every(r => {
-                const g = r.gens.find(x => x.geneId === id);
-                return g && g.zygosity === ZYG.VIS;
-            });
-
-            const geneDef = defs.find(k => k.id === id);
-            const geneName = geneDef ? geneDef.name.split(' (')[0] : '';
-            
-            if (isVisualInThisGroup && name.includes(geneName) && 
-                geneDef.type !== CALC_TYPES.POLY && geneDef.type !== CALC_TYPES.BLOOD) {
-                return;
-            }
-
-            let hetCount = 0;
-            raw.forEach(r => {
-                const g = r.gens.find(x => x.geneId === id);
-                if(g && (g.zygosity === ZYG.HET || g.zygosity === ZYG.VIS)) {
-                    hetCount += r.prob;
-                }
-            });
-
-            const ratio = hetCount / prob;
-            if(ratio > 0.001) {
-                let label = '';
-                if(ratio >= 0.99) label = 'Het';
-                else if(ratio >= 0.60) label = '66% Poss Het';
-                else if(ratio >= 0.45) label = '50% Poss Het';
-                else label = `${Math.round(ratio*100)}% Poss Het`;
-                hetStats[id] = label;
-            }
-        });
-
-        const groupedHets = {};
-        Object.keys(hetStats).forEach(id => {
-            const label = hetStats[id];
-            const d = defs.find(k => k.id === id);
-            const gName = d ? d.name.split(' (')[0] : id;
-            if(!groupedHets[label]) groupedHets[label] = [ ];
-            groupedHets[label].push(gName);
-        });
-
-        const extraInfo = [ ];
-
-        // --- 多遺傳與血系基因的「視表現」標籤處理 ---
-        Object.keys(polyInheritance).forEach(pid => {
-            const val = polyInheritance[pid];
-            const d = defs.find(k => k.id === pid);
-            if(d) {
-                const pName = d.name.split(' (')[0];
-                if (d.type === CALC_TYPES.BLOOD) {
-                    if (val < 100) {
-                        extraInfo.push(`${val}% ${pName}血`);
-                    }
-                } else if (d.type === CALC_TYPES.POLY) {
-                    if (!name.includes(pName)) { 
-                        extraInfo.push(`${pName} (視表現)`);
-                    }
-                }
-            }
-        });
-
-        // 排序並加入 Het 資訊
-        const sortOrder =[ 'Het', '66% Poss Het', '50% Poss Het' ];
-        sortOrder.forEach(lbl => {
-            if(groupedHets[lbl]) {
-                extraInfo.push(`${lbl} ${groupedHets[lbl].join(' ')}`);
-                delete groupedHets[lbl];
-            }
-        });
-        Object.keys(groupedHets).forEach(lbl => {
-            extraInfo.push(`${lbl} ${groupedHets[lbl].join(' ')}`);
-        });
-
-        let fullLabel = name;
-        if(extraInfo.length > 0) {
-            fullLabel += ` (${extraInfo.join(', ')})`;
-        }
-
-        finalOutcomes.push({
-            description: name,
-            fullLabel: fullLabel,
-            prob: prob,
-            gens: [ ]
-        });
-    });
-
-    finalOutcomes.sort((a,b) => b.prob - a.prob);
-
-    return {
-        totalCombos: finalOutcomes.length,
-        outcomes: finalOutcomes,
-        warning: warning,
-        notices: notices
-    };
-}
 </file>
 
 <file path="utils/faq.js">
@@ -1040,178 +680,6 @@ const props = defineProps({
 </style>
 </file>
 
-<file path="pages/articles/[id].vue">
-<script setup>
-import { computed } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
-import { useHead, useAsyncData, useSupabaseClient } from '#imports'
-import { useMainStore } from '~/stores/useMainStore'
-
-const route = useRoute()
-const router = useRouter()
-const store = useMainStore()
-const supabase = useSupabaseClient()
-const articleId = route.params.id
-
-// [SEO] 為了在伺服器端渲染 (SSR) 期間就能拿到該文章資料以產生正確的 Meta，
-// 我們使用 useAsyncData 獨立向 Supabase 請求單篇文章資料。
-const { data: readingArticle, pending } = await useAsyncData(`article-${articleId}`, async () => {
-    // 若 Store 已經有了，可以直接用 (CSR 場景)
-    if (store.articlesList && store.articlesList.length > 0) {
-        const found = store.articlesList.find(a => a.ID === articleId)
-        if (found) return found
-    }
-
-    // 若 Store 沒有 (SSR 場景或直接進入內頁)，則直接去資料庫撈
-    const { data, error } = await supabase
-        .from('articles')
-        .select('*')
-        .eq('id', articleId)
-        .eq('status', 'Published')
-        .single()
-
-    if (error || !data) return null
-
-    return {
-        ID: data.id,
-        Title: data.title,
-        Category: data.category,
-        Summary: data.summary,
-        Content: data.content,
-        ImageURL: data.image_url,
-        Author: data.author,
-        PublishDate: data.publish_date,
-        Keywords: data.keywords // 🌟 新增：撈取隱藏的關鍵字欄位
-    }
-})
-
-// 當文章被載入後，將其存入 Store 以供全域 Navbar 計算進度條使用
-if (readingArticle.value && import.meta.client) {
-    store.readingArticle = readingArticle.value
-}
-
-const getMetaImg = (url) => {
-    if (!url) return 'https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/%E6%9C%AA%E5%91%BD%E5%90%8D%E8%A8%AD%E8%A8%88.png'
-    const driveRegex = /file\/d\/([a-zA-Z0-9_-]+)\//
-    const match = url.match(driveRegex)
-    let target = url
-    if (match && match[1]) target = 'https://drive.google.com/uc?id=' + match[1]
-    return `https://wsrv.nl/?url=${encodeURIComponent(target)}&w=1200&output=webp&q=80`
-}
-
-const convertLink = (url) => {
-    if (!url) return ''
-    const driveRegex = /file\/d\/([a-zA-Z0-9_-]+)\//
-    const match = url.match(driveRegex)
-    let target = url
-    if (match && match[1]) target = 'https://drive.google.com/uc?id=' + match[1]
-    return `https://wsrv.nl/?url=${encodeURIComponent(target)}&w=1000&output=webp&q=80`
-}
-
-const fmtDate = (d) => {
-    try { return new Date(d).toISOString().split('T')[0] } catch(e) { return '' }
-}
-
-const siteData = computed(() => {
-    if (readingArticle.value) {
-        const art = readingArticle.value
-        const imgUrl = getMetaImg(art.ImageURL)
-        const artUrl = `https://www.genckobreeding.com/articles/${art.ID}`
-        const isoDate = new Date(art.PublishDate).toISOString()
-
-        const jsonLd = {
-            "@context": "https://schema.org",
-            "@type": "BlogPosting",
-            "headline": art.Title,
-            "image": [imgUrl],
-            "datePublished": isoDate,
-            "dateModified": isoDate,
-            "author":[{
-                "@type": "Person",
-                "name": art.Author || "Gencko Studio",
-                "url": "https://www.genckobreeding.com/about"
-            }],
-            "description": art.Summary,
-            "keywords": art.Keywords || "" // 🌟 新增：注入 JSON-LD
-        }
-
-        return {
-            title: art.Title,
-            desc: art.Summary || 'Gencko Studio 專業爬蟲與守宮飼養專欄。',
-            keywords: art.Keywords || 'Gencko Studio, 豹紋守宮, 肥尾守宮, 爬蟲, 飼養教學', // 🌟 預設備用關鍵字
-            img: imgUrl,
-            url: artUrl,
-            script:[{ type: 'application/ld+json', children: JSON.stringify(jsonLd) }]
-        }
-    }
-    
-    // Fallback if not found
-    return {
-        title: '文章不存在',
-        desc: '找不到此文章',
-        keywords: '',
-        img: 'https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/%E6%9C%AA%E5%91%BD%E5%90%8D%E8%A8%AD%E8%A8%88.png',
-        url: `https://www.genckobreeding.com/articles/${articleId}`,
-        script:[]
-    }
-})
-
-useHead({
-    title: computed(() => siteData.value.title),
-    meta:[
-        { name: 'description', content: computed(() => siteData.value.desc) },
-        { name: 'keywords', content: computed(() => siteData.value.keywords) }, // 🌟 新增：Meta Keywords
-        { property: 'og:title', content: computed(() => `${siteData.value.title} | Gencko Studio`) },
-        { property: 'og:description', content: computed(() => siteData.value.desc) },
-        { property: 'og:image', content: computed(() => siteData.value.img) },
-        { property: 'og:url', content: computed(() => siteData.value.url) },
-        { property: 'og:type', content: 'article' }
-    ],
-    link:[
-        { rel: 'canonical', href: computed(() => siteData.value.url) }
-    ],
-    script: computed(() => siteData.value.script)
-})
-
-const goBack = () => {
-    store.readingArticle = null
-    router.push('/articles')
-}
-</script>
-
-<template>
-    <div>
-        <div v-if="pending" style="text-align:center; padding:100px 0; color:#888;">
-            <div class="loader" style="margin:0 auto 20px auto;"></div>
-            <p>文章載入中...</p>
-        </div>
-
-        <div v-else-if="!readingArticle" style="text-align:center; padding:100px 0; color:#888;">
-            <h2>找不到此文章或文章已下架</h2>
-            <button @click="goBack" class="btn-back" style="margin-top:20px;">← 返回列表</button>
-        </div>
-
-        <div v-else>
-            <button @click="goBack" class="btn-back">← 返回列表</button>
-            <article class="reader-container">
-                <div v-if="readingArticle.ImageURL" class="article-hero-image">
-                    <img :src="convertLink(readingArticle.ImageURL)" :alt="readingArticle.Title" style="width:100%; height:auto; max-height:200px; object-fit:cover; border-radius:8px; margin-bottom:0px;" loading="eager">
-                </div>
-                <h1 style="color:var(--txt);font-size:2rem;margin-bottom:15px;">{{ readingArticle.Title }}</h1>
-                <div style="color:#666;font-size:0.9rem;margin-bottom:20px;">
-                    <time :datetime="readingArticle.PublishDate">📅 {{ fmtDate(readingArticle.PublishDate) }}</time>
-                    <span style="margin-left:15px;">👤 {{ readingArticle.Author }}</span>
-                    <span style="margin-left:15px;">📂 {{ readingArticle.Category }}</span>
-                </div>
-                <hr style="border-color:rgba(255,255,255,0.1); margin: 0px 0;">
-                <div class="reader-content" v-html="readingArticle.Content"></div>
-            </article>
-            <button @click="goBack" class="btn-back" style="margin-top:30px;">← 返回列表</button>
-        </div>
-    </div>
-</template>
-</file>
-
 <file path="server/api/_sitemap-urls.ts">
 import { serverSupabaseClient } from '#supabase/server'
 
@@ -1335,6 +803,363 @@ export default defineEventHandler(async (event) => {
 
   return urls
 })
+</file>
+
+<file path="utils/calcUtils.js">
+import { CALC_SPECIES, CALC_TYPES, ZYG, CALC_COMBO_RULES } from './genes.js';
+
+// --- 輔助函式：取得機率分數顯示 ---
+export function getProbFraction(prob) {
+    if (prob >= 0.99) return '';
+    const frac = Math.round(1 / prob);
+    if ([ 2, 3, 4, 8, 16, 32, 64, 128, 256 ].includes(frac)) return `1/${frac}`;
+    return '';
+}
+
+// --- 核心運算函式 ---
+export function calculateGenetics(species, maleGenes, femaleGenes, defs) {
+    if (maleGenes.length === 0 && femaleGenes.length === 0) {
+        return null;
+    }
+
+    // 展開 Combo 基因
+    const expand = (list) => {
+        let res =[ ];
+        list.forEach(s => {
+            const d = defs.find(k => k.id === s.geneId);
+            if (d && d.components) {
+                d.components.forEach(c => {
+                    let z = ZYG.VIS;
+                    if (c.type === 'Het') z = ZYG.HET;
+                    if (c.type === 'Super') z = ZYG.SUP;
+                    res.push({ geneId: c.geneId, zygosity: z });
+                });
+            } else {
+                res.push(s);
+            }
+        });
+        return res;
+    };
+
+    const mExpanded = expand(maleGenes);
+    const fExpanded = expand(femaleGenes);
+    const allGenes = [ ...maleGenes, ...femaleGenes ];
+
+    // 1. 警告與提示檢查
+    let warning = '';
+    let notices = [ ];
+
+    if(allGenes.some(g => g.geneId === 'lemonfrost')) warning += "檸檬霜 (Lemon Frost) 易導致腫瘤。\n";
+    if(allGenes.some(g => g.geneId === 'ndbe')) warning += "慾望黑眼 (NDBE) 母體不孕且子代易眼部萎縮。\n";
+    if(allGenes.some(g => g.geneId === 'enigman')) notices.push("謎 (Enigma) 可能伴隨神經症狀 (ES)。");
+    if(allGenes.some(g => g.geneId === 'whiteandyellow')) notices.push("白黃 (W&Y) 可能伴隨輕微神經症狀。");
+    
+    // 🌟 修正 Bug：超級立可白致死基因應檢查雙親 (allGenes)，而非僅檢查母代
+    const hasSuperWhiteout = allGenes.some(g => g.geneId === 'aft_whiteout' && g.zygosity === ZYG.SUP);
+    if(hasSuperWhiteout) warning += "超級立可白為致死基因。\n";
+
+    // 新增：檢查是否存在多遺傳基因，並顯示警告
+    const hasPolygenicGene = allGenes.some(g => {
+        const def = defs.find(d => d.id === g.geneId);
+        return def && (def.type === CALC_TYPES.POLY || def.type === CALC_TYPES.BLOOD);
+    });
+    if (hasPolygenicGene) {
+        warning += "含有多遺傳基因之品系需視表現而定。\n";
+    }
+
+    if (species === CALC_SPECIES.LG) {
+        const albinoTypes =[ 'tremper', 'bell', 'rainwater' ];
+        const getAlbinos = (list) => {
+             const rawIds = list.map(g => g.geneId);
+             const expandedIds = expand(list).map(g => g.geneId);
+             return new Set([ ...rawIds, ...expandedIds ].filter(id => albinoTypes.includes(id)));
+        };
+        const mAlbinos = getAlbinos(maleGenes);
+        const fAlbinos = getAlbinos(femaleGenes);
+        const union = new Set([ ...mAlbinos, ...fAlbinos ]);
+        if(union.size > 1) {
+             warning += "不同白化基因 (川普/貝爾/雨水) 互配，子代將不表現白化且造成基因混亂。\n";
+        }
+    }
+
+    if (species === CALC_SPECIES.AFT) {
+        const fHasCaramel = femaleGenes.some(g => g.geneId === 'aft_caramel');
+        const fHasGhost = femaleGenes.some(g => g.geneId === 'aft_ghost');
+        if(fHasCaramel) warning += "母焦糖 (Caramel) 會有不孕問題。\n";
+        if(fHasGhost) warning += "母幽靈 (Ghost) 會有不孕問題。\n";
+    }
+
+    // 2. 孟德爾遺傳計算
+    const allIds = new Set([ ...mExpanded.map(g => g.geneId), ...fExpanded.map(g => g.geneId) ]);
+    const mendelianResults = [ ];
+    const polyInheritance = {};
+
+    allIds.forEach(id => {
+        const def = defs.find(d => d.id === id);
+        if(!def) return;
+        
+        const mG = mExpanded.find(g => g.geneId === id);
+        const fG = fExpanded.find(g => g.geneId === id);
+
+        // 多遺傳與血系：取平均值
+        if (def.type === CALC_TYPES.POLY || def.type === CALC_TYPES.BLOOD) {
+            const mP = mG ? 100 : 0;
+            const fP = fG ? 100 : 0;
+            const avg = (mP + fP) / 2;
+            if (avg > 0) polyInheritance[id] = avg;
+        } else {
+            const getAlleles = (z) => {
+                if (!z) return [ 0, 0 ];
+                if (def.type === CALC_TYPES.REC) {
+                    if (z === ZYG.VIS) return [ 1, 1 ];
+                    if (z === ZYG.HET) return [ 1, 0 ];
+                } else if (def.type === CALC_TYPES.CODOM) {
+                    if (z === ZYG.SUP) return [ 1, 1 ];
+                    if (z === ZYG.VIS || z === ZYG.SGL) return [ 1, 0 ];
+                } else { 
+                    if (z === ZYG.VIS) return[ 1, 0 ]; 
+                }
+                return [ 0, 0 ];
+            };
+            const p1 = getAlleles(mG?.zygosity);
+            const p2 = getAlleles(fG?.zygosity);
+            const counts = {};
+            
+            for(let a of p1) {
+                for(let b of p2) {
+                    const sum = a+b;
+                    let k = '';
+                    if(def.type === CALC_TYPES.REC) {
+                        if(sum===2) k=ZYG.VIS; else if(sum===1) k=ZYG.HET; else k='Wild';
+                    } else if(def.type === CALC_TYPES.CODOM) {
+                        if(sum===2) k=ZYG.SUP; else if(sum===1) k=ZYG.SGL; else k='Wild';
+                    } else {
+                        if(sum>=1) k=ZYG.VIS; else k='Wild';
+                    }
+                    counts[k] = (counts[k]||0)+1;
+                }
+            }
+            const locRes = [ ];
+            Object.keys(counts).forEach(k => {
+                if(k!=='Wild') locRes.push({ geneId: id, zygosity: k, prob: counts[k]/4 });
+            });
+            if(locRes.length > 0) mendelianResults.push(locRes);
+        }
+    });
+
+    // 3. 組合結果
+    let rawOutcomes = [ { gens: [ ], prob: 1 } ];
+    mendelianResults.forEach(opts => {
+        const nextOutcomes = [ ];
+        const sumProb = opts.reduce((s,o) => s + o.prob, 0);
+        const wildProb = 1 - sumProb;
+        
+        rawOutcomes.forEach(ex => {
+            opts.forEach(o => {
+                nextOutcomes.push({ 
+                    gens:[ ...ex.gens, { geneId: o.geneId, zygosity: o.zygosity } ], 
+                    prob: ex.prob * o.prob 
+                });
+            });
+            if(wildProb > 0.0001) {
+                nextOutcomes.push({ gens: [ ...ex.gens ], prob: ex.prob * wildProb });
+            }
+        });
+        rawOutcomes = nextOutcomes;
+    });
+
+    // 4. 表型對應 (Phenotype Mapping)
+    const phenoMap = new Map();
+    rawOutcomes.forEach(o => {
+        const active = o.gens;
+        
+        // 篩選單基因遺傳的 Visual
+        const visualGenes = active.filter(a => {
+            const d = defs.find(k => k.id === a.geneId);
+            if (!d) return false;
+            if (d.type === CALC_TYPES.REC) return a.zygosity === ZYG.VIS;
+            if (d.type === CALC_TYPES.CODOM) return[ ZYG.VIS, ZYG.SGL, ZYG.SUP ].includes(a.zygosity);
+            return true;
+        });
+
+        // 收集當前組合中，所有多遺傳和血系基因的 ID，用於後續 descParts 的生成
+        const polygenicGeneIdsInPhenotype = new Set();
+        Object.keys(polyInheritance).forEach(pid => {
+            const val = polyInheritance[pid];
+            const def = defs.find(d => d.id === pid);
+            
+            if (def.type === CALC_TYPES.BLOOD) {
+                if (val >= 100) {
+                    polygenicGeneIdsInPhenotype.add(pid);
+                } else {
+                    if (def.baseGeneId) {
+                        polygenicGeneIdsInPhenotype.add(def.baseGeneId);
+                    }
+                }
+            } else {
+                polygenicGeneIdsInPhenotype.add(pid);
+            }
+        });
+
+        const descParts = [ ];
+        const consumed = new Set();
+
+        CALC_COMBO_RULES.forEach(rule => {
+            const met = rule.required.every(r => {
+                const match = visualGenes.find(a => a.geneId === r.id);
+                if(!match || consumed.has(match.geneId)) return false;
+                if(r.z === 'Any') return true;
+                return match.zygosity === r.z;
+            });
+            if(met) {
+                descParts.push(rule.name);
+                rule.required.forEach(r => consumed.add(r.id));
+            }
+        });
+        
+        // 處理非多遺傳/血系的視覺表現基因
+        visualGenes.forEach(a => {
+            if(consumed.has(a.geneId)) return;
+            const d = defs.find(k => k.id === a.geneId);
+            if(!d) return;
+            let geneDisplayName = d.name.split(' (')[0];
+            
+            if(d.type === CALC_TYPES.CODOM) {
+                if(a.zygosity === ZYG.SUP) descParts.push('超級' + geneDisplayName);
+                else descParts.push(geneDisplayName);
+            } else if(d.type === CALC_TYPES.REC) {
+                descParts.push(geneDisplayName);
+            } else {
+                descParts.push(geneDisplayName);
+            }
+        });
+        
+        // 將多遺傳基因的名稱添加到 descParts，但要確保它們不會被 consumed 掉
+        polygenicGeneIdsInPhenotype.forEach(pid => {
+            const d = defs.find(k => k.id === pid);
+            if (d && !consumed.has(pid)) {
+                const geneDisplayName = d.name.split(' (')[0];
+                if (!descParts.includes(geneDisplayName)) { // 避免重複添加
+                    descParts.push(geneDisplayName);
+                }
+            }
+        });
+
+        const name = descParts.join(' + ') || '原色';
+        
+        if(!phenoMap.has(name)) phenoMap.set(name, { prob: 0, raw: [ ] });
+        const entry = phenoMap.get(name);
+        entry.prob += o.prob;
+        entry.raw.push(o);
+    });
+
+    // 5. 整理最終輸出
+    const finalOutcomes = [ ];
+    phenoMap.forEach((data, name) => {
+        const { prob, raw } = data;
+        const hetStats = {};
+        
+        // Het 計算
+        const potentialHets = new Set([ ...mExpanded.map(x=>x.geneId), ...fExpanded.map(x=>x.geneId) ]);
+        potentialHets.forEach(id => {
+            const d = defs.find(k => k.id === id);
+            if(!d || d.type !== CALC_TYPES.REC) return;
+            
+            const isVisualInThisGroup = raw.every(r => {
+                const g = r.gens.find(x => x.geneId === id);
+                return g && g.zygosity === ZYG.VIS;
+            });
+
+            const geneDef = defs.find(k => k.id === id);
+            const geneName = geneDef ? geneDef.name.split(' (')[0] : '';
+            
+            if (isVisualInThisGroup && name.includes(geneName) && 
+                geneDef.type !== CALC_TYPES.POLY && geneDef.type !== CALC_TYPES.BLOOD) {
+                return;
+            }
+
+            let hetCount = 0;
+            raw.forEach(r => {
+                const g = r.gens.find(x => x.geneId === id);
+                if(g && (g.zygosity === ZYG.HET || g.zygosity === ZYG.VIS)) {
+                    hetCount += r.prob;
+                }
+            });
+
+            const ratio = hetCount / prob;
+            if(ratio > 0.001) {
+                let label = '';
+                if(ratio >= 0.99) label = 'Het';
+                else if(ratio >= 0.60) label = '66% Poss Het';
+                else if(ratio >= 0.45) label = '50% Poss Het';
+                else label = `${Math.round(ratio*100)}% Poss Het`;
+                hetStats[id] = label;
+            }
+        });
+
+        const groupedHets = {};
+        Object.keys(hetStats).forEach(id => {
+            const label = hetStats[id];
+            const d = defs.find(k => k.id === id);
+            const gName = d ? d.name.split(' (')[0] : id;
+            if(!groupedHets[label]) groupedHets[label] = [ ];
+            groupedHets[label].push(gName);
+        });
+
+        const extraInfo = [ ];
+
+        // --- 多遺傳與血系基因的「視表現」標籤處理 ---
+        Object.keys(polyInheritance).forEach(pid => {
+            const val = polyInheritance[pid];
+            const d = defs.find(k => k.id === pid);
+            if(d) {
+                const pName = d.name.split(' (')[0];
+                if (d.type === CALC_TYPES.BLOOD) {
+                    if (val < 100) {
+                        extraInfo.push(`${val}% ${pName}血`);
+                    }
+                } else if (d.type === CALC_TYPES.POLY) {
+                    if (!name.includes(pName)) { 
+                        extraInfo.push(`${pName} (視表現)`);
+                    }
+                }
+            }
+        });
+
+        // 排序並加入 Het 資訊
+        const sortOrder =[ 'Het', '66% Poss Het', '50% Poss Het' ];
+        sortOrder.forEach(lbl => {
+            if(groupedHets[lbl]) {
+                extraInfo.push(`${lbl} ${groupedHets[lbl].join(' ')}`);
+                delete groupedHets[lbl];
+            }
+        });
+        Object.keys(groupedHets).forEach(lbl => {
+            extraInfo.push(`${lbl} ${groupedHets[lbl].join(' ')}`);
+        });
+
+        let fullLabel = name;
+        if(extraInfo.length > 0) {
+            fullLabel += ` (${extraInfo.join(', ')})`;
+        }
+
+        finalOutcomes.push({
+            description: name,
+            fullLabel: fullLabel,
+            prob: prob,
+            gens: [ ]
+        });
+    });
+
+    finalOutcomes.sort((a,b) => b.prob - a.prob);
+
+    return {
+        totalCombos: finalOutcomes.length,
+        outcomes: finalOutcomes,
+        warning: warning,
+        notices: notices
+    };
+}
 </file>
 
 <file path="utils/genes-db.js">
@@ -1708,6 +1533,185 @@ const openLineGroup = () => {
     }
 }
 </style>
+</file>
+
+<file path="pages/articles/[id].vue">
+<script setup>
+import { computed } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import { useHead, useAsyncData, useSupabaseClient } from '#imports'
+import { useMainStore } from '~/stores/useMainStore'
+
+const route = useRoute()
+const router = useRouter()
+const store = useMainStore()
+const supabase = useSupabaseClient()
+const articleId = route.params.id
+
+// [SEO] 為了在伺服器端渲染 (SSR) 期間就能拿到該文章資料以產生正確的 Meta，
+// 我們使用 useAsyncData 獨立向 Supabase 請求單篇文章資料。
+const { data: readingArticle, pending } = await useAsyncData(`article-${articleId}`, async () => {
+    // 若 Store 已經有了，可以直接用 (CSR 場景)
+    if (store.articlesList && store.articlesList.length > 0) {
+        const found = store.articlesList.find(a => a.ID === articleId)
+        if (found) return found
+    }
+
+    // 若 Store 沒有 (SSR 場景或直接進入內頁)，則直接去資料庫撈
+    const { data, error } = await supabase
+        .from('articles')
+        .select('*')
+        .eq('id', articleId)
+        .eq('status', 'Published')
+        .single()
+
+    if (error || !data) return null
+
+    return {
+        ID: data.id,
+        Title: data.title,
+        Category: data.category,
+        Summary: data.summary,
+        Content: data.content,
+        ImageURL: data.image_url,
+        Author: data.author,
+        PublishDate: data.publish_date,
+        Keywords: data.keywords // 🌟 新增：撈取隱藏的關鍵字欄位
+    }
+})
+
+// 當文章被載入後，將其存入 Store 以供全域 Navbar 計算進度條使用
+if (readingArticle.value && import.meta.client) {
+    store.readingArticle = readingArticle.value
+}
+
+const getMetaImg = (url) => {
+    if (!url) return 'https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/%E6%9C%AA%E5%91%BD%E5%90%8D%E8%A8%AD%E8%A8%88.png'
+    const driveRegex = /file\/d\/([a-zA-Z0-9_-]+)\//
+    const match = url.match(driveRegex)
+    let target = url
+    if (match && match[1]) target = 'https://drive.google.com/uc?id=' + match[1]
+    return `https://wsrv.nl/?url=${encodeURIComponent(target)}&w=1200&output=webp&q=80`
+}
+
+const convertLink = (url) => {
+    if (!url) return ''
+    const driveRegex = /file\/d\/([a-zA-Z0-9_-]+)\//
+    const match = url.match(driveRegex)
+    let target = url
+    if (match && match[1]) target = 'https://drive.google.com/uc?id=' + match[1]
+    return `https://wsrv.nl/?url=${encodeURIComponent(target)}&w=1000&output=webp&q=80`
+}
+
+const fmtDate = (d) => {
+    try { return new Date(d).toISOString().split('T')[0] } catch(e) { return '' }
+}
+
+const siteData = computed(() => {
+    if (readingArticle.value) {
+        const art = readingArticle.value
+        const imgUrl = getMetaImg(art.ImageURL)
+        const artUrl = `https://www.genckobreeding.com/articles/${art.ID}`
+        
+        // 🌟 修正 SSR 崩潰 Bug：加入 try-catch 保護日期解析
+        let isoDate = ''
+        try {
+            isoDate = art.PublishDate ? new Date(art.PublishDate).toISOString() : new Date().toISOString()
+        } catch (e) {
+            isoDate = new Date().toISOString() // 若日期格式錯誤，使用當下時間作為預設值
+        }
+
+        const jsonLd = {
+            "@context": "https://schema.org",
+            "@type": "BlogPosting",
+            "headline": art.Title,
+            "image": [imgUrl],
+            "datePublished": isoDate,
+            "dateModified": isoDate,
+            "author":[{
+                "@type": "Person",
+                "name": art.Author || "Gencko Studio",
+                "url": "https://www.genckobreeding.com/about"
+            }],
+            "description": art.Summary,
+            "keywords": art.Keywords || "" // 🌟 新增：注入 JSON-LD
+        }
+
+        return {
+            title: art.Title,
+            desc: art.Summary || 'Gencko Studio 專業爬蟲與守宮飼養專欄。',
+            keywords: art.Keywords || 'Gencko Studio, 豹紋守宮, 肥尾守宮, 爬蟲, 飼養教學', // 🌟 預設備用關鍵字
+            img: imgUrl,
+            url: artUrl,
+            script:[{ type: 'application/ld+json', children: JSON.stringify(jsonLd) }]
+        }
+    }
+    
+    // Fallback if not found
+    return {
+        title: '文章不存在',
+        desc: '找不到此文章',
+        keywords: '',
+        img: 'https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/%E6%9C%AA%E5%91%BD%E5%90%8D%E8%A8%AD%E8%A8%88.png',
+        url: `https://www.genckobreeding.com/articles/${articleId}`,
+        script:[]
+    }
+})
+
+useHead({
+    title: computed(() => siteData.value.title),
+    meta:[
+        { name: 'description', content: computed(() => siteData.value.desc) },
+        { name: 'keywords', content: computed(() => siteData.value.keywords) }, // 🌟 新增：Meta Keywords
+        { property: 'og:title', content: computed(() => `${siteData.value.title} | Gencko Studio`) },
+        { property: 'og:description', content: computed(() => siteData.value.desc) },
+        { property: 'og:image', content: computed(() => siteData.value.img) },
+        { property: 'og:url', content: computed(() => siteData.value.url) },
+        { property: 'og:type', content: 'article' }
+    ],
+    link:[
+        { rel: 'canonical', href: computed(() => siteData.value.url) }
+    ],
+    script: computed(() => siteData.value.script)
+})
+
+const goBack = () => {
+    store.readingArticle = null
+    router.push('/articles')
+}
+</script>
+
+<template>
+    <div>
+        <div v-if="pending" style="text-align:center; padding:100px 0; color:#888;">
+            <div class="loader" style="margin:0 auto 20px auto;"></div>
+            <p>文章載入中...</p>
+        </div>
+
+        <div v-else-if="!readingArticle" style="text-align:center; padding:100px 0; color:#888;">
+            <h2>找不到此文章或文章已下架</h2>
+            <button @click="goBack" class="btn-back" style="margin-top:20px;">← 返回列表</button>
+        </div>
+
+        <div v-else>
+            <button @click="goBack" class="btn-back">← 返回列表</button>
+            <article class="reader-container">
+                <div v-if="readingArticle.ImageURL" class="article-hero-image">
+                    <img :src="convertLink(readingArticle.ImageURL)" :alt="readingArticle.Title" style="width:100%; height:auto; max-height:200px; object-fit:cover; border-radius:8px; margin-bottom:0px;" loading="eager">
+                </div>
+                <h1 style="color:var(--txt);font-size:2rem;margin-bottom:15px;">{{ readingArticle.Title }}</h1>
+                <div style="color:#666;font-size:0.9rem;margin-bottom:20px;">
+                    <time :datetime="readingArticle.PublishDate">📅 {{ fmtDate(readingArticle.PublishDate) }}</time>
+                    <span style="margin-left:15px;">👤 {{ readingArticle.Author }}</span>
+                    <span style="margin-left:15px;">📂 {{ readingArticle.Category }}</span>
+                </div>
+                <hr style="border-color:rgba(255,255,255,0.1); margin: 0px 0;">
+                <div class="reader-content" v-html="readingArticle.Content"></div>
+            </article>
+            <button @click="goBack" class="btn-back" style="margin-top:30px;">← 返回列表</button>
+        </div>
+    </div>
+</template>
 </file>
 
 <file path="pages/calculator.vue">
@@ -3028,203 +3032,6 @@ export const useMainStore = defineStore('main', () => {
 })
 </file>
 
-<file path="app.vue">
-<script setup>
-import { onMounted, onUnmounted, watch } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
-import { useHead, useNuxtApp } from '#imports'
-import { useMainStore } from '~/stores/useMainStore'
-
-const store = useMainStore()
-const route = useRoute()
-const router = useRouter()
-const { $pwa } = useNuxtApp() 
-
-// 🌟 修正 FOUC 閃屏問題：改為對 document.documentElement (html標籤) 操作
-useHead({
-  script:[
-    {
-      children: `
-        (function() {
-          try {
-            var theme = localStorage.getItem('gencko_theme');
-            if (theme === 'dark') {
-              document.documentElement.classList.remove('day-mode');
-            } else {
-              document.documentElement.classList.add('day-mode');
-            }
-          } catch (e) {}
-        })();
-      `
-    }
-  ]
-})
-
-watch(() => route.path, (newPath) => {
-  store.mobileMenuOpen = false
-  if (newPath.startsWith('/articles')) store.curTab = 'articles'
-  else store.curTab = route.name || 'home'
-})
-
-const handleScroll = () => {
-  const st = Math.max(0, window.scrollY)
-  if (st > 100 && st > store.lastScrollY) store.navHidden = true
-  else store.navHidden = false
-  store.lastScrollY = st
-
-  if (st + window.innerHeight >= document.documentElement.scrollHeight - 300) {
-    store.displayLimit += 20
-  }
-
-  if (route.path.startsWith('/articles/') && store.readingArticle) {
-    const docH = document.documentElement.scrollHeight
-    const winH = window.innerHeight
-    const progress = (st / (docH - winH)) * 100
-    store.readingProgress = Math.min(100, Math.max(0, progress))
-  }
-}
-
-const scrollToTop = () => window.scrollTo(0, 0)
-
-onMounted(() => {
-  store.initTheme()
-  store.loadDataFromAPI()
-  store.loadAuctions()
-  store.initLiff()
-  store.initPWAInstallPrompt()
-
-  const savedWish = localStorage.getItem('gencko_wishlist')
-  if (savedWish) store.wishlist = JSON.parse(savedWish)
-  
-  const savedHospWish = localStorage.getItem('gencko_hosp_wishlist')
-  if (savedHospWish) store.hospWishlist = JSON.parse(savedHospWish)
-  
-  const savedHist = localStorage.getItem('gencko_history')
-  if (savedHist) store.history = JSON.parse(savedHist)
-
-  window.addEventListener('scroll', handleScroll)
-})
-
-onUnmounted(() => {
-  window.removeEventListener('scroll', handleScroll)
-})
-</script>
-
-<template>
-  <div class="cont">
-    <VitePwaManifest /> 
-
-    <div v-if="$pwa?.needRefresh" class="pwa-update-toast">
-      <span style="font-weight: bold;">🚀 發現新版本！請更新以獲得最佳體驗</span>
-      <div class="pwa-update-actions">
-        <button class="pwa-btn-update" @click="$pwa.updateServiceWorker()">立即更新</button>
-        <button class="pwa-btn-cancel" @click="$pwa.cancelPrompt()">稍後</button>
-      </div>
-    </div>
-
-    <!-- iOS 下載安裝教學彈窗 -->
-    <div v-if="store.showIOSGuide" class="ios-install-guide-overlay" @click="store.showIOSGuide = false">
-      <div class="ios-guide-box" @click.stop>
-        <button class="btn-close-guide" @click="store.showIOSGuide = false">✕</button>
-        <h3>如何安裝 Gencko App？</h3>
-        <p>因為 Apple 系統限制，請跟著以下兩個步驟輕鬆安裝：</p>
-        <ol class="ios-steps">
-          <li>1. 點擊 Safari 瀏覽器正下方的 <strong>「分享 ⍐」</strong> 圖示。</li>
-          <li>2. 往下滑，選擇 <strong>「➕ 加入主畫面」</strong>，然後按右上角的「新增」。</li>
-        </ol>
-        <p style="font-size:0.85rem; color:#888; margin-top:10px; text-align:center;">安裝後即可獲得全螢幕無廣告的最佳體驗！</p>
-        <div class="ios-arrow-down">⬇</div>
-      </div>
-    </div>
-
-    <TheLightbox :item="store.lightboxItem" :line-link="store.lineLink" @close="store.closeLightbox" />
-    <TheToast :show="store.showToast" />
-    <TheMarquee :list="store.marqueeList" />
-    
-    <TheNavbar
-      :nav-hidden="store.navHidden"
-      :is-day-mode="store.isDayMode"
-      v-model:mobile-menu-open="store.mobileMenuOpen"
-      :logo-url="store.logoUrl"
-      :cur-tab="store.curTab"
-      :reading-article="store.readingArticle"
-      :reading-progress="store.readingProgress"
-      @toggle-theme="store.toggleTheme"
-      @scroll-top="scrollToTop"
-    />
-
-    <main style="padding-top: 0; min-height: 80vh;">
-      <NuxtPage />
-    </main>
-
-    <a v-if="store.wishlist.length > 0" 
-       :href="'https://line.me/R/ti/p/@219abdzn?text=' + encodeURIComponent('Hi Gencko, 我有興趣詢問收藏清單中的守宮 (' + store.wishlist.length + '隻) ID：\n' + store.wishlist.join(', '))" 
-       target="_blank"
-       class="floating-inquire-btn">
-       <span>❤ 已選 {{ store.wishlist.length }} 隻｜一次詢問</span>
-       <span>➜</span>
-    </a>
-    
-    <TheFooter />
-    <TheBottomNav />
-  </div>
-</template>
-
-<style scoped>
-.ios-install-guide-overlay {
-  position: fixed; top: 0; left: 0; width: 100%; height: 100vh;
-  background: rgba(0,0,0,0.6); backdrop-filter: blur(5px);
-  z-index: 999999; display: flex; align-items: flex-end; justify-content: center;
-}
-.ios-guide-box {
-  background: var(--card-bg); border: 1px solid var(--pri);
-  border-radius: 20px 20px 0 0; padding: 30px 20px 40px 20px;
-  width: 100%; max-width: 500px; color: var(--txt);
-  position: relative; animation: slideUp 0.3s ease-out;
-  box-shadow: 0 -10px 30px rgba(255, 69, 0, 0.2);
-}
-.btn-close-guide {
-  position: absolute; top: 15px; right: 15px;
-  background: transparent; border: none; color: var(--txt);
-  font-size: 1.2rem; cursor: pointer; opacity: 0.6;
-}
-.ios-guide-box h3 { margin: 0 0 10px 0; color: var(--pri); text-align: center; }
-.ios-guide-box p { margin: 0 0 15px 0; line-height: 1.5; font-size: 0.95rem; }
-.ios-steps { list-style: none; padding: 0; margin: 0; background: rgba(128,128,128,0.1); border-radius: 12px; padding: 15px; }
-.ios-steps li { margin-bottom: 12px; font-size: 1rem; line-height: 1.5; }
-.ios-steps li:last-child { margin-bottom: 0; }
-.ios-arrow-down { text-align: center; font-size: 2rem; color: var(--pri); margin-top: 15px; animation: bounce 1s infinite; }
-
-@keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
-@keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(10px); } }
-
-.pwa-update-toast {
-  position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
-  background: var(--card-bg); backdrop-filter: blur(10px); border: 1px solid var(--pri);
-  color: var(--txt); padding: 15px 20px; border-radius: 12px; z-index: 100000;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5); display: flex; flex-direction: column;
-  align-items: center; gap: 12px; width: 90%; max-width: 350px; text-align: center;
-  animation: slideUpFade 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-}
-.pwa-update-actions { display: flex; gap: 10px; width: 100%; }
-.pwa-btn-update { flex: 1; background: var(--pri); color: #fff; border: none; padding: 10px; border-radius: 8px; font-weight: bold; cursor: pointer; box-shadow: 0 4px 10px var(--pri-glow); }
-.pwa-btn-cancel { flex: 1; background: transparent; color: var(--txt); opacity: 0.8; border: 1px solid var(--bd); padding: 10px; border-radius: 8px; cursor: pointer; }
-
-@keyframes slideUpFade { from { opacity: 0; transform: translate(-50%, 20px); } to { opacity: 1; transform: translate(-50%, 0); } }
-
-@media (max-width: 768px) {
-  .floating-inquire-btn { bottom: calc(85px + env(safe-area-inset-bottom, 0px)) !important; }
-  .pwa-update-toast { bottom: calc(85px + env(safe-area-inset-bottom, 0px)) !important; }
-}
-</style>
-
-<style>
-.page-enter-active, .page-leave-active { transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); }
-.page-enter-from { opacity: 0; transform: translateY(15px) scale(0.98); filter: blur(2px); }
-.page-leave-to { opacity: 0; transform: translateY(-15px) scale(0.98); filter: blur(2px); }
-</style>
-</file>
-
 <file path="pages/faq.vue">
 <script setup>
 import { ref } from 'vue'
@@ -4531,6 +4338,219 @@ const getMapLink = (h) => {
     
     .btn-hero { width: 100%; }
 }
+</style>
+</file>
+
+<file path="app.vue">
+<script setup>
+import { onMounted, onUnmounted, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import { useHead, useNuxtApp } from '#imports'
+import { useMainStore } from '~/stores/useMainStore'
+
+const store = useMainStore()
+const route = useRoute()
+const router = useRouter()
+const { $pwa } = useNuxtApp() 
+
+// 🌟 修正 FOUC 閃屏問題：改為對 document.documentElement (html標籤) 操作
+useHead({
+  script:[
+    {
+      children: `
+        (function() {
+          try {
+            var theme = localStorage.getItem('gencko_theme');
+            if (theme === 'dark') {
+              document.documentElement.classList.remove('day-mode');
+            } else {
+              document.documentElement.classList.add('day-mode');
+            }
+          } catch (e) {}
+        })();
+      `
+    }
+  ]
+})
+
+watch(() => route.path, (newPath) => {
+  store.mobileMenuOpen = false
+  if (newPath.startsWith('/articles')) store.curTab = 'articles'
+  else store.curTab = route.name || 'home'
+})
+
+// 🌟 修正效能問題：加入 requestAnimationFrame 節流與合理的上限控制
+let isScrolling = false
+const handleScroll = () => {
+  if (isScrolling) return
+  isScrolling = true
+
+  window.requestAnimationFrame(() => {
+    const st = Math.max(0, window.scrollY)
+    
+    if (st > 100 && st > store.lastScrollY) store.navHidden = true
+    else store.navHidden = false
+
+    // 🌟 修正滾動觸發崩潰 Bug：確保只有在「往下滾」時觸發，並設立安全上限
+    if (st + window.innerHeight >= document.documentElement.scrollHeight - 300) {
+      if (st > store.lastScrollY && store.displayLimit < 2000) {
+        store.displayLimit += 20
+      }
+    }
+
+    store.lastScrollY = st
+
+    if (route.path.startsWith('/articles/') && store.readingArticle) {
+      const docH = document.documentElement.scrollHeight
+      const winH = window.innerHeight
+      const progress = (st / (docH - winH)) * 100
+      store.readingProgress = Math.min(100, Math.max(0, progress))
+    }
+    
+    isScrolling = false
+  })
+}
+
+const scrollToTop = () => window.scrollTo(0, 0)
+
+onMounted(() => {
+  store.initTheme()
+  store.loadDataFromAPI()
+  store.loadAuctions()
+  store.initLiff()
+  store.initPWAInstallPrompt()
+
+  const savedWish = localStorage.getItem('gencko_wishlist')
+  if (savedWish) store.wishlist = JSON.parse(savedWish)
+  
+  const savedHospWish = localStorage.getItem('gencko_hosp_wishlist')
+  if (savedHospWish) store.hospWishlist = JSON.parse(savedHospWish)
+  
+  const savedHist = localStorage.getItem('gencko_history')
+  if (savedHist) store.history = JSON.parse(savedHist)
+
+  // 🌟 將 scroll 事件設為 passive 以優化行動端捲動效能
+  window.addEventListener('scroll', handleScroll, { passive: true })
+})
+
+onUnmounted(() => {
+  window.removeEventListener('scroll', handleScroll)
+})
+</script>
+
+<template>
+  <div class="cont">
+    <VitePwaManifest /> 
+
+    <div v-if="$pwa?.needRefresh" class="pwa-update-toast">
+      <span style="font-weight: bold;">🚀 發現新版本！請更新以獲得最佳體驗</span>
+      <div class="pwa-update-actions">
+        <!-- 🌟 修正 PWA 潛在報錯 Bug：加入可選串連 (?.) 保護機制 -->
+        <button class="pwa-btn-update" @click="$pwa?.updateServiceWorker()">立即更新</button>
+        <button class="pwa-btn-cancel" @click="$pwa?.cancelPrompt()">稍後</button>
+      </div>
+    </div>
+
+    <!-- iOS 下載安裝教學彈窗 -->
+    <div v-if="store.showIOSGuide" class="ios-install-guide-overlay" @click="store.showIOSGuide = false">
+      <div class="ios-guide-box" @click.stop>
+        <button class="btn-close-guide" @click="store.showIOSGuide = false">✕</button>
+        <h3>如何安裝 Gencko App？</h3>
+        <p>因為 Apple 系統限制，請跟著以下兩個步驟輕鬆安裝：</p>
+        <ol class="ios-steps">
+          <li>1. 點擊 Safari 瀏覽器正下方的 <strong>「分享 ⍐」</strong> 圖示。</li>
+          <li>2. 往下滑，選擇 <strong>「➕ 加入主畫面」</strong>，然後按右上角的「新增」。</li>
+        </ol>
+        <p style="font-size:0.85rem; color:#888; margin-top:10px; text-align:center;">安裝後即可獲得全螢幕無廣告的最佳體驗！</p>
+        <div class="ios-arrow-down">⬇</div>
+      </div>
+    </div>
+
+    <TheLightbox :item="store.lightboxItem" :line-link="store.lineLink" @close="store.closeLightbox" />
+    <TheToast :show="store.showToast" />
+    <TheMarquee :list="store.marqueeList" />
+    
+    <TheNavbar
+      :nav-hidden="store.navHidden"
+      :is-day-mode="store.isDayMode"
+      v-model:mobile-menu-open="store.mobileMenuOpen"
+      :logo-url="store.logoUrl"
+      :cur-tab="store.curTab"
+      :reading-article="store.readingArticle"
+      :reading-progress="store.readingProgress"
+      @toggle-theme="store.toggleTheme"
+      @scroll-top="scrollToTop"
+    />
+
+    <main style="padding-top: 0; min-height: 80vh;">
+      <NuxtPage />
+    </main>
+
+    <a v-if="store.wishlist.length > 0" 
+       :href="'https://line.me/R/ti/p/@219abdzn?text=' + encodeURIComponent('Hi Gencko, 我有興趣詢問收藏清單中的守宮 (' + store.wishlist.length + '隻) ID：\n' + store.wishlist.join(', '))" 
+       target="_blank"
+       class="floating-inquire-btn">
+       <span>❤ 已選 {{ store.wishlist.length }} 隻｜一次詢問</span>
+       <span>➜</span>
+    </a>
+    
+    <TheFooter />
+    <TheBottomNav />
+  </div>
+</template>
+
+<style scoped>
+.ios-install-guide-overlay {
+  position: fixed; top: 0; left: 0; width: 100%; height: 100vh;
+  background: rgba(0,0,0,0.6); backdrop-filter: blur(5px);
+  z-index: 999999; display: flex; align-items: flex-end; justify-content: center;
+}
+.ios-guide-box {
+  background: var(--card-bg); border: 1px solid var(--pri);
+  border-radius: 20px 20px 0 0; padding: 30px 20px 40px 20px;
+  width: 100%; max-width: 500px; color: var(--txt);
+  position: relative; animation: slideUp 0.3s ease-out;
+  box-shadow: 0 -10px 30px rgba(255, 69, 0, 0.2);
+}
+.btn-close-guide {
+  position: absolute; top: 15px; right: 15px;
+  background: transparent; border: none; color: var(--txt);
+  font-size: 1.2rem; cursor: pointer; opacity: 0.6;
+}
+.ios-guide-box h3 { margin: 0 0 10px 0; color: var(--pri); text-align: center; }
+.ios-guide-box p { margin: 0 0 15px 0; line-height: 1.5; font-size: 0.95rem; }
+.ios-steps { list-style: none; padding: 0; margin: 0; background: rgba(128,128,128,0.1); border-radius: 12px; padding: 15px; }
+.ios-steps li { margin-bottom: 12px; font-size: 1rem; line-height: 1.5; }
+.ios-steps li:last-child { margin-bottom: 0; }
+.ios-arrow-down { text-align: center; font-size: 2rem; color: var(--pri); margin-top: 15px; animation: bounce 1s infinite; }
+
+@keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+@keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(10px); } }
+
+.pwa-update-toast {
+  position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+  background: var(--card-bg); backdrop-filter: blur(10px); border: 1px solid var(--pri);
+  color: var(--txt); padding: 15px 20px; border-radius: 12px; z-index: 100000;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5); display: flex; flex-direction: column;
+  align-items: center; gap: 12px; width: 90%; max-width: 350px; text-align: center;
+  animation: slideUpFade 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+.pwa-update-actions { display: flex; gap: 10px; width: 100%; }
+.pwa-btn-update { flex: 1; background: var(--pri); color: #fff; border: none; padding: 10px; border-radius: 8px; font-weight: bold; cursor: pointer; box-shadow: 0 4px 10px var(--pri-glow); }
+.pwa-btn-cancel { flex: 1; background: transparent; color: var(--txt); opacity: 0.8; border: 1px solid var(--bd); padding: 10px; border-radius: 8px; cursor: pointer; }
+
+@keyframes slideUpFade { from { opacity: 0; transform: translate(-50%, 20px); } to { opacity: 1; transform: translate(-50%, 0); } }
+
+@media (max-width: 768px) {
+  .floating-inquire-btn { bottom: calc(85px + env(safe-area-inset-bottom, 0px)) !important; }
+  .pwa-update-toast { bottom: calc(85px + env(safe-area-inset-bottom, 0px)) !important; }
+}
+</style>
+
+<style>
+.page-enter-active, .page-leave-active { transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); }
+.page-enter-from { opacity: 0; transform: translateY(15px) scale(0.98); filter: blur(2px); }
+.page-leave-to { opacity: 0; transform: translateY(-15px) scale(0.98); filter: blur(2px); }
 </style>
 </file>
 
@@ -8557,6 +8577,228 @@ const goToDetail = (id) => {
 </style>
 </file>
 
+<file path="components/TheLightbox.vue">
+<script setup>
+import { ref } from 'vue'
+import { getCleanUrl } from '~/utils/image.js'
+
+const props = defineProps({
+    item: { type: Object, default: null },
+    lineLink: { type: String, default: '' }
+})
+
+const emit = defineEmits(['close'])
+
+// --- 🌟 PWA 手勢滑動追蹤 ---
+const touchStartY = ref(0)
+const touchDeltaY = ref(0)
+const isDragging = ref(false)
+
+const onTouchStart = (e) => {
+    touchStartY.value = e.touches[0].clientY
+    isDragging.value = true
+    touchDeltaY.value = 0
+}
+
+const onTouchMove = (e) => {
+    if (!isDragging.value) return
+    touchDeltaY.value = e.touches[0].clientY - touchStartY.value
+}
+
+const onTouchEnd = () => {
+    if (!isDragging.value) return
+    isDragging.value = false
+    
+    // 如果上下滑動超過 100px，則觸發關閉視窗
+    if (Math.abs(touchDeltaY.value) > 100) {
+        emit('close')
+    }
+    
+    // 恢復原位，若沒有被關閉則利用 CSS transition 彈回
+    touchDeltaY.value = 0
+}
+
+// 🌟 安全取得圖片網址邏輯：確保 GitHub 與舊有網址皆能直接顯示
+const getImgSrc = (item) => {
+    if (!item) return ''
+    // 同時檢查大寫與小寫欄位
+    const rawUrl = item.ImageURL || item.image_url || ''
+    return getCleanUrl(rawUrl)
+}
+</script>
+
+<template>
+    <div v-if="item" class="lightbox-overlay" @click="emit('close')">
+        
+        <div class="lightbox-content-wrapper"
+             :style="{
+                 transform: `translateY(${touchDeltaY}px)`,
+                 transition: isDragging ? 'none' : 'transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1), opacity 0.3s ease',
+                 opacity: Math.max(0, 1 - Math.abs(touchDeltaY) / 250)
+             }"
+             @touchstart="onTouchStart"
+             @touchmove="onTouchMove"
+             @touchend="onTouchEnd"
+             @click.stop
+        >
+            <!-- 🌟 下滑關閉的小提示 -->
+            <div class="swipe-hint-container">
+                <div class="swipe-indicator"></div>
+                <span class="swipe-text">下拉關閉圖片</span>
+            </div>
+
+            <!-- 🌟 使用原生 img 以確保 GitHub 直連網址的最高穩定性，不經過 Nuxt Image 處理 -->
+            <img 
+                v-if="getImgSrc(item)"
+                :src="getImgSrc(item)" 
+                :alt="item.Morph || item.Name || 'Gencko Showcase'"
+                class="lightbox-img" 
+                loading="lazy"
+                decoding="async"
+                draggable="false"
+            />
+            
+            <div class="lightbox-info">
+                <h2 class="lightbox-title">{{ item.Morph || item.Name }}</h2>
+                <a v-if="item.Status === 'ForSale' || item.Available !== 'No'" 
+                   :href="item.ExternalLink || lineLink" 
+                   target="_blank" 
+                   class="app-btn-buy" 
+                   rel="noopener noreferrer">
+                   💬 立即私訊購買
+                </a>
+            </div>
+        </div>
+    </div>
+</template>
+
+<style scoped>
+.lightbox-overlay {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: var(--card-bg);
+    backdrop-filter: blur(15px);
+    -webkit-backdrop-filter: blur(15px);
+    z-index: 999999;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+}
+
+.lightbox-content-wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    touch-action: none;
+    will-change: transform, opacity;
+}
+
+.swipe-hint-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-bottom: 12px;
+    opacity: 0.6;
+    animation: float 2s ease-in-out infinite;
+}
+
+@keyframes float {
+    0% { transform: translateY(0px); }
+    50% { transform: translateY(-5px); }
+    100% { transform: translateY(0px); }
+}
+
+.swipe-indicator {
+    width: 40px;
+    height: 5px;
+    border-radius: 5px;
+    background: var(--txt);
+    margin-bottom: 6px;
+}
+
+.swipe-text {
+    font-size: 0.75rem;
+    color: var(--txt);
+    font-weight: bold;
+    letter-spacing: 1px;
+}
+
+.lightbox-img {
+    max-width: 95%;
+    width: auto; 
+    height: auto; 
+    max-height: 70vh; 
+    border-radius: 16px; 
+    box-shadow: 0 10px 40px rgba(0,0,0,0.15);
+    object-fit: contain;
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
+    background: rgba(128, 128, 128, 0.05);
+    border: 1px solid var(--bd);
+}
+
+.lightbox-info {
+    margin-top: 20px;
+    text-align: center;
+    width: 100%;
+    position: relative;
+    z-index: 1000000;
+}
+
+.lightbox-title {
+    color: var(--txt);
+    margin: 0 0 15px 0;
+    font-size: 1.5rem;
+    font-weight: 900;
+    text-shadow: 0 2px 10px rgba(0,0,0,0.05);
+}
+
+.app-btn-buy {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    font-size: 1.1rem;
+    padding: 14px 35px;
+    background: var(--pri);
+    color: #fff;
+    border-radius: 30px;
+    font-weight: bold;
+    text-decoration: none;
+    box-shadow: 0 5px 20px var(--pri-glow);
+    transition: transform 0.2s, box-shadow 0.2s;
+    position: relative;
+    z-index: 100001;
+}
+
+.app-btn-buy:active {
+    transform: scale(0.95);
+    box-shadow: 0 2px 10px rgba(255, 69, 0, 0.2);
+}
+
+@media (max-width: 768px) {
+    .lightbox-img {
+        max-height: 60vh;
+    }
+    
+    .lightbox-title {
+        font-size: 1.25rem;
+        margin-bottom: 12px;
+    }
+    
+    .app-btn-buy {
+        padding: 12px 25px;
+        font-size: 1rem;
+    }
+}
+</style>
+</file>
+
 <file path="pages/shop/index.vue">
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue'
@@ -8682,7 +8924,11 @@ const shopList = computed(() => {
 
         if (fil.value.genes.length > 0) {
             const iGenes = Array.isArray(i.Genes) ? i.Genes : [ ]
-            if (!fil.value.genes.every(g => iGenes.includes(g))) return false
+            if (!fil.value.genes.every(g => {
+                // 🌟 修正 Bug：相容 WY 與白黃的別名問題
+                if (g === 'WY') return iGenes.includes('WY') || iGenes.includes('白黃')
+                return iGenes.includes(g)
+            })) return false
         }
         return true
     })
@@ -9228,228 +9474,6 @@ const toggleWishlist = (id) => {
     .sold-stamp { font-size: 0.55rem; padding: 2px 4px; top: 4px; left: 4px; }
     .status-badge { padding: 2px 6px !important; font-size: 0.75rem !important; }
     .shop-empty-state { grid-column: 1 / -1 !important; }
-}
-</style>
-</file>
-
-<file path="components/TheLightbox.vue">
-<script setup>
-import { ref } from 'vue'
-import { getCleanUrl } from '~/utils/image.js'
-
-const props = defineProps({
-    item: { type: Object, default: null },
-    lineLink: { type: String, default: '' }
-})
-
-const emit = defineEmits(['close'])
-
-// --- 🌟 PWA 手勢滑動追蹤 ---
-const touchStartY = ref(0)
-const touchDeltaY = ref(0)
-const isDragging = ref(false)
-
-const onTouchStart = (e) => {
-    touchStartY.value = e.touches[0].clientY
-    isDragging.value = true
-    touchDeltaY.value = 0
-}
-
-const onTouchMove = (e) => {
-    if (!isDragging.value) return
-    touchDeltaY.value = e.touches[0].clientY - touchStartY.value
-}
-
-const onTouchEnd = () => {
-    if (!isDragging.value) return
-    isDragging.value = false
-    
-    // 如果上下滑動超過 100px，則觸發關閉視窗
-    if (Math.abs(touchDeltaY.value) > 100) {
-        emit('close')
-    }
-    
-    // 恢復原位，若沒有被關閉則利用 CSS transition 彈回
-    touchDeltaY.value = 0
-}
-
-// 🌟 安全取得圖片網址邏輯：確保 GitHub 與舊有網址皆能直接顯示
-const getImgSrc = (item) => {
-    if (!item) return ''
-    // 同時檢查大寫與小寫欄位
-    const rawUrl = item.ImageURL || item.image_url || ''
-    return getCleanUrl(rawUrl)
-}
-</script>
-
-<template>
-    <div v-if="item" class="lightbox-overlay" @click="emit('close')">
-        
-        <div class="lightbox-content-wrapper"
-             :style="{
-                 transform: `translateY(${touchDeltaY}px)`,
-                 transition: isDragging ? 'none' : 'transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1), opacity 0.3s ease',
-                 opacity: Math.max(0, 1 - Math.abs(touchDeltaY) / 250)
-             }"
-             @touchstart="onTouchStart"
-             @touchmove="onTouchMove"
-             @touchend="onTouchEnd"
-             @click.stop
-        >
-            <!-- 🌟 下滑關閉的小提示 -->
-            <div class="swipe-hint-container">
-                <div class="swipe-indicator"></div>
-                <span class="swipe-text">下拉關閉圖片</span>
-            </div>
-
-            <!-- 🌟 使用原生 img 以確保 GitHub 直連網址的最高穩定性，不經過 Nuxt Image 處理 -->
-            <img 
-                v-if="getImgSrc(item)"
-                :src="getImgSrc(item)" 
-                :alt="item.Morph || item.Name || 'Gencko Showcase'"
-                class="lightbox-img" 
-                loading="lazy"
-                decoding="async"
-                draggable="false"
-            />
-            
-            <div class="lightbox-info">
-                <h2 class="lightbox-title">{{ item.Morph || item.Name }}</h2>
-                <a v-if="item.Status === 'ForSale' || item.Available !== 'No'" 
-                   :href="item.ExternalLink || lineLink" 
-                   target="_blank" 
-                   class="app-btn-buy" 
-                   rel="noopener noreferrer">
-                   💬 立即私訊購買
-                </a>
-            </div>
-        </div>
-    </div>
-</template>
-
-<style scoped>
-.lightbox-overlay {
-    position: fixed;
-    top: 0; left: 0;
-    width: 100%; height: 100%;
-    background: var(--card-bg);
-    backdrop-filter: blur(15px);
-    -webkit-backdrop-filter: blur(15px);
-    z-index: 999999;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    flex-direction: column;
-}
-
-.lightbox-content-wrapper {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    width: 100%;
-    touch-action: none;
-    will-change: transform, opacity;
-}
-
-.swipe-hint-container {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    margin-bottom: 12px;
-    opacity: 0.6;
-    animation: float 2s ease-in-out infinite;
-}
-
-@keyframes float {
-    0% { transform: translateY(0px); }
-    50% { transform: translateY(-5px); }
-    100% { transform: translateY(0px); }
-}
-
-.swipe-indicator {
-    width: 40px;
-    height: 5px;
-    border-radius: 5px;
-    background: var(--txt);
-    margin-bottom: 6px;
-}
-
-.swipe-text {
-    font-size: 0.75rem;
-    color: var(--txt);
-    font-weight: bold;
-    letter-spacing: 1px;
-}
-
-.lightbox-img {
-    max-width: 95%;
-    width: auto; 
-    height: auto; 
-    max-height: 70vh; 
-    border-radius: 16px; 
-    box-shadow: 0 10px 40px rgba(0,0,0,0.15);
-    object-fit: contain;
-    -webkit-touch-callout: none;
-    -webkit-user-select: none;
-    user-select: none;
-    background: rgba(128, 128, 128, 0.05);
-    border: 1px solid var(--bd);
-}
-
-.lightbox-info {
-    margin-top: 20px;
-    text-align: center;
-    width: 100%;
-    position: relative;
-    z-index: 1000000;
-}
-
-.lightbox-title {
-    color: var(--txt);
-    margin: 0 0 15px 0;
-    font-size: 1.5rem;
-    font-weight: 900;
-    text-shadow: 0 2px 10px rgba(0,0,0,0.05);
-}
-
-.app-btn-buy {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    font-size: 1.1rem;
-    padding: 14px 35px;
-    background: var(--pri);
-    color: #fff;
-    border-radius: 30px;
-    font-weight: bold;
-    text-decoration: none;
-    box-shadow: 0 5px 20px var(--pri-glow);
-    transition: transform 0.2s, box-shadow 0.2s;
-    position: relative;
-    z-index: 100001;
-}
-
-.app-btn-buy:active {
-    transform: scale(0.95);
-    box-shadow: 0 2px 10px rgba(255, 69, 0, 0.2);
-}
-
-@media (max-width: 768px) {
-    .lightbox-img {
-        max-height: 60vh;
-    }
-    
-    .lightbox-title {
-        font-size: 1.25rem;
-        margin-bottom: 12px;
-    }
-    
-    .app-btn-buy {
-        padding: 12px 25px;
-        font-size: 1rem;
-    }
 }
 </style>
 </file>

@@ -405,7 +405,8 @@ const generatePromo = async () => {
                     </div>
                     <ul v-else class="history-list">
                         <template v-if="isBidsExpanded">
-                            <li v-for="(bid, index) in currentBids" :key="index" :class="{ 'highest-bid': index === 0 }">
+                            <!-- 🌟 修正 Bug：將 :key="index" 改為 :key="bid.id || bid.bid_time" 避免 DOM 複用錯亂 -->
+                            <li v-for="(bid, index) in currentBids" :key="bid.id || bid.bid_time" :class="{ 'highest-bid': index === 0 }">
                                 <span class="bidder">{{ bid.user_name }}</span>
                                 <span class="bid-amount">${{ bid.amount }}</span>
                                 <span class="bid-time">{{ formatTime(bid.bid_time) }}</span>
