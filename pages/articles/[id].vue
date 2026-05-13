@@ -74,7 +74,14 @@ const siteData = computed(() => {
         const art = readingArticle.value
         const imgUrl = getMetaImg(art.ImageURL)
         const artUrl = `https://www.genckobreeding.com/articles/${art.ID}`
-        const isoDate = new Date(art.PublishDate).toISOString()
+        
+        // 🌟 修正 SSR 崩潰 Bug：加入 try-catch 保護日期解析
+        let isoDate = ''
+        try {
+            isoDate = art.PublishDate ? new Date(art.PublishDate).toISOString() : new Date().toISOString()
+        } catch (e) {
+            isoDate = new Date().toISOString() // 若日期格式錯誤，使用當下時間作為預設值
+        }
 
         const jsonLd = {
             "@context": "https://schema.org",

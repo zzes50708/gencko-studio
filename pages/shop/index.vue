@@ -122,7 +122,11 @@ const shopList = computed(() => {
 
         if (fil.value.genes.length > 0) {
             const iGenes = Array.isArray(i.Genes) ? i.Genes : [ ]
-            if (!fil.value.genes.every(g => iGenes.includes(g))) return false
+            if (!fil.value.genes.every(g => {
+                // 🌟 修正 Bug：相容 WY 與白黃的別名問題
+                if (g === 'WY') return iGenes.includes('WY') || iGenes.includes('白黃')
+                return iGenes.includes(g)
+            })) return false
         }
         return true
     })

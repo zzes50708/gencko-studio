@@ -35,22 +35,36 @@ watch(() => route.path, (newPath) => {
   else store.curTab = route.name || 'home'
 })
 
+// 🌟 修正效能問題：加入 requestAnimationFrame 節流與合理的上限控制
+let isScrolling = false
 const handleScroll = () => {
-  const st = Math.max(0, window.scrollY)
-  if (st > 100 && st > store.lastScrollY) store.navHidden = true
-  else store.navHidden = false
-  store.lastScrollY = st
+  if (isScrolling) return
+  isScrolling = true
 
-  if (st + window.innerHeight >= document.documentElement.scrollHeight - 300) {
-    store.displayLimit += 20
-  }
+  window.requestAnimationFrame(() => {
+    const st = Math.max(0, window.scrollY)
+    
+    if (st > 100 && st > store.lastScrollY) store.navHidden = true
+    else store.navHidden = false
 
-  if (route.path.startsWith('/articles/') && store.readingArticle) {
-    const docH = document.documentElement.scrollHeight
-    const winH = window.innerHeight
-    const progress = (st / (docH - winH)) * 100
-    store.readingProgress = Math.min(100, Math.max(0, progress))
-  }
+    // 🌟 修正滾動觸發崩潰 Bug：確保只有在「往下滾」時觸發，並設立安全上限
+    if (st + window.innerHeight >= document.documentElement.scrollHeight - 300) {
+      if (st > store.lastScrollY && store.displayLimit < 2000) {
+        store.displayLimit += 20
+      }
+    }
+
+    store.lastScrollY = st
+
+    if (route.path.startsWith('/articles/') && store.readingArticle) {
+      const docH = document.documentElement.scrollHeight
+      const winH = window.innerHeight
+      const progress = (st / (docH - winH)) * 100
+      store.readingProgress = Math.min(100, Math.max(0, progress))
+    }
+    
+    isScrolling = false
+  })
 }
 
 const scrollToTop = () => window.scrollTo(0, 0)
@@ -71,7 +85,8 @@ onMounted(() => {
   const savedHist = localStorage.getItem('gencko_history')
   if (savedHist) store.history = JSON.parse(savedHist)
 
-  window.addEventListener('scroll', handleScroll)
+  // 🌟 將 scroll 事件設為 passive 以優化行動端捲動效能
+  window.addEventListener('scroll', handleScroll, { passive: true })
 })
 
 onUnmounted(() => {
@@ -86,8 +101,9 @@ onUnmounted(() => {
     <div v-if="$pwa?.needRefresh" class="pwa-update-toast">
       <span style="font-weight: bold;">🚀 發現新版本！請更新以獲得最佳體驗</span>
       <div class="pwa-update-actions">
-        <button class="pwa-btn-update" @click="$pwa.updateServiceWorker()">立即更新</button>
-        <button class="pwa-btn-cancel" @click="$pwa.cancelPrompt()">稍後</button>
+        <!-- 🌟 修正 PWA 潛在報錯 Bug：加入可選串連 (?.) 保護機制 -->
+        <button class="pwa-btn-update" @click="$pwa?.updateServiceWorker()">立即更新</button>
+        <button class="pwa-btn-cancel" @click="$pwa?.cancelPrompt()">稍後</button>
       </div>
     </div>
 

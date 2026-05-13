@@ -1,10 +1,10 @@
-This file is a merged representation of a subset of the codebase, containing files not matching ignore patterns, combined into a single document by Repomix.
+This file is a merged representation of the entire codebase, combined into a single document by Repomix.
 
 <file_summary>
 This section contains a summary of this file.
 
 <purpose>
-This file contains a packed representation of a subset of the repository's contents that is considered the most important context.
+This file contains a packed representation of the entire repository's contents.
 It is designed to be easily consumable by AI systems for analysis, code review,
 or other automated processes.
 </purpose>
@@ -32,7 +32,6 @@ The content is organized as follows:
 <notes>
 - Some files may have been excluded based on .gitignore rules and Repomix's configuration
 - Binary files are not included in this packed representation. Please refer to the Repository Structure section for a complete list of file paths, including binary files
-- Files matching these patterns are excluded: legacy_backup
 - Files matching patterns in .gitignore are excluded
 - Files matching default ignore patterns are excluded
 - Files are sorted by Git change count (files with more changes are at the bottom)
@@ -86,6 +85,7 @@ utils/hospitals.js
 utils/image.js
 utils/quiz.js
 vercel.json
+vercel更新.txt
 </directory_structure>
 
 <files>
@@ -113,6 +113,20 @@ UI 與 CSS 系統：
 1.讀取並充分理解上方所有專案架構，以及我隨附的打包原始碼 (repomix)。
 2.在我明確提出需求前，絕對不輸出任何程式碼或猜測的修改建議。
 3.僅需簡短回覆：「已接收 Gencko Studio 最新版專案交接文件與原始碼。目前系統架構已處於最佳化狀態，我已準備就緒，請告訴我您接下來想進行什麼優化或開發新功能！」
+</file>
+
+<file path="vercel更新.txt">
+git checkout main
+git status
+git fetch origin
+git push origin main
+
+直接更新git checkout main && git fetch origin && git push --force-with-lease origin main
+
+git add .
+git commit -m "redeploy"
+git push origin main
+git push -f
 </file>
 
 <file path=".gitignore">
@@ -3211,283 +3225,6 @@ onUnmounted(() => {
 </style>
 </file>
 
-<file path="components/TheNavbar.vue">
-<script setup>
-import { ref, computed, watch } from 'vue'
-import { useMainStore } from '~/stores/useMainStore' // 🌟 引入 store
-
-const props = defineProps({
-    navHidden: { type: Boolean, default: false },
-    isDayMode: { type: Boolean, default: true },
-    mobileMenuOpen: { type: Boolean, default: false },
-    logoUrl: { type: String, default: '' },
-    curTab: { type: String, default: '' },
-    readingArticle: { type: Object, default: null },
-    readingProgress: { type: Number, default: 0 }
-})
-
-const emit = defineEmits(['toggle-theme', 'update:mobileMenuOpen', 'scroll-top'])
-
-const store = useMainStore() // 🌟 取得安裝狀態與方法
-const mobileExpanded = ref(null)
-
-const isShopActive = computed(() =>['shop', 'auction', 'breeders', 'merch'].includes(props.curTab))
-const isToolActive = computed(() =>['calculator', 'genes', 'health', 'qs', 'hospital'].includes(props.curTab))
-const isServiceActive = computed(() =>['about', 'care', 'articles', 'faq'].includes(props.curTab))
-
-watch(() => props.mobileMenuOpen, (val) => {
-    if (!val) mobileExpanded.value = null
-})
-
-const toggleMobileGroup = (groupName) => {
-    mobileExpanded.value = mobileExpanded.value === groupName ? null : groupName
-}
-
-const closeMobileMenu = () => {
-    emit('update:mobileMenuOpen', false)
-}
-</script>
-
-<template>
-    <div>
-        <!-- Sticky Nav -->
-        <div class="sticky-nav" :class="{'nav-hidden': navHidden}">
-            <div class="nav-container">
-                <!-- Logo -->
-                <NuxtLink to="/" class="nav-left" @click="$emit('scroll-top')" style="cursor:pointer; display:flex; align-items:center; gap:10px; text-decoration:none;">
-                    <img v-if="logoUrl" :src="logoUrl" style="height:40px; width:auto; display:block;">
-                    <div style="font-weight:900; font-size:1.2rem; color:var(--pri); letter-spacing:1px; line-height:1;">GENCKO</div>
-                </NuxtLink>
-
-                <!-- Desktop Menu -->
-                <div class="dt-nav">
-                    <div class="nav-item-dt dropdown-hover" :class="{active: isServiceActive}">
-                        品牌服務 ▾
-                        <div class="dt-dropdown">
-                            <NuxtLink to="/about">關於我們</NuxtLink>
-                            <NuxtLink to="/care">飼養方式</NuxtLink>
-                            <NuxtLink to="/articles">專欄文章</NuxtLink>
-                            <NuxtLink to="/faq">常見問題</NuxtLink>
-                        </div>
-                    </div>
-                    <div class="nav-item-dt dropdown-hover" :class="{active: isShopActive}">
-                        探索選購 ▾
-                        <div class="dt-dropdown">
-                            <NuxtLink to="/shop">選購守宮</NuxtLink>
-                            <NuxtLink to="/auction">線上競標</NuxtLink>
-                            <NuxtLink to="/breeders">種群展示</NuxtLink>
-                            <NuxtLink to="/merch">周邊商品</NuxtLink>
-                        </div>
-                    </div>
-                    <div class="nav-item-dt dropdown-hover" :class="{active: isToolActive}">
-                        工具知識 ▾
-                        <div class="dt-dropdown">
-                            <NuxtLink to="/calculator">基因計算機</NuxtLink>
-                            <NuxtLink to="/genes">基因圖鑑</NuxtLink>
-                            <NuxtLink to="/health">健康評估</NuxtLink>
-                            <NuxtLink to="/qs">飼養評估</NuxtLink>
-                            <NuxtLink to="/hospital">特寵醫院</NuxtLink>
-                        </div>
-                    </div>                    
-                </div>
-
-                <!-- Right Controls -->
-                <div class="nav-right">
-                    <button v-if="store.canInstall" @click="store.installApp" class="dt-install-btn dt-only">
-                        📲 下載 App
-                    </button>
-                    
-                    <NuxtLink to="/profile" class="profile-link-dt dt-only" style="text-decoration:none; margin-right:15px; font-size:1.2rem; display:flex; align-items:center;" title="我的專區">👤</NuxtLink>
-                    
-                    <!-- 🌟 加入 ClientOnly 解決伺服器與瀏覽器文字不一致的 Mismatch -->
-                    <div class="theme-toggle" @click="$emit('toggle-theme')" style="cursor:pointer;font-size:1rem;font-weight:bold;margin-right:15px;color:var(--txt);display:flex;align-items:center;border:1px solid var(--bd);padding:4px 10px;border-radius:20px;">
-                        <ClientOnly>
-                            {{ isDayMode ? '夜間' : '日間' }}
-                            <template #fallback>
-                                <span>切換</span>
-                            </template>
-                        </ClientOnly>
-                    </div>
-                    <div class="hamburger" @click="$emit('update:mobileMenuOpen', !mobileMenuOpen)">☰</div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Mobile Menu -->
-        <div class="mobile-menu-overlay" :class="{open: mobileMenuOpen}" style="position:fixed; top:90px; left:0; width:100%; height:calc(100vh - 90px); overflow-y:auto; padding-bottom: 100px;">
-            
-            <!-- 🌟 手機版的下載 App 按鈕 (展開選單時顯示在最上面) -->
-            <div v-if="store.canInstall" class="mobile-install-banner" @click="store.installApp(); closeMobileMenu();">
-                <span style="font-size:1.5rem;">📲</span>
-                <div style="flex:1;">
-                    <div style="font-weight:bold; color:var(--pri);">下載 Gencko 專屬 App</div>
-                    <div style="font-size:0.8rem; opacity:0.8;">享有無廣告全螢幕最佳體驗</div>
-                </div>
-                <span style="font-weight:bold; background:var(--pri); color:#fff; padding:4px 12px; border-radius:20px; font-size:0.85rem;">安裝</span>
-            </div>
-
-            <!-- Group 1: Shop -->
-            <div class="mm-group" :class="{active: mobileExpanded === 'shop' || (mobileExpanded === null && isShopActive)}">
-                <div class="mm-summary" @click="toggleMobileGroup('shop')">
-                    探索選購
-                    <span class="mm-arrow">▼</span>
-                </div>
-                <div class="mm-anim-wrapper">
-                    <div class="mm-anim-inner">
-                        <NuxtLink to="/shop" class="mm-sub" @click="closeMobileMenu">選購守宮</NuxtLink>
-                        <NuxtLink to="/auction" class="mm-sub" @click="closeMobileMenu">線上競標</NuxtLink>
-                        <NuxtLink to="/breeders" class="mm-sub" @click="closeMobileMenu">種群展示</NuxtLink>
-                        <NuxtLink to="/merch" class="mm-sub" @click="closeMobileMenu">周邊商品</NuxtLink>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Group 2: Tools -->
-            <div class="mm-group" :class="{active: mobileExpanded === 'tool' || (mobileExpanded === null && isToolActive)}">
-                <div class="mm-summary" @click="toggleMobileGroup('tool')">
-                    工具知識
-                    <span class="mm-arrow">▼</span>
-                </div>
-                <div class="mm-anim-wrapper">
-                    <div class="mm-anim-inner">
-                        <NuxtLink to="/calculator" class="mm-sub" @click="closeMobileMenu">基因計算機</NuxtLink>
-                        <NuxtLink to="/genes" class="mm-sub" @click="closeMobileMenu">基因圖鑑</NuxtLink>
-                        <NuxtLink to="/health" class="mm-sub" @click="closeMobileMenu">健康評估</NuxtLink>
-                        <NuxtLink to="/qs" class="mm-sub" @click="closeMobileMenu">飼養評估</NuxtLink>
-                        <NuxtLink to="/hospital" class="mm-sub" @click="closeMobileMenu">特寵醫院</NuxtLink>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Group 3: Service -->
-            <div class="mm-group" :class="{active: mobileExpanded === 'service' || (mobileExpanded === null && isServiceActive)}">
-                <div class="mm-summary" @click="toggleMobileGroup('service')">
-                    品牌服務
-                    <span class="mm-arrow">▼</span>
-                </div>
-                <div class="mm-anim-wrapper">
-                    <div class="mm-anim-inner">
-                        <NuxtLink to="/about" class="mm-sub" @click="closeMobileMenu">關於我們</NuxtLink>
-                        <NuxtLink to="/care" class="mm-sub" @click="closeMobileMenu">飼養方式</NuxtLink>
-                        <NuxtLink to="/articles" class="mm-sub" @click="closeMobileMenu">專欄文章</NuxtLink>
-                        <NuxtLink to="/faq" class="mm-sub" @click="closeMobileMenu">常見問題</NuxtLink>
-                    </div>
-                </div>
-            </div>
-        </div>
-        
-        <!-- Reading Progress Bar -->
-        <div v-if="curTab==='articles' && readingArticle" class="reading-progress-bar">
-            <div class="progress-fill" :style="{width: readingProgress + '%'}"></div>
-        </div>
-    </div>
-</template>
-
-<style scoped>
-/* Sticky Navigation */
-.sticky-nav { 
-    position: fixed; 
-    top: calc(40px + env(safe-area-inset-top, 0px)); 
-    left: 0; 
-    width: 100%; 
-    height: 50px; 
-    z-index: 1000; 
-    background: var(--card-bg); 
-    backdrop-filter: blur(10px); 
-    -webkit-backdrop-filter: blur(10px);
-    border-bottom: 1px solid var(--bd); 
-    padding: 0 15px; 
-    box-shadow: 0 4px 10px rgba(0,0,0,0.05); 
-    transition: transform 0.3s ease;
-}
-.sticky-nav.nav-hidden { transform: translateY(-100%); }
-
-.nav-container { max-width: 1300px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; height: 50px; }
-.nav-left { display: flex; align-items: center; gap: 10px; }
-
-/* Desktop Navigation */
-.dt-nav { display: flex; gap: 5px; height: 100%; align-items: center; }
-.nav-item-dt { padding: 0 12px; height: 100%; display: flex; align-items: center; font-size: 0.95rem; font-weight: 700; color: var(--txt); opacity: 0.8; cursor: pointer; transition: 0.2s; position: relative; white-space: nowrap; }
-.nav-item-dt:hover, .nav-item-dt.active { color: var(--pri); opacity: 1; background: rgba(128, 128, 128, 0.05); }
-.nav-item-dt.active { border-bottom: 3px solid var(--pri); }
-
-/* Dropdown */
-.dropdown-hover { position: relative; }
-.dt-dropdown { position: absolute; top: 100%; left: 0; background: var(--card-bg); border: 1px solid var(--bd); min-width: 140px; flex-direction: column; border-radius: 0 0 8px 8px; overflow: hidden; box-shadow: 0 5px 20px rgba(0,0,0,0.1); visibility: hidden; opacity: 0; transform: translateY(-5px); transition: all 0.2s ease; display: flex; z-index: 100; }
-.dropdown-hover:hover .dt-dropdown { visibility: visible; opacity: 1; transform: translateY(0); }
-.dt-dropdown a { display: block; padding: 15px; color: var(--txt); opacity: 0.8; cursor: pointer; transition: 0.2s; font-size: 0.95rem; font-weight: bold; border-bottom: 1px solid var(--bd); text-decoration: none; white-space: nowrap; }
-.dt-dropdown a:last-child { border-bottom: none; }
-.dt-dropdown a:hover { background: rgba(255, 69, 0, 0.05); color: var(--pri); opacity: 1; }
-
-/* Right Controls */
-.nav-right { display: flex; align-items: center; gap: 12px; }
-.hamburger { display: none; }
-
-/* 🌟 桌機版安裝按鈕 */
-.dt-install-btn {
-    background: var(--pri);
-    color: #fff;
-    border: none;
-    padding: 6px 12px;
-    border-radius: 20px;
-    font-size: 0.85rem;
-    font-weight: bold;
-    cursor: pointer;
-    box-shadow: 0 2px 10px var(--pri-glow);
-    transition: 0.2s;
-    margin-right: 10px;
-}
-.dt-install-btn:hover {
-    transform: scale(1.05);
-}
-
-.dt-only { display: block; }
-
-/* Reading Progress Bar */
-.reading-progress-bar { position: absolute; bottom: 0; left: 0; width: 100%; height: 2px; background: var(--bd); }
-.progress-fill { height: 100%; background: var(--pri); width: 0%; transition: width 0.1s linear; box-shadow: 0 0 10px var(--pri-glow); }
-
-/* Mobile Menu Overlay & Responsive */
-@media (max-width: 768px) {
-    .dt-only { display: none !important; }
-    .dt-nav { display: none; }
-    
-    .hamburger { display: block; font-size: 1.6rem; cursor: pointer; color: var(--txt); padding: 10px; margin-right: -10px; }
-
-    .mobile-menu-overlay { display: flex; position: fixed; top: calc(90px + env(safe-area-inset-top, 0px)); left: 0; width: 100%; height: calc(100vh - 90px - env(safe-area-inset-top, 0px)); background: var(--card-bg); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); z-index: 2000; transform: translateX(100%); transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1); padding: 5px 15px 100px 15px; overflow-y: auto; flex-direction: column; gap: 0; border-top: 1px solid var(--bd); box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
-    .mobile-menu-overlay.open { transform: translateX(0); }
-
-    /* 🌟 手機版安裝橫幅 */
-    .mobile-install-banner {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        background: rgba(255, 69, 0, 0.05);
-        border: 1px solid var(--pri);
-        padding: 15px;
-        border-radius: 12px;
-        margin: 10px 0 20px 0;
-        cursor: pointer;
-        color: var(--txt);
-    }
-
-    .mm-summary { font-size: 1.1rem; font-weight: bold; padding: 15px 10px; border-bottom: 1px solid var(--bd); color: var(--txt); cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
-    .mm-group.active .mm-summary { color: var(--pri); border-bottom: none; }
-    
-    .mm-arrow { transition: transform 0.3s ease; font-size: 0.8rem; opacity: 0.6; }
-    .mm-group.active .mm-arrow { transform: rotate(180deg); opacity: 1; color: var(--pri); }
-
-    .mm-anim-wrapper { display: grid; grid-template-rows: 0fr; transition: grid-template-rows 0.3s ease-out; }
-    .mm-group.active .mm-anim-wrapper { grid-template-rows: 1fr; }
-    .mm-anim-inner { overflow: hidden; background: rgba(128, 128, 128, 0.05); border-radius: 8px; }
-
-    .mm-sub { display: block; padding: 15px 20px; color: var(--txt); opacity: 0.8; font-size: 1rem; border-bottom: 1px dashed var(--bd); cursor: pointer; font-weight: bold; text-decoration: none; transition: 0.2s; }
-    .mm-sub:last-child { border-bottom: none; }
-    .mm-sub:active, .mm-summary:active { background: rgba(255, 69, 0, 0.1); color: var(--pri); opacity: 1; }
-}
-</style>
-</file>
-
 <file path="pages/faq.vue">
 <script setup>
 import { ref } from 'vue'
@@ -5308,6 +5045,293 @@ html.day-mode .g-pill-blue { background: #e3f2fd; color: #1565c0; }
 html.day-mode .g-pill-orange { background: #fff3e0; color: #ef6c00; }
 </file>
 
+<file path="components/TheNavbar.vue">
+<script setup>
+import { ref, computed, watch } from 'vue'
+import { useMainStore } from '~/stores/useMainStore' // 🌟 引入 store
+
+const props = defineProps({
+    navHidden: { type: Boolean, default: false },
+    isDayMode: { type: Boolean, default: true },
+    mobileMenuOpen: { type: Boolean, default: false },
+    logoUrl: { type: String, default: '' },
+    curTab: { type: String, default: '' },
+    readingArticle: { type: Object, default: null },
+    readingProgress: { type: Number, default: 0 }
+})
+
+const emit = defineEmits(['toggle-theme', 'update:mobileMenuOpen', 'scroll-top'])
+
+const store = useMainStore() // 🌟 取得安裝狀態與方法
+const mobileExpanded = ref(null)
+
+const isShopActive = computed(() =>['shop', 'auction', 'breeders', 'merch'].includes(props.curTab))
+const isToolActive = computed(() =>['calculator', 'genes', 'health', 'qs', 'hospital'].includes(props.curTab))
+// 🌟 移除 articles，專欄文章現在是獨立項目
+const isServiceActive = computed(() =>['about', 'care', 'faq'].includes(props.curTab))
+
+watch(() => props.mobileMenuOpen, (val) => {
+    if (!val) mobileExpanded.value = null
+})
+
+const toggleMobileGroup = (groupName) => {
+    mobileExpanded.value = mobileExpanded.value === groupName ? null : groupName
+}
+
+const closeMobileMenu = () => {
+    emit('update:mobileMenuOpen', false)
+}
+</script>
+
+<template>
+    <div>
+        <!-- Sticky Nav -->
+        <div class="sticky-nav" :class="{'nav-hidden': navHidden}">
+            <div class="nav-container">
+                <!-- Logo -->
+                <NuxtLink to="/" class="nav-left" @click="$emit('scroll-top')" style="cursor:pointer; display:flex; align-items:center; gap:10px; text-decoration:none;">
+                    <img v-if="logoUrl" :src="logoUrl" style="height:40px; width:auto; display:block;">
+                    <div style="font-weight:900; font-size:1.2rem; color:var(--pri); letter-spacing:1px; line-height:1;">GENCKO</div>
+                </NuxtLink>
+
+                <!-- Desktop Menu -->
+                <div class="dt-nav">
+                    <!-- 🌟 專欄文章獨立到第一層 -->
+                    <NuxtLink to="/articles" class="nav-item-dt" :class="{active: curTab === 'articles'}">
+                        專欄文章
+                    </NuxtLink>
+
+                    <div class="nav-item-dt dropdown-hover" :class="{active: isShopActive}">
+                        探索選購 ▾
+                        <div class="dt-dropdown">
+                            <NuxtLink to="/shop">選購守宮</NuxtLink>
+                            <NuxtLink to="/auction">線上競標</NuxtLink>
+                            <NuxtLink to="/breeders">種群展示</NuxtLink>
+                            <NuxtLink to="/merch">周邊商品</NuxtLink>
+                        </div>
+                    </div>
+                    <div class="nav-item-dt dropdown-hover" :class="{active: isToolActive}">
+                        工具知識 ▾
+                        <div class="dt-dropdown">
+                            <NuxtLink to="/calculator">基因計算機</NuxtLink>
+                            <NuxtLink to="/genes">基因圖鑑</NuxtLink>
+                            <NuxtLink to="/health">健康評估</NuxtLink>
+                            <NuxtLink to="/qs">飼養評估</NuxtLink>
+                            <NuxtLink to="/hospital">特寵醫院</NuxtLink>
+                        </div>
+                    </div>                    
+                    <div class="nav-item-dt dropdown-hover" :class="{active: isServiceActive}">
+                        品牌服務 ▾
+                        <div class="dt-dropdown">
+                            <NuxtLink to="/about">關於我們</NuxtLink>
+                            <NuxtLink to="/care">飼養方式</NuxtLink>
+                            <NuxtLink to="/faq">常見問題</NuxtLink>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right Controls -->
+                <div class="nav-right">
+                    <button v-if="store.canInstall" @click="store.installApp" class="dt-install-btn dt-only">
+                        📲 下載 App
+                    </button>
+                    
+                    <NuxtLink to="/profile" class="profile-link-dt dt-only" style="text-decoration:none; margin-right:15px; font-size:1.2rem; display:flex; align-items:center;" title="我的專區">👤</NuxtLink>
+                    
+                    <!-- 🌟 加入 ClientOnly 解決伺服器與瀏覽器文字不一致的 Mismatch -->
+                    <div class="theme-toggle" @click="$emit('toggle-theme')" style="cursor:pointer;font-size:1rem;font-weight:bold;margin-right:15px;color:var(--txt);display:flex;align-items:center;border:1px solid var(--bd);padding:4px 10px;border-radius:20px;">
+                        <ClientOnly>
+                            {{ isDayMode ? '夜間' : '日間' }}
+                            <template #fallback>
+                                <span>切換</span>
+                            </template>
+                        </ClientOnly>
+                    </div>
+                    <div class="hamburger" @click="$emit('update:mobileMenuOpen', !mobileMenuOpen)">☰</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Mobile Menu -->
+        <div class="mobile-menu-overlay" :class="{open: mobileMenuOpen}" style="position:fixed; top:90px; left:0; width:100%; height:calc(100vh - 90px); overflow-y:auto; padding-bottom: 100px;">
+            
+            <!-- 🌟 手機版的下載 App 按鈕 (展開選單時顯示在最上面) -->
+            <div v-if="store.canInstall" class="mobile-install-banner" @click="store.installApp(); closeMobileMenu();">
+                <span style="font-size:1.5rem;">📲</span>
+                <div style="flex:1;">
+                    <div style="font-weight:bold; color:var(--pri);">下載 Gencko 專屬 App</div>
+                    <div style="font-size:0.8rem; opacity:0.8;">享有無廣告全螢幕最佳體驗</div>
+                </div>
+                <span style="font-weight:bold; background:var(--pri); color:#fff; padding:4px 12px; border-radius:20px; font-size:0.85rem;">安裝</span>
+            </div>
+
+            <!-- 🌟 手機版：專欄文章改為獨立大項目 -->
+            <NuxtLink to="/articles" class="mm-summary" @click="closeMobileMenu" style="text-decoration: none;">
+                專欄文章
+                <span class="mm-arrow" style="transform: rotate(-90deg); opacity: 0.3;">▼</span>
+            </NuxtLink>
+
+            <!-- Group 1: Service -->
+            <div class="mm-group" :class="{active: mobileExpanded === 'service' || (mobileExpanded === null && isServiceActive)}">
+                <div class="mm-summary" @click="toggleMobileGroup('service')">
+                    品牌服務
+                    <span class="mm-arrow">▼</span>
+                </div>
+                <div class="mm-anim-wrapper">
+                    <div class="mm-anim-inner">
+                        <NuxtLink to="/about" class="mm-sub" @click="closeMobileMenu">關於我們</NuxtLink>
+                        <NuxtLink to="/care" class="mm-sub" @click="closeMobileMenu">飼養方式</NuxtLink>
+                        <NuxtLink to="/faq" class="mm-sub" @click="closeMobileMenu">常見問題</NuxtLink>
+                    </div>
+                </div>
+            </div>
+    
+            <!-- Group 2: Shop -->
+            <div class="mm-group" :class="{active: mobileExpanded === 'shop' || (mobileExpanded === null && isShopActive)}">
+                <div class="mm-summary" @click="toggleMobileGroup('shop')">
+                    探索選購
+                    <span class="mm-arrow">▼</span>
+                </div>
+                <div class="mm-anim-wrapper">
+                    <div class="mm-anim-inner">
+                        <NuxtLink to="/shop" class="mm-sub" @click="closeMobileMenu">選購守宮</NuxtLink>
+                        <NuxtLink to="/auction" class="mm-sub" @click="closeMobileMenu">線上競標</NuxtLink>
+                        <NuxtLink to="/breeders" class="mm-sub" @click="closeMobileMenu">種群展示</NuxtLink>
+                        <NuxtLink to="/merch" class="mm-sub" @click="closeMobileMenu">周邊商品</NuxtLink>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Group 3: Tools -->
+            <div class="mm-group" :class="{active: mobileExpanded === 'tool' || (mobileExpanded === null && isToolActive)}">
+                <div class="mm-summary" @click="toggleMobileGroup('tool')">
+                    工具知識
+                    <span class="mm-arrow">▼</span>
+                </div>
+                <div class="mm-anim-wrapper">
+                    <div class="mm-anim-inner">
+                        <NuxtLink to="/calculator" class="mm-sub" @click="closeMobileMenu">基因計算機</NuxtLink>
+                        <NuxtLink to="/genes" class="mm-sub" @click="closeMobileMenu">基因圖鑑</NuxtLink>
+                        <NuxtLink to="/health" class="mm-sub" @click="closeMobileMenu">健康評估</NuxtLink>
+                        <NuxtLink to="/qs" class="mm-sub" @click="closeMobileMenu">飼養評估</NuxtLink>
+                        <NuxtLink to="/hospital" class="mm-sub" @click="closeMobileMenu">特寵醫院</NuxtLink>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Reading Progress Bar -->
+        <div v-if="curTab==='articles' && readingArticle" class="reading-progress-bar">
+            <div class="progress-fill" :style="{width: readingProgress + '%'}"></div>
+        </div>
+    </div>
+</template>
+
+<style scoped>
+/* Sticky Navigation */
+.sticky-nav { 
+    position: fixed; 
+    top: calc(40px + env(safe-area-inset-top, 0px)); 
+    left: 0; 
+    width: 100%; 
+    height: 50px; 
+    z-index: 1000; 
+    background: var(--card-bg); 
+    backdrop-filter: blur(10px); 
+    -webkit-backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--bd); 
+    padding: 0 15px; 
+    box-shadow: 0 4px 10px rgba(0,0,0,0.05); 
+    transition: transform 0.3s ease;
+}
+.sticky-nav.nav-hidden { transform: translateY(-100%); }
+
+.nav-container { max-width: 1300px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; height: 50px; }
+.nav-left { display: flex; align-items: center; gap: 10px; }
+
+/* Desktop Navigation */
+.dt-nav { display: flex; gap: 5px; height: 100%; align-items: center; }
+.nav-item-dt { padding: 0 12px; height: 100%; display: flex; align-items: center; font-size: 0.95rem; font-weight: 700; color: var(--txt); opacity: 0.8; cursor: pointer; transition: 0.2s; position: relative; white-space: nowrap; text-decoration: none; }
+.nav-item-dt:hover, .nav-item-dt.active { color: var(--pri); opacity: 1; background: rgba(128, 128, 128, 0.05); }
+.nav-item-dt.active { border-bottom: 3px solid var(--pri); }
+
+/* Dropdown */
+.dropdown-hover { position: relative; }
+.dt-dropdown { position: absolute; top: 100%; left: 0; background: var(--card-bg); border: 1px solid var(--bd); min-width: 140px; flex-direction: column; border-radius: 0 0 8px 8px; overflow: hidden; box-shadow: 0 5px 20px rgba(0,0,0,0.1); visibility: hidden; opacity: 0; transform: translateY(-5px); transition: all 0.2s ease; display: flex; z-index: 100; }
+.dropdown-hover:hover .dt-dropdown { visibility: visible; opacity: 1; transform: translateY(0); }
+.dt-dropdown a { display: block; padding: 15px; color: var(--txt); opacity: 0.8; cursor: pointer; transition: 0.2s; font-size: 0.95rem; font-weight: bold; border-bottom: 1px solid var(--bd); text-decoration: none; white-space: nowrap; }
+.dt-dropdown a:last-child { border-bottom: none; }
+.dt-dropdown a:hover { background: rgba(255, 69, 0, 0.05); color: var(--pri); opacity: 1; }
+
+/* Right Controls */
+.nav-right { display: flex; align-items: center; gap: 12px; }
+.hamburger { display: none; }
+
+/* 🌟 桌機版安裝按鈕 */
+.dt-install-btn {
+    background: var(--pri);
+    color: #fff;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: bold;
+    cursor: pointer;
+    box-shadow: 0 2px 10px var(--pri-glow);
+    transition: 0.2s;
+    margin-right: 10px;
+}
+.dt-install-btn:hover {
+    transform: scale(1.05);
+}
+
+.dt-only { display: block; }
+
+/* Reading Progress Bar */
+.reading-progress-bar { position: absolute; bottom: 0; left: 0; width: 100%; height: 2px; background: var(--bd); }
+.progress-fill { height: 100%; background: var(--pri); width: 0%; transition: width 0.1s linear; box-shadow: 0 0 10px var(--pri-glow); }
+
+/* Mobile Menu Overlay & Responsive */
+@media (max-width: 768px) {
+    .dt-only { display: none !important; }
+    .dt-nav { display: none; }
+    
+    .hamburger { display: block; font-size: 1.6rem; cursor: pointer; color: var(--txt); padding: 10px; margin-right: -10px; }
+
+    .mobile-menu-overlay { display: flex; position: fixed; top: calc(90px + env(safe-area-inset-top, 0px)); left: 0; width: 100%; height: calc(100vh - 90px - env(safe-area-inset-top, 0px)); background: var(--card-bg); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); z-index: 2000; transform: translateX(100%); transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1); padding: 5px 15px 100px 15px; overflow-y: auto; flex-direction: column; gap: 0; border-top: 1px solid var(--bd); box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
+    .mobile-menu-overlay.open { transform: translateX(0); }
+
+    /* 🌟 手機版安裝橫幅 */
+    .mobile-install-banner {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        background: rgba(255, 69, 0, 0.05);
+        border: 1px solid var(--pri);
+        padding: 15px;
+        border-radius: 12px;
+        margin: 10px 0 20px 0;
+        cursor: pointer;
+        color: var(--txt);
+    }
+
+    .mm-summary { font-size: 1.1rem; font-weight: bold; padding: 15px 10px; border-bottom: 1px solid var(--bd); color: var(--txt); cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
+    .mm-group.active .mm-summary { color: var(--pri); border-bottom: none; }
+    
+    .mm-arrow { transition: transform 0.3s ease; font-size: 0.8rem; opacity: 0.6; }
+    .mm-group.active .mm-arrow { transform: rotate(180deg); opacity: 1; color: var(--pri); }
+
+    .mm-anim-wrapper { display: grid; grid-template-rows: 0fr; transition: grid-template-rows 0.3s ease-out; }
+    .mm-group.active .mm-anim-wrapper { grid-template-rows: 1fr; }
+    .mm-anim-inner { overflow: hidden; background: rgba(128, 128, 128, 0.05); border-radius: 8px; }
+
+    .mm-sub { display: block; padding: 15px 20px; color: var(--txt); opacity: 0.8; font-size: 1rem; border-bottom: 1px dashed var(--bd); cursor: pointer; font-weight: bold; text-decoration: none; transition: 0.2s; }
+    .mm-sub:last-child { border-bottom: none; }
+    .mm-sub:active, .mm-summary:active { background: rgba(255, 69, 0, 0.1); color: var(--pri); opacity: 1; }
+}
+</style>
+</file>
+
 <file path="package.json">
 {
   "name": "gencko-studio-nuxt",
@@ -5334,346 +5358,6 @@ html.day-mode .g-pill-orange { background: #fff3e0; color: #ef6c00; }
     "pinia": "^2.3.0"
   }
 }
-</file>
-
-<file path="pages/articles/index.vue">
-<script setup>
-import { ref, computed } from 'vue'
-import { useHead } from '#imports'
-import { useMainStore } from '~/stores/useMainStore'
-import { getCleanUrl } from '~/utils/image.js'
-
-const store = useMainStore()
-const artCat = ref('All')
-const searchQuery = ref('')
-
-// 1. 固定分類清單 (包含虛擬的新手必看)
-const fixedCats = [
-    { label: '全部文章', value: 'All' },
-    { label: '新手必看', value: 'Beginner' },
-    { label: '行為與互動', value: '行為與互動' },
-    { label: '健康照護', value: '健康照護' },
-    { label: '環境布置', value: '環境布置' },
-    { label: '餵食與營養', value: '餵食與營養' }
-]
-
-// 2. 切換分類並清空搜尋欄
-const setCategory = (catValue) => {
-    artCat.value = catValue
-    searchQuery.value = '' // 🌟 點選分類時清空搜尋欄
-}
-
-// 3. 自動分析最高頻率的熱門標籤 (供搜尋欄下方使用)
-const popularTags = computed(() => {
-    if (!store.articlesList.length) return []
-    const counts = {}
-    store.articlesList.forEach(a => {
-        if (a.Keywords) {
-            const kws = a.Keywords.split(',').map(k => k.trim()).filter(k => k)
-            kws.forEach(k => {
-                if (k && !k.includes('新手')) {
-                    counts[k] = (counts[k] || 0) + 1
-                }
-            })
-        }
-    })
-    return Object.entries(counts)
-        .sort((a, b) => b[1] - a[1])
-        .slice(0, 5)
-        .map(item => item[0])
-})
-
-// 4. 極致寬鬆搜尋與分類邏輯
-const filteredArticles = computed(() => {
-    if (!store.articlesList || store.articlesList.length === 0) return []
-    let list = store.articlesList
-
-    // 🌟 分類篩選邏輯
-    if (artCat.value === 'Beginner') {
-        // 新手必看：只要 Keywords 包含 "新手"
-        list = list.filter(i => (i.Keywords || '').includes('新手'))
-    } else if (artCat.value !== 'All') {
-        // 一般分類：比對 Category 欄位
-        list = list.filter(i => i.Category === artCat.value)
-    }
-
-    // 🌟 搜尋過濾邏輯
-    if (searchQuery.value) {
-        const terms = searchQuery.value.toLowerCase().split(/\s+/).filter(t => t)
-        list = list.filter(i => {
-            const t = (i.Title || '').toLowerCase()
-            const s = (i.Summary || '').toLowerCase()
-            const k = (i.Keywords || '').toLowerCase()
-            return terms.every(term => t.includes(term) || s.includes(term) || k.includes(term))
-        })
-    }
-
-    return list
-})
-
-const toggleQuickTag = (tag) => {
-    if (searchQuery.value === tag) {
-        searchQuery.value = ''
-    } else {
-        searchQuery.value = tag
-        artCat.value = 'All' // 點擊標籤時回到全部分類
-    }
-}
-
-useHead({
-    title: '專欄文章',
-    meta: [
-        { name: 'description', content: 'Gencko Studio 專欄，提供守宮飼養教學、健康照護與環境布置知識。' }
-    ]
-})
-
-const fmtDate = (d) => {
-    try { return new Date(d).toISOString().split('T')[0] } catch(e) { return '' }
-}
-</script>
-
-<template>
-    <div class="articles-page-wrapper">
-        <h1 class="page-title dt-only">專欄文章</h1>
-        
-        <!-- 🌟 第一層：搜尋欄 -->
-        <div class="search-bar-wrap">
-            <span class="search-icon">🔍</span>
-            <input 
-                type="text" 
-                v-model="searchQuery" 
-                placeholder="搜尋標題或隱藏關鍵字..." 
-                class="search-input" 
-            />
-            <button v-if="searchQuery" @click="searchQuery = ''" class="clear-btn">✕</button>
-        </div>
-
-        <!-- 🌟 第二層：固定六大分類 (固定一行) -->
-        <div class="category-nav-row">
-            <div 
-                v-for="cat in fixedCats" 
-                :key="cat.value"
-                class="nav-chip"
-                :class="{ active: artCat === cat.value, beginner: cat.value === 'Beginner' }"
-                @click="setCategory(cat.value)"
-            >
-                {{ cat.label }}
-            </div>
-        </div>
-
-        <!-- 🌟 第三層：熱門搜尋 -->
-        <div class="quick-tags" v-if="popularTags.length > 0">
-            <span class="tag-label">猜你想找：</span>
-            <div class="tags-scroll">
-                <span 
-                    v-for="t in popularTags" 
-                    :key="t" 
-                    class="q-tag" 
-                    :class="{ active: searchQuery === t }" 
-                    @click="toggleQuickTag(t)"
-                >
-                    {{ t }}
-                </span>
-            </div>
-        </div>
-
-        <!-- 文章列表標題 -->
-        <div class="main-list-head" v-if="searchQuery || artCat !== 'All'">
-            <h2 class="list-title">
-                {{ searchQuery ? `搜尋：${searchQuery}` : (artCat === 'All' ? '全部文章' : fixedCats.find(c=>c.value===artCat)?.label) }}
-            </h2>
-        </div>
-
-        <transition-group tag="div" name="list" class="grid">
-            <div v-if="filteredArticles.length === 0" key="empty-msg" class="empty-state" style="grid-column: 1 / -1;">
-                找不到相關文章
-            </div>
-
-            <article class="card article-card" v-for="item in filteredArticles" :key="item.ID">
-                <NuxtLink :to="`/articles/${item.ID}`" style="display:block; text-decoration:none; color:inherit; height:100%;">
-                    <div style="position:relative; overflow:hidden;">
-                        <NuxtImg 
-                            v-if="item.ImageURL" 
-                            :src="getCleanUrl(item.ImageURL)" 
-                            :alt="item.Title" 
-                            class="card-img" 
-                            style="height:180px;" 
-                            loading="lazy"
-                            width="400"
-                            height="180"
-                            fit="cover"
-                            format="webp"
-                        />
-                        <div v-else class="card-img" style="height:180px;display:flex;align-items:center;justify-content:center;font-size:3rem;background:#1a1a1a;">📝</div>
-                        <div class="art-cat-tag">{{ item.Category }}</div>
-                    </div>
-                    <div class="card-body">
-                        <time :datetime="item.PublishDate" class="date-text">{{ fmtDate(item.PublishDate) }}</time>
-                        <h2 class="morph-title">{{ item.Title }}</h2>
-                        <p class="art-summary">{{ item.Summary }}</p>
-                    </div>
-                </NuxtLink>
-            </article>
-        </transition-group>
-    </div>
-</template>
-
-<style scoped>
-.articles-page-wrapper {
-    max-width: 1300px;
-    margin: 0 auto;
-    padding-bottom: 30px;
-}
-.dt-only { display: block; }
-
-/* 🌟 Search Bar */
-.search-bar-wrap {
-    position: relative;
-    margin-bottom: 15px;
-    width: 100%;
-}
-.search-icon {
-    position: absolute;
-    left: 15px;
-    top: 50%;
-    transform: translateY(-50%);
-    font-size: 1.1rem;
-    color: var(--txt);
-    opacity: 0.5;
-}
-.search-input {
-    width: 100%;
-    padding: 14px 45px;
-    background: var(--card-bg);
-    border: 1px solid var(--bd);
-    color: var(--txt);
-    border-radius: 12px;
-    font-size: 1rem;
-    font-weight: bold;
-    outline: none;
-    transition: 0.3s;
-}
-.search-input:focus {
-    border-color: var(--pri);
-    box-shadow: 0 0 10px var(--pri-glow);
-}
-.clear-btn {
-    position: absolute;
-    right: 15px;
-    top: 50%;
-    transform: translateY(-50%);
-    background: rgba(128,128,128,0.2);
-    border: none;
-    color: var(--txt);
-    width: 24px;
-    height: 24px;
-    border-radius: 50%;
-    cursor: pointer;
-}
-
-/* 🌟 固定一行分類導覽 */
-.category-nav-row {
-    display: flex;
-    gap: 8px;
-    margin-bottom: 15px;
-    padding-bottom: 5px;
-    /* 為了在手機版強行擠在同一行，允許微小的捲動防止跑版 */
-    overflow-x: auto;
-    scrollbar-width: none;
-    flex-wrap: nowrap;
-}
-.category-nav-row::-webkit-scrollbar { display: none; }
-
-.nav-chip {
-    flex: 1;
-    min-width: max-content;
-    padding: 10px 12px;
-    background: var(--card-bg);
-    border: 1px solid var(--bd);
-    border-radius: 8px;
-    color: var(--txt);
-    opacity: 0.7;
-    font-weight: bold;
-    font-size: 0.9rem;
-    text-align: center;
-    cursor: pointer;
-    transition: 0.2s;
-    white-space: nowrap;
-}
-.nav-chip.active {
-    background: var(--pri);
-    color: #fff;
-    border-color: var(--pri);
-    opacity: 1;
-    box-shadow: 0 4px 10px var(--pri-glow);
-}
-.nav-chip.beginner {
-    border-color: #4caf50;
-    color: #4caf50;
-}
-.nav-chip.beginner.active {
-    background: #4caf50;
-    color: #fff;
-    border-color: #4caf50;
-}
-
-/* 🌟 Quick Tags */
-.quick-tags {
-    display: flex;
-    align-items: center;
-    margin-bottom: 25px;
-    background: rgba(128,128,128,0.05);
-    padding: 8px 12px;
-    border-radius: 8px;
-}
-.tag-label { font-size: 0.8rem; font-weight: bold; opacity: 0.5; margin-right: 8px; white-space: nowrap; }
-.tags-scroll { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; }
-.tags-scroll::-webkit-scrollbar { display: none; }
-.q-tag {
-    padding: 4px 10px;
-    background: var(--card-bg);
-    border: 1px solid var(--bd);
-    border-radius: 12px;
-    font-size: 0.8rem;
-    color: var(--txt);
-    cursor: pointer;
-    white-space: nowrap;
-}
-.q-tag.active { border-color: var(--pri); color: var(--pri); }
-
-/* 文章列表與卡片 */
-.list-title {
-    font-size: 1.2rem;
-    color: var(--txt);
-    border-left: 4px solid var(--pri);
-    padding-left: 10px;
-    margin-bottom: 15px;
-}
-.empty-state {
-    text-align: center;
-    padding: 50px;
-    color: var(--txt);
-    opacity: 0.5;
-    background: var(--card-bg);
-    border-radius: 12px;
-}
-.date-text { font-size: 0.8rem; opacity: 0.5; margin-bottom: 5px; display: block; }
-.morph-title { font-size: 1.1rem; margin-bottom: 5px; color: var(--txt); }
-.art-summary { font-size: 0.85rem; opacity: 0.7; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-
-@media (max-width: 768px) {
-    .dt-only { display: none !important; }
-    .articles-page-wrapper { padding: 5px 10px; }
-    .nav-chip {
-        padding: 8px 10px;
-        font-size: 0.75rem; /* 手機版縮小字體以塞進更多內容 */
-        border-radius: 6px;
-    }
-    .grid { grid-template-columns: repeat(2, 1fr) !important; gap: 8px !important; }
-    .card-img { height: 120px !important; }
-    .morph-title { font-size: 0.9rem !important; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-}
-</style>
 </file>
 
 <file path="pages/breeders.vue">
@@ -6661,6 +6345,346 @@ const copyCurrentLink = async () => {
 </style>
 </file>
 
+<file path="pages/articles/index.vue">
+<script setup>
+import { ref, computed } from 'vue'
+import { useHead } from '#imports'
+import { useMainStore } from '~/stores/useMainStore'
+import { getCleanUrl } from '~/utils/image.js'
+
+const store = useMainStore()
+const artCat = ref('All')
+const searchQuery = ref('')
+
+// 1. 固定分類清單 (包含虛擬的新手必看)
+const fixedCats = [
+    { label: '全部文章', value: 'All' },
+    { label: '新手必看', value: 'Beginner' },
+    { label: '行為與互動', value: '行為與互動' },
+    { label: '健康照護', value: '健康照護' },
+    { label: '環境佈置', value: '環境佈置' },
+    { label: '餵食與營養', value: '餵食與營養' }
+]
+
+// 2. 切換分類並清空搜尋欄
+const setCategory = (catValue) => {
+    artCat.value = catValue
+    searchQuery.value = '' // 🌟 點選分類時清空搜尋欄
+}
+
+// 3. 自動分析最高頻率的熱門標籤 (供搜尋欄下方使用)
+const popularTags = computed(() => {
+    if (!store.articlesList.length) return []
+    const counts = {}
+    store.articlesList.forEach(a => {
+        if (a.Keywords) {
+            const kws = a.Keywords.split(',').map(k => k.trim()).filter(k => k)
+            kws.forEach(k => {
+                if (k && !k.includes('新手')) {
+                    counts[k] = (counts[k] || 0) + 1
+                }
+            })
+        }
+    })
+    return Object.entries(counts)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 5)
+        .map(item => item[0])
+})
+
+// 4. 極致寬鬆搜尋與分類邏輯
+const filteredArticles = computed(() => {
+    if (!store.articlesList || store.articlesList.length === 0) return []
+    let list = store.articlesList
+
+    // 🌟 分類篩選邏輯
+    if (artCat.value === 'Beginner') {
+        // 新手必看：只要 Keywords 包含 "新手"
+        list = list.filter(i => (i.Keywords || '').includes('新手'))
+    } else if (artCat.value !== 'All') {
+        // 一般分類：比對 Category 欄位
+        list = list.filter(i => i.Category === artCat.value)
+    }
+
+    // 🌟 搜尋過濾邏輯
+    if (searchQuery.value) {
+        const terms = searchQuery.value.toLowerCase().split(/\s+/).filter(t => t)
+        list = list.filter(i => {
+            const t = (i.Title || '').toLowerCase()
+            const s = (i.Summary || '').toLowerCase()
+            const k = (i.Keywords || '').toLowerCase()
+            return terms.every(term => t.includes(term) || s.includes(term) || k.includes(term))
+        })
+    }
+
+    return list
+})
+
+const toggleQuickTag = (tag) => {
+    if (searchQuery.value === tag) {
+        searchQuery.value = ''
+    } else {
+        searchQuery.value = tag
+        artCat.value = 'All' // 點擊標籤時回到全部分類
+    }
+}
+
+useHead({
+    title: '專欄文章',
+    meta: [
+        { name: 'description', content: 'Gencko Studio 專欄，提供守宮飼養教學、健康照護與環境布置知識。' }
+    ]
+})
+
+const fmtDate = (d) => {
+    try { return new Date(d).toISOString().split('T')[0] } catch(e) { return '' }
+}
+</script>
+
+<template>
+    <div class="articles-page-wrapper">
+        <h1 class="page-title dt-only">專欄文章</h1>
+        
+        <!-- 🌟 第一層：搜尋欄 -->
+        <div class="search-bar-wrap">
+            <span class="search-icon">🔍</span>
+            <input 
+                type="text" 
+                v-model="searchQuery" 
+                placeholder="搜尋標題或隱藏關鍵字..." 
+                class="search-input" 
+            />
+            <button v-if="searchQuery" @click="searchQuery = ''" class="clear-btn">✕</button>
+        </div>
+
+        <!-- 🌟 第二層：固定六大分類 (固定一行) -->
+        <div class="category-nav-row">
+            <div 
+                v-for="cat in fixedCats" 
+                :key="cat.value"
+                class="nav-chip"
+                :class="{ active: artCat === cat.value, beginner: cat.value === 'Beginner' }"
+                @click="setCategory(cat.value)"
+            >
+                {{ cat.label }}
+            </div>
+        </div>
+
+        <!-- 🌟 第三層：熱門搜尋 -->
+        <div class="quick-tags" v-if="popularTags.length > 0">
+            <span class="tag-label">猜你想找：</span>
+            <div class="tags-scroll">
+                <span 
+                    v-for="t in popularTags" 
+                    :key="t" 
+                    class="q-tag" 
+                    :class="{ active: searchQuery === t }" 
+                    @click="toggleQuickTag(t)"
+                >
+                    {{ t }}
+                </span>
+            </div>
+        </div>
+
+        <!-- 文章列表標題 -->
+        <div class="main-list-head" v-if="searchQuery || artCat !== 'All'">
+            <h2 class="list-title">
+                {{ searchQuery ? `搜尋：${searchQuery}` : (artCat === 'All' ? '全部文章' : fixedCats.find(c=>c.value===artCat)?.label) }}
+            </h2>
+        </div>
+
+        <transition-group tag="div" name="list" class="grid">
+            <div v-if="filteredArticles.length === 0" key="empty-msg" class="empty-state" style="grid-column: 1 / -1;">
+                找不到相關文章
+            </div>
+
+            <article class="card article-card" v-for="item in filteredArticles" :key="item.ID">
+                <NuxtLink :to="`/articles/${item.ID}`" style="display:block; text-decoration:none; color:inherit; height:100%;">
+                    <div style="position:relative; overflow:hidden;">
+                        <NuxtImg 
+                            v-if="item.ImageURL" 
+                            :src="getCleanUrl(item.ImageURL)" 
+                            :alt="item.Title" 
+                            class="card-img" 
+                            style="height:180px;" 
+                            loading="lazy"
+                            width="400"
+                            height="180"
+                            fit="cover"
+                            format="webp"
+                        />
+                        <div v-else class="card-img" style="height:180px;display:flex;align-items:center;justify-content:center;font-size:3rem;background:#1a1a1a;">📝</div>
+                        <div class="art-cat-tag">{{ item.Category }}</div>
+                    </div>
+                    <div class="card-body">
+                        <time :datetime="item.PublishDate" class="date-text">{{ fmtDate(item.PublishDate) }}</time>
+                        <h2 class="morph-title">{{ item.Title }}</h2>
+                        <p class="art-summary">{{ item.Summary }}</p>
+                    </div>
+                </NuxtLink>
+            </article>
+        </transition-group>
+    </div>
+</template>
+
+<style scoped>
+.articles-page-wrapper {
+    max-width: 1300px;
+    margin: 0 auto;
+    padding-bottom: 30px;
+}
+.dt-only { display: block; }
+
+/* 🌟 Search Bar */
+.search-bar-wrap {
+    position: relative;
+    margin-bottom: 15px;
+    width: 100%;
+}
+.search-icon {
+    position: absolute;
+    left: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 1.1rem;
+    color: var(--txt);
+    opacity: 0.5;
+}
+.search-input {
+    width: 100%;
+    padding: 14px 45px;
+    background: var(--card-bg);
+    border: 1px solid var(--bd);
+    color: var(--txt);
+    border-radius: 12px;
+    font-size: 1rem;
+    font-weight: bold;
+    outline: none;
+    transition: 0.3s;
+}
+.search-input:focus {
+    border-color: var(--pri);
+    box-shadow: 0 0 10px var(--pri-glow);
+}
+.clear-btn {
+    position: absolute;
+    right: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: rgba(128,128,128,0.2);
+    border: none;
+    color: var(--txt);
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    cursor: pointer;
+}
+
+/* 🌟 固定一行分類導覽 */
+.category-nav-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 15px;
+    padding-bottom: 5px;
+    /* 為了在手機版強行擠在同一行，允許微小的捲動防止跑版 */
+    overflow-x: auto;
+    scrollbar-width: none;
+    flex-wrap: nowrap;
+}
+.category-nav-row::-webkit-scrollbar { display: none; }
+
+.nav-chip {
+    flex: 1;
+    min-width: max-content;
+    padding: 10px 12px;
+    background: var(--card-bg);
+    border: 1px solid var(--bd);
+    border-radius: 8px;
+    color: var(--txt);
+    opacity: 0.7;
+    font-weight: bold;
+    font-size: 0.9rem;
+    text-align: center;
+    cursor: pointer;
+    transition: 0.2s;
+    white-space: nowrap;
+}
+.nav-chip.active {
+    background: var(--pri);
+    color: #fff;
+    border-color: var(--pri);
+    opacity: 1;
+    box-shadow: 0 4px 10px var(--pri-glow);
+}
+.nav-chip.beginner {
+    border-color: #4caf50;
+    color: #4caf50;
+}
+.nav-chip.beginner.active {
+    background: #4caf50;
+    color: #fff;
+    border-color: #4caf50;
+}
+
+/* 🌟 Quick Tags */
+.quick-tags {
+    display: flex;
+    align-items: center;
+    margin-bottom: 25px;
+    background: rgba(128,128,128,0.05);
+    padding: 8px 12px;
+    border-radius: 8px;
+}
+.tag-label { font-size: 0.8rem; font-weight: bold; opacity: 0.5; margin-right: 8px; white-space: nowrap; }
+.tags-scroll { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; }
+.tags-scroll::-webkit-scrollbar { display: none; }
+.q-tag {
+    padding: 4px 10px;
+    background: var(--card-bg);
+    border: 1px solid var(--bd);
+    border-radius: 12px;
+    font-size: 0.8rem;
+    color: var(--txt);
+    cursor: pointer;
+    white-space: nowrap;
+}
+.q-tag.active { border-color: var(--pri); color: var(--pri); }
+
+/* 文章列表與卡片 */
+.list-title {
+    font-size: 1.2rem;
+    color: var(--txt);
+    border-left: 4px solid var(--pri);
+    padding-left: 10px;
+    margin-bottom: 15px;
+}
+.empty-state {
+    text-align: center;
+    padding: 50px;
+    color: var(--txt);
+    opacity: 0.5;
+    background: var(--card-bg);
+    border-radius: 12px;
+}
+.date-text { font-size: 0.8rem; opacity: 0.5; margin-bottom: 5px; display: block; }
+.morph-title { font-size: 1.1rem; margin-bottom: 5px; color: var(--txt); }
+.art-summary { font-size: 0.85rem; opacity: 0.7; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+
+@media (max-width: 768px) {
+    .dt-only { display: none !important; }
+    .articles-page-wrapper { padding: 5px 10px; }
+    .nav-chip {
+        padding: 8px 10px;
+        font-size: 0.75rem; /* 手機版縮小字體以塞進更多內容 */
+        border-radius: 6px;
+    }
+    .grid { grid-template-columns: repeat(2, 1fr) !important; gap: 8px !important; }
+    .card-img { height: 120px !important; }
+    .morph-title { font-size: 0.9rem !important; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+}
+</style>
+</file>
+
 <file path="pages/care.vue">
 <script setup>
 import { computed } from 'vue'
@@ -7560,238 +7584,6 @@ const triggerPrint = () => {
     .id-actions { margin-top: 20px; }
     .act-btn { padding: 10px 20px; font-size: 0.9rem; }
     .id-hint { font-size: 0.75rem; margin-top: 8px; }
-}
-</style>
-</file>
-
-<file path="components/TheLightbox.vue">
-<script setup>
-import { ref } from 'vue'
-import { getCleanUrl } from '~/utils/image.js'
-
-const props = defineProps({
-    item: { type: Object, default: null },
-    lineLink: { type: String, default: '' }
-})
-
-const emit = defineEmits(['close'])
-
-// --- 🌟 PWA 手勢滑動追蹤 ---
-const touchStartY = ref(0)
-const touchDeltaY = ref(0)
-const isDragging = ref(false)
-
-const onTouchStart = (e) => {
-    touchStartY.value = e.touches[0].clientY
-    isDragging.value = true
-    touchDeltaY.value = 0
-}
-
-const onTouchMove = (e) => {
-    if (!isDragging.value) return
-    touchDeltaY.value = e.touches[0].clientY - touchStartY.value
-}
-
-const onTouchEnd = () => {
-    if (!isDragging.value) return
-    isDragging.value = false
-    
-    // 如果上下滑動超過 100px，則觸發關閉視窗
-    if (Math.abs(touchDeltaY.value) > 100) {
-        emit('close')
-    }
-    
-    // 恢復原位，若沒有被關閉則利用 CSS transition 彈回
-    touchDeltaY.value = 0
-}
-</script>
-
-<template>
-    <div v-if="item" class="lightbox-overlay" @click="emit('close')">
-        <!-- 🌟 移除 ✕ 按鈕，改用全手勢操作 -->
-        
-        <div class="lightbox-content-wrapper"
-             :style="{
-                 transform: `translateY(${touchDeltaY}px)`,
-                 transition: isDragging ? 'none' : 'transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1), opacity 0.3s ease',
-                 opacity: Math.max(0, 1 - Math.abs(touchDeltaY) / 250)
-             }"
-             @touchstart="onTouchStart"
-             @touchmove="onTouchMove"
-             @touchend="onTouchEnd"
-             @click.stop
-        >
-            <!-- 🌟 新增：下滑關閉的小提示 -->
-            <div class="swipe-hint-container">
-                <div class="swipe-indicator"></div>
-                <span class="swipe-text">下拉關閉圖片</span>
-            </div>
-
-            <!-- 使用 NuxtImg 進行放大預覽圖的最佳化 -->
-            <NuxtImg 
-                v-if="item.ImageURL"
-                :src="getCleanUrl(item.ImageURL)" 
-                class="lightbox-img" 
-                width="1000"
-                height="800"
-                fit="contain"
-                format="webp"
-                draggable="false"
-            />
-            
-            <div class="lightbox-info">
-                <h2 class="lightbox-title">{{ item.Morph || item.Name }}</h2>
-                <a v-if="item.Status === 'ForSale' || item.Available !== 'No'" 
-                   :href="item.ExternalLink || lineLink" 
-                   target="_blank" 
-                   class="app-btn-buy" 
-                   rel="noopener noreferrer">
-                   💬 立即私訊購買
-                </a>
-            </div>
-        </div>
-    </div>
-</template>
-
-<style scoped>
-/*
-  [局部樣式與全域整合]
-  已將原本散落於 style.css 的燈箱樣式抽回 TheLightbox.vue。
-  利用 var(--card-bg) 與 var(--txt) 自動適配日夜模式，
-  徹底移除所有 :global(body.day-mode) 與硬色碼覆寫。
-*/
-
-/* 🌟 遮罩底色：利用變數 + 模糊達到完美日夜適配 */
-.lightbox-overlay {
-    position: fixed;
-    top: 0; left: 0;
-    width: 100%; height: 100%;
-    /* 在深淺模式下 var(--card-bg) 會自動切換透黑/純白 */
-    background: var(--card-bg);
-    backdrop-filter: blur(15px);
-    -webkit-backdrop-filter: blur(15px);
-    z-index: 999999;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    flex-direction: column;
-}
-
-.lightbox-content-wrapper {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    width: 100%;
-    /* 禁用預設的瀏覽器捲動/下拉更新，確保滑動手勢專屬於拖曳圖片 */
-    touch-action: none;
-    will-change: transform, opacity;
-}
-
-/* 🌟 下拉提示容器與動畫 */
-.swipe-hint-container {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    margin-bottom: 12px;
-    opacity: 0.6;
-    animation: float 2s ease-in-out infinite;
-}
-
-@keyframes float {
-    0% { transform: translateY(0px); }
-    50% { transform: translateY(-5px); }
-    100% { transform: translateY(0px); }
-}
-
-.swipe-indicator {
-    width: 40px;
-    height: 5px;
-    border-radius: 5px;
-    background: var(--txt);
-    margin-bottom: 6px;
-}
-
-.swipe-text {
-    font-size: 0.75rem;
-    color: var(--txt);
-    font-weight: bold;
-    letter-spacing: 1px;
-}
-
-/* 🌟 圖片高度自動縮減優化 */
-.lightbox-img {
-    max-width: 95%;
-    width: 100%; 
-    height: auto; 
-    max-height: 70vh; 
-    border-radius: 16px; 
-    box-shadow: 0 10px 40px rgba(0,0,0,0.15);
-    object-fit: contain;
-    /* 防止長按圖片時跳出系統選單，提升 App 沉浸感 */
-    -webkit-touch-callout: none;
-    -webkit-user-select: none;
-    user-select: none;
-    /* 圖片底色 */
-    background: rgba(128, 128, 128, 0.05);
-    border: 1px solid var(--bd);
-}
-
-.lightbox-info {
-    margin-top: 20px;
-    text-align: center;
-    width: 100%;
-    position: relative;
-    z-index: 1000000;
-}
-
-.lightbox-title {
-    color: var(--txt);
-    margin: 0 0 15px 0;
-    font-size: 1.5rem;
-    font-weight: 900;
-    text-shadow: 0 2px 10px rgba(0,0,0,0.05);
-}
-
-/* 🌟 App-like 購買按鈕 */
-.app-btn-buy {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    font-size: 1.1rem;
-    padding: 14px 35px;
-    background: var(--pri);
-    color: #fff;
-    border-radius: 30px;
-    font-weight: bold;
-    text-decoration: none;
-    box-shadow: 0 5px 20px var(--pri-glow);
-    transition: transform 0.2s, box-shadow 0.2s;
-    position: relative;
-    z-index: 100001;
-}
-
-.app-btn-buy:active {
-    transform: scale(0.95);
-    box-shadow: 0 2px 10px rgba(255, 69, 0, 0.2);
-}
-
-/* 🌟 Mobile Optimizations */
-@media (max-width: 768px) {
-    .lightbox-img {
-        max-height: 60vh; /* 手機版進一步限制最大高度，保留空間給標題與按鈕 */
-    }
-    
-    .lightbox-title {
-        font-size: 1.25rem;
-        margin-bottom: 12px;
-    }
-    
-    .app-btn-buy {
-        padding: 12px 25px;
-        font-size: 1rem;
-    }
 }
 </style>
 </file>
@@ -9440,166 +9232,226 @@ const toggleWishlist = (id) => {
 </style>
 </file>
 
-<file path="nuxt.config.ts">
-// https://nuxt.com/docs/api/configuration/nuxt-config
-export default defineNuxtConfig({
-  compatibilityDate: '2024-04-16',
-  devtools: { enabled: true },
+<file path="components/TheLightbox.vue">
+<script setup>
+import { ref } from 'vue'
+import { getCleanUrl } from '~/utils/image.js'
 
-  // 註冊所需模組
-  modules:[
-    '@nuxtjs/supabase',
-    '@pinia/nuxt',
-    '@vueuse/nuxt',
-    '@nuxtjs/sitemap',
-    '@nuxtjs/robots',
-    '@nuxt/image', // 🌟 新增圖片最佳化模組
-    '@vite-pwa/nuxt' // 🌟 導入 PWA 模組
-  ],
-
-  // 🌟 Nuxt Image 設定
-  image: {
-    domains:[
-      'cdn.jsdelivr.net',
-      'drive.google.com'
-    ],
-    screens: {
-      xs: 320, sm: 640, md: 768, lg: 1024, xl: 1280, xxl: 1536,
-    },
-    format: ['webp']
-  },
-
-  // 🌟 PWA 模組設定
-  pwa: {
-    registerType: 'prompt',
-    manifest: {
-      id: '/',
-      start_url: '/',
-      scope: '/',
-      name: 'Gencko Studio',
-      short_name: 'Gencko',
-      description: 'Gencko Studio 提供專業的豹紋守宮繁育、基因計算機與特寵飼養知識。',
-      theme_color: '#e6e3e3', 
-      background_color: '#e6e3e3', 
-      display: 'standalone', 
-      orientation: 'portrait', 
-      icons:[
-        {
-          src: 'https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/11.png',
-          sizes: '192x192',
-          type: 'image/png'
-        },
-        {
-          src: 'https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/11.png',
-          sizes: '512x512',
-          type: 'image/png'
-        },
-        {
-          src: 'https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/11.png',
-          sizes: '512x512',
-          type: 'image/png',
-          purpose: 'any maskable'
-        }
-      ]
-    },
-    workbox: {
-      globPatterns: ['**/*.{js,css,html,png,svg,ico,webp}'],
-      runtimeCaching:[
-        {
-          urlPattern: /^https:\/\/cdn\.jsdelivr\.net\/.*/i,
-          handler: 'CacheFirst',
-          options: {
-            cacheName: 'cdn-images-cache',
-            expiration: { maxEntries: 200, maxAgeSeconds: 60 * 60 * 24 * 30 },
-            cacheableResponse: { statuses: [0, 200] }
-          }
-        },
-        {
-          urlPattern: /^https:\/\/sfndneptcwhblvrxykcy\.supabase\.co\/rest\/v1\/.*/i,
-          handler: 'NetworkFirst',
-          options: {
-            cacheName: 'supabase-api-cache',
-            expiration: { maxEntries: 100, maxAgeSeconds: 60 * 60 * 24 },
-            networkTimeoutSeconds: 5,
-            cacheableResponse: { statuses: [0, 200] }
-          }
-        }
-      ]
-    },
-    devOptions: {
-      enabled: true,
-      type: 'module'
-    }
-  },
-
-  site: {
-    url: 'https://www.genckobreeding.com',
-    name: 'Gencko Studio'
-  },
-
-  sitemap: {
-    sources:[
-      '/api/_sitemap-urls'
-    ]
-  },
-
-  supabase: {
-    url: 'https://sfndneptcwhblvrxykcy.supabase.co',
-    key: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNmbmRuZXB0Y3doYmx2cnh5a2N5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk3MjYxMTcsImV4cCI6MjA4NTMwMjExN30.dN4MHhwjEM26coS9eZAW_eIQJplF8j9YHT9WyFypK3I',
-    redirect: false
-  },
-
-  css:[
-    '~/assets/css/style.css'
-  ],
-
-  // 🌟 全站應用程式設定
-  app: {
-    // 🌟 開啟全站路由轉場動畫
-    pageTransition: { name: 'page', mode: 'out-in' },
-    
-    head: {
-      titleTemplate: '%s | Gencko Studio',
-      title: 'Gencko Studio｜專業豹紋守宮選育工作室',
-      htmlAttrs: { lang: 'zh-TW' },
-      meta:[
-        { charset: 'utf-8' },
-        { name: 'viewport', content: 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover' },
-        { name: 'description', content: 'Gencko Studio 提供專業的豹紋守宮繁育、基因計算機與特寵飼養知識。線上選購守宮、查詢基因圖鑑的最佳平台。' },
-        { property: 'og:type', content: 'website' },
-        { property: 'og:site_name', content: 'Gencko Studio' },
-        { property: 'og:image', content: 'https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/%E6%AD%A3%E9%9D%A2.png' },
-        { name: 'twitter:card', content: 'summary_large_image' },
-        // 👇 這裡補上了通用的 PWA 標籤，解決瀏覽器警告
-        { name: 'mobile-web-app-capable', content: 'yes' },
-        { name: 'apple-mobile-web-app-capable', content: 'yes' },
-        { name: 'apple-mobile-web-app-status-bar-style', content: 'black-translucent' },
-        { name: 'apple-mobile-web-app-title', content: 'Gencko' },
-        { name: 'theme-color', content: '#e6e3e3' }
-      ],
-      link:[
-        { rel: 'preconnect', href: 'https://cdn.jsdelivr.net' },
-        { rel: 'dns-prefetch', href: 'https://cdn.jsdelivr.net' },
-        { rel: 'icon', href: 'https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/%E6%9C%AA%E5%91%BD%E5%90%8D%E8%A8%AD%E8%A8%88.png' },
-        { rel: 'apple-touch-icon', href: 'https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/%E6%9C%AA%E5%91%BD%E5%90%8D%E8%A8%AD%E8%A8%88.png' },
-        { rel: 'preconnect', href: 'https://fonts.googleapis.com' },
-        { rel: 'preconnect', href: 'https://fonts.gstatic.com', crossorigin: '' },
-        { rel: 'stylesheet', href: 'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+TC:wght@300;400;500;700;900&family=Black+Ops+One&display=swap' }
-      ],
-      script:[
-        { src: 'https://www.googletagmanager.com/gtag/js?id=G-Q97CS08YRH', async: true },
-        {
-          children: `
-            window.dataLayer = window.dataLayer || [];
-            function gtag(){dataLayer.push(arguments);}
-            gtag('js', new Date());
-            gtag('config', 'G-93T0C2KMEZ');
-          `
-        }
-      ]
-    }
-  }
+const props = defineProps({
+    item: { type: Object, default: null },
+    lineLink: { type: String, default: '' }
 })
+
+const emit = defineEmits(['close'])
+
+// --- 🌟 PWA 手勢滑動追蹤 ---
+const touchStartY = ref(0)
+const touchDeltaY = ref(0)
+const isDragging = ref(false)
+
+const onTouchStart = (e) => {
+    touchStartY.value = e.touches[0].clientY
+    isDragging.value = true
+    touchDeltaY.value = 0
+}
+
+const onTouchMove = (e) => {
+    if (!isDragging.value) return
+    touchDeltaY.value = e.touches[0].clientY - touchStartY.value
+}
+
+const onTouchEnd = () => {
+    if (!isDragging.value) return
+    isDragging.value = false
+    
+    // 如果上下滑動超過 100px，則觸發關閉視窗
+    if (Math.abs(touchDeltaY.value) > 100) {
+        emit('close')
+    }
+    
+    // 恢復原位，若沒有被關閉則利用 CSS transition 彈回
+    touchDeltaY.value = 0
+}
+
+// 🌟 安全取得圖片網址邏輯：確保 GitHub 與舊有網址皆能直接顯示
+const getImgSrc = (item) => {
+    if (!item) return ''
+    // 同時檢查大寫與小寫欄位
+    const rawUrl = item.ImageURL || item.image_url || ''
+    return getCleanUrl(rawUrl)
+}
+</script>
+
+<template>
+    <div v-if="item" class="lightbox-overlay" @click="emit('close')">
+        
+        <div class="lightbox-content-wrapper"
+             :style="{
+                 transform: `translateY(${touchDeltaY}px)`,
+                 transition: isDragging ? 'none' : 'transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1), opacity 0.3s ease',
+                 opacity: Math.max(0, 1 - Math.abs(touchDeltaY) / 250)
+             }"
+             @touchstart="onTouchStart"
+             @touchmove="onTouchMove"
+             @touchend="onTouchEnd"
+             @click.stop
+        >
+            <!-- 🌟 下滑關閉的小提示 -->
+            <div class="swipe-hint-container">
+                <div class="swipe-indicator"></div>
+                <span class="swipe-text">下拉關閉圖片</span>
+            </div>
+
+            <!-- 🌟 使用原生 img 以確保 GitHub 直連網址的最高穩定性，不經過 Nuxt Image 處理 -->
+            <img 
+                v-if="getImgSrc(item)"
+                :src="getImgSrc(item)" 
+                :alt="item.Morph || item.Name || 'Gencko Showcase'"
+                class="lightbox-img" 
+                loading="lazy"
+                decoding="async"
+                draggable="false"
+            />
+            
+            <div class="lightbox-info">
+                <h2 class="lightbox-title">{{ item.Morph || item.Name }}</h2>
+                <a v-if="item.Status === 'ForSale' || item.Available !== 'No'" 
+                   :href="item.ExternalLink || lineLink" 
+                   target="_blank" 
+                   class="app-btn-buy" 
+                   rel="noopener noreferrer">
+                   💬 立即私訊購買
+                </a>
+            </div>
+        </div>
+    </div>
+</template>
+
+<style scoped>
+.lightbox-overlay {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: var(--card-bg);
+    backdrop-filter: blur(15px);
+    -webkit-backdrop-filter: blur(15px);
+    z-index: 999999;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+}
+
+.lightbox-content-wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    touch-action: none;
+    will-change: transform, opacity;
+}
+
+.swipe-hint-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-bottom: 12px;
+    opacity: 0.6;
+    animation: float 2s ease-in-out infinite;
+}
+
+@keyframes float {
+    0% { transform: translateY(0px); }
+    50% { transform: translateY(-5px); }
+    100% { transform: translateY(0px); }
+}
+
+.swipe-indicator {
+    width: 40px;
+    height: 5px;
+    border-radius: 5px;
+    background: var(--txt);
+    margin-bottom: 6px;
+}
+
+.swipe-text {
+    font-size: 0.75rem;
+    color: var(--txt);
+    font-weight: bold;
+    letter-spacing: 1px;
+}
+
+.lightbox-img {
+    max-width: 95%;
+    width: auto; 
+    height: auto; 
+    max-height: 70vh; 
+    border-radius: 16px; 
+    box-shadow: 0 10px 40px rgba(0,0,0,0.15);
+    object-fit: contain;
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
+    background: rgba(128, 128, 128, 0.05);
+    border: 1px solid var(--bd);
+}
+
+.lightbox-info {
+    margin-top: 20px;
+    text-align: center;
+    width: 100%;
+    position: relative;
+    z-index: 1000000;
+}
+
+.lightbox-title {
+    color: var(--txt);
+    margin: 0 0 15px 0;
+    font-size: 1.5rem;
+    font-weight: 900;
+    text-shadow: 0 2px 10px rgba(0,0,0,0.05);
+}
+
+.app-btn-buy {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    font-size: 1.1rem;
+    padding: 14px 35px;
+    background: var(--pri);
+    color: #fff;
+    border-radius: 30px;
+    font-weight: bold;
+    text-decoration: none;
+    box-shadow: 0 5px 20px var(--pri-glow);
+    transition: transform 0.2s, box-shadow 0.2s;
+    position: relative;
+    z-index: 100001;
+}
+
+.app-btn-buy:active {
+    transform: scale(0.95);
+    box-shadow: 0 2px 10px rgba(255, 69, 0, 0.2);
+}
+
+@media (max-width: 768px) {
+    .lightbox-img {
+        max-height: 60vh;
+    }
+    
+    .lightbox-title {
+        font-size: 1.25rem;
+        margin-bottom: 12px;
+    }
+    
+    .app-btn-buy {
+        padding: 12px 25px;
+        font-size: 1rem;
+    }
+}
+</style>
 </file>
 
 <file path="pages/product/[id].vue">
@@ -10095,6 +9947,171 @@ const generatePromo = async () => {
     .prod-terms-box { grid-column: 1 / -1; padding: 15px; margin-top: 5px; }
 }
 </style>
+</file>
+
+<file path="nuxt.config.ts">
+// https://nuxt.com/docs/api/configuration/nuxt-config
+export default defineNuxtConfig({
+  compatibilityDate: '2024-04-16',
+  devtools: { enabled: true },
+
+  // 註冊所需模組
+  modules:[
+    '@nuxtjs/supabase',
+    '@pinia/nuxt',
+    '@vueuse/nuxt',
+    '@nuxtjs/sitemap',
+    '@nuxtjs/robots',
+    '@nuxt/image', // 🌟 新增圖片最佳化模組
+    '@vite-pwa/nuxt' // 🌟 導入 PWA 模組
+  ],
+
+  // 🌟 Nuxt Image 設定
+  image: {
+    domains:[
+      'cdn.jsdelivr.net',
+      'drive.google.com'
+    ],
+    screens: {
+      xs: 320, sm: 640, md: 768, lg: 1024, xl: 1280, xxl: 1536,
+    },
+    format: ['webp']
+  },
+
+  // 🌟 PWA 模組設定
+  pwa: {
+    registerType: 'prompt',
+    manifest: {
+      id: '/',
+      start_url: '/',
+      scope: '/',
+      name: 'Gencko Studio',
+      short_name: 'Gencko',
+      description: 'Gencko Studio 提供專業的豹紋守宮繁育、基因計算機與特寵飼養知識。',
+      theme_color: '#e6e3e3', 
+      background_color: '#e6e3e3', 
+      display: 'standalone', 
+      orientation: 'portrait', 
+      icons:[
+        {
+          src: 'https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/11.png',
+          sizes: '192x192',
+          type: 'image/png'
+        },
+        {
+          src: 'https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/11.png',
+          sizes: '512x512',
+          type: 'image/png'
+        },
+        {
+          src: 'https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/11.png',
+          sizes: '512x512',
+          type: 'image/png',
+          purpose: 'any maskable'
+        }
+      ]
+    },
+    workbox: {
+      globPatterns: ['**/*.{js,css,html,png,svg,ico,webp}'],
+      // 🌟 修復 non-precached-url 報錯，並確保更新機制正常
+      navigateFallback: null,
+      cleanupOutdatedCaches: true,
+      runtimeCaching:[
+        {
+          urlPattern: /^https:\/\/cdn\.jsdelivr\.net\/.*/i,
+          handler: 'CacheFirst',
+          options: {
+            cacheName: 'cdn-images-cache',
+            expiration: { maxEntries: 200, maxAgeSeconds: 60 * 60 * 24 * 30 },
+            cacheableResponse: { statuses: [0, 200] }
+          }
+        },
+        {
+          urlPattern: /^https:\/\/sfndneptcwhblvrxykcy\.supabase\.co\/rest\/v1\/.*/i,
+          handler: 'NetworkFirst',
+          options: {
+            cacheName: 'supabase-api-cache',
+            expiration: { maxEntries: 100, maxAgeSeconds: 60 * 60 * 24 },
+            networkTimeoutSeconds: 5,
+            cacheableResponse: { statuses: [0, 200] }
+          }
+        }
+      ]
+    },
+    devOptions: {
+      enabled: true,
+      type: 'module'
+    }
+  },
+
+  site: {
+    url: 'https://www.genckobreeding.com',
+    name: 'Gencko Studio'
+  },
+
+  sitemap: {
+    sources:[
+      '/api/_sitemap-urls'
+    ]
+  },
+
+  supabase: {
+    url: 'https://sfndneptcwhblvrxykcy.supabase.co',
+    key: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNmbmRuZXB0Y3doYmx2cnh5a2N5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk3MjYxMTcsImV4cCI6MjA4NTMwMjExN30.dN4MHhwjEM26coS9eZAW_eIQJplF8j9YHT9WyFypK3I',
+    redirect: false
+  },
+
+  css:[
+    '~/assets/css/style.css'
+  ],
+
+  // 🌟 全站應用程式設定
+  app: {
+    // 🌟 開啟全站路由轉場動畫
+    pageTransition: { name: 'page', mode: 'out-in' },
+    
+    head: {
+      titleTemplate: '%s | Gencko Studio',
+      title: 'Gencko Studio｜專業豹紋守宮選育工作室',
+      htmlAttrs: { lang: 'zh-TW' },
+      meta:[
+        { charset: 'utf-8' },
+        { name: 'viewport', content: 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover' },
+        { name: 'description', content: 'Gencko Studio 提供專業的豹紋守宮繁育、基因計算機與特寵飼養知識。線上選購守宮、查詢基因圖鑑的最佳平台。' },
+        { property: 'og:type', content: 'website' },
+        { property: 'og:site_name', content: 'Gencko Studio' },
+        // 🌟 更新預設分享圖片
+        { property: 'og:image', content: 'https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/11.png' },
+        { name: 'twitter:card', content: 'summary_large_image' },
+        { name: 'mobile-web-app-capable', content: 'yes' },
+        { name: 'apple-mobile-web-app-capable', content: 'yes' },
+        { name: 'apple-mobile-web-app-status-bar-style', content: 'black-translucent' },
+        { name: 'apple-mobile-web-app-title', content: 'Gencko' },
+        { name: 'theme-color', content: '#e6e3e3' }
+      ],
+      link:[
+        { rel: 'preconnect', href: 'https://cdn.jsdelivr.net' },
+        { rel: 'dns-prefetch', href: 'https://cdn.jsdelivr.net' },
+        { rel: 'icon', href: 'https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/11.png' },
+        { rel: 'apple-touch-icon', href: 'https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/11.png' },
+        { rel: 'preconnect', href: 'https://fonts.googleapis.com' },
+        { rel: 'preconnect', href: 'https://fonts.gstatic.com', crossorigin: '' },
+        { rel: 'stylesheet', href: 'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+TC:wght@300;400;500;700;900&family=Black+Ops+One&display=swap' }
+      ],
+      script:[
+        { src: 'https://www.googletagmanager.com/gtag/js?id=G-Q97CS08YRH', async: true },
+        {
+          children: `
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag('js', new Date());
+            gtag('config', 'G-93T0C2KMEZ');
+          `
+        }
+      ]
+    }
+  }
+})
 </file>
 
 <file path="pages/index.vue">
