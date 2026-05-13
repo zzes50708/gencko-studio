@@ -16,6 +16,7 @@ export default defineNuxtConfig({
 
   // 🌟 Nuxt Image 設定
   image: {
+    provider: 'ipx', // 🌟 核心修復：強制使用 Nuxt 內建的 IPX，徹底繞開 Vercel 單月 1000 張優化的收費限制 (402 Error)
     domains:[
       'cdn.jsdelivr.net',
       'drive.google.com'
@@ -61,7 +62,6 @@ export default defineNuxtConfig({
     },
     workbox: {
       globPatterns: ['**/*.{js,css,html,png,svg,ico,webp}'],
-      // 🌟 修復 non-precached-url 報錯，並確保更新機制正常
       navigateFallback: null,
       cleanupOutdatedCaches: true,
       runtimeCaching:[
@@ -115,9 +115,7 @@ export default defineNuxtConfig({
 
   // 🌟 全站應用程式設定
   app: {
-    // 🌟 開啟全站路由轉場動畫
     pageTransition: { name: 'page', mode: 'out-in' },
-    
     head: {
       titleTemplate: '%s | Gencko Studio',
       title: 'Gencko Studio｜專業豹紋守宮選育工作室',
@@ -128,7 +126,6 @@ export default defineNuxtConfig({
         { name: 'description', content: 'Gencko Studio 提供專業的豹紋守宮繁育、基因計算機與特寵飼養知識。線上選購守宮、查詢基因圖鑑的最佳平台。' },
         { property: 'og:type', content: 'website' },
         { property: 'og:site_name', content: 'Gencko Studio' },
-        // 🌟 更新預設分享圖片
         { property: 'og:image', content: 'https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/11.png' },
         { name: 'twitter:card', content: 'summary_large_image' },
         { name: 'mobile-web-app-capable', content: 'yes' },
