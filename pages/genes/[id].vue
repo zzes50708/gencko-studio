@@ -43,20 +43,10 @@ if (viewingGene.value && import.meta.client) {
     store.viewingGene = viewingGene.value
 }
 
-// SEO 用的圖片網址處理
-const getMetaImg = (url) => {
-    if (!url) return 'https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/%E6%AD%A3%E9%9D%A2.png'
-    const driveRegex = /file\/d\/([a-zA-Z0-9_-]+)\//
-    const match = url.match(driveRegex)
-    let target = url
-    if (match && match[1]) target = 'https://drive.google.com/uc?id=' + match[1]
-    return `https://wsrv.nl/?url=${encodeURIComponent(target)}&w=1200&output=webp&q=80`
-}
-
 const siteData = computed(() => {
     if (viewingGene.value) {
         const g = viewingGene.value
-        const img = getMetaImg(g.ImageURL)
+        const img = getCleanUrl(g.ImageURL)
         const url = `https://www.genckobreeding.com/genes/${encodeURIComponent(g.Name)}`
         const desc = g.Brief || `Gencko Studio 收錄的 ${g.Name} 基因詳細介紹與特徵說明。`
 
@@ -232,14 +222,13 @@ h3 {
     margin: 0 0 10px 0;
 }
 
-/* 2. 找到 p 標籤，更新換行規則 */
 p {
     color: var(--txt);
     opacity: 0.9;
     line-height: 1.7;
     font-size: 1.05rem;
-    white-space: pre-wrap; /* 🌟 改用 pre-wrap，對手機瀏覽器相容性更好 */
-    overflow-wrap: anywhere; /* 🌟 絕對強制截斷過長的連續英文字或網址 */
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
     word-wrap: break-word;
     word-break: normal;
     text-align: justify;

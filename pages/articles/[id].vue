@@ -3,6 +3,7 @@ import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useHead, useAsyncData, useSupabaseClient } from '#imports'
 import { useMainStore } from '~/stores/useMainStore'
+import { getCleanUrl } from '~/utils/image.js'
 
 const route = useRoute()
 const router = useRouter()
@@ -47,24 +48,6 @@ if (readingArticle.value && import.meta.client) {
     store.readingArticle = readingArticle.value
 }
 
-const getMetaImg = (url) => {
-    if (!url) return 'https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/%E6%9C%AA%E5%91%BD%E5%90%8D%E8%A8%AD%E8%A8%88.png'
-    const driveRegex = /file\/d\/([a-zA-Z0-9_-]+)\//
-    const match = url.match(driveRegex)
-    let target = url
-    if (match && match[1]) target = 'https://drive.google.com/uc?id=' + match[1]
-    return `https://wsrv.nl/?url=${encodeURIComponent(target)}&w=1200&output=webp&q=80`
-}
-
-const convertLink = (url) => {
-    if (!url) return ''
-    const driveRegex = /file\/d\/([a-zA-Z0-9_-]+)\//
-    const match = url.match(driveRegex)
-    let target = url
-    if (match && match[1]) target = 'https://drive.google.com/uc?id=' + match[1]
-    return `https://wsrv.nl/?url=${encodeURIComponent(target)}&w=1000&output=webp&q=80`
-}
-
 const fmtDate = (d) => {
     try { return new Date(d).toISOString().split('T')[0] } catch(e) { return '' }
 }
@@ -72,7 +55,7 @@ const fmtDate = (d) => {
 const siteData = computed(() => {
     if (readingArticle.value) {
         const art = readingArticle.value
-        const imgUrl = getMetaImg(art.ImageURL)
+        const imgUrl = getCleanUrl(art.ImageURL)
         const artUrl = `https://www.genckobreeding.com/articles/${art.ID}`
         
         // 🌟 修正 SSR 崩潰 Bug：加入 try-catch 保護日期解析
@@ -159,7 +142,7 @@ const goBack = () => {
             <button @click="goBack" class="btn-back">← 返回列表</button>
             <article class="reader-container">
                 <div v-if="readingArticle.ImageURL" class="article-hero-image">
-                    <img :src="convertLink(readingArticle.ImageURL)" :alt="readingArticle.Title" style="width:100%; height:auto; max-height:200px; object-fit:cover; border-radius:8px; margin-bottom:0px;" loading="eager">
+                    <img :src="getCleanUrl(readingArticle.ImageURL)" :alt="readingArticle.Title" style="width:100%; height:auto; max-height:200px; object-fit:cover; border-radius:8px; margin-bottom:0px;" loading="eager">
                 </div>
                 <h1 style="color:var(--txt);font-size:2rem;margin-bottom:15px;">{{ readingArticle.Title }}</h1>
                 <div style="color:#666;font-size:0.9rem;margin-bottom:20px;">

@@ -153,17 +153,14 @@ const fmtDate = (d) => {
             <article class="card article-card" v-for="item in filteredArticles" :key="item.ID">
                 <NuxtLink :to="`/articles/${item.ID}`" style="display:block; text-decoration:none; color:inherit; height:100%;">
                     <div style="position:relative; overflow:hidden;">
-                        <NuxtImg 
+                        <!-- 🌟 核心修正：將 NuxtImg 替換為原生 img，徹底繞過 Vercel 402 收費限制 -->
+                        <img 
                             v-if="item.ImageURL" 
                             :src="getCleanUrl(item.ImageURL)" 
                             :alt="item.Title" 
                             class="card-img" 
                             style="height:180px;" 
                             loading="lazy"
-                            width="400"
-                            height="180"
-                            fit="cover"
-                            format="webp"
                         />
                         <div v-else class="card-img" style="height:180px;display:flex;align-items:center;justify-content:center;font-size:3rem;background:#1a1a1a;">📝</div>
                         <div class="art-cat-tag">{{ item.Category }}</div>
@@ -238,7 +235,6 @@ const fmtDate = (d) => {
     gap: 8px;
     margin-bottom: 15px;
     padding-bottom: 5px;
-    /* 為了在手機版強行擠在同一行，允許微小的捲動防止跑版 */
     overflow-x: auto;
     scrollbar-width: none;
     flex-wrap: nowrap;
@@ -327,7 +323,7 @@ const fmtDate = (d) => {
     .articles-page-wrapper { padding: 5px 10px; }
     .nav-chip {
         padding: 8px 10px;
-        font-size: 0.75rem; /* 手機版縮小字體以塞進更多內容 */
+        font-size: 0.75rem;
         border-radius: 6px;
     }
     .grid { grid-template-columns: repeat(2, 1fr) !important; gap: 8px !important; }

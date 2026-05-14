@@ -66,26 +66,46 @@ export default defineNuxtConfig({
       navigateFallback: null,
       cleanupOutdatedCaches: true,
       runtimeCaching:[
-        {
-          urlPattern: /^https:\/\/cdn\.jsdelivr\.net\/.*/i,
-          handler: 'CacheFirst',
-          options: {
-            cacheName: 'cdn-images-cache',
-            expiration: { maxEntries: 200, maxAgeSeconds: 60 * 60 * 24 * 30 },
-            cacheableResponse: { statuses: [0, 200] }
-          }
-        },
-        {
-          urlPattern: /^https:\/\/sfndneptcwhblvrxykcy\.supabase\.co\/rest\/v1\/.*/i,
-          handler: 'NetworkFirst',
-          options: {
-            cacheName: 'supabase-api-cache',
-            expiration: { maxEntries: 100, maxAgeSeconds: 60 * 60 * 24 },
-            networkTimeoutSeconds: 5,
-            cacheableResponse: { statuses: [0, 200] }
-          }
-        }
-      ]
+  {
+    urlPattern: /^https:\/\/cdn\.jsdelivr\.net\/.*/i,
+    handler: 'CacheFirst',
+    options: {
+      cacheName: 'cdn-images-cache',
+      expiration: { maxEntries: 200, maxAgeSeconds: 60 * 60 * 24 * 30 },
+      cacheableResponse: { statuses: [0, 200] }
+    }
+  },
+  {
+    // 🌟 新增：快取 wsrv.nl 圖片代理回應（所有圖片的最終出口）
+    urlPattern: /^https:\/\/wsrv\.nl\/.*/i,
+    handler: 'CacheFirst',
+    options: {
+      cacheName: 'wsrv-images-cache',
+      expiration: { maxEntries: 300, maxAgeSeconds: 60 * 60 * 24 * 30 },
+      cacheableResponse: { statuses: [0, 200] }
+    }
+  },
+  {
+    // 🌟 新增：快取 GitHub Raw（getCleanUrl 將 jsDelivr 轉換後的實際來源）
+    urlPattern: /^https:\/\/raw\.githubusercontent\.com\/.*/i,
+    handler: 'CacheFirst',
+    options: {
+      cacheName: 'github-raw-cache',
+      expiration: { maxEntries: 200, maxAgeSeconds: 60 * 60 * 24 * 30 },
+      cacheableResponse: { statuses: [0, 200] }
+    }
+  },
+  {
+    urlPattern: /^https:\/\/sfndneptcwhblvrxykcy\.supabase\.co\/rest\/v1\/.*/i,
+    handler: 'NetworkFirst',
+    options: {
+      cacheName: 'supabase-api-cache',
+      expiration: { maxEntries: 100, maxAgeSeconds: 60 * 60 * 24 },
+      networkTimeoutSeconds: 5,
+      cacheableResponse: { statuses: [0, 200] }
+    }
+  }
+],
     },
     devOptions: {
       enabled: true,
