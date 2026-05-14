@@ -1,5 +1,5 @@
 <script setup>
-import { onMounted, onUnmounted, watch } from 'vue'
+import { onMounted, onUnmounted, watch, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useHead, useNuxtApp } from '#imports'
 import { useMainStore } from '~/stores/useMainStore'
@@ -9,7 +9,26 @@ const route = useRoute()
 const router = useRouter()
 const { $pwa } = useNuxtApp() 
 
-// 🌟 修正 FOUC 閃屏問題：改為對 document.documentElement (html標籤) 操作
+// 🌟 PWA 更新狀態管理，改善 UX 流暢度
+const isUpdating = ref(false)
+
+const handlePwaUpdate = () => {
+  if (!$pwa) return
+  isUpdating.value = true
+  
+  // 給予 300ms 的微延遲，讓使用者明確看到按鈕變成「更新中...」，減少突兀感
+  setTimeout(async () => {
+    try {
+      // true 代表執行完 skipWaiting 後自動 reload 頁面
+      await $pwa.updateServiceWorker(true) 
+    } catch (err) {
+      console.error('PWA 更新失敗:', err)
+      isUpdating.value = false
+    }
+  }, 300)
+}
+
+// 修正 FOUC 閃屏問題
 useHead({
   script:[
     {
@@ -35,7 +54,7 @@ watch(() => route.path, (newPath) => {
   else store.curTab = route.name || 'home'
 })
 
-// 🌟 修正效能問題：加入 requestAnimationFrame 節流與合理的上限控制
+// 滾動節流與效能優化
 let isScrolling = false
 const handleScroll = () => {
   if (isScrolling) return
@@ -47,7 +66,6 @@ const handleScroll = () => {
     if (st > 100 && st > store.lastScrollY) store.navHidden = true
     else store.navHidden = false
 
-    // 🌟 修正滾動觸發崩潰 Bug：確保只有在「往下滾」時觸發，並設立安全上限
     if (st + window.innerHeight >= document.documentElement.scrollHeight - 300) {
       if (st > store.lastScrollY && store.displayLimit < 2000) {
         store.displayLimit += 20
@@ -85,7 +103,6 @@ onMounted(() => {
   const savedHist = localStorage.getItem('gencko_history')
   if (savedHist) store.history = JSON.parse(savedHist)
 
-  // 🌟 將 scroll 事件設為 passive 以優化行動端捲動效能
   window.addEventListener('scroll', handleScroll, { passive: true })
 })
 
@@ -98,14 +115,18 @@ onUnmounted(() => {
   <div class="cont">
     <VitePwaManifest /> 
 
-    <div v-if="$pwa?.needRefresh" class="pwa-update-toast">
-      <span style="font-weight: bold;">🚀 發現新版本！請更新以獲得最佳體驗</span>
-      <div class="pwa-update-actions">
-        <!-- 🌟 修正 PWA 潛在報錯 Bug：加入可選串連 (?.) 保護機制 -->
-        <button class="pwa-btn-update" @click="$pwa?.updateServiceWorker()">立即更新</button>
-        <button class="pwa-btn-cancel" @click="$pwa?.cancelPrompt()">稍後</button>
+    <!-- 🌟 加入 Transition 動畫，讓 PWA 更新氣泡進退場更滑順 -->
+    <Transition name="pwa-toast-anim">
+      <div v-if="$pwa?.needRefresh" class="pwa-update-toast">
+        <span style="font-weight: bold;">🚀 發現新版本！請更新以獲得最佳體驗</span>
+        <div class="pwa-update-actions">
+          <button class="pwa-btn-update" :disabled="isUpdating" @click="handlePwaUpdate">
+            {{ isUpdating ? '🔄 更新中...' : '立即更新' }}
+          </button>
+          <button class="pwa-btn-cancel" :disabled="isUpdating" @click="$pwa?.cancelPrompt()">稍後</button>
+        </div>
       </div>
-    </div>
+    </Transition>
 
     <!-- iOS 下載安裝教學彈窗 -->
     <div v-if="store.showIOSGuide" class="ios-install-guide-overlay" @click="store.showIOSGuide = false">
@@ -156,6 +177,31 @@ onUnmounted(() => {
 </template>
 
 <style scoped>
+/* 🌟 新增的 PWA 提示氣泡滑順進退場動畫 */
+.pwa-toast-anim-enter-active,
+.pwa-toast-anim-leave-active {
+  transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.pwa-toast-anim-enter-from,
+.pwa-toast-anim-leave-to {
+  opacity: 0;
+  transform: translate(-50%, 20px) !important;
+}
+
+.pwa-update-toast {
+  position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+  background: var(--card-bg); backdrop-filter: blur(10px); border: 1px solid var(--pri);
+  color: var(--txt); padding: 15px 20px; border-radius: 12px; z-index: 100000;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5); display: flex; flex-direction: column;
+  align-items: center; gap: 12px; width: 90%; max-width: 350px; text-align: center;
+}
+.pwa-update-actions { display: flex; gap: 10px; width: 100%; }
+.pwa-btn-update { flex: 1; background: var(--pri); color: #fff; border: none; padding: 10px; border-radius: 8px; font-weight: bold; cursor: pointer; box-shadow: 0 4px 10px var(--pri-glow); transition: 0.2s; }
+.pwa-btn-update:disabled { opacity: 0.7; cursor: not-allowed; transform: none; box-shadow: none; }
+.pwa-btn-cancel { flex: 1; background: transparent; color: var(--txt); opacity: 0.8; border: 1px solid var(--bd); padding: 10px; border-radius: 8px; cursor: pointer; transition: 0.2s; }
+.pwa-btn-cancel:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* iOS 教學彈窗樣式保持不變 */
 .ios-install-guide-overlay {
   position: fixed; top: 0; left: 0; width: 100%; height: 100vh;
   background: rgba(0,0,0,0.6); backdrop-filter: blur(5px);
@@ -183,20 +229,6 @@ onUnmounted(() => {
 @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
 @keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(10px); } }
 
-.pwa-update-toast {
-  position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
-  background: var(--card-bg); backdrop-filter: blur(10px); border: 1px solid var(--pri);
-  color: var(--txt); padding: 15px 20px; border-radius: 12px; z-index: 100000;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5); display: flex; flex-direction: column;
-  align-items: center; gap: 12px; width: 90%; max-width: 350px; text-align: center;
-  animation: slideUpFade 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-}
-.pwa-update-actions { display: flex; gap: 10px; width: 100%; }
-.pwa-btn-update { flex: 1; background: var(--pri); color: #fff; border: none; padding: 10px; border-radius: 8px; font-weight: bold; cursor: pointer; box-shadow: 0 4px 10px var(--pri-glow); }
-.pwa-btn-cancel { flex: 1; background: transparent; color: var(--txt); opacity: 0.8; border: 1px solid var(--bd); padding: 10px; border-radius: 8px; cursor: pointer; }
-
-@keyframes slideUpFade { from { opacity: 0; transform: translate(-50%, 20px); } to { opacity: 1; transform: translate(-50%, 0); } }
-
 @media (max-width: 768px) {
   .floating-inquire-btn { bottom: calc(85px + env(safe-area-inset-bottom, 0px)) !important; }
   .pwa-update-toast { bottom: calc(85px + env(safe-area-inset-bottom, 0px)) !important; }
@@ -204,6 +236,7 @@ onUnmounted(() => {
 </style>
 
 <style>
+/* 全站路由過場動畫 */
 .page-enter-active, .page-leave-active { transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); }
 .page-enter-from { opacity: 0; transform: translateY(15px) scale(0.98); filter: blur(2px); }
 .page-leave-to { opacity: 0; transform: translateY(-15px) scale(0.98); filter: blur(2px); }
