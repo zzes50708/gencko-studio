@@ -38,17 +38,14 @@ useHead({
         <div class="grid" v-else>
             <!-- 點擊後跳轉到動態商品內頁 -->
             <NuxtLink v-for="m in merchList" :key="m.ItemID" :to="`/merch/${m.ItemID}`" class="card" style="text-decoration:none; color:inherit; display:flex; flex-direction:column;">
-                <!-- 使用 NuxtImg -->
-                <NuxtImg 
+                <!-- 🌟 核心修正：將 NuxtImg 替換為原生 img -->
+                <img 
                     v-if="m.ImageURL"
                     :src="getCleanUrl(m.ImageURL)" 
                     :alt="m.Name" 
                     class="card-img" 
                     loading="lazy"
-                    width="220"
-                    height="180"
-                    fit="cover"
-                    format="webp"
+                    decoding="async"
                 />
                 <div v-else class="card-img" style="display:flex;align-items:center;justify-content:center;color:#333;font-size:3rem;background:#1a1a1a;">🛍️</div>
                 <div class="card-body">

@@ -81,14 +81,12 @@ const goToDetail = (id) => {
             <div class="auction-grid">
                 <div v-for="item in displayAuctions" :key="item.id" class="auction-card" @click="goToDetail(item.id)">
                     <div class="card-img-box">
-                        <NuxtImg 
+                        <!-- 🌟 核心修正：將 NuxtImg 替換為原生 img -->
+                        <img 
                             :src="item.images && item.images.length ? getCleanUrl(item.images[0]) : 'https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/placeholder.jpg'" 
                             :alt="item.morph" 
                             loading="lazy"
-                            width="280"
-                            height="210"
-                            fit="cover"
-                            format="webp"
+                            decoding="async"
                         />
                         <!-- 🌟 狀態標籤也依賴時間，包覆 ClientOnly -->
                         <ClientOnly>

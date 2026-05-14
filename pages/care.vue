@@ -27,19 +27,14 @@ useHead({
         <TheBackButton wrapper-class="m-only" fallback="/" />
 
         <div class="content-card">
-            <!-- 🌟 已依據需求刪除所有 H1 標題 -->
-            
-            <!-- 使用 NuxtImg 進行圖片最佳化 -->
-            <NuxtImg 
+            <!-- 🌟 核心修正：將 NuxtImg 替換為原生 img -->
+            <img 
                 v-if="careImg" 
                 :src="getCleanUrl(careImg)" 
                 class="care-top-img" 
                 alt="飼養環境示範"
-                width="800"
-                height="400"
-                fit="cover"
-                format="webp"
                 loading="lazy"
+                decoding="async"
             />
             
             <!-- App 風格的 List -->

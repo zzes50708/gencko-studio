@@ -286,7 +286,9 @@ const generatePromo = async () => {
             <div class="prod-layout">
                 <div class="prod-img-box">
                     <div v-if="productModules.transaction.status === 'Sold'" class="sold-stamp">SOLD OUT</div>
-                    <NuxtImg 
+                    
+                    <!-- 🌟 核心修正：將 NuxtImg 改為原生 img，徹底繞過 Vercel 402 收費限制 -->
+                    <img 
                         v-for="(img, idx) in productModules.visuals.list" 
                         :key="idx" 
                         :src="getCleanUrl(img)" 
@@ -294,11 +296,10 @@ const generatePromo = async () => {
                         @click="router.push(`/identity/${productModules.identity.id}`)" 
                         style="cursor: pointer;" 
                         title="查看專屬電子身分證"
-                        width="600"
-                        height="500"
-                        fit="contain"
-                        format="webp"
+                        loading="eager"
+                        decoding="async"
                     />
+                    
                     <div class="prod-hint">點擊圖片可查看專屬電子身分證</div>
                 </div>
                 <div class="prod-info-box">
@@ -335,7 +336,6 @@ const generatePromo = async () => {
                         <span>{{ productModules.health.statement }}</span>
                     </div>
 
-                    <!-- 🌟 升級的行銷操作按鈕區塊 -->
                     <div class="prod-actions">
                         <a v-if="productModules.transaction.status === 'ForSale'" :href="store.lineLink" target="_blank" class="btn-buy-lg">💬 私訊購買 (Line)</a>
                         <div class="action-sub-buttons">

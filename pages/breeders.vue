@@ -52,17 +52,14 @@ useHead({
         <!-- Breeders Grid (Photo Grid) -->
         <div class="grid photo-grid" v-else>
             <div class="card" v-for="i in breedersList" :key="i.ID" @click="store.openLightbox(i)">
-                <!-- 使用 NuxtImg -->
-                <NuxtImg 
+                <!-- 🌟 核心修正：將 NuxtImg 替換為原生 img -->
+                <img 
                     v-if="i.ImageURL"
                     :src="getCleanUrl(i.ImageURL)" 
                     :alt="i.Morph" 
                     class="card-img" 
                     loading="lazy"
-                    width="400"
-                    height="400"
-                    fit="cover"
-                    format="webp"
+                    decoding="async"
                 />
                 <div v-else class="card-img" style="display:flex;align-items:center;justify-content:center;color:#333;font-size:2rem;background:#000;">🦎</div>
                 

@@ -299,18 +299,18 @@ const toggleWishlist = (id) => {
                             <span class="fav-btn" :class="{active: store.wishlist.includes(i.ID)}" @click.stop.prevent="toggleWishlist(i.ID)">❤</span>
                         </div>
                         <div style="position:relative;">
-                            <NuxtImg 
-                             v-if="i.ImageURL" 
-                             :src="getCleanUrl(i.ImageURL)" 
-                             :alt="i.Morph" 
-                             class="card-img slim-img" 
-                             :loading="index < 6 ? 'eager' : 'lazy'" 
-                             :fetchpriority="index < 6 ? 'high' : 'auto'" 
-                              width="220"
-                              height="220"
-                              fit="cover"
-                              format="webp"
-                               />
+                            
+                            <!-- 🌟 核心修正：將 NuxtImg 替換為原生 img -->
+                            <img 
+                                v-if="i.ImageURL" 
+                                :src="getCleanUrl(i.ImageURL)" 
+                                :alt="i.Morph" 
+                                class="card-img slim-img" 
+                                :loading="index < 6 ? 'eager' : 'lazy'" 
+                                :fetchpriority="index < 6 ? 'high' : 'auto'" 
+                                decoding="async"
+                            />
+                            
                             <div v-else class="card-img slim-img" style="display:flex;align-items:center;justify-content:center;color:#333;font-size:2rem;background:#000;">🦎</div>
                             <div v-if="i.Status === 'ForSale'" class="trust-badge">🛡️ 100% HEALTH</div>
                         </div>

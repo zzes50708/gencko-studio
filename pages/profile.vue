@@ -195,12 +195,14 @@ const getMapLink = (h) => {
                             <span class="fav-btn active" @click.stop.prevent="toggleWishlist(i.ID)">❤</span>
                         </div>
                         <div style="position:relative;">
-                            <NuxtImg 
+                            <!-- 🌟 核心修正：NuxtImg 替換為原生 img -->
+                            <img 
                                 v-if="i.ImageURL" 
                                 :src="getCleanUrl(i.ImageURL)" 
                                 :alt="i.Morph" 
                                 class="card-img slim-img" 
-                                loading="lazy" width="220" height="220" fit="cover" format="webp"
+                                loading="lazy" 
+                                decoding="async"
                             />
                             <div v-else class="card-img slim-img" style="display:flex;align-items:center;justify-content:center;font-size:2rem;background:#000;">🦎</div>
                         </div>
@@ -234,12 +236,14 @@ const getMapLink = (h) => {
                             <span class="fav-btn" :class="{active: store.wishlist.includes(i.ID)}" @click.stop.prevent="toggleWishlist(i.ID)">❤</span>
                         </div>
                         <div style="position:relative;">
-                            <NuxtImg 
+                            <!-- 🌟 核心修正：NuxtImg 替換為原生 img -->
+                            <img 
                                 v-if="i.ImageURL" 
                                 :src="getCleanUrl(i.ImageURL)" 
                                 :alt="i.Morph" 
                                 class="card-img slim-img" 
-                                loading="lazy" width="220" height="220" fit="cover" format="webp"
+                                loading="lazy" 
+                                decoding="async"
                             />
                             <div v-else class="card-img slim-img" style="display:flex;align-items:center;justify-content:center;font-size:2rem;background:#000;">🦎</div>
                         </div>
@@ -328,10 +332,12 @@ const getMapLink = (h) => {
                 
                 <div v-else class="bid-list">
                     <NuxtLink :to="`/auction/${bid.auction_id}`" class="bid-card" v-for="bid in myBids" :key="bid.auction_id">
-                        <NuxtImg 
+                        <!-- 🌟 核心修正：NuxtImg 替換為原生 img -->
+                        <img 
                             :src="bid.image ? getCleanUrl(bid.image) : 'https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/placeholder.jpg'" 
                             class="bid-img"
-                            loading="lazy" width="120" height="120" fit="cover" format="webp"
+                            loading="lazy" 
+                            decoding="async"
                         />
                         <div class="bid-info">
                             <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">

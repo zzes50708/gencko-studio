@@ -140,8 +140,8 @@ const copyCurrentLink = async () => {
 
             <div class="prod-layout">
                 <div class="prod-img-box">
-                    <!-- 使用 NuxtImg -->
-                    <NuxtImg 
+                    <!-- 🌟 核心修正：將 NuxtImg 改為原生 img，並設為 eager 優先載入 -->
+                    <img 
                         v-if="currentMerch.ImageURL"
                         :src="getCleanUrl(currentMerch.ImageURL)" 
                         :alt="currentMerch.Name" 
@@ -149,10 +149,8 @@ const copyCurrentLink = async () => {
                         @click="store.openLightbox(currentMerch)" 
                         style="cursor: pointer;" 
                         title="點擊放大圖片"
-                        width="600"
-                        height="500"
-                        fit="contain"
-                        format="webp"
+                        loading="eager"
+                        decoding="async"
                     />
                     <div class="prod-hint">🔍 點擊放大圖片</div>
                 </div>

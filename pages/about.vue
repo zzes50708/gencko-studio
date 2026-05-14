@@ -30,20 +30,19 @@ const openLineGroup = () => {
     <div>
         <div class="page-text-box">
             <div class="about-layout">
-                <!-- 使用 NuxtImg 接管壓縮，並強制首屏載入 -->
-<NuxtImg 
-    v-if="aboutImg" 
-    :src="getCleanUrl(aboutImg)" 
-    alt="Gencko 豹紋守宮成體" 
-    class="about-img" 
-    title="點擊加入社群" 
-    @click="openLineGroup" 
-    style="cursor:pointer;"
-    width="600"
-    format="webp"
-    loading="eager"
-    fetchpriority="high"
-/>
+                <!-- 🌟 核心修正：將 NuxtImg 替換為原生 img -->
+                <img 
+                    v-if="aboutImg" 
+                    :src="getCleanUrl(aboutImg)" 
+                    alt="Gencko 豹紋守宮成體" 
+                    class="about-img" 
+                    title="點擊加入社群" 
+                    @click="openLineGroup" 
+                    style="cursor:pointer;"
+                    loading="eager"
+                    fetchpriority="high"
+                    decoding="async"
+                />
                 <div class="about-content">
                     <p>Gencko 致力於建立嚴謹的爬蟲繁殖標準。</p>
                     <p>我們重視每一個成長環節，從環境、營養到日常照護皆以最高標準執行，確保個體呈現穩定的狀態與良好的體質。</p>
@@ -54,7 +53,7 @@ const openLineGroup = () => {
         </div>
         <div class="breeding-std-box">
             <div class="std-img-wrapper">
-                <img src="https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/380074.jpg" class="std-img" alt="Gencko 餵食標準">
+                <img src="https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/380074.jpg" class="std-img" alt="Gencko 餵食標準" loading="lazy">
             </div>
             <div class="std-content">
                 <div class="std-title">Gencko 繁育標準</div>

@@ -119,29 +119,27 @@ const setBeginnerMode = () => {
 
             <div v-else-if="hotList.length > 0" class="hot-marquee-mask">
                 <div class="hot-track">
-    <div class="hot-card-item" v-for="(i, idx) in [ ...hotList, ...hotList, ...hotList, ...hotList ]" :key="idx">
-        <NuxtLink :to="`/product/${i.ID}`" style="display:block; text-decoration:none; color:inherit; height:100%;">
-            <div style="position:relative;">
-                <!-- 跑馬燈的前 4 張圖直接原生直連 CDN，後面的懶載入 -->
-                <img 
-                    v-if="i.ImageURL && idx < 4" 
-                    :src="getCleanUrl(i.ImageURL)" 
-                    :alt="i.Morph + ' 守宮'" 
-                    class="card-img" 
-                    loading="eager" 
-                    fetchpriority="high" 
-                />
-                <NuxtImg 
-                    v-else-if="i.ImageURL" 
-                    :src="getCleanUrl(i.ImageURL)" 
-                    :alt="i.Morph + ' 守宮'" 
-                    class="card-img" 
-                    loading="lazy" 
-                    width="220" 
-                    height="180" 
-                    fit="cover" 
-                    format="webp" 
-                />
+                    <div class="hot-card-item" v-for="(i, idx) in [ ...hotList, ...hotList, ...hotList, ...hotList ]" :key="idx">
+                        <NuxtLink :to="`/product/${i.ID}`" style="display:block; text-decoration:none; color:inherit; height:100%;">
+                            <div style="position:relative;">
+                                <!-- 跑馬燈的前 4 張圖直接原生直連 CDN，後面的懶載入 -->
+                                <img 
+                                    v-if="i.ImageURL && idx < 4" 
+                                    :src="getCleanUrl(i.ImageURL)" 
+                                    :alt="i.Morph + ' 守宮'" 
+                                    class="card-img" 
+                                    loading="eager" 
+                                    fetchpriority="high" 
+                                />
+                                <!-- 🌟 核心修正：NuxtImg 替換為原生 img -->
+                                <img 
+                                    v-else-if="i.ImageURL" 
+                                    :src="getCleanUrl(i.ImageURL)" 
+                                    :alt="i.Morph + ' 守宮'" 
+                                    class="card-img" 
+                                    loading="lazy" 
+                                    decoding="async"
+                                />
                                 <div v-else class="card-img" style="display:flex;align-items:center;justify-content:center;color:#333;font-size:3rem;background:#000;">🦎</div>
                             </div>
                             <div class="card-body" style="padding:12px; text-align:center;">
@@ -166,17 +164,15 @@ const setBeginnerMode = () => {
                 <article class="card article-card" v-for="item in articlesList.slice(0, 3)" :key="item.ID">
                     <NuxtLink :to="`/articles/${item.ID}`" style="display:block; text-decoration:none; color:inherit; height:100%;">
                         <div style="position:relative; overflow:hidden;">
-                            <NuxtImg 
+                            <!-- 🌟 核心修正：NuxtImg 替換為原生 img -->
+                            <img 
                                 v-if="item.ImageURL" 
                                 :src="getCleanUrl(item.ImageURL)" 
                                 :alt="item.Title" 
                                 class="card-img" 
                                 style="height:180px;" 
                                 loading="lazy" 
-                                width="400" 
-                                height="180" 
-                                fit="cover" 
-                                format="webp" 
+                                decoding="async"
                             />
                             <div v-else class="card-img" style="height:180px;display:flex;align-items:center;justify-content:center;font-size:3rem;background:#1a1a1a;">📝</div>
                             <div class="art-cat-tag">{{ item.Category }}</div>

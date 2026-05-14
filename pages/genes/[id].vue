@@ -137,17 +137,14 @@ useHead({
                 </div>
                 
                 <div class="gene-layout">
-                    <!-- 使用 NuxtImg 優化載入 -->
-                    <NuxtImg 
+                    <!-- 🌟 核心修正：將 NuxtImg 替換為原生 img -->
+                    <img 
                         v-if="viewingGene.ImageURL" 
                         :src="getCleanUrl(viewingGene.ImageURL)" 
                         :alt="viewingGene.Name + ' 基因特徵'" 
                         class="gene-img"
-                        width="600"
-                        height="600"
-                        fit="cover"
-                        format="webp"
                         loading="eager"
+                        decoding="async"
                     />
                     
                     <div class="gene-text-content">

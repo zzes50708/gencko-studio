@@ -377,13 +377,12 @@ const generatePromo = async () => {
             
             <div class="left-col">
                 <div class="main-img" @click="store.openLightbox(currentAuction.images && currentAuction.images.length ? { ImageURL: currentAuction.images[0] } : { ImageURL: 'https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/placeholder.jpg' })">
-                    <NuxtImg 
+                    <!-- 🌟 核心修正：將 NuxtImg 改為原生 img，並設為 eager 優先載入 -->
+                    <img 
                         :src="currentAuction.images && currentAuction.images.length ? getCleanUrl(currentAuction.images[0]) : 'https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/placeholder.jpg'" 
                         :alt="currentAuction.morph" 
-                        width="600"
-                        height="450"
-                        fit="cover"
-                        format="webp"
+                        loading="eager"
+                        decoding="async"
                     />
                     <div class="zoom-hint">🔍 點擊放大圖片</div>
                 </div>
@@ -405,7 +404,6 @@ const generatePromo = async () => {
                     </div>
                     <ul v-else class="history-list">
                         <template v-if="isBidsExpanded">
-                            <!-- 🌟 修正 Bug：將 :key="index" 改為 :key="bid.id || bid.bid_time" 避免 DOM 複用錯亂 -->
                             <li v-for="(bid, index) in currentBids" :key="bid.id || bid.bid_time" :class="{ 'highest-bid': index === 0 }">
                                 <span class="bidder">{{ bid.user_name }}</span>
                                 <span class="bid-amount">${{ bid.amount }}</span>
