@@ -9,23 +9,23 @@ const route = useRoute()
 const router = useRouter()
 const { $pwa } = useNuxtApp() 
 
-// 🌟 PWA 更新狀態管理，改善 UX 流暢度
+// PWA 更新狀態管理
 const isUpdating = ref(false)
 
-const handlePwaUpdate = () => {
+// 🌟 修正不順暢感：移除人工延遲，並強制立刻重新整理
+const handlePwaUpdate = async () => {
   if (!$pwa) return
-  isUpdating.value = true
+  isUpdating.value = true // 按鈕瞬間切換狀態
   
-  // 給予 300ms 的微延遲，讓使用者明確看到按鈕變成「更新中...」，減少突兀感
-  setTimeout(async () => {
-    try {
-      // true 代表執行完 skipWaiting 後自動 reload 頁面
-      await $pwa.updateServiceWorker(true) 
-    } catch (err) {
-      console.error('PWA 更新失敗:', err)
-      isUpdating.value = false
-    }
-  }, 300)
+  try {
+    // 傳入 false 關閉套件自帶的緩慢重整機制
+    await $pwa.updateServiceWorker(false) 
+  } catch (err) {
+    console.error('PWA 更新失敗:', err)
+  } finally {
+    // 無論成功或失敗，指令發出後強制「立刻」重新整理畫面
+    window.location.reload()
+  }
 }
 
 // 修正 FOUC 閃屏問題
