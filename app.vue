@@ -12,20 +12,22 @@ const { $pwa } = useNuxtApp()
 // PWA 更新狀態管理
 const isUpdating = ref(false)
 
-// 🌟 修正不順暢感：移除人工延遲，並強制立刻重新整理
-const handlePwaUpdate = async () => {
+// 🌟 修正卡死 Bug：拔除 await，加入絕對防線強制重整
+const handlePwaUpdate = () => {
   if (!$pwa) return
-  isUpdating.value = true // 按鈕瞬間切換狀態
+  isUpdating.value = true 
   
+  // 1. 把更新指令丟給 Service Worker (不使用 await 等待)
   try {
-    // 傳入 false 關閉套件自帶的緩慢重整機制
-    await $pwa.updateServiceWorker(false) 
+    $pwa.updateServiceWorker(true) 
   } catch (err) {
-    console.error('PWA 更新失敗:', err)
-  } finally {
-    // 無論成功或失敗，指令發出後強制「立刻」重新整理畫面
-    window.location.reload()
+    console.error('PWA 更新指令發送失敗:', err)
   }
+  
+  // 2. 絕對防線：給予 300 毫秒讓 Service Worker 接收指令，時間一到「無條件」強制重新整理
+  setTimeout(() => {
+    window.location.reload()
+  }, 300)
 }
 
 // 修正 FOUC 閃屏問題
