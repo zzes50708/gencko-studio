@@ -29,14 +29,13 @@ const popularTags = computed(() => {
     if (!store.articlesList.length) return []
     const counts = {}
     store.articlesList.forEach(a => {
-        if (a.Keywords) {
-            const kws = a.Keywords.split(',').map(k => k.trim()).filter(k => k)
-            kws.forEach(k => {
-                if (k && !k.includes('新手')) {
-                    counts[k] = (counts[k] || 0) + 1
-                }
-            })
-        }
+        const kws = (a.Keywords || '').split(',').map(k => k.trim()).filter(k => k)
+        kws.forEach(k => {
+            // 排除「新手」相關標籤（已有獨立分類）
+            if (k && !k.includes('新手')) {
+                counts[k] = (counts[k] || 0) + 1
+            }
+        })
     })
     return Object.entries(counts)
         .sort((a, b) => b[1] - a[1])
@@ -51,14 +50,17 @@ const filteredArticles = computed(() => {
 
     // 🌟 分類篩選邏輯
     if (artCat.value === 'Beginner') {
-        // 新手必看：只要 Keywords 包含 "新手"
-        list = list.filter(i => (i.Keywords || '').includes('新手'))
+        // 新手必看：keywords 含「新手」OR category 為「新手必看」（雙重支援，兼容不同後台設定方式）
+        list = list.filter(i =>
+            (i.Keywords || '').toLowerCase().includes('新手') ||
+            (i.Category || '') === '新手必看'
+        )
     } else if (artCat.value !== 'All') {
         // 一般分類：比對 Category 欄位
         list = list.filter(i => i.Category === artCat.value)
     }
 
-    // 🌟 搜尋過濾邏輯
+    // 🌟 搜尋過濾邏輯（Title + Summary + Keywords 三欄全文搜尋）
     if (searchQuery.value) {
         const terms = searchQuery.value.toLowerCase().split(/\s+/).filter(t => t)
         list = list.filter(i => {
