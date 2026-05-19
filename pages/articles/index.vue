@@ -158,7 +158,7 @@ const fmtDate = (d) => {
                         <!-- 🌟 核心修正：將 NuxtImg 替換為原生 img，徹底繞過 Vercel 402 收費限制 -->
                         <img 
                             v-if="item.ImageURL" 
-                            :src="getCleanUrl(item.ImageURL)" 
+                            :src="getCleanUrl(item.ImageURL, 600)" 
                             :alt="item.Title" 
                             class="card-img" 
                             style="height:180px;" 

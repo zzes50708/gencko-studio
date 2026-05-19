@@ -61,7 +61,10 @@ export const useMainStore = defineStore('main', () => {
 
     // 1. animals（核心資料，獨立處理，控制 loading 狀態）
     try {
-      const { data: invData, error: invErr } = await supabase.from('animals').select('*')
+      // 只選官網所需欄位，省略後台專用的 cost_price
+      const { data: invData, error: invErr } = await supabase
+        .from('animals')
+        .select('id, source, species, morph, genes, gender_type, gender_value, birthday, listing_price, sold_price, status, note, image_url, is_hot, created_at')
       if (invErr) throw invErr
 
       inv.value = invData.map(i => ({
@@ -73,7 +76,6 @@ export const useMainStore = defineStore('main', () => {
         GenderType: i.gender_type,
         GenderValue: i.gender_value,
         Birthday: i.birthday,
-        CostPrice: i.cost_price,
         ListingPrice: i.listing_price,
         SoldPrice: i.sold_price,
         Status: i.status,

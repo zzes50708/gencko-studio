@@ -33,39 +33,54 @@ watch(() => store.currentUser, (user) => {
     }
 }, { immediate: true })
 
-// 抓取使用者的競標紀錄
+// 抓取使用者的競標紀錄（兩段式查詢，不需要 DB 外鍵）
 const fetchMyBids = async (emailOrId) => {
     if (!emailOrId) return
     isLoadingBids.value = true
     try {
-        const { data, error } = await supabase
+        // Step 1：查詢出價紀錄
+        const { data: bidsData, error: bidsError } = await supabase
             .from('auction_bids')
-            .select('auction_id, amount, bid_time, auctions(morph, end_time, status, images)')
-            .eq('phone', emailOrId) 
+            .select('auction_id, amount, bid_time')
+            .eq('phone', emailOrId)
             .order('bid_time', { ascending: false })
 
-        if (error) throw error
-
-        const grouped = {}
-        if (data) {
-            data.forEach(bid => {
-                if (!grouped[bid.auction_id]) {
-                    grouped[bid.auction_id] = {
-                        auction_id: bid.auction_id,
-                        morph: bid.auctions?.morph || '未知品系',
-                        image: bid.auctions?.images?.[0] || '',
-                        end_time: bid.auctions?.end_time,
-                        my_max_bid: bid.amount,
-                        bid_count: 1
-                    }
-                } else {
-                    grouped[bid.auction_id].bid_count++
-                    if (bid.amount > grouped[bid.auction_id].my_max_bid) {
-                        grouped[bid.auction_id].my_max_bid = bid.amount
-                    }
-                }
-            })
+        if (bidsError) throw bidsError
+        if (!bidsData || bidsData.length === 0) {
+            myBids.value = []
+            return
         }
+
+        // Step 2：取出不重複的 auction_id，一次查詢對應拍賣資料
+        const auctionIds = [...new Set(bidsData.map(b => b.auction_id))]
+        const { data: auctionsData } = await supabase
+            .from('auctions')
+            .select('id, morph, end_time, status, images')
+            .in('id', auctionIds)
+
+        const auctionsMap = {}
+        ;(auctionsData || []).forEach(a => { auctionsMap[a.id] = a })
+
+        // Step 3：Grouping — 每場拍賣只保留最高出價與出價次數
+        const grouped = {}
+        bidsData.forEach(bid => {
+            const auction = auctionsMap[bid.auction_id]
+            if (!grouped[bid.auction_id]) {
+                grouped[bid.auction_id] = {
+                    auction_id: bid.auction_id,
+                    morph: auction?.morph || '未知品系',
+                    image: auction?.images?.[0] || '',
+                    end_time: auction?.end_time,
+                    my_max_bid: bid.amount,
+                    bid_count: 1
+                }
+            } else {
+                grouped[bid.auction_id].bid_count++
+                if (bid.amount > grouped[bid.auction_id].my_max_bid) {
+                    grouped[bid.auction_id].my_max_bid = bid.amount
+                }
+            }
+        })
         myBids.value = Object.values(grouped)
     } catch(e) {
         console.error("讀取競標紀錄失敗:", e)
@@ -198,7 +213,7 @@ const getMapLink = (h) => {
                             <!-- 🌟 核心修正：NuxtImg 替換為原生 img -->
                             <img 
                                 v-if="i.ImageURL" 
-                                :src="getCleanUrl(i.ImageURL)" 
+                                :src="getCleanUrl(i.ImageURL, 400)"
                                 :alt="i.Morph" 
                                 class="card-img slim-img" 
                                 loading="lazy" 
@@ -238,7 +253,7 @@ const getMapLink = (h) => {
                             <!-- 🌟 核心修正：NuxtImg 替換為原生 img -->
                             <img 
                                 v-if="i.ImageURL" 
-                                :src="getCleanUrl(i.ImageURL)" 
+                                :src="getCleanUrl(i.ImageURL, 400)"
                                 :alt="i.Morph" 
                                 class="card-img slim-img" 
                                 loading="lazy" 

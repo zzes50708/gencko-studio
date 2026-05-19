@@ -125,19 +125,19 @@ const setBeginnerMode = () => {
                                 <!-- 跑馬燈的前 4 張圖直接原生直連 CDN，後面的懶載入 -->
                                 <img 
                                     v-if="i.ImageURL && idx < 4" 
-                                    :src="getCleanUrl(i.ImageURL)" 
-                                    :alt="i.Morph + ' 守宮'" 
-                                    class="card-img" 
-                                    loading="eager" 
-                                    fetchpriority="high" 
+                                    :src="getCleanUrl(i.ImageURL, 300)"
+                                    :alt="i.Morph + ' 守宮'"
+                                    class="card-img"
+                                    loading="eager"
+                                    fetchpriority="high"
                                 />
                                 <!-- 🌟 核心修正：NuxtImg 替換為原生 img -->
-                                <img 
-                                    v-else-if="i.ImageURL" 
-                                    :src="getCleanUrl(i.ImageURL)" 
-                                    :alt="i.Morph + ' 守宮'" 
-                                    class="card-img" 
-                                    loading="lazy" 
+                                <img
+                                    v-else-if="i.ImageURL"
+                                    :src="getCleanUrl(i.ImageURL, 300)"
+                                    :alt="i.Morph + ' 守宮'"
+                                    class="card-img"
+                                    loading="lazy"
                                     decoding="async"
                                 />
                                 <div v-else class="card-img" style="display:flex;align-items:center;justify-content:center;color:#333;font-size:3rem;background:#000;">🦎</div>
@@ -167,7 +167,7 @@ const setBeginnerMode = () => {
                             <!-- 🌟 核心修正：NuxtImg 替換為原生 img -->
                             <img 
                                 v-if="item.ImageURL" 
-                                :src="getCleanUrl(item.ImageURL)" 
+                                :src="getCleanUrl(item.ImageURL, 600)" 
                                 :alt="item.Title" 
                                 class="card-img" 
                                 style="height:180px;" 

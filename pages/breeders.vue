@@ -55,7 +55,7 @@ useHead({
                 <!-- 🌟 核心修正：將 NuxtImg 替換為原生 img -->
                 <img 
                     v-if="i.ImageURL"
-                    :src="getCleanUrl(i.ImageURL)" 
+                    :src="getCleanUrl(i.ImageURL, 400)" 
                     :alt="i.Morph" 
                     class="card-img" 
                     loading="lazy"
