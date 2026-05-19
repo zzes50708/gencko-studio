@@ -149,6 +149,14 @@ const getSexCls = (i) => {
     return 'mix'
 }
 
+// 從進行中競標列表找到 morph 相符的場次，提供直連（比 morph 名稱，找不到則 fallback 到列表）
+const matchedAuctionId = computed(() => {
+    if (!currentProduct.value || currentProduct.value.Status !== 'Auction') return null
+    const morph = (currentProduct.value.Morph || '').trim().toLowerCase()
+    const match = store.auctionList.find(a => (a.morph || '').trim().toLowerCase() === morph)
+    return match?.id || null
+})
+
 // 寫入瀏覽歷史（最多保留 50 筆，最新的在最前）
 onMounted(() => {
     if (currentProduct.value?.ID) {
@@ -351,7 +359,12 @@ const generatePromo = async () => {
 
                     <div class="prod-actions">
                         <a v-if="productModules.transaction.status === 'ForSale'" :href="store.lineLink" target="_blank" class="btn-buy-lg">💬 私訊購買 (Line)</a>
-                        <NuxtLink v-else-if="productModules.transaction.status === 'Auction'" to="/auction" class="btn-buy-lg" style="background: #e67e22; box-shadow: 0 4px 10px rgba(230,126,34,0.4);">🔨 前往競標頁面</NuxtLink>
+                        <NuxtLink
+                            v-else-if="productModules.transaction.status === 'Auction'"
+                            :to="matchedAuctionId ? `/auction/${matchedAuctionId}` : '/auction'"
+                            class="btn-buy-lg"
+                            style="background: #e67e22; box-shadow: 0 4px 10px rgba(230,126,34,0.4);"
+                        >🔨 {{ matchedAuctionId ? '前往競標場次' : '前往競標頁面' }}</NuxtLink>
                         <div class="action-sub-buttons">
                             <button class="btn-share" @click="shareLink">分享連結</button>
                             <button class="btn-promo" @click="generatePromo" :disabled="isGenerating">

@@ -11,6 +11,9 @@ useHead({
         { property: 'og:description', content: '飼養守宮前的自我評估問卷，了解自己是否已準備好。' },
         { property: 'og:image', content: 'https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/%E5%AE%98%E7%B6%B2%E8%83%8C%E6%99%AF.png' },
         { property: 'og:url', content: 'https://www.genckobreeding.com/qs' }
+    ],
+    link:[
+        { rel: 'canonical', href: 'https://www.genckobreeding.com/qs' }
     ]
 })
 

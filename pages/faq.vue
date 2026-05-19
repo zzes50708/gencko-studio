@@ -10,6 +10,9 @@ useHead({
         { property: 'og:title', content: '常見問題 | Gencko Studio' },
         { property: 'og:description', content: '關於守宮購買流程、運送方式以及售後服務的常見問題。' },
         { property: 'og:url', content: 'https://www.genckobreeding.com/faq' }
+    ],
+    link:[
+        { rel: 'canonical', href: 'https://www.genckobreeding.com/faq' }
     ]
 })
 

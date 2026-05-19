@@ -14,7 +14,11 @@ useHead({
         { name: 'keywords', content: '守宮基因計算機, 爬蟲遺傳學, 豹紋守宮配對, 肥尾守宮基因, Morph Calculator' },
         { property: 'og:title', content: '守宮基因計算機 | Gencko Studio' },
         { property: 'og:description', content: '線上模擬守宮配對結果，預測子代品系機率。' },
-        { property: 'og:image', content: 'https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/%E5%AE%98%E7%B6%B2%E8%83%8C%E6%99%AF.png' }
+        { property: 'og:image', content: 'https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/%E5%AE%98%E7%B6%B2%E8%83%8C%E6%99%AF.png' },
+        { property: 'og:url', content: 'https://www.genckobreeding.com/calculator' }
+    ],
+    link:[
+        { rel: 'canonical', href: 'https://www.genckobreeding.com/calculator' }
     ],
     script:[
         {

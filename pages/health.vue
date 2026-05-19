@@ -9,6 +9,9 @@ useHead({
         { property: 'og:title', content: '健康評估系統 | Gencko Studio' },
         { property: 'og:description', content: '透過外觀與行為快速自我檢測您的守宮是否健康。' },
         { property: 'og:url', content: 'https://www.genckobreeding.com/health' }
+    ],
+    link:[
+        { rel: 'canonical', href: 'https://www.genckobreeding.com/health' }
     ]
 })
 
