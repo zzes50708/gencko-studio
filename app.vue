@@ -112,14 +112,20 @@ onMounted(() => {
   store.initLiff()
   store.initPWAInstallPrompt()
 
-  const savedWish = localStorage.getItem('gencko_wishlist')
-  if (savedWish) store.wishlist = JSON.parse(savedWish)
-  
-  const savedHospWish = localStorage.getItem('gencko_hosp_wishlist')
-  if (savedHospWish) store.hospWishlist = JSON.parse(savedHospWish)
-  
-  const savedHist = localStorage.getItem('gencko_history')
-  if (savedHist) store.history = JSON.parse(savedHist)
+  try {
+    const savedWish = localStorage.getItem('gencko_wishlist')
+    if (savedWish) store.wishlist = JSON.parse(savedWish)
+  } catch (e) { localStorage.removeItem('gencko_wishlist') }
+
+  try {
+    const savedHospWish = localStorage.getItem('gencko_hosp_wishlist')
+    if (savedHospWish) store.hospWishlist = JSON.parse(savedHospWish)
+  } catch (e) { localStorage.removeItem('gencko_hosp_wishlist') }
+
+  try {
+    const savedHist = localStorage.getItem('gencko_history')
+    if (savedHist) store.history = JSON.parse(savedHist)
+  } catch (e) { localStorage.removeItem('gencko_history') }
 
   window.addEventListener('scroll', handleScroll, { passive: true })
 })

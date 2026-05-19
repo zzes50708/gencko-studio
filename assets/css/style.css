@@ -286,7 +286,7 @@ html.day-mode .terms-list { color: #444; }
 .price-row { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--bd); flex-wrap: nowrap; gap: 8px; }
 .price { font-size: 1.4rem; color: var(--pri); font-weight: 900; letter-spacing: 0.5px; white-space: nowrap; }
 .status-badge { padding: 6px 10px; font-size: 0.85rem; font-weight: bold; border-radius: 4px; white-space: nowrap; }
-.s-sold { background: #333; color: #fff; border: 1px solid #666; } .s-res { background: #FFC107; color: #000; } .s-nfs { background: #9C27B0; color: #fff; box-shadow: 0 0 10px rgba(156, 39, 176, 0.4); }
+.s-sold { background: #333; color: #fff; border: 1px solid #666; } .s-res { background: #FFC107; color: #000; } .s-nfs { background: #9C27B0; color: #fff; box-shadow: 0 0 10px rgba(156, 39, 176, 0.4); } .s-auction { background: #e67e22; color: #fff; box-shadow: 0 0 10px rgba(230, 126, 34, 0.4); }
 
 /* 🌟 Mobile 買吧加入底部安全區適配 */
 .mobile-buy-bar { position: fixed; bottom: 0; left: 0; width: 100%; background: rgba(20,20,20,0.95); backdrop-filter: blur(10px); border-top: 1px solid var(--bd); padding: 10px 15px calc(10px + env(safe-area-inset-bottom, 0px)) 15px; display: none; justify-content: space-between; align-items: center; z-index: 9999; box-shadow: 0 -5px 20px rgba(0,0,0,0.5); }

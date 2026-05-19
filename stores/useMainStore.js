@@ -58,6 +58,8 @@ export const useMainStore = defineStore('main', () => {
   // --- Actions (Data Loading) ---
   async function loadDataFromAPI() {
     loading.value = true
+
+    // 1. animals（核心資料，獨立處理，控制 loading 狀態）
     try {
       const { data: invData, error: invErr } = await supabase.from('animals').select('*')
       if (invErr) throw invErr
@@ -82,59 +84,71 @@ export const useMainStore = defineStore('main', () => {
       }))
 
       hotList.value = inv.value.filter(i => i.IsHot === true)
-
-      const { data: merchData } = await supabase.from('merchandise').select('*')
-      if (merchData) {
-        merchList.value = merchData.map(m => ({
-          ItemID: m.item_id,
-          Name: m.name,
-          Description: m.description,
-          Price: m.price,
-          ImageURL: m.image_url,
-          Category: m.category,
-          Available: m.available,
-          ExternalLink: m.external_link
-        }))
-      }
-
-      const { data: artData } = await supabase.from('articles').select('*')
-      if (artData) {
-        articlesList.value = artData
-          .filter(a => (a.status || '').toLowerCase() === 'published')
-          .map(a => ({
-            ID: a.id,
-            Title: a.title,
-            Category: a.category,
-            Summary: a.summary,
-            Content: a.content,
-            ImageURL: a.image_url,
-            Author: a.author || 'Gencko Studio',
-            PublishDate: a.created_at,   // 新版 schema 使用 created_at
-            Keywords: a.keywords || ''   // 新版 schema 無此欄位，預設空字串
-          }))
-          .reverse()
-      }
-
-      const { data: geneData } = await supabase.from('genetic_pages').select('*')
-      if (geneData) {
-        genePages.value = geneData.map(g => ({
-          Name: g.name,
-          ImageURL: g.image_url,
-          Warning: g.warning,
-          Brief: g.brief,
-          Detail: g.detail,
-          Source: g.source
-        }))
-      }
-
-      const { data: configData } = await supabase.from('config').select('*')
-      if (configData) {
-        marqueeList.value = configData.map(c => ({ text: c.text, url: c.url }))
-      }
     } catch (e) {
-      console.error('Supabase 讀取失敗:', e)
+      console.error('讀取個體資料失敗:', e)
     } finally {
       loading.value = false
+    }
+
+    // 2. 次要資料表：平行獨立載入，互不影響
+    const [merchResult, artResult, geneResult, configResult] = await Promise.allSettled([
+      supabase.from('merchandise').select('*'),
+      supabase.from('articles').select('*'),
+      supabase.from('genetic_pages').select('*'),
+      supabase.from('config').select('*')
+    ])
+
+    if (merchResult.status === 'fulfilled' && !merchResult.value.error && merchResult.value.data) {
+      merchList.value = merchResult.value.data.map(m => ({
+        ItemID: m.item_id,
+        Name: m.name,
+        Description: m.description,
+        Price: m.price,
+        ImageURL: m.image_url,
+        Category: m.category,
+        Available: m.available,
+        ExternalLink: m.external_link
+      }))
+    } else if (merchResult.status === 'rejected' || merchResult.value?.error) {
+      console.error('讀取周邊商品失敗:', merchResult.reason || merchResult.value?.error)
+    }
+
+    if (artResult.status === 'fulfilled' && !artResult.value.error && artResult.value.data) {
+      articlesList.value = artResult.value.data
+        .filter(a => (a.status || '').toLowerCase() === 'published')
+        .map(a => ({
+          ID: a.id,
+          Title: a.title,
+          Category: a.category,
+          Summary: a.summary,
+          Content: a.content,
+          ImageURL: a.image_url,
+          Author: a.author || 'Gencko Studio',
+          PublishDate: a.created_at,   // 新版 schema 使用 created_at
+          Keywords: a.keywords || ''   // 新版 schema 無此欄位，預設空字串
+        }))
+        .reverse()
+    } else if (artResult.status === 'rejected' || artResult.value?.error) {
+      console.error('讀取文章失敗:', artResult.reason || artResult.value?.error)
+    }
+
+    if (geneResult.status === 'fulfilled' && !geneResult.value.error && geneResult.value.data) {
+      genePages.value = geneResult.value.data.map(g => ({
+        Name: g.name,
+        ImageURL: g.image_url,
+        Warning: g.warning,
+        Brief: g.brief,
+        Detail: g.detail,
+        Source: g.source
+      }))
+    } else if (geneResult.status === 'rejected' || geneResult.value?.error) {
+      console.error('讀取基因圖鑑失敗:', geneResult.reason || geneResult.value?.error)
+    }
+
+    if (configResult.status === 'fulfilled' && !configResult.value.error && configResult.value.data) {
+      marqueeList.value = configResult.value.data.map(c => ({ text: c.text, url: c.url }))
+    } else if (configResult.status === 'rejected' || configResult.value?.error) {
+      console.error('讀取跑馬燈設定失敗:', configResult.reason || configResult.value?.error)
     }
   }
 

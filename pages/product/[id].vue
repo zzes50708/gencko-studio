@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref } from 'vue'
+import { computed, ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useHead, useAsyncData, useSupabaseClient } from '#imports'
 import { useMainStore } from '~/stores/useMainStore'
@@ -148,6 +148,17 @@ const getSexCls = (i) => {
     if (i.GenderType === '母' || (i.GenderType === '溫控' && +i.GenderValue <= 27)) return 'female'
     return 'mix'
 }
+
+// 寫入瀏覽歷史（最多保留 50 筆，最新的在最前）
+onMounted(() => {
+    if (currentProduct.value?.ID) {
+        const id = currentProduct.value.ID
+        store.history = [id, ...store.history.filter(x => x !== id)].slice(0, 50)
+        try {
+            localStorage.setItem('gencko_history', JSON.stringify(store.history))
+        } catch (e) {}
+    }
+})
 
 // 原生系統分享 (Web Share API)
 const shareLink = async () => {
@@ -320,7 +331,9 @@ const generatePromo = async () => {
                     <div class="prod-price-area">
                         <div v-if="productModules.transaction.status !== 'ForSale'">
                             <span v-if="productModules.transaction.status === 'Sold'" class="status-badge s-sold">已售出</span>
-                            <span v-else class="status-badge s-nfs">非賣/預訂</span>
+                            <span v-else-if="productModules.transaction.status === 'Auction'" class="status-badge s-auction">競標中</span>
+                            <span v-else-if="productModules.transaction.status === 'SelfKeep'" class="status-badge s-nfs">非賣（自留）</span>
+                            <span v-else class="status-badge s-nfs">非賣</span>
                         </div>
                         <div v-else class="price">NT$ {{ productModules.transaction.price }}</div>
                     </div>
@@ -338,6 +351,7 @@ const generatePromo = async () => {
 
                     <div class="prod-actions">
                         <a v-if="productModules.transaction.status === 'ForSale'" :href="store.lineLink" target="_blank" class="btn-buy-lg">💬 私訊購買 (Line)</a>
+                        <NuxtLink v-else-if="productModules.transaction.status === 'Auction'" to="/auction" class="btn-buy-lg" style="background: #e67e22; box-shadow: 0 4px 10px rgba(230,126,34,0.4);">🔨 前往競標頁面</NuxtLink>
                         <div class="action-sub-buttons">
                             <button class="btn-share" @click="shareLink">分享連結</button>
                             <button class="btn-promo" @click="generatePromo" :disabled="isGenerating">
