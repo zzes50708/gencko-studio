@@ -80,7 +80,7 @@ const getImgSrc = (item) => {
             
             <div class="lightbox-info">
                 <h2 class="lightbox-title">{{ item.Morph || item.Name }}</h2>
-                <a v-if="item.Status === 'ForSale' || item.Available !== 'No'" 
+                <a v-if="item.Status === 'ForSale' || (item.Available && item.Available !== 'No')"
                    :href="item.ExternalLink || lineLink" 
                    target="_blank" 
                    class="app-btn-buy" 

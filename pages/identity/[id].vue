@@ -10,7 +10,7 @@ const identityId = route.params.id
 //[SEO] 透過 SSR 抓取電子身分證資料，確保分享連結能直接預覽
 const { data: item, pending, error } = await useAsyncData(`identity-${identityId}`, async () => {
     const { data, error: fetchError } = await supabase
-        .from('inventory')
+        .from('animals')
         .select('*')
         .eq('id', identityId)
         .single()
@@ -45,8 +45,8 @@ const displayImg = computed(() => {
 const fmtSex = computed(() => {
     if (!item.value) return ''
     const i = item.value
-    if (i.GenderType === '溫度') {
-        return `溫度 ${i.GenderValue || '?'}°C`
+    if (i.GenderType === '溫控') {
+        return `溫控 ${i.GenderValue || '?'}°C`
     }
     return i.GenderType || 'Unsexed'
 })

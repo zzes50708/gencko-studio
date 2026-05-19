@@ -25,14 +25,14 @@ export default defineEventHandler(async (event) => {
   // 1. 抓取商品與電子身分證 (Inventory)
   // 嚴格還原舊版寫法：只抓 id 與 status，把過濾邏輯放回 JS 處理
   const { data: products, error: err1 } = await supabase
-    .from('inventory')
+    .from('animals')
     .select('id, status')
-  
-  if (err1) console.error('Sitemap 抓取 inventory 失敗:', err1)
+
+  if (err1) console.error('Sitemap 抓取 animals 失敗:', err1)
   if (products) {
     products.forEach(p => {
-      // 在此過濾掉垃圾桶與非賣品
-      if (p.status !== 'Trash' && p.status !== 'NotForSale') {
+      // 在此過濾掉垃圾桶與自留品
+      if (p.status !== 'Trash' && p.status !== 'SelfKeep') {
         urls.push({
           loc: `/product/${p.id}`,
           changefreq: 'weekly',
@@ -51,8 +51,8 @@ export default defineEventHandler(async (event) => {
   // 2. 抓取文章 (Articles)
   const { data: articles, error: err2 } = await supabase
     .from('articles')
-    .select('id, publish_date, status')
-    .eq('status', 'Published')
+    .select('id, created_at, status')
+    .eq('status', 'published')
 
   if (err2) console.error('Sitemap 抓取 articles 失敗:', err2)
   if (articles) {
@@ -61,7 +61,7 @@ export default defineEventHandler(async (event) => {
         loc: `/articles/${a.id}`,
         changefreq: 'monthly',
         priority: 0.7,
-        lastmod: a.publish_date
+        lastmod: a.created_at
       })
     })
   }

@@ -59,7 +59,7 @@ export const useMainStore = defineStore('main', () => {
   async function loadDataFromAPI() {
     loading.value = true
     try {
-      const { data: invData, error: invErr } = await supabase.from('inventory').select('*')
+      const { data: invData, error: invErr } = await supabase.from('animals').select('*')
       if (invErr) throw invErr
 
       inv.value = invData.map(i => ({
@@ -67,7 +67,7 @@ export const useMainStore = defineStore('main', () => {
         Source: i.source,
         Species: i.species,
         Morph: i.morph,
-        Genes: i.genes ? JSON.parse(i.genes) :[],
+        Genes: Array.isArray(i.genes) ? i.genes : [],
         GenderType: i.gender_type,
         GenderValue: i.gender_value,
         Birthday: i.birthday,
@@ -77,11 +77,11 @@ export const useMainStore = defineStore('main', () => {
         Status: i.status,
         Note: i.note,
         ImageURL: i.image_url,
-        IsHot: String(i.is_hot || '').trim(),
+        IsHot: i.is_hot === true,
         CreatedDate: i.created_at || new Date().toISOString()
       }))
 
-      hotList.value = inv.value.filter(i => i.IsHot === 'Hot')
+      hotList.value = inv.value.filter(i => i.IsHot === true)
 
       const { data: merchData } = await supabase.from('merchandise').select('*')
       if (merchData) {
@@ -100,7 +100,7 @@ export const useMainStore = defineStore('main', () => {
       const { data: artData } = await supabase.from('articles').select('*')
       if (artData) {
         articlesList.value = artData
-          .filter(a => a.status === 'Published')
+          .filter(a => a.status === 'published')
           .map(a => ({
             ID: a.id,
             Title: a.title,
@@ -140,10 +140,13 @@ export const useMainStore = defineStore('main', () => {
 
   async function loadAuctions() {
     try {
+      const now = new Date().toISOString()
       const { data: auctionsData, error } = await supabase
         .from('auctions')
         .select('*')
-        .order('created_at', { ascending: false })
+        .eq('status', 'active')
+        .gt('end_time', now)
+        .order('end_time', { ascending: true })
         
       if (error) throw error
       

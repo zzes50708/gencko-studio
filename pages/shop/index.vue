@@ -87,7 +87,7 @@ const maxPrice = computed(() => {
 
 const availableGenes = computed(() => {
     const s = new Set()
-    const targetStatus = fil.value.sold ?[ 'ForSale', 'Sold', 'Reserved' ] :[ 'ForSale', 'Reserved' ]
+    const targetStatus = fil.value.sold ? ['ForSale', 'Auction', 'Sold'] : ['ForSale', 'Auction']
     store.inv.filter(i => i.Species === sp.value && targetStatus.includes(i.Status)).forEach(i => {
         if (Array.isArray(i.Genes)) i.Genes.forEach(g => s.add(g === '白黃' ? 'WY' : g))
     })
@@ -102,7 +102,7 @@ const getSortedGenes = (list) => {
 
 const shopList = computed(() => {
     let l = store.inv.filter(i => {
-        if (i.Species !== sp.value || i.Status === 'Trash' || i.Status === 'NotForSale') return false
+        if (i.Species !== sp.value || i.Status === 'Trash' || i.Status === 'SelfKeep') return false
         const isSold = i.Status === 'Sold'
         const isStock = i.Status === 'ForSale' || i.Status === 'Reserved'
         if (!fil.value.sold && isSold) return false
@@ -113,8 +113,8 @@ const shopList = computed(() => {
         if (fil.value.maxP && p > fil.value.maxP) return false
 
         const sex = i.GenderType
-        const isM = sex === '公' || (sex === '溫度' && Number(i.GenderValue) >= 30)
-        const isF = sex === '母' || (sex === '溫度' && Number(i.GenderValue) <= 27)
+        const isM = sex === '公' || (sex === '溫控' && Number(i.GenderValue) >= 30)
+        const isF = sex === '母' || (sex === '溫控' && Number(i.GenderValue) <= 27)
         if (!fil.value.sexM && isM) return false
         if (!fil.value.sexF && isF) return false
 
@@ -320,7 +320,7 @@ const toggleWishlist = (id) => {
                                 <div v-if="i.Status !== 'ForSale'">
                                     <span v-if="i.Status === 'Sold'" class="status-badge s-sold">已售出</span>
                                     <span v-else-if="i.Status === 'Reserved'" class="status-badge s-res">預訂</span>
-                                    <span v-else-if="i.Status === 'NotForSale'" class="status-badge s-nfs">非賣</span>
+                                    <span v-else-if="i.Status === 'SelfKeep'" class="status-badge s-nfs">非賣</span>
                                 </div>
                                 <div v-else class="price slim-price">${{ i.ListingPrice }}</div>
                             </div>

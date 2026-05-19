@@ -19,7 +19,7 @@ const { data: currentProduct, pending } = await useAsyncData(`product-${productI
     }
 
     const { data, error } = await supabase
-        .from('inventory')
+        .from('animals')
         .select('*')
         .eq('id', productId)
         .single()
@@ -30,7 +30,7 @@ const { data: currentProduct, pending } = await useAsyncData(`product-${productI
         ID: String(data.id || '').trim(),
         Species: data.species,
         Morph: data.morph,
-        Genes: data.genes ? JSON.parse(data.genes) :[ ],
+        Genes: Array.isArray(data.genes) ? data.genes : [],
         GenderType: data.gender_type,
         GenderValue: data.gender_value,
         Birthday: data.birthday,
@@ -131,7 +131,7 @@ useHead({
 
 const fmtSex = (i) => {
     if (!i) return ''
-    if (i.GenderType === '溫度') {
+    if (i.GenderType === '溫控') {
         let t = +i.GenderValue
         if (t >= 31) return t + '°C (90%公)'
         if (t >= 30) return t + '°C (75%公)'
@@ -144,8 +144,8 @@ const fmtSex = (i) => {
 
 const getSexCls = (i) => {
     if (!i) return ''
-    if (i.GenderType === '公' || (i.GenderType === '溫度' && +i.GenderValue >= 30)) return 'male'
-    if (i.GenderType === '母' || (i.GenderType === '溫度' && +i.GenderValue <= 27)) return 'female'
+    if (i.GenderType === '公' || (i.GenderType === '溫控' && +i.GenderValue >= 30)) return 'male'
+    if (i.GenderType === '母' || (i.GenderType === '溫控' && +i.GenderValue <= 27)) return 'female'
     return 'mix'
 }
 

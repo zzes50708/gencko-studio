@@ -211,8 +211,7 @@ const getMapLink = (h) => {
                             <div class="slim-price-row" style="margin-top:4px;">
                                 <div v-if="i.Status !== 'ForSale'">
                                     <span v-if="i.Status === 'Sold'" class="status-badge s-sold">已售出</span>
-                                    <span v-else-if="i.Status === 'Reserved'" class="status-badge s-res">預訂</span>
-                                    <span v-else-if="i.Status === 'NotForSale'" class="status-badge s-nfs">非賣</span>
+                                    <span v-else-if="i.Status === 'SelfKeep'" class="status-badge s-nfs">非賣</span>
                                 </div>
                                 <div v-else class="price slim-price">${{ i.ListingPrice }}</div>
                             </div>
@@ -252,8 +251,7 @@ const getMapLink = (h) => {
                             <div class="slim-price-row" style="margin-top:4px;">
                                 <div v-if="i.Status !== 'ForSale'">
                                     <span v-if="i.Status === 'Sold'" class="status-badge s-sold">已售出</span>
-                                    <span v-else-if="i.Status === 'Reserved'" class="status-badge s-res">預訂</span>
-                                    <span v-else-if="i.Status === 'NotForSale'" class="status-badge s-nfs">非賣</span>
+                                    <span v-else-if="i.Status === 'SelfKeep'" class="status-badge s-nfs">非賣</span>
                                 </div>
                                 <div v-else class="price slim-price">${{ i.ListingPrice }}</div>
                             </div>

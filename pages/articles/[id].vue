@@ -25,7 +25,7 @@ const { data: readingArticle, pending } = await useAsyncData(`article-${articleI
         .from('articles')
         .select('*')
         .eq('id', articleId)
-        .eq('status', 'Published')
+        .eq('status', 'published')
         .single()
 
     if (error || !data) return null

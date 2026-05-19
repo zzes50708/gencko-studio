@@ -14,7 +14,7 @@ const breederSp = computed({
 
 // 計算種群展示列表
 const breedersList = computed(() => {
-    let list = store.inv.filter(i => i.Species === breederSp.value && i.Status === 'NotForSale' && i.Status !== 'Trash')
+    let list = store.inv.filter(i => i.Species === breederSp.value && i.Status === 'SelfKeep')
     return list.sort((a, b) => {
         const imgA = a.ImageURL ? 1 : 0
         const imgB = b.ImageURL ? 1 : 0
