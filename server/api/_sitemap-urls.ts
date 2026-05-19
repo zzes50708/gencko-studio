@@ -52,7 +52,7 @@ export default defineEventHandler(async (event) => {
   const { data: articles, error: err2 } = await supabase
     .from('articles')
     .select('id, created_at, status')
-    .eq('status', 'published')
+    .ilike('status', 'published')
 
   if (err2) console.error('Sitemap 抓取 articles 失敗:', err2)
   if (articles) {

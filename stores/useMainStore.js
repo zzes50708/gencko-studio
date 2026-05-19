@@ -100,7 +100,7 @@ export const useMainStore = defineStore('main', () => {
       const { data: artData } = await supabase.from('articles').select('*')
       if (artData) {
         articlesList.value = artData
-          .filter(a => a.status === 'published')
+          .filter(a => (a.status || '').toLowerCase() === 'published')
           .map(a => ({
             ID: a.id,
             Title: a.title,
