@@ -108,9 +108,9 @@ export const useMainStore = defineStore('main', () => {
             Summary: a.summary,
             Content: a.content,
             ImageURL: a.image_url,
-            Author: a.author,
-            PublishDate: a.publish_date,
-            Keywords: a.keywords // 🌟 新增：撈取隱藏的關鍵字欄位
+            Author: a.author || 'Gencko Studio',
+            PublishDate: a.created_at,   // 新版 schema 使用 created_at
+            Keywords: a.keywords || ''   // 新版 schema 無此欄位，預設空字串
           }))
           .reverse()
       }
@@ -157,15 +157,29 @@ export const useMainStore = defineStore('main', () => {
           .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'auctions' }, payload => {
             const updatedAuction = payload.new
             const idx = auctionList.value.findIndex(a => a.id === updatedAuction.id)
+            const isValid = updatedAuction.status === 'active' && updatedAuction.end_time > new Date().toISOString()
             if (idx !== -1) {
-              auctionList.value[idx] = { ...auctionList.value[idx], ...updatedAuction }
+              if (isValid) {
+                // 更新現有場次資料
+                auctionList.value[idx] = { ...auctionList.value[idx], ...updatedAuction }
+              } else {
+                // 場次已結束或停用，從列表移除
+                auctionList.value.splice(idx, 1)
+              }
+            } else if (isValid) {
+              // 原本不在列表（如剛啟用的場次），加入尾端
+              auctionList.value.push(updatedAuction)
             }
           })
           .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'auctions' }, payload => {
-            auctionList.value.unshift(payload.new)
+            const newAuction = payload.new
+            const isValid = newAuction.status === 'active' && newAuction.end_time > new Date().toISOString()
+            if (isValid) {
+              auctionList.value.unshift(newAuction)
+            }
           })
           .subscribe()
-          
+
         isAuctionSubscribed.value = true
       }
     } catch (error) {
