@@ -165,7 +165,15 @@ export const useMainStore = defineStore('main', () => {
         .order('end_time', { ascending: true })
         
       if (error) throw error
-      
+
+      // 診斷：確認 animal_id 欄位是否存在（若 DB SQL 已執行，此值不為 undefined）
+      if (auctionsData?.length > 0 && import.meta.client) {
+        const sample = auctionsData[0]
+        if (!('animal_id' in sample)) {
+          console.warn('[Gencko] auctions 表缺少 animal_id 欄位，請確認 Supabase SQL 是否已執行：\nALTER TABLE auctions ADD COLUMN IF NOT EXISTS animal_id text REFERENCES animals(id) ON DELETE SET NULL;')
+        }
+      }
+
       auctionList.value = auctionsData
 
       if (import.meta.client && !isAuctionSubscribed.value) {

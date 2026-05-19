@@ -149,12 +149,17 @@ const getSexCls = (i) => {
     return 'mix'
 }
 
-// 從進行中競標列表找到 morph 相符的場次，提供直連（比 morph 名稱，找不到則 fallback 到列表）
+// 從進行中競標列表找到對應場次，優先用 animal_id 精準比對，找不到再 fallback 至 morph 名稱比對
 const matchedAuctionId = computed(() => {
     if (!currentProduct.value || currentProduct.value.Status !== 'Auction') return null
+    const pid = currentProduct.value.ID
     const morph = (currentProduct.value.Morph || '').trim().toLowerCase()
-    const match = store.auctionList.find(a => (a.morph || '').trim().toLowerCase() === morph)
-    return match?.id || null
+    // 1. 精準比對：auction.animal_id === 個體 ID（需後台在建立競標時填入）
+    const exactMatch = store.auctionList.find(a => a.animal_id === pid)
+    if (exactMatch) return exactMatch.id
+    // 2. 模糊比對：morph 名稱相同（同名品系有多隻時可能不準確）
+    const morphMatch = store.auctionList.find(a => (a.morph || '').trim().toLowerCase() === morph)
+    return morphMatch?.id || null
 })
 
 // 寫入瀏覽歷史（最多保留 50 筆，最新的在最前）
