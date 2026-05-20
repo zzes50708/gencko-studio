@@ -41,9 +41,9 @@ const closeMobileMenu = () => {
         <div class="sticky-nav" :class="{'nav-hidden': navHidden}">
             <div class="nav-container">
                 <!-- Logo -->
-                <NuxtLink to="/" class="nav-left nav-brand" @click="$emit('scroll-top')" style="text-decoration:none;">
-                    <span class="brand-gecko">🦎</span>
-                    <span class="brand-text">GENCKO</span>
+                <NuxtLink to="/" class="nav-left" @click="$emit('scroll-top')" style="cursor:pointer; display:flex; align-items:center; gap:10px; text-decoration:none;">
+                    <img v-if="logoUrl" :src="logoUrl" style="height:40px; width:auto; display:block;">
+                    <div style="font-weight:900; font-size:1.2rem; color:var(--pri); letter-spacing:1px; line-height:1;">GENCKO</div>
                 </NuxtLink>
 
                 <!-- Desktop Menu -->
@@ -180,45 +180,60 @@ const closeMobileMenu = () => {
 </template>
 
 <style scoped>
-/* ── 品牌 Logo（純文字，無邊界問題）── */
-.nav-brand {
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-}
-.brand-gecko {
-    font-size: 1.4rem;
-    line-height: 1;
-    filter: drop-shadow(0 0 6px rgba(232, 68, 10, 0.5));
-}
-.brand-text {
-    font-weight: 900;
-    font-size: 1.25rem;
-    color: var(--pri);
-    letter-spacing: 2px;
-    line-height: 1;
-    font-family: 'Black Ops One', 'Inter', sans-serif;
-    text-shadow: 0 0 16px rgba(232, 68, 10, 0.35);
-}
-
-/* Sticky Navigation */
-.sticky-nav { 
-    position: fixed; 
-    top: calc(40px + env(safe-area-inset-top, 0px)); 
-    left: 0; 
-    width: 100%; 
-    height: 50px; 
-    z-index: 1000; 
-    background: var(--card-bg); 
-    backdrop-filter: blur(10px); 
-    -webkit-backdrop-filter: blur(10px);
-    border-bottom: 1px solid var(--bd); 
-    padding: 0 15px; 
-    box-shadow: 0 4px 10px rgba(0,0,0,0.05); 
+/* Sticky Navigation — 背景與 Logo 底色一致，邊界消失 */
+.sticky-nav {
+    position: fixed;
+    top: calc(40px + env(safe-area-inset-top, 0px));
+    left: 0;
+    width: 100%;
+    height: 50px;
+    z-index: 1000;
+    background: rgba(196, 207, 216, 0.97);   /* Logo 冷藍灰底色 */
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-bottom: 1px solid rgba(160, 175, 185, 0.5);
+    padding: 0 15px;
+    box-shadow: 0 2px 16px rgba(0, 0, 0, 0.18);
     transition: transform 0.3s ease;
 }
 .sticky-nav.nav-hidden { transform: translateY(-100%); }
+
+/* Navbar 背景為淺色，文字改深色 */
+.sticky-nav :deep(.nav-item-dt) {
+    color: rgba(25, 35, 45, 0.60);
+}
+.sticky-nav :deep(.nav-item-dt:hover) {
+    color: rgba(25, 35, 45, 0.90);
+    background: rgba(0, 0, 0, 0.06);
+}
+.sticky-nav :deep(.nav-item-dt.active) {
+    color: var(--pri);
+    border-bottom-color: var(--pri);
+    text-shadow: none;
+}
+
+/* 漢堡選單圖示改深色 */
+.hamburger {
+    color: rgba(25, 35, 45, 0.80) !important;
+}
+
+/* 日夜切換按鈕深色文字（覆寫 inline style 的 CSS 變數） */
+.sticky-nav :deep(.theme-toggle) {
+    color: rgba(25, 35, 45, 0.70) !important;
+    border-color: rgba(25, 35, 45, 0.25) !important;
+}
+.sticky-nav :deep(.theme-toggle:hover) {
+    color: rgba(25, 35, 45, 0.95) !important;
+    border-color: rgba(25, 35, 45, 0.5) !important;
+}
+
+/* 我的專區連結深色 */
+.sticky-nav :deep(.profile-link-dt) {
+    color: rgba(25, 35, 45, 0.70) !important;
+}
+.sticky-nav :deep(.profile-link-dt:hover) {
+    color: var(--pri) !important;
+}
 
 .nav-container { max-width: 1300px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; height: 50px; }
 .nav-left { display: flex; align-items: center; gap: 10px; }
