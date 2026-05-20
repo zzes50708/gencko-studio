@@ -13,31 +13,39 @@ const productId = route.params.id
 
 // [SEO] 透過 SSR 抓取單筆商品資料
 const { data: currentProduct, pending } = await useAsyncData(`product-${productId}`, async () => {
-    if (store.inv && store.inv.length > 0) {
-        const found = store.inv.find(i => i.ID === productId)
-        if (found) return found
-    }
+    try {
+        // CSR 導航：store 已有資料時直接回傳，避免多餘 API 呼叫
+        if (import.meta.client && store.inv && store.inv.length > 0) {
+            const found = store.inv.find(i => i.ID === String(productId).trim())
+            if (found) return found
+        }
 
-    const { data, error } = await supabase
-        .from('animals')
-        .select('*')
-        .eq('id', productId)
-        .single()
+        // SSR 或 store 尚未載入：直接查詢 Supabase
+        const { data, error } = await supabase
+            .from('animals')
+            .select('id, species, morph, genes, gender_type, gender_value, birthday, listing_price, sold_price, status, note, image_url')
+            .eq('id', productId)
+            .single()
 
-    if (error || !data) return null
+        if (error || !data) return null
 
-    return {
-        ID: String(data.id || '').trim(),
-        Species: data.species,
-        Morph: data.morph,
-        Genes: Array.isArray(data.genes) ? data.genes : [],
-        GenderType: data.gender_type,
-        GenderValue: data.gender_value,
-        Birthday: data.birthday,
-        ListingPrice: data.listing_price,
-        Status: data.status,
-        Note: data.note,
-        ImageURL: data.image_url
+        return {
+            ID: String(data.id || '').trim(),
+            Species: data.species,
+            Morph: data.morph,
+            Genes: Array.isArray(data.genes) ? data.genes : [],
+            GenderType: data.gender_type,
+            GenderValue: data.gender_value,
+            Birthday: data.birthday,
+            ListingPrice: data.listing_price,
+            SoldPrice: data.sold_price,
+            Status: data.status,
+            Note: data.note,
+            ImageURL: data.image_url
+        }
+    } catch (e) {
+        console.error('[product] 載入失敗:', e)
+        return null
     }
 })
 
@@ -322,6 +330,11 @@ const generatePromo = async () => {
             <h2>找不到此守宮</h2>
             <p>該商品可能已下架或不存在。</p>
             <TheBackButton fallback="/shop" text="返回商城列表" style="margin: 20px auto; justify-content: center;" />
+        </div>
+
+        <div v-else-if="!productModules" style="text-align:center; padding:100px 0; color:#888;">
+            <div class="loader" style="margin:0 auto 20px auto;"></div>
+            <p>資料載入中，請稍候...</p>
         </div>
 
         <div v-else class="prod-container">
