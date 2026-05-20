@@ -207,7 +207,7 @@ const relatedArticles = computed(() => {
                         <div class="author-name" itemprop="name">Gencko Studio</div>
                         <div class="author-role">專業豹紋守宮（Eublepharis macularius）繁育工作室</div>
                         <p class="author-bio" itemprop="description">
-                            致力於豹紋守宮與肥尾守宮的科學化選育，提供基因計算工具、飼養知識專欄與線上競標服務。所有文章均基於實際繁育經驗撰寫。
+                            致力於豹紋守宮與肥尾守宮的科學化選育，提供基因計算工具、飼養知識專欄與線上競標服務。
                         </p>
                         <div class="author-links">
                             <a href="https://www.instagram.com/gencko_breeding" target="_blank" rel="noopener" class="author-link" itemprop="sameAs">Instagram</a>
