@@ -51,20 +51,30 @@ html, body {
     z-index: 0; 
 }
 
-/* 獨立背景圖層 */
+/* ── 純 CSS 背景（不依賴 CDN 圖片）── */
 body::before {
     content: "";
     position: fixed;
     top: 0; left: 0;
     width: 100vw; height: 100vh;
-    z-index: -1; 
-    background-color: var(--bg-dark); 
-    background-image: url("https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/Generated%20Image%20April%2015%2C%202026%20-%202_13PM%20(1).jpg");
-    background-repeat: no-repeat;
-    background-position: center center;
-    background-size: cover;
-    transition: background-image 0.4s ease-in-out, background-color 0.4s ease-in-out;
-    pointer-events: none; 
+    z-index: -1;
+    pointer-events: none;
+    transition: background-color 0.4s ease;
+
+    /* 深色模式：暖黑底 + 橘紅光源暈 + 細格線幾何感（呼應 Logo 背景）*/
+    background-color: #0D0B0A;
+    background-image:
+        radial-gradient(ellipse 80% 60% at 10% 60%,  rgba(232, 68, 10, 0.07) 0%, transparent 70%),
+        radial-gradient(ellipse 60% 50% at 90% 25%,  rgba(232, 68, 10, 0.05) 0%, transparent 60%),
+        radial-gradient(ellipse 40% 30% at 50% 100%, rgba(232, 68, 10, 0.04) 0%, transparent 70%),
+        linear-gradient(rgba(255, 255, 255, 0.018) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.018) 1px, transparent 1px);
+    background-size:
+        100% 100%,
+        100% 100%,
+        100% 100%,
+        44px 44px,
+        44px 44px;
 }
 
 /* 🌟 Body 上方內距加上系統頂部安全區 (瀏海) */
@@ -557,9 +567,21 @@ html.day-mode {
   --shadow-btn:    0 4px 12px var(--pri-glow);
 }
 
-/* 修改為正確的選擇器層級：在 html.day-mode 下的 body::before */
+/* 日間模式：冷藍灰底（Logo 背景色）+ 更淡的橘色光暈 + 細格線 */
 html.day-mode body::before {
-    background-image: url("https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/Generated%20Image%20April%2015%2C%202026%20-%205_59PM%20(2).jpg");
+    background-color: #EEF1F4;
+    background-image:
+        radial-gradient(ellipse 70% 55% at 8%  55%,  rgba(200, 52, 10, 0.05) 0%, transparent 65%),
+        radial-gradient(ellipse 55% 45% at 92% 20%,  rgba(200, 52, 10, 0.04) 0%, transparent 55%),
+        radial-gradient(ellipse 35% 25% at 50% 100%, rgba(200, 52, 10, 0.03) 0%, transparent 65%),
+        linear-gradient(rgba(0, 0, 0, 0.028) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0, 0, 0, 0.028) 1px, transparent 1px);
+    background-size:
+        100% 100%,
+        100% 100%,
+        100% 100%,
+        44px 44px,
+        44px 44px;
 }
 
 /* Day Mode Titles & Sections */
@@ -567,7 +589,7 @@ html.day-mode .sec-title, html.day-mode .page-title, html.day-mode .morph-title,
 html.day-mode .hero-content h1 { color: #d84315 !important; }
 html.day-mode .hero-content p { color: #222 !important; }
 
-html.day-mode .hero-box { background: linear-gradient(rgba(255,255,255,0.96), rgba(255,255,255,0.96)), url("https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/Generated%20Image%20April%2015%2C%202026%20-%205_59PM%20(2).jpg") no-repeat center center !important; background-size: cover !important; border: 1px solid var(--pri); box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+html.day-mode .hero-box { background: rgba(255,255,255,0.6) !important; border: 1px solid var(--bd-hover); box-shadow: 0 4px 15px rgba(0,0,0,0.05); backdrop-filter: blur(8px); }
 html.day-mode .hero-main-title { color: #d84315; text-shadow: 0 0 25px rgba(216, 67, 21, 0.3); }
 html.day-mode .hero-content p { color: #444; text-shadow: none; }
 html.day-mode .btn-hero.btn-soc { background: #fff; border-color: #ccc; color: #555; }

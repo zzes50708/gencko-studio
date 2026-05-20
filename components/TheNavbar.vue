@@ -41,9 +41,9 @@ const closeMobileMenu = () => {
         <div class="sticky-nav" :class="{'nav-hidden': navHidden}">
             <div class="nav-container">
                 <!-- Logo -->
-                <NuxtLink to="/" class="nav-left" @click="$emit('scroll-top')" style="cursor:pointer; display:flex; align-items:center; gap:10px; text-decoration:none;">
-                    <img v-if="logoUrl" :src="logoUrl" style="height:40px; width:auto; display:block;">
-                    <div style="font-weight:900; font-size:1.2rem; color:var(--pri); letter-spacing:1px; line-height:1;">GENCKO</div>
+                <NuxtLink to="/" class="nav-left nav-brand" @click="$emit('scroll-top')" style="text-decoration:none;">
+                    <span class="brand-gecko">🦎</span>
+                    <span class="brand-text">GENCKO</span>
                 </NuxtLink>
 
                 <!-- Desktop Menu -->
@@ -180,6 +180,28 @@ const closeMobileMenu = () => {
 </template>
 
 <style scoped>
+/* ── 品牌 Logo（純文字，無邊界問題）── */
+.nav-brand {
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.brand-gecko {
+    font-size: 1.4rem;
+    line-height: 1;
+    filter: drop-shadow(0 0 6px rgba(232, 68, 10, 0.5));
+}
+.brand-text {
+    font-weight: 900;
+    font-size: 1.25rem;
+    color: var(--pri);
+    letter-spacing: 2px;
+    line-height: 1;
+    font-family: 'Black Ops One', 'Inter', sans-serif;
+    text-shadow: 0 0 16px rgba(232, 68, 10, 0.35);
+}
+
 /* Sticky Navigation */
 .sticky-nav { 
     position: fixed; 
