@@ -43,7 +43,7 @@ export const FAQ_CATEGORIES = [
             },
             {
                 title: '什麼是白化？顯性和隱性基因有什麼差別？',
-                ans: '守宮基因分三種遺傳模式：\n● 隱性（Recessive）：需要雙份基因才會表現，攜帶者（Het）外觀正常。常見品系：川普白化、日蝕、無紋。\n● 顯性（Dominant）：單份即可表現。常見品系：白黃。\n● 共顯性（Co-dominant）：單份一種表現，雙份（超合子）另一種表現。常見品系：馬克雪花（Mack Snow）。\n注意：三種白化（川普、貝爾、雨水）基因位點不同，互配不會產出白化後代。\n\n📖 <a href="/articles" style="color:var(--pri);font-weight:700;">查看基因相關專欄文章 →</a> ・ <a href="/calculator" style="color:var(--pri);font-weight:700;">基因計算機 →</a>'
+                ans: '守宮基因分三種遺傳模式：\n● 隱性（Recessive）：需要雙份基因才會表現，攜帶者（Het）外觀正常。常見品系：川普白化、日蝕、無紋。\n● 顯性（Dominant）：單份即可表現。常見品系：白黃。\n● 共顯性（Co-dominant）：單份一種表現，雙份（超合子）另一種表現。常見品系：馬克雪花（Mack Snow）。\n注意：三種白化（川普、貝爾、雨水）基因位點不同，互配不會產出白化後代。\n\n📖 <a href="/genes" style="color:var(--pri);font-weight:700;">基因圖鑑 →</a> ・ <a href="/calculator" style="color:var(--pri);font-weight:700;">基因計算機 →</a>'
             },
             {
                 title: '如何判斷守宮是否健康？',
