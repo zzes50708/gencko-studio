@@ -36,7 +36,7 @@ export const GENE_DEFINITIONS = {
         { id: 'carrottail', name: '蘿蔔尾', type: CALC_TYPES.POLY },
         { id: 'carrothead', name: '蘿蔔頭', type: CALC_TYPES.POLY },
         { id: 'lavender', name: '薰衣草', type: CALC_TYPES.POLY },
-        { id: 'melanistic', name: '黑夜', type: CALC_TYPES.POLY },
+        { id: 'melanistic', name: '黑化(Melanistic)', type: CALC_TYPES.POLY },
         { id: 'stripe', name: '直線', type: CALC_TYPES.POLY },
         { id: 'reversestripe', name: '反直線', type: CALC_TYPES.POLY },
         { id: 'mandarine', name: '蜜橘', type: CALC_TYPES.BLOOD, baseGeneId: 'tangerine', group: '橘化血系' },

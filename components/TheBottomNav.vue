@@ -5,9 +5,19 @@ import { useRoute } from 'vue-router'
 const route = useRoute()
 
 // 判斷目前是否在特定路由下，以亮起對應的導航圖示
+// 深層頁面（/product、/identity、/breeders、/merch）歸屬於「選購」
 const isActive = (path) => {
-    if (path === '/') return route.path === '/'
-    return route.path.startsWith(path)
+    const p = route.path
+    if (path === '/') return p === '/'
+    if (path === '/shop') return (
+        p.startsWith('/shop') ||
+        p.startsWith('/product') ||
+        p.startsWith('/identity') ||
+        p.startsWith('/breeders') ||
+        p.startsWith('/merch')
+    )
+    if (path === '/auction') return p.startsWith('/auction')
+    return p.startsWith(path)
 }
 </script>
 

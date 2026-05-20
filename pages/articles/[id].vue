@@ -25,7 +25,7 @@ const { data: readingArticle, pending } = await useAsyncData(`article-${articleI
         .from('articles')
         .select('*')
         .eq('id', articleId)
-        .eq('status', 'Published')
+        .ilike('status', 'published')
         .single()
 
     if (error || !data) return null
@@ -37,9 +37,9 @@ const { data: readingArticle, pending } = await useAsyncData(`article-${articleI
         Summary: data.summary,
         Content: data.content,
         ImageURL: data.image_url,
-        Author: data.author,
-        PublishDate: data.publish_date,
-        Keywords: data.keywords // 🌟 新增：撈取隱藏的關鍵字欄位
+        Author: data.author || 'Gencko Studio',
+        PublishDate: data.created_at,   // 新版 schema 使用 created_at
+        Keywords: data.keywords || ''   // 新版 schema 無此欄位，預設空字串
     }
 })
 

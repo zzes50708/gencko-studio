@@ -90,6 +90,9 @@ useHead({
         { property: 'og:image', content: 'https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/%E5%AE%98%E7%B6%B2%E8%83%8C%E6%99%AF.png' },
         { property: 'og:url', content: 'https://www.genckobreeding.com/hospital' }
     ],
+    link:[
+        { rel: 'canonical', href: 'https://www.genckobreeding.com/hospital' }
+    ],
     script: computed(() => siteData.value.script)
 })
 </script>

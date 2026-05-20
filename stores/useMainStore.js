@@ -58,8 +58,13 @@ export const useMainStore = defineStore('main', () => {
   // --- Actions (Data Loading) ---
   async function loadDataFromAPI() {
     loading.value = true
+
+    // 1. animals（核心資料，獨立處理，控制 loading 狀態）
     try {
-      const { data: invData, error: invErr } = await supabase.from('inventory').select('*')
+      // 只選官網所需欄位，省略後台專用的 cost_price
+      const { data: invData, error: invErr } = await supabase
+        .from('animals')
+        .select('id, source, species, morph, genes, gender_type, gender_value, birthday, listing_price, sold_price, status, note, image_url, is_hot, created_at')
       if (invErr) throw invErr
 
       inv.value = invData.map(i => ({
@@ -67,18 +72,16 @@ export const useMainStore = defineStore('main', () => {
         Source: i.source,
         Species: i.species,
         Morph: i.morph,
-        // genes 可能是 JSONB array（新 animals 表）或 JSON string（舊 inventory 表）
         Genes: Array.isArray(i.genes) ? i.genes : (i.genes ? JSON.parse(i.genes) : []),
         GenderType: i.gender_type,
         GenderValue: i.gender_value,
         Birthday: i.birthday,
-        CostPrice: i.cost_price,
         ListingPrice: i.listing_price,
         SoldPrice: i.sold_price,
         Status: i.status,
         Note: i.note,
         ImageURL: i.image_url,
-        // is_hot 後台存 boolean，舊表存字串 'Hot'
+        // is_hot：後台存 boolean，容錯舊表字串 'Hot'
         IsHot: i.is_hot === true || i.is_hot === 'Hot' ? 'Hot' : '',
         CreatedDate: i.created_at || new Date().toISOString()
       }))
@@ -134,21 +137,93 @@ export const useMainStore = defineStore('main', () => {
         marqueeList.value = configData.map(c => ({ text: c.text, url: c.url }))
       }
     } catch (e) {
-      console.error('Supabase 讀取失敗:', e)
+      console.error('讀取個體資料失敗:', e)
     } finally {
       loading.value = false
+    }
+
+    // 2. 次要資料表：平行獨立載入，互不影響
+    const [merchResult, artResult, geneResult, configResult] = await Promise.allSettled([
+      supabase.from('merchandise').select('*'),
+      supabase.from('articles').select('*'),
+      supabase.from('genetic_pages').select('*'),
+      supabase.from('config').select('*')
+    ])
+
+    if (merchResult.status === 'fulfilled' && !merchResult.value.error && merchResult.value.data) {
+      merchList.value = merchResult.value.data.map(m => ({
+        ItemID: m.item_id,
+        Name: m.name,
+        Description: m.description,
+        Price: m.price,
+        ImageURL: m.image_url,
+        Category: m.category,
+        Available: m.available,
+        ExternalLink: m.external_link
+      }))
+    } else if (merchResult.status === 'rejected' || merchResult.value?.error) {
+      console.error('讀取周邊商品失敗:', merchResult.reason || merchResult.value?.error)
+    }
+
+    if (artResult.status === 'fulfilled' && !artResult.value.error && artResult.value.data) {
+      articlesList.value = artResult.value.data
+        .filter(a => (a.status || '').toLowerCase() === 'published')
+        .map(a => ({
+          ID: a.id,
+          Title: a.title,
+          Category: a.category,
+          Summary: a.summary,
+          Content: a.content,
+          ImageURL: a.image_url,
+          Author: a.author || 'Gencko Studio',
+          PublishDate: a.created_at,   // 新版 schema 使用 created_at
+          Keywords: a.keywords || ''   // 新版 schema 無此欄位，預設空字串
+        }))
+        .reverse()
+    } else if (artResult.status === 'rejected' || artResult.value?.error) {
+      console.error('讀取文章失敗:', artResult.reason || artResult.value?.error)
+    }
+
+    if (geneResult.status === 'fulfilled' && !geneResult.value.error && geneResult.value.data) {
+      genePages.value = geneResult.value.data.map(g => ({
+        Name: g.name,
+        ImageURL: g.image_url,
+        Warning: g.warning,
+        Brief: g.brief,
+        Detail: g.detail,
+        Source: g.source
+      }))
+    } else if (geneResult.status === 'rejected' || geneResult.value?.error) {
+      console.error('讀取基因圖鑑失敗:', geneResult.reason || geneResult.value?.error)
+    }
+
+    if (configResult.status === 'fulfilled' && !configResult.value.error && configResult.value.data) {
+      marqueeList.value = configResult.value.data.map(c => ({ text: c.text, url: c.url }))
+    } else if (configResult.status === 'rejected' || configResult.value?.error) {
+      console.error('讀取跑馬燈設定失敗:', configResult.reason || configResult.value?.error)
     }
   }
 
   async function loadAuctions() {
     try {
+      const now = new Date().toISOString()
       const { data: auctionsData, error } = await supabase
         .from('auctions')
         .select('*')
-        .order('created_at', { ascending: false })
+        .eq('status', 'active')
+        .gt('end_time', now)
+        .order('end_time', { ascending: true })
         
       if (error) throw error
-      
+
+      // 診斷：確認 animal_id 欄位是否存在（若 DB SQL 已執行，此值不為 undefined）
+      if (auctionsData?.length > 0 && import.meta.client) {
+        const sample = auctionsData[0]
+        if (!('animal_id' in sample)) {
+          console.warn('[Gencko] auctions 表缺少 animal_id 欄位，請確認 Supabase SQL 是否已執行：\nALTER TABLE auctions ADD COLUMN IF NOT EXISTS animal_id text REFERENCES animals(id) ON DELETE SET NULL;')
+        }
+      }
+
       auctionList.value = auctionsData
 
       if (import.meta.client && !isAuctionSubscribed.value) {
@@ -156,15 +231,29 @@ export const useMainStore = defineStore('main', () => {
           .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'auctions' }, payload => {
             const updatedAuction = payload.new
             const idx = auctionList.value.findIndex(a => a.id === updatedAuction.id)
+            const isValid = updatedAuction.status === 'active' && updatedAuction.end_time > new Date().toISOString()
             if (idx !== -1) {
-              auctionList.value[idx] = { ...auctionList.value[idx], ...updatedAuction }
+              if (isValid) {
+                // 更新現有場次資料
+                auctionList.value[idx] = { ...auctionList.value[idx], ...updatedAuction }
+              } else {
+                // 場次已結束或停用，從列表移除
+                auctionList.value.splice(idx, 1)
+              }
+            } else if (isValid) {
+              // 原本不在列表（如剛啟用的場次），加入尾端
+              auctionList.value.push(updatedAuction)
             }
           })
           .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'auctions' }, payload => {
-            auctionList.value.unshift(payload.new)
+            const newAuction = payload.new
+            const isValid = newAuction.status === 'active' && newAuction.end_time > new Date().toISOString()
+            if (isValid) {
+              auctionList.value.unshift(newAuction)
+            }
           })
           .subscribe()
-          
+
         isAuctionSubscribed.value = true
       }
     } catch (error) {

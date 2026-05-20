@@ -41,7 +41,28 @@ export default defineNuxtConfig({
       theme_color: '#e6e3e3', 
       background_color: '#e6e3e3', 
       display: 'standalone', 
-      orientation: 'portrait', 
+      orientation: 'portrait',
+      categories: ['shopping', 'lifestyle'],
+      shortcuts: [
+        {
+          name: '選購守宮',
+          short_name: '選購',
+          url: '/shop',
+          icons: [{ src: 'https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/11.png', sizes: '192x192' }]
+        },
+        {
+          name: '線上競標',
+          short_name: '競標',
+          url: '/auction',
+          icons: [{ src: 'https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/11.png', sizes: '192x192' }]
+        },
+        {
+          name: '基因計算機',
+          short_name: '計算機',
+          url: '/calculator',
+          icons: [{ src: 'https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/11.png', sizes: '192x192' }]
+        }
+      ],
       icons:[
         {
           src: 'https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/11.png',
@@ -122,6 +143,18 @@ export default defineNuxtConfig({
     sources:[
       '/api/_sitemap-urls'
     ]
+  },
+
+  // 🌟 Robots 規則：私人頁面不索引
+  robots: {
+    rules: [
+      {
+        UserAgent: '*',
+        Allow: '/',
+        Disallow: ['/profile', '/identity/']
+      }
+    ],
+    sitemap: 'https://www.genckobreeding.com/sitemap.xml'
   },
 
   supabase: {

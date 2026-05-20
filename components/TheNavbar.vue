@@ -180,20 +180,17 @@ const closeMobileMenu = () => {
 </template>
 
 <style scoped>
-/* Sticky Navigation */
-.sticky-nav { 
-    position: fixed; 
-    top: calc(40px + env(safe-area-inset-top, 0px)); 
-    left: 0; 
-    width: 100%; 
-    height: 50px; 
-    z-index: 1000; 
-    background: var(--card-bg); 
-    backdrop-filter: blur(10px); 
-    -webkit-backdrop-filter: blur(10px);
-    border-bottom: 1px solid var(--bd); 
-    padding: 0 15px; 
-    box-shadow: 0 4px 10px rgba(0,0,0,0.05); 
+/* Sticky Navigation — 背景由全域 CSS 控制（夜間深色 / 日間 Logo 冷藍灰） */
+.sticky-nav {
+    position: fixed;
+    top: calc(40px + env(safe-area-inset-top, 0px));
+    left: 0;
+    width: 100%;
+    height: 50px;
+    z-index: 1000;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    padding: 0 15px;
     transition: transform 0.3s ease;
 }
 .sticky-nav.nav-hidden { transform: translateY(-100%); }

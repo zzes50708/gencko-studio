@@ -52,8 +52,24 @@ useHead({
 
 watch(() => route.path, (newPath) => {
   store.mobileMenuOpen = false
-  if (newPath.startsWith('/articles')) store.curTab = 'articles'
-  else store.curTab = route.name || 'home'
+
+  // 以路徑 startsWith 明確映射，避免依賴 route.name 自動命名不穩定的問題
+  if (newPath === '/') store.curTab = 'home'
+  else if (newPath.startsWith('/articles'))  store.curTab = 'articles'
+  else if (newPath.startsWith('/shop') || newPath.startsWith('/product') || newPath.startsWith('/identity')) store.curTab = 'shop'
+  else if (newPath.startsWith('/auction'))   store.curTab = 'auction'
+  else if (newPath.startsWith('/breeders'))  store.curTab = 'breeders'
+  else if (newPath.startsWith('/merch'))     store.curTab = 'merch'
+  else if (newPath.startsWith('/genes'))     store.curTab = 'genes'
+  else if (newPath.startsWith('/calculator')) store.curTab = 'calculator'
+  else if (newPath.startsWith('/health'))    store.curTab = 'health'
+  else if (newPath.startsWith('/hospital'))  store.curTab = 'hospital'
+  else if (newPath.startsWith('/qs'))        store.curTab = 'qs'
+  else if (newPath.startsWith('/about'))     store.curTab = 'about'
+  else if (newPath.startsWith('/care'))      store.curTab = 'care'
+  else if (newPath.startsWith('/faq'))       store.curTab = 'faq'
+  else if (newPath.startsWith('/profile'))   store.curTab = 'profile'
+  else store.curTab = 'home'
 })
 
 // 滾動節流與效能優化
@@ -96,14 +112,20 @@ onMounted(() => {
   store.initLiff()
   store.initPWAInstallPrompt()
 
-  const savedWish = localStorage.getItem('gencko_wishlist')
-  if (savedWish) store.wishlist = JSON.parse(savedWish)
-  
-  const savedHospWish = localStorage.getItem('gencko_hosp_wishlist')
-  if (savedHospWish) store.hospWishlist = JSON.parse(savedHospWish)
-  
-  const savedHist = localStorage.getItem('gencko_history')
-  if (savedHist) store.history = JSON.parse(savedHist)
+  try {
+    const savedWish = localStorage.getItem('gencko_wishlist')
+    if (savedWish) store.wishlist = JSON.parse(savedWish)
+  } catch (e) { localStorage.removeItem('gencko_wishlist') }
+
+  try {
+    const savedHospWish = localStorage.getItem('gencko_hosp_wishlist')
+    if (savedHospWish) store.hospWishlist = JSON.parse(savedHospWish)
+  } catch (e) { localStorage.removeItem('gencko_hosp_wishlist') }
+
+  try {
+    const savedHist = localStorage.getItem('gencko_history')
+    if (savedHist) store.history = JSON.parse(savedHist)
+  } catch (e) { localStorage.removeItem('gencko_history') }
 
   window.addEventListener('scroll', handleScroll, { passive: true })
 })

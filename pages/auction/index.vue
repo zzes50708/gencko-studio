@@ -83,7 +83,7 @@ const goToDetail = (id) => {
                     <div class="card-img-box">
                         <!-- 🌟 核心修正：將 NuxtImg 替換為原生 img -->
                         <img 
-                            :src="item.images && item.images.length ? getCleanUrl(item.images[0]) : 'https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/placeholder.jpg'" 
+                            :src="item.images && item.images.length ? getCleanUrl(item.images[0], 400) : 'https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/placeholder.jpg'" 
                             :alt="item.morph" 
                             loading="lazy"
                             decoding="async"

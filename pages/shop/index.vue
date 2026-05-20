@@ -80,15 +80,22 @@ watch([sp, kw, fil, sortOrder], () => {
 }, { deep: true })
 
 // --- 計算屬性 ---
+
+// 有效狀態：Status='Auction' 但 auctionList 中無對應有效場次 → 視為 ForSale
+const getEffectiveStatus = (item) => {
+    if (item.Status === 'Auction' && !store.auctionList.some(a => a.animal_id === item.ID)) return 'ForSale'
+    return item.Status
+}
+
 const maxPrice = computed(() => {
-    const prices = store.inv.filter(i => i.Species === sp.value && i.Status === 'ForSale').map(i => Number(i.ListingPrice) || 0)
+    const prices = store.inv.filter(i => i.Species === sp.value && ['ForSale','Auction'].includes(getEffectiveStatus(i))).map(i => Number(i.ListingPrice) || 0)
     return prices.length ? Math.max(...prices) : 0
 })
 
 const availableGenes = computed(() => {
     const s = new Set()
-    const targetStatus = fil.value.sold ?[ 'ForSale', 'Sold', 'Reserved' ] :[ 'ForSale', 'Reserved' ]
-    store.inv.filter(i => i.Species === sp.value && targetStatus.includes(i.Status)).forEach(i => {
+    const targetStatus = fil.value.sold ? ['ForSale', 'Auction', 'Sold'] : ['ForSale', 'Auction']
+    store.inv.filter(i => i.Species === sp.value && targetStatus.includes(getEffectiveStatus(i))).forEach(i => {
         if (Array.isArray(i.Genes)) i.Genes.forEach(g => s.add(g === '白黃' ? 'WY' : g))
     })
     return Array.from(s)
@@ -102,9 +109,10 @@ const getSortedGenes = (list) => {
 
 const shopList = computed(() => {
     let l = store.inv.filter(i => {
-        if (i.Species !== sp.value || i.Status === 'Trash' || i.Status === 'NotForSale') return false
-        const isSold = i.Status === 'Sold'
-        const isStock = i.Status === 'ForSale' || i.Status === 'Reserved'
+        if (i.Species !== sp.value || i.Status === 'Trash' || i.Status === 'SelfKeep') return false
+        const es = getEffectiveStatus(i)
+        const isSold = es === 'Sold'
+        const isStock = es === 'ForSale' || es === 'Reserved' || es === 'Auction'
         if (!fil.value.sold && isSold) return false
         if (!fil.value.stock && isStock) return false
         
@@ -113,8 +121,8 @@ const shopList = computed(() => {
         if (fil.value.maxP && p > fil.value.maxP) return false
 
         const sex = i.GenderType
-        const isM = sex === '公' || (sex === '溫度' && Number(i.GenderValue) >= 30)
-        const isF = sex === '母' || (sex === '溫度' && Number(i.GenderValue) <= 27)
+        const isM = sex === '公' || (sex === '溫控' && Number(i.GenderValue) >= 30)
+        const isF = sex === '母' || (sex === '溫控' && Number(i.GenderValue) <= 27)
         if (!fil.value.sexM && isM) return false
         if (!fil.value.sexF && isF) return false
 
@@ -303,7 +311,7 @@ const toggleWishlist = (id) => {
                             <!-- 🌟 核心修正：將 NuxtImg 替換為原生 img -->
                             <img 
                                 v-if="i.ImageURL" 
-                                :src="getCleanUrl(i.ImageURL)" 
+                                :src="getCleanUrl(i.ImageURL, 400)" 
                                 :alt="i.Morph" 
                                 class="card-img slim-img" 
                                 :loading="index < 6 ? 'eager' : 'lazy'" 
@@ -317,12 +325,19 @@ const toggleWishlist = (id) => {
                         <div class="card-body slim-body">
                             <h3 class="slim-title" style="margin:0;">{{ i.Morph }}</h3>
                             <div class="slim-price-row" style="margin-top:4px;">
-                                <div v-if="i.Status !== 'ForSale'">
-                                    <span v-if="i.Status === 'Sold'" class="status-badge s-sold">已售出</span>
-                                    <span v-else-if="i.Status === 'Reserved'" class="status-badge s-res">預訂</span>
-                                    <span v-else-if="i.Status === 'NotForSale'" class="status-badge s-nfs">非賣</span>
-                                </div>
-                                <div v-else class="price slim-price">${{ i.ListingPrice }}</div>
+                                <template v-if="i.Status === 'Sold'">
+                                    <span class="status-badge s-sold">已售出</span>
+                                </template>
+                                <!-- 競標中：需確認 auctionList 中有對應有效場次，避免已結標但 animals.status 未更新的誤判 -->
+                                <template v-else-if="i.Status === 'Auction' && store.auctionList.some(a => a.animal_id === i.ID)">
+                                    <span class="status-badge s-auction">競標中</span>
+                                </template>
+                                <template v-else-if="i.Status === 'SelfKeep'">
+                                    <span class="status-badge s-nfs">非賣</span>
+                                </template>
+                                <template v-else>
+                                    <div class="price slim-price">${{ i.ListingPrice }}</div>
+                                </template>
                             </div>
                         </div>
                     </NuxtLink>

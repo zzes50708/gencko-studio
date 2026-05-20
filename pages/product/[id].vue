@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref } from 'vue'
+import { computed, ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useHead, useAsyncData, useSupabaseClient } from '#imports'
 import { useMainStore } from '~/stores/useMainStore'
@@ -19,7 +19,7 @@ const { data: currentProduct, pending } = await useAsyncData(`product-${productI
     }
 
     const { data, error } = await supabase
-        .from('inventory')
+        .from('animals')
         .select('*')
         .eq('id', productId)
         .single()
@@ -30,7 +30,7 @@ const { data: currentProduct, pending } = await useAsyncData(`product-${productI
         ID: String(data.id || '').trim(),
         Species: data.species,
         Morph: data.morph,
-        Genes: data.genes ? JSON.parse(data.genes) :[ ],
+        Genes: Array.isArray(data.genes) ? data.genes : [],
         GenderType: data.gender_type,
         GenderValue: data.gender_value,
         Birthday: data.birthday,
@@ -131,7 +131,7 @@ useHead({
 
 const fmtSex = (i) => {
     if (!i) return ''
-    if (i.GenderType === '溫度') {
+    if (i.GenderType === '溫控') {
         let t = +i.GenderValue
         if (t >= 31) return t + '°C (90%公)'
         if (t >= 30) return t + '°C (75%公)'
@@ -144,10 +144,34 @@ const fmtSex = (i) => {
 
 const getSexCls = (i) => {
     if (!i) return ''
-    if (i.GenderType === '公' || (i.GenderType === '溫度' && +i.GenderValue >= 30)) return 'male'
-    if (i.GenderType === '母' || (i.GenderType === '溫度' && +i.GenderValue <= 27)) return 'female'
+    if (i.GenderType === '公' || (i.GenderType === '溫控' && +i.GenderValue >= 30)) return 'male'
+    if (i.GenderType === '母' || (i.GenderType === '溫控' && +i.GenderValue <= 27)) return 'female'
     return 'mix'
 }
+
+// 從進行中競標列表找到對應場次，優先用 animal_id 精準比對，找不到再 fallback 至 morph 名稱比對
+const matchedAuctionId = computed(() => {
+    if (!currentProduct.value || currentProduct.value.Status !== 'Auction') return null
+    const pid = currentProduct.value.ID
+    const morph = (currentProduct.value.Morph || '').trim().toLowerCase()
+    // 1. 精準比對：auction.animal_id === 個體 ID（需後台在建立競標時填入）
+    const exactMatch = store.auctionList.find(a => a.animal_id === pid)
+    if (exactMatch) return exactMatch.id
+    // 2. 模糊比對：morph 名稱相同（同名品系有多隻時可能不準確）
+    const morphMatch = store.auctionList.find(a => (a.morph || '').trim().toLowerCase() === morph)
+    return morphMatch?.id || null
+})
+
+// 寫入瀏覽歷史（最多保留 50 筆，最新的在最前）
+onMounted(() => {
+    if (currentProduct.value?.ID) {
+        const id = currentProduct.value.ID
+        store.history = [id, ...store.history.filter(x => x !== id)].slice(0, 50)
+        try {
+            localStorage.setItem('gencko_history', JSON.stringify(store.history))
+        } catch (e) {}
+    }
+})
 
 // 原生系統分享 (Web Share API)
 const shareLink = async () => {
@@ -318,11 +342,20 @@ const generatePromo = async () => {
                         </div>
                     </div>
                     <div class="prod-price-area">
-                        <div v-if="productModules.transaction.status !== 'ForSale'">
-                            <span v-if="productModules.transaction.status === 'Sold'" class="status-badge s-sold">已售出</span>
-                            <span v-else class="status-badge s-nfs">非賣/預訂</span>
-                        </div>
-                        <div v-else class="price">NT$ {{ productModules.transaction.price }}</div>
+                        <template v-if="productModules.transaction.status === 'Sold'">
+                            <span class="status-badge s-sold">已售出</span>
+                        </template>
+                        <!-- 競標中：需確認 auctionList 中有對應有效場次 -->
+                        <template v-else-if="productModules.transaction.status === 'Auction' && matchedAuctionId">
+                            <span class="status-badge s-auction">競標中</span>
+                        </template>
+                        <template v-else-if="productModules.transaction.status === 'SelfKeep'">
+                            <span class="status-badge s-nfs">非賣（自留）</span>
+                        </template>
+                        <template v-else>
+                            <!-- ForSale 或 Auction 已結標（後台未更新）→ 顯示售價 -->
+                            <div class="price">NT$ {{ productModules.transaction.price }}</div>
+                        </template>
                     </div>
 
                     <div class="guarantee-icons-row">
@@ -337,7 +370,15 @@ const generatePromo = async () => {
                     </div>
 
                     <div class="prod-actions">
-                        <a v-if="productModules.transaction.status === 'ForSale'" :href="store.lineLink" target="_blank" class="btn-buy-lg">💬 私訊購買 (Line)</a>
+                        <!-- 競標中且有有效場次 -->
+                        <NuxtLink
+                            v-if="productModules.transaction.status === 'Auction' && matchedAuctionId"
+                            :to="`/auction/${matchedAuctionId}`"
+                            class="btn-buy-lg"
+                            style="background: #e67e22; box-shadow: 0 4px 10px rgba(230,126,34,0.4);"
+                        >🔨 前往競標場次</NuxtLink>
+                        <!-- ForSale 或 Auction 已結標（顯示私訊購買） -->
+                        <a v-else-if="productModules.transaction.status === 'ForSale' || productModules.transaction.status === 'Auction'" :href="store.lineLink" target="_blank" class="btn-buy-lg">💬 私訊購買 (Line)</a>
                         <div class="action-sub-buttons">
                             <button class="btn-share" @click="shareLink">分享連結</button>
                             <button class="btn-promo" @click="generatePromo" :disabled="isGenerating">

@@ -5,9 +5,10 @@ const props = defineProps({
 </script>
 
 <template>
-    <div class="marquee-container">
+    <div class="marquee-container" v-if="list && list.length > 0">
         <div class="marquee-content">
-            <span v-for="(item, i) in list" :key="i" class="marquee-item">
+            <!-- 渲染兩份實現無縫循環：動畫跑 -50% 剛好是一份的結尾接上另一份的開頭 -->
+            <span v-for="(item, i) in [...list, ...list]" :key="i" class="marquee-item">
                 <a v-if="item.url" :href="item.url" target="_blank" class="marquee-link">{{ item.text }}</a>
                 <span v-else>{{ item.text }}</span>
                 <span style="margin: 0 80px; opacity: 0.3;">◆</span>
@@ -74,9 +75,9 @@ const props = defineProps({
     opacity: 0.9;
 }
 
-@keyframes marquee { 
-    0% { transform: translateX(0); } 
-    100% { transform: translateX(-100%); } 
+@keyframes marquee {
+    0% { transform: translateX(0); }
+    100% { transform: translateX(-50%); }  /* 兩份內容跑一半 = 一份結尾接回開頭，無縫循環 */
 }
 
 /* 🌟 Mobile Optimizations */
