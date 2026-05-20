@@ -176,12 +176,16 @@ export default defineNuxtConfig({
       htmlAttrs: { lang: 'zh-TW' },
       meta:[
         { charset: 'utf-8' },
-        { name: 'viewport', content: 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover' },
+        { name: 'viewport', content: 'width=device-width, initial-scale=1.0, viewport-fit=cover' },
         { name: 'description', content: 'Gencko Studio 提供專業的豹紋守宮繁育、基因計算機與特寵飼養知識。線上選購守宮、查詢基因圖鑑的最佳平台。' },
         { property: 'og:type', content: 'website' },
         { property: 'og:site_name', content: 'Gencko Studio' },
         { property: 'og:image', content: 'https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/11.png' },
+        { property: 'og:image:width', content: '1200' },
+        { property: 'og:image:height', content: '630' },
+        { property: 'og:locale', content: 'zh_TW' },
         { name: 'twitter:card', content: 'summary_large_image' },
+        { name: 'twitter:site', content: '@gencko_breeding' },
         { name: 'mobile-web-app-capable', content: 'yes' },
         { name: 'apple-mobile-web-app-capable', content: 'yes' },
         { name: 'apple-mobile-web-app-status-bar-style', content: 'black-translucent' },
@@ -198,7 +202,8 @@ export default defineNuxtConfig({
         { rel: 'stylesheet', href: 'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+TC:wght@300;400;500;700;900&family=Black+Ops+One&display=swap' }
       ],
       script:[
-        { src: 'https://www.googletagmanager.com/gtag/js?id=G-Q97CS08YRH', async: true },
+        // ⚠️ GA4：script src 與 config ID 統一為 G-93T0C2KMEZ（原 G-Q97CS08YRH 不一致已修正）
+        { src: 'https://www.googletagmanager.com/gtag/js?id=G-93T0C2KMEZ', async: true },
         {
           children: `
             window.dataLayer = window.dataLayer || [];
@@ -206,6 +211,31 @@ export default defineNuxtConfig({
             gtag('js', new Date());
             gtag('config', 'G-93T0C2KMEZ');
           `
+        },
+        // Organization 結構化資料（品牌身份，GEO / Knowledge Panel 基礎）
+        {
+          type: 'application/ld+json',
+          children: JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "Organization",
+            "name": "Gencko Studio",
+            "alternateName": "捷客工作室",
+            "url": "https://www.genckobreeding.com",
+            "logo": "https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/11.png",
+            "description": "Gencko Studio 是台灣專業的豹紋守宮（Eublepharis macularius）繁育工作室，提供基因計算機、飼養知識與線上競標服務。",
+            "foundingDate": "2023",
+            "areaServed": { "@type": "Country", "name": "Taiwan" },
+            "sameAs": [
+              "https://www.instagram.com/gencko_breeding",
+              "https://www.facebook.com/profile.php?id=61579393505049",
+              "https://line.me/R/ti/p/@219abdzn"
+            ],
+            "contactPoint": {
+              "@type": "ContactPoint",
+              "contactType": "customer service",
+              "availableLanguage": "Chinese"
+            }
+          })
         }
       ]
     }

@@ -38,8 +38,8 @@ const { data: readingArticle, pending } = await useAsyncData(`article-${articleI
         Content: data.content,
         ImageURL: data.image_url,
         Author: data.author || 'Gencko Studio',
-        PublishDate: data.created_at,   // 新版 schema 使用 created_at
-        Keywords: data.keywords || ''   // 新版 schema 無此欄位，預設空字串
+        PublishDate: data.publish_date || data.created_at,
+        Keywords: data.keywords || ''
     }
 })
 

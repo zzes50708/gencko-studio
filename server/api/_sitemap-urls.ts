@@ -31,19 +31,14 @@ export default defineEventHandler(async (event) => {
   if (err1) console.error('Sitemap 抓取 animals 失敗:', err1)
   if (products) {
     products.forEach(p => {
-      // 在此過濾掉垃圾桶與自留品
+      // 過濾垃圾桶與自留品
       if (p.status !== 'Trash' && p.status !== 'SelfKeep') {
         urls.push({
           loc: `/product/${p.id}`,
           changefreq: 'weekly',
           priority: p.status === 'ForSale' ? 0.8 : 0.4
         })
-        // 寫入對應的電子身分證網址
-        urls.push({
-          loc: `/identity/${p.id}`,
-          changefreq: 'monthly',
-          priority: 0.5
-        })
+        // /identity/ 已在 robots.txt 設為 Disallow，不放入 sitemap 避免矛盾
       }
     })
   }
@@ -51,7 +46,7 @@ export default defineEventHandler(async (event) => {
   // 2. 抓取文章 (Articles)
   const { data: articles, error: err2 } = await supabase
     .from('articles')
-    .select('id, created_at, status')
+    .select('id, publish_date, created_at, status')
     .ilike('status', 'published')
 
   if (err2) console.error('Sitemap 抓取 articles 失敗:', err2)
@@ -61,7 +56,7 @@ export default defineEventHandler(async (event) => {
         loc: `/articles/${a.id}`,
         changefreq: 'monthly',
         priority: 0.7,
-        lastmod: a.created_at
+        lastmod: a.publish_date || a.created_at
       })
     })
   }

@@ -6,14 +6,30 @@ import { FAQ_DATA } from '~/utils/faq.js'
 useHead({
     title: '常見問題',
     meta:[
-        { name: 'description', content: 'Gencko Studio 整理了關於守宮購買流程、運送方式以及售後服務的常見問題。' },
-        { property: 'og:title', content: '常見問題 | Gencko Studio' },
-        { property: 'og:description', content: '關於守宮購買流程、運送方式以及售後服務的常見問題。' },
+        { name: 'description', content: 'Gencko Studio 整理了關於守宮購買流程、運送方式、性別判斷、售後服務的常見問題，新手入手前必讀。' },
+        { property: 'og:title', content: '常見問題 FAQ | Gencko Studio' },
+        { property: 'og:description', content: '關於守宮購買流程、運送方式、退款機制及售後服務的完整解答。' },
         { property: 'og:url', content: 'https://www.genckobreeding.com/faq' }
     ],
     link:[
         { rel: 'canonical', href: 'https://www.genckobreeding.com/faq' }
-    ]
+    ],
+    // 🌟 FAQPage 結構化資料 → 讓 Google 在搜尋結果直接展開問答（Featured Snippet / AEO）
+    script:[{
+        type: 'application/ld+json',
+        children: JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "FAQPage",
+            "mainEntity": FAQ_DATA.map(q => ({
+                "@type": "Question",
+                "name": q.title.replace(/^Q\d+：/, '').replace(/\(必讀\)/, '').trim(),
+                "acceptedAnswer": {
+                    "@type": "Answer",
+                    "text": (q.ans || '').replace(/\n/g, ' ').trim()
+                }
+            }))
+        })
+    }]
 })
 
 const faqList = ref(JSON.parse(JSON.stringify(FAQ_DATA)))
