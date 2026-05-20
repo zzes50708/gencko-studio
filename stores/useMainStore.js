@@ -84,7 +84,8 @@ export const useMainStore = defineStore('main', () => {
         Source: i.source,
         Species: i.species,
         Morph: i.morph,
-        Genes: Array.isArray(i.genes) ? i.genes : (i.genes ? JSON.parse(i.genes) : []),
+        // genes 是 JSONB array，不需要 JSON.parse（CLAUDE.md 確認）
+        Genes: Array.isArray(i.genes) ? i.genes : [],
         GenderType: i.gender_type,
         GenderValue: i.gender_value,
         Birthday: i.birthday,
@@ -93,61 +94,12 @@ export const useMainStore = defineStore('main', () => {
         Status: i.status,
         Note: i.note,
         ImageURL: i.image_url,
-        // is_hot：後台存 boolean，容錯舊表字串 'Hot'
-        IsHot: i.is_hot === true || i.is_hot === 'Hot' ? 'Hot' : '',
+        // is_hot 是純 boolean（CLAUDE.md 確認）
+        IsHot: i.is_hot === true,
         CreatedDate: i.created_at || new Date().toISOString()
       }))
 
-      hotList.value = inv.value.filter(i => i.IsHot === 'Hot')
-
-      const { data: merchData } = await supabase.from('merchandise').select('*')
-      if (merchData) {
-        merchList.value = merchData.map(m => ({
-          ItemID: m.item_id,
-          Name: m.name,
-          Description: m.description,
-          Price: m.price,
-          ImageURL: m.image_url,
-          Category: m.category,
-          Available: m.available,
-          ExternalLink: m.external_link
-        }))
-      }
-
-      const { data: artData } = await supabase.from('articles').select('*')
-      if (artData) {
-        articlesList.value = artData
-          .filter(a => a.status === 'Published' || a.status === 'published')
-          .map(a => ({
-            ID: a.id,
-            Title: a.title,
-            Category: a.category,
-            Summary: a.summary,
-            Content: a.content,
-            ImageURL: a.image_url,
-            Author: a.author,
-            PublishDate: a.publish_date,
-            Keywords: a.keywords // 🌟 新增：撈取隱藏的關鍵字欄位
-          }))
-          .reverse()
-      }
-
-      const { data: geneData } = await supabase.from('genetic_pages').select('*')
-      if (geneData) {
-        genePages.value = geneData.map(g => ({
-          Name: g.name,
-          ImageURL: g.image_url,
-          Warning: g.warning,
-          Brief: g.brief,
-          Detail: g.detail,
-          Source: g.source
-        }))
-      }
-
-      const { data: configData } = await supabase.from('config').select('*')
-      if (configData) {
-        marqueeList.value = configData.map(c => ({ text: c.text, url: c.url }))
-      }
+      hotList.value = inv.value.filter(i => i.IsHot === true)
     } catch (e) {
       console.error('讀取個體資料失敗:', e)
     } finally {
@@ -188,8 +140,9 @@ export const useMainStore = defineStore('main', () => {
           Content: a.content,
           ImageURL: a.image_url,
           Author: a.author || 'Gencko Studio',
-          PublishDate: a.created_at,   // 新版 schema 使用 created_at
-          Keywords: a.keywords || ''   // 新版 schema 無此欄位，預設空字串
+          // publish_date 是後台填入的發布日（CLAUDE.md 確認），created_at 為建立時間備用
+          PublishDate: a.publish_date || a.created_at,
+          Keywords: a.keywords || ''
         }))
         .reverse()
     } else if (artResult.status === 'rejected' || artResult.value?.error) {
