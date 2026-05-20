@@ -50,17 +50,37 @@ const siteData = computed(() => {
         const url = `https://www.genckobreeding.com/genes/${encodeURIComponent(g.Name)}`
         const desc = g.Brief || `Gencko Studio 收錄的 ${g.Name} 基因詳細介紹與特徵說明。`
 
-        // Article Schema (視為百科條目)
+        // Article Schema（視為百科條目，加入實體消歧與科學名稱供 GEO 引用）
         const jsonLd = {
             "@context": "https://schema.org",
             "@type": "Article",
-            "headline": `${g.Name} - 守宮基因圖鑑`,
-            "image":[img],
+            "headline": `${g.Name} - 豹紋守宮（Eublepharis macularius）基因圖鑑`,
+            "image": [img],
             "author": {
                 "@type": "Organization",
-                "name": "Gencko Studio"
+                "name": "Gencko Studio",
+                "url": "https://www.genckobreeding.com"
             },
-            "description": desc
+            "publisher": {
+                "@type": "Organization",
+                "name": "Gencko Studio",
+                "logo": { "@type": "ImageObject", "url": "https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/11.png" }
+            },
+            "description": desc,
+            "about": {
+                "@type": "Thing",
+                "name": g.Name,
+                "description": `豹紋守宮（Eublepharis macularius）的 ${g.Name} 基因型，影響體色、斑紋與外觀表現。`
+            },
+            "mentions": [
+                {
+                    "@type": "Taxon",
+                    "name": "Eublepharis macularius",
+                    "alternateName": "豹紋守宮",
+                    "sameAs": "https://www.wikidata.org/wiki/Q185061"
+                }
+            ],
+            "mainEntityOfPage": url
         }
 
         return {

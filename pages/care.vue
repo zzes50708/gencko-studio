@@ -10,13 +10,67 @@ const store = useMainStore()
 const careImg = computed(() => store.careImg)
 
 useHead({
-    title: '飼養方式',
+    title: '豹紋守宮飼養方式',
     meta:[
-        { name: 'description', content: 'Gencko Studio 專業守宮飼養方式指南。提供環境佈置、溫度濕度控制與營養管理等全面教學。' },
-        { property: 'og:title', content: '飼養方式 | Gencko Studio' },
-        { property: 'og:description', content: 'Gencko Studio 專業守宮飼養方式指南。' },
+        { name: 'description', content: '豹紋守宮（Eublepharis macularius）完整飼養指南：飼養箱大小、溫度設定、底材選擇、餵食頻率與注意事項，新手入門必讀。' },
+        { property: 'og:title', content: '豹紋守宮飼養方式完整指南 | Gencko Studio' },
+        { property: 'og:description', content: '飼養箱、溫度、底材、飲食與注意事項全攻略，Gencko Studio 專業繁育工作室整理。' },
         { property: 'og:url', content: 'https://www.genckobreeding.com/care' }
-    ]
+    ],
+    link:[
+        { rel: 'canonical', href: 'https://www.genckobreeding.com/care' }
+    ],
+    // 🌟 HowTo schema → 讓 Google 在搜尋結果展開步驟（AEO Featured Snippet）
+    script:[{
+        type: 'application/ld+json',
+        children: JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "HowTo",
+            "name": "如何飼養豹紋守宮（Eublepharis macularius）",
+            "description": "豹紋守宮飼養完整步驟，包含環境佈置、溫度控制、飲食管理與常見注意事項。",
+            "totalTime": "PT30M",
+            "supply": [
+                { "@type": "HowToSupply", "name": "飼養箱（至少 40×30×20 公分）" },
+                { "@type": "HowToSupply", "name": "底部加熱墊" },
+                { "@type": "HowToSupply", "name": "躲避屋" },
+                { "@type": "HowToSupply", "name": "溫度計" },
+                { "@type": "HowToSupply", "name": "淺水碟" },
+                { "@type": "HowToSupply", "name": "鈣粉與維生素 D₃" }
+            ],
+            "step": [
+                {
+                    "@type": "HowToStep",
+                    "name": "準備飼養箱",
+                    "text": "選擇至少 40×30×20 公分的玻璃或壓克力飼養箱，提供充足活動空間。"
+                },
+                {
+                    "@type": "HowToStep",
+                    "name": "鋪設底材",
+                    "text": "使用廚房紙巾、椰纖土或大顆赤玉土，避免沙粒等細碎底材以防誤食。"
+                },
+                {
+                    "@type": "HowToStep",
+                    "name": "設置躲避處",
+                    "text": "提供至少一處遮蔽物，增加守宮安全感並協助脫皮。"
+                },
+                {
+                    "@type": "HowToStep",
+                    "name": "設定溫度",
+                    "text": "安裝底部加熱墊，熱區維持 30–32°C，冷區維持 24–26°C，讓守宮自由選擇。"
+                },
+                {
+                    "@type": "HowToStep",
+                    "name": "提供飲水",
+                    "text": "每日更換乾淨水源，使用淺水碟避免溺水風險。"
+                },
+                {
+                    "@type": "HowToStep",
+                    "name": "餵食",
+                    "text": "幼體每日或隔日餵食蟋蟀、杜比亞蟑螂；成體每 2–3 天一次。每次餵食後裹鈣粉補充營養。"
+                }
+            ]
+        })
+    }]
 })
 </script>
 
