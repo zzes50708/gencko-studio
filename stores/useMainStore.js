@@ -49,6 +49,18 @@ export const useMainStore = defineStore('main', () => {
   const isStandalone = ref(false)
   const showIOSGuide = ref(false)
 
+  // 🌟 並排比較清單（最多 3 隻）
+  const compareList = ref([])
+  const toggleCompare = (id) => {
+    const idx = compareList.value.indexOf(id)
+    if (idx !== -1) {
+      compareList.value.splice(idx, 1)
+    } else if (compareList.value.length < 3) {
+      compareList.value.push(id)
+    }
+  }
+  const clearCompare = () => { compareList.value = [] }
+
   // --- 資源連結 ---
   const careImg = ref('https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/%E7%92%B0%E5%A2%83.png')
   const aboutImg = ref('https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/324500%20(1).png')
@@ -434,6 +446,7 @@ export const useMainStore = defineStore('main', () => {
     currentUser, wishlist, hospWishlist, history, showToast, lightboxItem, navHidden, mobileMenuOpen, lastScrollY,
     displayLimit, readingArticle, readingProgress, viewingGene, geneSpecies, careImg, aboutImg, logoUrl, lineLink,
     canInstall, showIOSGuide,
+    compareList, toggleCompare, clearCompare,
     loadDataFromAPI, loadAuctions, initLiff, checkAuthStatus, loginWithLine, loginWithGoogle, logout,
     initTheme, toggleTheme, initPWAInstallPrompt, installApp,
     openLightbox, closeLightbox, triggerToast

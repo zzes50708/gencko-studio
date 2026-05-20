@@ -200,6 +200,9 @@ const toggleWishlist = (id) => {
     }
     if (import.meta.client) localStorage.setItem('gencko_wishlist', JSON.stringify(store.wishlist))
 }
+
+// 🌟 並排比較
+const compareItems = computed(() => store.compareList.map(id => store.inv.find(i => i.ID === id)).filter(Boolean))
 </script>
 
 <template>
@@ -303,8 +306,15 @@ const toggleWishlist = (id) => {
                     
                     <NuxtLink :to="`/product/${i.ID}`" class="card slim-card" v-for="(i, index) in shopList" :key="i.ID" style="text-decoration:none; color:inherit;">
                         <div v-if="i.Status === 'Sold'" class="sold-stamp">SOLD</div>
-                        <div style="position:absolute;top:5px;right:5px;z-index:10;">
+                        <div style="position:absolute;top:5px;right:5px;z-index:10; display:flex; flex-direction:column; gap:4px;">
                             <span class="fav-btn" :class="{active: store.wishlist.includes(i.ID)}" @click.stop.prevent="toggleWishlist(i.ID)">❤</span>
+                            <span
+                                v-if="i.Status !== 'Sold'"
+                                class="cmp-btn"
+                                :class="{active: store.compareList.includes(i.ID), disabled: store.compareList.length >= 3 && !store.compareList.includes(i.ID)}"
+                                @click.stop.prevent="store.toggleCompare(i.ID)"
+                                :title="store.compareList.includes(i.ID) ? '移出比較' : store.compareList.length >= 3 ? '最多3隻' : '加入比較'"
+                            >⊕</span>
                         </div>
                         <div style="position:relative;">
                             
@@ -345,6 +355,31 @@ const toggleWishlist = (id) => {
             </div>
         </div>
     </div>
+
+    <!-- 🌟 浮動比較列 -->
+    <Teleport to="body">
+        <Transition name="cmp-bar">
+            <div v-if="store.compareList.length > 0" class="compare-bar">
+                <div class="cmp-bar-items">
+                    <div v-for="item in compareItems" :key="item.ID" class="cmp-bar-item">
+                        <img v-if="item.ImageURL" :src="getCleanUrl(item.ImageURL, 80)" :alt="item.Morph" />
+                        <div v-else class="cmp-bar-placeholder">🦎</div>
+                        <span class="cmp-bar-name">{{ item.Morph }}</span>
+                        <button class="cmp-bar-remove" @click="store.toggleCompare(item.ID)">✕</button>
+                    </div>
+                    <div v-for="n in (3 - store.compareList.length)" :key="'empty-'+n" class="cmp-bar-empty">
+                        + 加入
+                    </div>
+                </div>
+                <div class="cmp-bar-actions">
+                    <NuxtLink :to="`/compare?ids=${store.compareList.join(',')}`" class="cmp-go-btn">
+                        比較 {{ store.compareList.length }} 隻
+                    </NuxtLink>
+                    <button class="cmp-clear-btn" @click="store.clearCompare()">清除</button>
+                </div>
+            </div>
+        </Transition>
+    </Teleport>
 </template>
 
 <style scoped>
@@ -684,8 +719,148 @@ const toggleWishlist = (id) => {
     
     .trust-badge { font-size: 0.5rem; padding: 2px 4px; bottom: 2px; left: 2px; }
     .fav-btn { font-size: 1rem; width: 26px; height: 26px; top: 3px; right: 3px; }
+    .cmp-btn { font-size: 0.85rem; width: 22px; height: 22px; }
     .sold-stamp { font-size: 0.55rem; padding: 2px 4px; top: 4px; left: 4px; }
     .status-badge { padding: 2px 6px !important; font-size: 0.75rem !important; }
     .shop-empty-state { grid-column: 1 / -1 !important; }
+    .compare-bar { padding: 10px 12px; gap: 8px; flex-direction: column; }
+    .cmp-bar-items { gap: 6px; }
+    .cmp-bar-item { width: 70px; }
+    .cmp-bar-item img { width: 40px; height: 40px; }
+    .cmp-bar-name { font-size: 0.62rem; }
 }
+
+/* ── 比較按鈕 (卡片右上角) ── */
+.cmp-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: var(--card-bg);
+    border: 1px solid var(--bd);
+    color: var(--txt);
+    font-size: 1rem;
+    cursor: pointer;
+    transition: 0.2s;
+    opacity: 0.8;
+    line-height: 1;
+}
+.cmp-btn:hover { opacity: 1; border-color: var(--pri); color: var(--pri); }
+.cmp-btn.active { background: var(--pri); color: #fff; border-color: var(--pri); opacity: 1; }
+.cmp-btn.disabled { opacity: 0.3; cursor: not-allowed; }
+
+/* ── 浮動比較列 ── */
+.compare-bar {
+    position: fixed;
+    bottom: calc(70px + env(safe-area-inset-bottom, 0px));
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 9000;
+    background: var(--card-bg);
+    border: 1px solid var(--bd-hover);
+    border-radius: 16px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.35), 0 0 0 1px var(--pri-glow-soft);
+    padding: 12px 16px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    min-width: 340px;
+    max-width: 90vw;
+    backdrop-filter: blur(12px);
+}
+.cmp-bar-items {
+    display: flex;
+    gap: 10px;
+    flex: 1;
+    align-items: center;
+}
+.cmp-bar-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    width: 80px;
+    position: relative;
+}
+.cmp-bar-item img {
+    width: 50px;
+    height: 50px;
+    border-radius: 8px;
+    object-fit: cover;
+    border: 1px solid var(--bd);
+}
+.cmp-bar-placeholder { width: 50px; height: 50px; border-radius: 8px; background: var(--bd); display: flex; align-items: center; justify-content: center; font-size: 1.5rem; }
+.cmp-bar-name {
+    font-size: 0.68rem;
+    font-weight: bold;
+    color: var(--txt);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 80px;
+    text-align: center;
+}
+.cmp-bar-remove {
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: #e74c3c;
+    border: none;
+    color: #fff;
+    font-size: 0.6rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+}
+.cmp-bar-empty {
+    width: 80px;
+    height: 50px;
+    border-radius: 8px;
+    border: 2px dashed var(--bd);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.7rem;
+    color: var(--txt);
+    opacity: 0.4;
+}
+.cmp-bar-actions { display: flex; flex-direction: column; gap: 6px; }
+.cmp-go-btn {
+    background: var(--pri);
+    color: #fff;
+    border: none;
+    padding: 10px 18px;
+    border-radius: 20px;
+    font-size: 0.88rem;
+    font-weight: bold;
+    cursor: pointer;
+    box-shadow: 0 3px 10px var(--pri-glow);
+    white-space: nowrap;
+    text-decoration: none;
+    display: block;
+    text-align: center;
+}
+.cmp-clear-btn {
+    background: transparent;
+    color: var(--txt);
+    border: 1px solid var(--bd);
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 0.78rem;
+    cursor: pointer;
+    opacity: 0.7;
+    white-space: nowrap;
+}
+.cmp-clear-btn:hover { opacity: 1; }
+
+/* 浮動列進場動畫 */
+.cmp-bar-enter-active, .cmp-bar-leave-active { transition: opacity 0.25s ease, transform 0.25s ease; }
+.cmp-bar-enter-from, .cmp-bar-leave-to { opacity: 0; transform: translateX(-50%) translateY(20px); }
 </style>

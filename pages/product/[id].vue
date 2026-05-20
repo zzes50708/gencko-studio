@@ -162,6 +162,26 @@ const matchedAuctionId = computed(() => {
     return morphMatch?.id || null
 })
 
+// 🌟 相似個體推薦：同品系且有相同基因，依相似度排序，最多顯示 8 筆
+const relatedProducts = computed(() => {
+    if (!currentProduct.value || !store.inv.length) return []
+    const p = currentProduct.value
+    const pGenes = Array.isArray(p.Genes) ? p.Genes : []
+    const availStatuses = ['ForSale', 'Auction', 'Reserved']
+
+    return store.inv
+        .filter(i => i.ID !== p.ID && i.Species === p.Species && availStatuses.includes(i.Status))
+        .map(i => {
+            const iGenes = Array.isArray(i.Genes) ? i.Genes : []
+            const sharedGenes = pGenes.filter(g => iGenes.includes(g)).length
+            const sameMorph = i.Morph === p.Morph ? 3 : 0
+            return { ...i, _score: sameMorph + sharedGenes }
+        })
+        .filter(i => i._score > 0)
+        .sort((a, b) => b._score - a._score || (b.ImageURL ? 1 : 0) - (a.ImageURL ? 1 : 0))
+        .slice(0, 8)
+})
+
 // 寫入瀏覽歷史（最多保留 50 筆，最新的在最前）
 onMounted(() => {
     if (currentProduct.value?.ID) {
@@ -415,6 +435,44 @@ const generatePromo = async () => {
             </div>
         </div>
     </div>
+
+    <!-- 🌟 相似個體推薦 -->
+    <section v-if="relatedProducts.length > 0" class="related-section">
+        <div class="section-head" style="margin-bottom:14px; border-bottom:1px solid var(--bd); padding-bottom:10px;">
+            <h2 class="sec-title" style="font-size:1.2rem;">相似個體推薦</h2>
+            <NuxtLink to="/shop" class="sec-more" style="text-decoration:none; font-size:0.85rem;">查看更多 →</NuxtLink>
+        </div>
+        <div class="related-grid">
+            <NuxtLink
+                v-for="item in relatedProducts"
+                :key="item.ID"
+                :to="`/product/${item.ID}`"
+                class="related-card"
+                style="text-decoration:none; color:inherit;"
+            >
+                <div class="related-img-wrap">
+                    <img
+                        v-if="item.ImageURL"
+                        :src="getCleanUrl(item.ImageURL, 300)"
+                        :alt="item.Morph"
+                        loading="lazy"
+                        decoding="async"
+                    />
+                    <div v-else class="related-img-placeholder">🦎</div>
+                    <span v-if="item.Status === 'Sold'" class="rel-badge rel-sold">售出</span>
+                    <span v-else-if="item.Status === 'Auction'" class="rel-badge rel-auction">競標</span>
+                </div>
+                <div class="related-info">
+                    <div class="related-morph">{{ item.Morph }}</div>
+                    <div class="related-price">
+                        <span v-if="item.Status === 'ForSale'">${{ item.ListingPrice }}</span>
+                        <span v-else-if="item.Status === 'Auction'" style="color:var(--pri);">競標中</span>
+                        <span v-else style="color:#888;">已售出</span>
+                    </div>
+                </div>
+            </NuxtLink>
+        </div>
+    </section>
 </template>
 
 <style scoped>
@@ -529,5 +587,59 @@ const generatePromo = async () => {
     
     .prod-expect-notice { font-size: 0.7rem; }
     .prod-terms-box { grid-column: 1 / -1; padding: 15px; margin-top: 5px; }
+    .related-grid { grid-template-columns: repeat(3, 1fr) !important; gap: 8px !important; }
 }
+
+/* ── 相似個體推薦 ── */
+.related-section { margin-top: 30px; }
+.related-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+}
+@media (min-width: 769px) and (max-width: 1100px) {
+    .related-grid { grid-template-columns: repeat(4, 1fr); }
+}
+.related-card {
+    background: var(--card-bg);
+    border: 1px solid var(--bd);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    transition: transform var(--transition), box-shadow var(--transition), border-color var(--transition);
+    cursor: pointer;
+}
+.related-card:hover {
+    transform: translateY(-3px);
+    border-color: var(--bd-hover);
+    box-shadow: var(--shadow-hover);
+}
+.related-img-wrap {
+    position: relative;
+    aspect-ratio: 1 / 1;
+    overflow: hidden;
+    background: var(--card-bg);
+}
+.related-img-wrap img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    transition: transform var(--transition);
+}
+.related-card:hover .related-img-wrap img { transform: scale(1.04); }
+.related-img-placeholder {
+    width: 100%; height: 100%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 2rem; background: rgba(0,0,0,0.2);
+}
+.rel-badge {
+    position: absolute; top: 6px; left: 6px;
+    padding: 2px 7px; border-radius: 10px;
+    font-size: 0.65rem; font-weight: bold; color: #fff;
+}
+.rel-sold { background: #555; }
+.rel-auction { background: var(--pri); box-shadow: 0 0 6px var(--pri-glow); }
+.related-info { padding: 8px 10px; }
+.related-morph { font-size: 0.88rem; font-weight: 700; color: var(--txt); margin-bottom: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.related-price { font-size: 0.82rem; font-weight: bold; color: var(--pri); }
 </style>
