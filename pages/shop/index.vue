@@ -317,12 +317,19 @@ const toggleWishlist = (id) => {
                         <div class="card-body slim-body">
                             <h3 class="slim-title" style="margin:0;">{{ i.Morph }}</h3>
                             <div class="slim-price-row" style="margin-top:4px;">
-                                <div v-if="i.Status !== 'ForSale'">
-                                    <span v-if="i.Status === 'Sold'" class="status-badge s-sold">已售出</span>
-                                    <span v-else-if="i.Status === 'Auction'" class="status-badge s-auction">競標中</span>
-                                    <span v-else-if="i.Status === 'SelfKeep'" class="status-badge s-nfs">非賣</span>
-                                </div>
-                                <div v-else class="price slim-price">${{ i.ListingPrice }}</div>
+                                <template v-if="i.Status === 'Sold'">
+                                    <span class="status-badge s-sold">已售出</span>
+                                </template>
+                                <!-- 競標中：需確認 auctionList 中有對應有效場次，避免已結標但 animals.status 未更新的誤判 -->
+                                <template v-else-if="i.Status === 'Auction' && store.auctionList.some(a => a.animal_id === i.ID)">
+                                    <span class="status-badge s-auction">競標中</span>
+                                </template>
+                                <template v-else-if="i.Status === 'SelfKeep'">
+                                    <span class="status-badge s-nfs">非賣</span>
+                                </template>
+                                <template v-else>
+                                    <div class="price slim-price">${{ i.ListingPrice }}</div>
+                                </template>
                             </div>
                         </div>
                     </NuxtLink>

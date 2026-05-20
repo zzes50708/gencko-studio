@@ -342,13 +342,20 @@ const generatePromo = async () => {
                         </div>
                     </div>
                     <div class="prod-price-area">
-                        <div v-if="productModules.transaction.status !== 'ForSale'">
-                            <span v-if="productModules.transaction.status === 'Sold'" class="status-badge s-sold">已售出</span>
-                            <span v-else-if="productModules.transaction.status === 'Auction'" class="status-badge s-auction">競標中</span>
-                            <span v-else-if="productModules.transaction.status === 'SelfKeep'" class="status-badge s-nfs">非賣（自留）</span>
-                            <span v-else class="status-badge s-nfs">非賣</span>
-                        </div>
-                        <div v-else class="price">NT$ {{ productModules.transaction.price }}</div>
+                        <template v-if="productModules.transaction.status === 'Sold'">
+                            <span class="status-badge s-sold">已售出</span>
+                        </template>
+                        <!-- 競標中：需確認 auctionList 中有對應有效場次 -->
+                        <template v-else-if="productModules.transaction.status === 'Auction' && matchedAuctionId">
+                            <span class="status-badge s-auction">競標中</span>
+                        </template>
+                        <template v-else-if="productModules.transaction.status === 'SelfKeep'">
+                            <span class="status-badge s-nfs">非賣（自留）</span>
+                        </template>
+                        <template v-else>
+                            <!-- ForSale 或 Auction 已結標（後台未更新）→ 顯示售價 -->
+                            <div class="price">NT$ {{ productModules.transaction.price }}</div>
+                        </template>
                     </div>
 
                     <div class="guarantee-icons-row">
@@ -363,13 +370,15 @@ const generatePromo = async () => {
                     </div>
 
                     <div class="prod-actions">
-                        <a v-if="productModules.transaction.status === 'ForSale'" :href="store.lineLink" target="_blank" class="btn-buy-lg">💬 私訊購買 (Line)</a>
+                        <!-- 競標中且有有效場次 -->
                         <NuxtLink
-                            v-else-if="productModules.transaction.status === 'Auction'"
-                            :to="matchedAuctionId ? `/auction/${matchedAuctionId}` : '/auction'"
+                            v-if="productModules.transaction.status === 'Auction' && matchedAuctionId"
+                            :to="`/auction/${matchedAuctionId}`"
                             class="btn-buy-lg"
                             style="background: #e67e22; box-shadow: 0 4px 10px rgba(230,126,34,0.4);"
-                        >🔨 {{ matchedAuctionId ? '前往競標場次' : '前往競標頁面' }}</NuxtLink>
+                        >🔨 前往競標場次</NuxtLink>
+                        <!-- ForSale 或 Auction 已結標（顯示私訊購買） -->
+                        <a v-else-if="productModules.transaction.status === 'ForSale' || productModules.transaction.status === 'Auction'" :href="store.lineLink" target="_blank" class="btn-buy-lg">💬 私訊購買 (Line)</a>
                         <div class="action-sub-buttons">
                             <button class="btn-share" @click="shareLink">分享連結</button>
                             <button class="btn-promo" @click="generatePromo" :disabled="isGenerating">
