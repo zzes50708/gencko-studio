@@ -67,7 +67,8 @@ export const useMainStore = defineStore('main', () => {
         Source: i.source,
         Species: i.species,
         Morph: i.morph,
-        Genes: i.genes ? JSON.parse(i.genes) :[],
+        // genes 可能是 JSONB array（新 animals 表）或 JSON string（舊 inventory 表）
+        Genes: Array.isArray(i.genes) ? i.genes : (i.genes ? JSON.parse(i.genes) : []),
         GenderType: i.gender_type,
         GenderValue: i.gender_value,
         Birthday: i.birthday,
@@ -77,7 +78,8 @@ export const useMainStore = defineStore('main', () => {
         Status: i.status,
         Note: i.note,
         ImageURL: i.image_url,
-        IsHot: String(i.is_hot || '').trim(),
+        // is_hot 後台存 boolean，舊表存字串 'Hot'
+        IsHot: i.is_hot === true || i.is_hot === 'Hot' ? 'Hot' : '',
         CreatedDate: i.created_at || new Date().toISOString()
       }))
 
@@ -100,7 +102,7 @@ export const useMainStore = defineStore('main', () => {
       const { data: artData } = await supabase.from('articles').select('*')
       if (artData) {
         articlesList.value = artData
-          .filter(a => a.status === 'Published')
+          .filter(a => a.status === 'Published' || a.status === 'published')
           .map(a => ({
             ID: a.id,
             Title: a.title,
