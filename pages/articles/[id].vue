@@ -145,6 +145,26 @@ const goBack = () => {
     store.readingArticle = null
     router.push('/articles')
 }
+
+// 🌟 相關文章：同分類優先，其次任意文章，排除自身，最多 4 篇
+const relatedArticles = computed(() => {
+    if (!readingArticle.value || !store.articlesList.length) return []
+    const self = readingArticle.value.ID
+    const cat = readingArticle.value.Category
+    const selfKws = (readingArticle.value.Keywords || '').toLowerCase().split(',').map(k => k.trim()).filter(Boolean)
+
+    const scored = store.articlesList
+        .filter(a => a.ID !== self)
+        .map(a => {
+            let score = 0
+            if (a.Category === cat) score += 3
+            const aKws = (a.Keywords || '').toLowerCase().split(',').map(k => k.trim()).filter(Boolean)
+            score += selfKws.filter(k => aKws.includes(k)).length
+            return { ...a, _score: score }
+        })
+        .sort((a, b) => b._score - a._score || (b.ImageURL ? 1 : 0) - (a.ImageURL ? 1 : 0))
+    return scored.slice(0, 4)
+})
 </script>
 
 <template>
@@ -197,6 +217,29 @@ const goBack = () => {
                     </div>
                 </div>
             </article>
+            <!-- 🌟 相關文章（內部連結 + SEO 停留時間）-->
+            <section v-if="relatedArticles.length > 0" class="related-articles-section">
+                <h2 class="related-title">延伸閱讀</h2>
+                <div class="related-articles-grid">
+                    <NuxtLink
+                        v-for="art in relatedArticles"
+                        :key="art.ID"
+                        :to="`/articles/${art.ID}`"
+                        class="related-art-card"
+                        style="text-decoration:none; color:inherit;"
+                    >
+                        <div class="related-art-img-wrap">
+                            <img v-if="art.ImageURL" :src="getCleanUrl(art.ImageURL, 300)" :alt="art.Title" loading="lazy" decoding="async" />
+                            <div v-else class="related-art-img-placeholder">📝</div>
+                        </div>
+                        <div class="related-art-info">
+                            <span class="related-art-cat">{{ art.Category }}</span>
+                            <div class="related-art-title">{{ art.Title }}</div>
+                        </div>
+                    </NuxtLink>
+                </div>
+            </section>
+
             <button @click="goBack" class="btn-back" style="margin-top:30px;">← 返回列表</button>
         </div>
     </div>
@@ -268,5 +311,72 @@ const goBack = () => {
 @media (max-width: 768px) {
     .author-card { flex-direction: column; gap: 12px; padding: 14px; }
     .author-avatar { width: 44px; height: 44px; }
+    .related-articles-grid { grid-template-columns: repeat(2, 1fr) !important; gap: 8px !important; }
+    .related-art-title { font-size: 0.82rem !important; }
+}
+
+/* ── 延伸閱讀 ── */
+.related-articles-section { margin-top: 32px; }
+.related-title {
+    font-size: 1.1rem;
+    font-weight: 900;
+    color: var(--txt);
+    border-left: 3px solid var(--pri);
+    padding-left: 10px;
+    margin-bottom: 14px;
+}
+.related-articles-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+}
+.related-art-card {
+    background: var(--card-bg);
+    border: 1px solid var(--bd);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    transition: transform var(--transition), border-color var(--transition);
+    cursor: pointer;
+}
+.related-art-card:hover {
+    transform: translateY(-3px);
+    border-color: var(--bd-hover);
+}
+.related-art-img-wrap {
+    aspect-ratio: 16 / 9;
+    overflow: hidden;
+    background: var(--card-bg);
+}
+.related-art-img-wrap img {
+    width: 100%; height: 100%;
+    object-fit: cover;
+    transition: transform var(--transition);
+}
+.related-art-card:hover .related-art-img-wrap img { transform: scale(1.04); }
+.related-art-img-placeholder {
+    width: 100%; height: 100%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 2rem; background: rgba(128,128,128,0.1);
+}
+.related-art-info { padding: 10px; }
+.related-art-cat {
+    font-size: 0.68rem;
+    color: var(--pri);
+    font-weight: bold;
+    background: var(--pri-glow-soft);
+    padding: 2px 7px;
+    border-radius: 10px;
+    display: inline-block;
+    margin-bottom: 5px;
+}
+.related-art-title {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--txt);
+    line-height: 1.4;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
 }
 </style>

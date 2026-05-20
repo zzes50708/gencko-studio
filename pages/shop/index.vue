@@ -10,19 +10,54 @@ const store = useMainStore()
 const route = useRoute()
 const router = useRouter()
 
+// 🌟 ItemList schema：在售個體列表（前 12 筆，供搜尋引擎展示商品卡片）
+const itemListSchema = computed(() => {
+    const forSaleItems = store.inv
+        .filter(i => i.Status === 'ForSale' && i.Species === sp.value)
+        .slice(0, 12)
+    if (!forSaleItems.length) return null
+    return {
+        "@context": "https://schema.org",
+        "@type": "ItemList",
+        "name": `${sp.value}選購列表`,
+        "description": `Gencko Studio 目前在售的${sp.value}個體`,
+        "url": "https://www.genckobreeding.com/shop",
+        "numberOfItems": forSaleItems.length,
+        "itemListElement": forSaleItems.map((item, idx) => ({
+            "@type": "ListItem",
+            "position": idx + 1,
+            "item": {
+                "@type": "Product",
+                "name": item.Morph,
+                "url": `https://www.genckobreeding.com/product/${item.ID}`,
+                "image": item.ImageURL || '',
+                "description": `${item.Species} ${item.Morph}，${item.GenderType}，基因：${(item.Genes || []).join('、') || '純種'}`,
+                "offers": {
+                    "@type": "Offer",
+                    "price": item.ListingPrice,
+                    "priceCurrency": "TWD",
+                    "availability": "https://schema.org/InStock",
+                    "seller": { "@type": "Organization", "name": "Gencko Studio" }
+                }
+            }
+        }))
+    }
+})
+
 useHead({
-    title: '線上選購守宮',
+    title: '線上選購豹紋守宮',
     meta:[
-        { name: 'description', content: 'Gencko Studio 提供多樣化的豹紋守宮與肥尾守宮選購。透過進階篩選功能，依據基因、性別、價格找到您的夢幻守宮。' },
-        { property: 'og:title', content: '線上選購守宮 | Gencko Studio' },
-        { property: 'og:description', content: 'Gencko Studio 提供多樣化的豹紋守宮與肥尾守宮選購。透過進階篩選功能，依據基因、性別、價格找到您的夢幻守宮。' },
+        { name: 'description', content: 'Gencko Studio 提供多樣化的豹紋守宮（Eublepharis macularius）與肥尾守宮選購。依基因、性別、價格篩選，找到你的夢幻守宮。新手推薦、競標個體一覽無遺。' },
+        { property: 'og:title', content: '線上選購豹紋守宮 | Gencko Studio' },
+        { property: 'og:description', content: '台灣專業繁育工作室，豹紋守宮與肥尾守宮直接選購，100% 健康保證。' },
         { property: 'og:image', content: 'https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/%E6%AD%A3%E9%9D%A2.png' },
         { property: 'og:url', content: 'https://www.genckobreeding.com/shop' },
         { name: 'twitter:card', content: 'summary_large_image' }
     ],
     link:[
         { rel: 'canonical', href: 'https://www.genckobreeding.com/shop' }
-    ]
+    ],
+    script: computed(() => itemListSchema.value ? [{ type: 'application/ld+json', children: JSON.stringify(itemListSchema.value) }] : [])
 })
 
 // --- 狀態管理 ---

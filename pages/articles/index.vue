@@ -84,9 +84,15 @@ const toggleQuickTag = (tag) => {
 }
 
 useHead({
-    title: '專欄文章',
+    title: '豹紋守宮飼養知識專欄',
     meta: [
-        { name: 'description', content: 'Gencko Studio 專欄，提供守宮飼養教學、健康照護與環境布置知識。' }
+        { name: 'description', content: '豹紋守宮（Eublepharis macularius）完整知識庫：飼養教學、健康照護、基因科普、環境佈置與新手必看指南。由 Gencko Studio 專業繁育工作室整理。' },
+        { property: 'og:title', content: '豹紋守宮飼養知識專欄 | Gencko Studio' },
+        { property: 'og:description', content: '新手入門、健康照護、基因科普、環境佈置，守宮飼養必讀文章全收錄。' },
+        { property: 'og:url', content: 'https://www.genckobreeding.com/articles' }
+    ],
+    link: [
+        { rel: 'canonical', href: 'https://www.genckobreeding.com/articles' }
     ]
 })
 
