@@ -180,7 +180,7 @@ const closeMobileMenu = () => {
 </template>
 
 <style scoped>
-/* Sticky Navigation — 背景與 Logo 底色一致，邊界消失 */
+/* Sticky Navigation — 背景由全域 CSS 控制（夜間深色 / 日間 Logo 冷藍灰） */
 .sticky-nav {
     position: fixed;
     top: calc(40px + env(safe-area-inset-top, 0px));
@@ -188,52 +188,12 @@ const closeMobileMenu = () => {
     width: 100%;
     height: 50px;
     z-index: 1000;
-    background: rgba(196, 207, 216, 0.97);   /* Logo 冷藍灰底色 */
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
-    border-bottom: 1px solid rgba(160, 175, 185, 0.5);
     padding: 0 15px;
-    box-shadow: 0 2px 16px rgba(0, 0, 0, 0.18);
     transition: transform 0.3s ease;
 }
 .sticky-nav.nav-hidden { transform: translateY(-100%); }
-
-/* Navbar 背景為淺色，文字改深色 */
-.sticky-nav :deep(.nav-item-dt) {
-    color: rgba(25, 35, 45, 0.60);
-}
-.sticky-nav :deep(.nav-item-dt:hover) {
-    color: rgba(25, 35, 45, 0.90);
-    background: rgba(0, 0, 0, 0.06);
-}
-.sticky-nav :deep(.nav-item-dt.active) {
-    color: var(--pri);
-    border-bottom-color: var(--pri);
-    text-shadow: none;
-}
-
-/* 漢堡選單圖示改深色 */
-.hamburger {
-    color: rgba(25, 35, 45, 0.80) !important;
-}
-
-/* 日夜切換按鈕深色文字（覆寫 inline style 的 CSS 變數） */
-.sticky-nav :deep(.theme-toggle) {
-    color: rgba(25, 35, 45, 0.70) !important;
-    border-color: rgba(25, 35, 45, 0.25) !important;
-}
-.sticky-nav :deep(.theme-toggle:hover) {
-    color: rgba(25, 35, 45, 0.95) !important;
-    border-color: rgba(25, 35, 45, 0.5) !important;
-}
-
-/* 我的專區連結深色 */
-.sticky-nav :deep(.profile-link-dt) {
-    color: rgba(25, 35, 45, 0.70) !important;
-}
-.sticky-nav :deep(.profile-link-dt:hover) {
-    color: var(--pri) !important;
-}
 
 .nav-container { max-width: 1300px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; height: 50px; }
 .nav-left { display: flex; align-items: center; gap: 10px; }

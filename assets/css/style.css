@@ -51,7 +51,7 @@ html, body {
     z-index: 0; 
 }
 
-/* ── 純 CSS 背景（不依賴 CDN 圖片）── */
+/* ── 純 CSS 背景（蜂巢六邊形，不依賴 CDN 圖片）── */
 body::before {
     content: "";
     position: fixed;
@@ -61,20 +61,26 @@ body::before {
     pointer-events: none;
     transition: background-color 0.4s ease;
 
-    /* 深色模式：暖黑底 + 橘紅光源暈 + 細格線幾何感（呼應 Logo 背景）*/
+    /* 深色模式：暖黑底 + 橘紅蜂巢六邊形 + 邊緣光暈 */
     background-color: #0D0B0A;
     background-image:
-        radial-gradient(ellipse 80% 60% at 10% 60%,  rgba(232, 68, 10, 0.07) 0%, transparent 70%),
-        radial-gradient(ellipse 60% 50% at 90% 25%,  rgba(232, 68, 10, 0.05) 0%, transparent 60%),
-        radial-gradient(ellipse 40% 30% at 50% 100%, rgba(232, 68, 10, 0.04) 0%, transparent 70%),
-        linear-gradient(rgba(255, 255, 255, 0.018) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(255, 255, 255, 0.018) 1px, transparent 1px);
+        /* 中央暗化（讓邊緣六邊形更明顯） */
+        radial-gradient(ellipse 65% 50% at 50% 50%, rgba(13, 11, 10, 0.80) 0%, rgba(13, 11, 10, 0.35) 55%, transparent 85%),
+        /* 左側橘紅光暈 */
+        radial-gradient(ellipse 30% 80% at 0%   50%, rgba(232, 68, 10, 0.13) 0%, transparent 70%),
+        /* 右側橘紅光暈 */
+        radial-gradient(ellipse 30% 80% at 100% 50%, rgba(232, 68, 10, 0.13) 0%, transparent 70%),
+        /* 頂部橘紅光暈 */
+        radial-gradient(ellipse 80% 25% at 50%  0%,  rgba(232, 68, 10, 0.08) 0%, transparent 70%),
+        /* 六邊形蜂巢 SVG tile — pointy-top, R=40, tile 70×120 */
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='70' height='120'%3E%3Cpolygon points='35,0 70,20 70,60 35,80 0,60 0,20' fill='none' stroke='rgba(232,68,10,0.10)' stroke-width='10' stroke-linejoin='round'/%3E%3Cpolygon points='35,0 70,20 70,60 35,80 0,60 0,20' fill='none' stroke='rgba(232,68,10,0.40)' stroke-width='1.2' stroke-linejoin='round'/%3E%3Cpolygon points='0,60 35,80 35,120 0,140 -35,120 -35,60' fill='none' stroke='rgba(232,68,10,0.10)' stroke-width='10' stroke-linejoin='round'/%3E%3Cpolygon points='0,60 35,80 35,120 0,140 -35,120 -35,60' fill='none' stroke='rgba(232,68,10,0.40)' stroke-width='1.2' stroke-linejoin='round'/%3E%3Cpolygon points='70,60 105,80 105,120 70,140 35,120 35,80' fill='none' stroke='rgba(232,68,10,0.10)' stroke-width='10' stroke-linejoin='round'/%3E%3Cpolygon points='70,60 105,80 105,120 70,140 35,120 35,80' fill='none' stroke='rgba(232,68,10,0.40)' stroke-width='1.2' stroke-linejoin='round'/%3E%3C/svg%3E");
     background-size:
         100% 100%,
         100% 100%,
         100% 100%,
-        44px 44px,
-        44px 44px;
+        100% 100%,
+        70px 120px;
+    background-repeat: no-repeat, no-repeat, no-repeat, no-repeat, repeat;
 }
 
 /* 🌟 Body 上方內距加上系統頂部安全區 (瀏海) */
@@ -567,21 +573,23 @@ html.day-mode {
   --shadow-btn:    0 4px 12px var(--pri-glow);
 }
 
-/* 日間模式：冷藍灰底（Logo 背景色）+ 更淡的橘色光暈 + 細格線 */
+/* 日間模式：冷藍灰底（Logo 背景色）+ 更淡的灰色蜂巢六邊形 */
 html.day-mode body::before {
     background-color: #EEF1F4;
     background-image:
-        radial-gradient(ellipse 70% 55% at 8%  55%,  rgba(200, 52, 10, 0.05) 0%, transparent 65%),
-        radial-gradient(ellipse 55% 45% at 92% 20%,  rgba(200, 52, 10, 0.04) 0%, transparent 55%),
-        radial-gradient(ellipse 35% 25% at 50% 100%, rgba(200, 52, 10, 0.03) 0%, transparent 65%),
-        linear-gradient(rgba(0, 0, 0, 0.028) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(0, 0, 0, 0.028) 1px, transparent 1px);
+        /* 中央提亮 */
+        radial-gradient(ellipse 60% 45% at 50% 50%, rgba(238, 241, 244, 0.75) 0%, transparent 80%),
+        /* 邊緣極淡光暈 */
+        radial-gradient(ellipse 30% 80% at 0%   50%, rgba(200, 52, 10, 0.06) 0%, transparent 70%),
+        radial-gradient(ellipse 30% 80% at 100% 50%, rgba(200, 52, 10, 0.06) 0%, transparent 70%),
+        /* 六邊形蜂巢 SVG tile — 灰色 */
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='70' height='120'%3E%3Cpolygon points='35,0 70,20 70,60 35,80 0,60 0,20' fill='none' stroke='rgba(90,110,130,0.09)' stroke-width='10' stroke-linejoin='round'/%3E%3Cpolygon points='35,0 70,20 70,60 35,80 0,60 0,20' fill='none' stroke='rgba(90,110,130,0.28)' stroke-width='1.2' stroke-linejoin='round'/%3E%3Cpolygon points='0,60 35,80 35,120 0,140 -35,120 -35,60' fill='none' stroke='rgba(90,110,130,0.09)' stroke-width='10' stroke-linejoin='round'/%3E%3Cpolygon points='0,60 35,80 35,120 0,140 -35,120 -35,60' fill='none' stroke='rgba(90,110,130,0.28)' stroke-width='1.2' stroke-linejoin='round'/%3E%3Cpolygon points='70,60 105,80 105,120 70,140 35,120 35,80' fill='none' stroke='rgba(90,110,130,0.09)' stroke-width='10' stroke-linejoin='round'/%3E%3Cpolygon points='70,60 105,80 105,120 70,140 35,120 35,80' fill='none' stroke='rgba(90,110,130,0.28)' stroke-width='1.2' stroke-linejoin='round'/%3E%3C/svg%3E");
     background-size:
         100% 100%,
         100% 100%,
         100% 100%,
-        44px 44px,
-        44px 44px;
+        70px 120px;
+    background-repeat: no-repeat, no-repeat, no-repeat, repeat;
 }
 
 /* Day Mode Titles & Sections */
@@ -610,7 +618,7 @@ html.day-mode .sec-title { border-left-color: var(--pri); color: #1A1210; }
 html.day-mode .sec-more { color: rgba(26, 18, 16, 0.4); }
 html.day-mode .sec-more:hover { color: var(--pri); }
 
-html.day-mode .sticky-nav { background: rgba(255,255,255,0.95); border-bottom: 1px solid #ddd; }
+html.day-mode .sticky-nav { background: rgba(196, 207, 216, 0.97); border-bottom: 1px solid rgba(160, 175, 185, 0.50); box-shadow: 0 2px 12px rgba(0, 0, 0, 0.14); }
 html.day-mode .nav-item-dt { color: rgba(26, 18, 16, 0.55); }
 html.day-mode .nav-item-dt:hover { color: #111; background: rgba(0,0,0,0.04); }
 html.day-mode .nav-item-dt.active { color: var(--pri); text-shadow: none; }
