@@ -73,11 +73,32 @@ const siteData = computed(() => {
             "image": [imgUrl],
             "datePublished": isoDate,
             "dateModified": isoDate,
-            "author":[{
+            "author": [{
                 "@type": "Person",
                 "name": art.Author || "Gencko Studio",
-                "url": "https://www.genckobreeding.com/about"
+                "url": "https://www.genckobreeding.com/about",
+                "worksFor": {
+                    "@type": "Organization",
+                    "name": "Gencko Studio"
+                }
             }],
+            "publisher": {
+                "@type": "Organization",
+                "name": "Gencko Studio",
+                "url": "https://www.genckobreeding.com",
+                "logo": { "@type": "ImageObject", "url": "https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/11.png" },
+                "sameAs": [
+                    "https://www.instagram.com/gencko_breeding",
+                    "https://www.facebook.com/profile.php?id=61579393505049"
+                ]
+            },
+            "mainEntityOfPage": artUrl,
+            "inLanguage": "zh-TW",
+            "about": {
+                "@type": "Thing",
+                "name": "豹紋守宮",
+                "alternateName": "Eublepharis macularius"
+            },
             "description": art.Summary,
             "keywords": art.Keywords || "" // 🌟 新增：注入 JSON-LD
         }
@@ -152,8 +173,100 @@ const goBack = () => {
                 </div>
                 <hr style="border-color:rgba(255,255,255,0.1); margin: 0px 0;">
                 <div class="reader-content" v-html="readingArticle.Content"></div>
+
+                <!-- 🌟 E-E-A-T 作者資訊卡：提升 AI 引用可信度 & 品牌識別 -->
+                <div class="author-card" itemscope itemtype="https://schema.org/Organization">
+                    <img
+                        src="https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/11.png"
+                        alt="Gencko Studio Logo"
+                        class="author-avatar"
+                        itemprop="logo"
+                        loading="lazy"
+                    />
+                    <div class="author-info">
+                        <div class="author-name" itemprop="name">Gencko Studio</div>
+                        <div class="author-role">專業豹紋守宮（Eublepharis macularius）繁育工作室</div>
+                        <p class="author-bio" itemprop="description">
+                            致力於豹紋守宮與肥尾守宮的科學化選育，提供基因計算工具、飼養知識專欄與線上競標服務。所有文章均基於實際繁育經驗撰寫。
+                        </p>
+                        <div class="author-links">
+                            <a href="https://www.instagram.com/gencko_breeding" target="_blank" rel="noopener" class="author-link" itemprop="sameAs">Instagram</a>
+                            <a href="https://www.facebook.com/profile.php?id=61579393505049" target="_blank" rel="noopener" class="author-link" itemprop="sameAs">Facebook</a>
+                            <NuxtLink to="/about" class="author-link">關於我們</NuxtLink>
+                        </div>
+                    </div>
+                </div>
             </article>
             <button @click="goBack" class="btn-back" style="margin-top:30px;">← 返回列表</button>
         </div>
     </div>
 </template>
+
+<style scoped>
+/* ── E-E-A-T 作者資訊卡 ── */
+.author-card {
+    display: flex;
+    gap: 16px;
+    align-items: flex-start;
+    margin-top: 36px;
+    padding: 20px;
+    background: var(--card-bg);
+    border: 1px solid var(--bd);
+    border-radius: var(--radius-md);
+    border-left: 3px solid var(--pri);
+}
+.author-avatar {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    object-fit: cover;
+    flex-shrink: 0;
+    border: 2px solid var(--bd);
+}
+.author-info { flex: 1; min-width: 0; }
+.author-name {
+    font-size: 1rem;
+    font-weight: 900;
+    color: var(--txt);
+    margin-bottom: 2px;
+}
+.author-role {
+    font-size: 0.78rem;
+    color: var(--pri);
+    font-weight: 600;
+    margin-bottom: 8px;
+}
+.author-bio {
+    font-size: 0.85rem;
+    color: var(--txt);
+    opacity: 0.75;
+    line-height: 1.6;
+    margin: 0 0 10px 0;
+}
+.author-links {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+.author-link {
+    font-size: 0.78rem;
+    font-weight: bold;
+    color: var(--txt);
+    opacity: 0.6;
+    text-decoration: none;
+    border: 1px solid var(--bd);
+    padding: 3px 10px;
+    border-radius: 20px;
+    transition: 0.2s;
+}
+.author-link:hover {
+    opacity: 1;
+    border-color: var(--pri);
+    color: var(--pri);
+}
+
+@media (max-width: 768px) {
+    .author-card { flex-direction: column; gap: 12px; padding: 14px; }
+    .author-avatar { width: 44px; height: 44px; }
+}
+</style>
