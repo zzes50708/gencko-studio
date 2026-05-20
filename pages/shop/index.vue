@@ -80,15 +80,22 @@ watch([sp, kw, fil, sortOrder], () => {
 }, { deep: true })
 
 // --- 計算屬性 ---
+
+// 有效狀態：Status='Auction' 但 auctionList 中無對應有效場次 → 視為 ForSale
+const getEffectiveStatus = (item) => {
+    if (item.Status === 'Auction' && !store.auctionList.some(a => a.animal_id === item.ID)) return 'ForSale'
+    return item.Status
+}
+
 const maxPrice = computed(() => {
-    const prices = store.inv.filter(i => i.Species === sp.value && i.Status === 'ForSale').map(i => Number(i.ListingPrice) || 0)
+    const prices = store.inv.filter(i => i.Species === sp.value && ['ForSale','Auction'].includes(getEffectiveStatus(i))).map(i => Number(i.ListingPrice) || 0)
     return prices.length ? Math.max(...prices) : 0
 })
 
 const availableGenes = computed(() => {
     const s = new Set()
     const targetStatus = fil.value.sold ? ['ForSale', 'Auction', 'Sold'] : ['ForSale', 'Auction']
-    store.inv.filter(i => i.Species === sp.value && targetStatus.includes(i.Status)).forEach(i => {
+    store.inv.filter(i => i.Species === sp.value && targetStatus.includes(getEffectiveStatus(i))).forEach(i => {
         if (Array.isArray(i.Genes)) i.Genes.forEach(g => s.add(g === '白黃' ? 'WY' : g))
     })
     return Array.from(s)
@@ -103,8 +110,9 @@ const getSortedGenes = (list) => {
 const shopList = computed(() => {
     let l = store.inv.filter(i => {
         if (i.Species !== sp.value || i.Status === 'Trash' || i.Status === 'SelfKeep') return false
-        const isSold = i.Status === 'Sold'
-        const isStock = i.Status === 'ForSale' || i.Status === 'Reserved'
+        const es = getEffectiveStatus(i)
+        const isSold = es === 'Sold'
+        const isStock = es === 'ForSale' || es === 'Reserved' || es === 'Auction'
         if (!fil.value.sold && isSold) return false
         if (!fil.value.stock && isStock) return false
         

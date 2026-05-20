@@ -790,3 +790,23 @@ html.day-mode .scenario-title { color: #d84315; }
 html.day-mode .g-pill-green { background: #e8f5e9; color: #2e7d32; }
 html.day-mode .g-pill-blue { background: #e3f2fd; color: #1565c0; }
 html.day-mode .g-pill-orange { background: #fff3e0; color: #ef6c00; }
+
+/* ── 日間模式補強：競標頁元件在白底下的對比度 ── */
+/* 競標倒數計時器：白底下需要灰底才能區隔 */
+html.day-mode .countdown { background: rgba(0,0,0,0.04) !important; border-color: rgba(0,0,0,0.12) !important; color: #222 !important; }
+html.day-mode .countdown.ending-soon { background: #e74c3c !important; color: #fff !important; }
+/* 價格區塊在白底下加輕灰底 */
+html.day-mode .price-info { background: rgba(0,0,0,0.03) !important; border-color: rgba(0,0,0,0.10) !important; }
+html.day-mode .price-label { color: #555 !important; }
+html.day-mode .price-val { color: var(--pri) !important; }
+/* 競標卡片 */
+html.day-mode .auction-card { background: #fff; border-color: #e0e0e0; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+html.day-mode .auction-card:hover { box-shadow: 0 6px 18px rgba(0,0,0,0.10); border-color: var(--pri); }
+/* 首頁情境卡 - scenario desc 深色 */
+html.day-mode .scenario-desc { color: #555; }
+/* morph-name 種群展示 */
+html.day-mode .morph-title { color: #111 !important; }
+/* g-btn 非 active 狀態在白底 */
+html.day-mode .g-btn { background: #f5f5f5; border-color: #ddd; color: #444; }
+html.day-mode .g-btn:hover { background: #efefef; }
+html.day-mode .g-count { background: rgba(0,0,0,0.10); color: inherit; }

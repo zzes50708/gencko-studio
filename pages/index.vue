@@ -123,8 +123,8 @@ const setBeginnerMode = () => {
                         <NuxtLink :to="`/product/${i.ID}`" style="display:block; text-decoration:none; color:inherit; height:100%;">
                             <div style="position:relative;">
                                 <!-- 跑馬燈的前 4 張圖直接原生直連 CDN，後面的懶載入 -->
-                                <img 
-                                    v-if="i.ImageURL && idx < 4" 
+                                <img
+                                    v-if="i.ImageURL && idx < 4"
                                     :src="getCleanUrl(i.ImageURL, 300)"
                                     :alt="i.Morph + ' 守宮'"
                                     class="card-img"
@@ -141,6 +141,9 @@ const setBeginnerMode = () => {
                                     decoding="async"
                                 />
                                 <div v-else class="card-img" style="display:flex;align-items:center;justify-content:center;color:#333;font-size:3rem;background:#000;">🦎</div>
+                                <!-- 競標/售出狀態小 badge -->
+                                <div v-if="i.Status === 'Sold'" class="hot-stamp hot-stamp-sold">SOLD</div>
+                                <div v-else-if="i.Status === 'Auction' && auctionList.some(a => a.animal_id === i.ID)" class="hot-stamp hot-stamp-auction">🔨競標</div>
                             </div>
                             <div class="card-body" style="padding:12px; text-align:center;">
                                 <h3 class="slim-title" style="margin:0; font-size:1.05rem; white-space:normal; line-height:1.2;">{{ i.Morph }}</h3>
@@ -199,6 +202,22 @@ const setBeginnerMode = () => {
     width: 100%;
     overflow-x: hidden;
 }
+
+/* 熱門輪播狀態小 badge */
+.hot-stamp {
+    position: absolute;
+    top: 6px;
+    left: 6px;
+    padding: 2px 7px;
+    border-radius: 10px;
+    font-size: 0.68rem;
+    font-weight: bold;
+    color: #fff;
+    z-index: 10;
+    pointer-events: none;
+}
+.hot-stamp-sold { background: #555; }
+.hot-stamp-auction { background: var(--pri); box-shadow: 0 0 8px var(--pri-glow); }
 
 .live-badge {
     position: absolute;
