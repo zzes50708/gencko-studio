@@ -53,6 +53,12 @@ useHead({
 watch(() => route.path, (newPath) => {
   store.mobileMenuOpen = false
 
+  // 離開文章內頁時，歸零進度條（否則下次進其他頁面 Navbar 進度條仍留在上次讀到的位置）
+  if (!newPath.startsWith('/articles/')) {
+    store.readingProgress = 0
+    store.readingArticle = null
+  }
+
   // 以路徑 startsWith 明確映射，避免依賴 route.name 自動命名不穩定的問題
   if (newPath === '/') store.curTab = 'home'
   else if (newPath.startsWith('/articles'))  store.curTab = 'articles'
@@ -175,7 +181,6 @@ onUnmounted(() => {
       :nav-hidden="store.navHidden"
       :is-day-mode="store.isDayMode"
       v-model:mobile-menu-open="store.mobileMenuOpen"
-      :logo-url="store.logoUrl"
       :cur-tab="store.curTab"
       :reading-article="store.readingArticle"
       :reading-progress="store.readingProgress"

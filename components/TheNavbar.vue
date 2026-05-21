@@ -6,7 +6,6 @@ const props = defineProps({
     navHidden: { type: Boolean, default: false },
     isDayMode: { type: Boolean, default: true },
     mobileMenuOpen: { type: Boolean, default: false },
-    logoUrl: { type: String, default: '' },
     curTab: { type: String, default: '' },
     readingArticle: { type: Object, default: null },
     readingProgress: { type: Number, default: 0 }
@@ -42,7 +41,6 @@ const closeMobileMenu = () => {
             <div class="nav-container">
                 <!-- Logo -->
                 <NuxtLink to="/" class="nav-left" @click="$emit('scroll-top')" style="cursor:pointer; display:flex; align-items:center; gap:10px; text-decoration:none;">
-                    <img v-if="logoUrl" :src="logoUrl" style="height:40px; width:auto; display:block;">
                     <div style="font-weight:900; font-size:1.2rem; color:var(--pri); letter-spacing:1px; line-height:1;">GENCKO</div>
                 </NuxtLink>
 

@@ -62,6 +62,12 @@ const fmtPrice = (i) => {
 
 const hasActiveAuction = (id) => store.auctionList.some(a => a.animal_id === id)
 
+// 🌟 Bug fix：查出對應的 auction.id，直接連結到競標詳頁（而非列表頁）
+const getAuctionLink = (id) => {
+    const auction = store.auctionList.find(a => a.animal_id === id)
+    return auction ? `/auction/${auction.id}` : '/auction'
+}
+
 const removeItem = (id) => {
     store.toggleCompare(id)
     if (store.compareList.length === 0) router.push('/shop')
@@ -164,7 +170,7 @@ const removeItem = (id) => {
                     >💬 私訊購買</NuxtLink>
                     <NuxtLink
                         v-else-if="item.Status === 'Auction' && hasActiveAuction(item.ID)"
-                        :to="`/auction`"
+                        :to="getAuctionLink(item.ID)"
                         class="btn-action btn-auction"
                     >🔨 前往競標</NuxtLink>
                     <NuxtLink

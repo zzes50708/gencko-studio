@@ -9,45 +9,53 @@ const route = useRoute()
 const router = useRouter()
 const store = useMainStore()
 const supabase = useSupabaseClient()
-const productId = route.params.id
+
+// 使用 computed 讓 productId 保持響應式，確保元件複用時 key 能正確更新
+const productId = computed(() => String(route.params.id || '').trim())
 
 // [SEO] 透過 SSR 抓取單筆商品資料
-const { data: currentProduct, pending } = await useAsyncData(`product-${productId}`, async () => {
-    try {
-        // CSR 導航：store 已有資料時直接回傳，避免多餘 API 呼叫
-        if (import.meta.client && store.inv && store.inv.length > 0) {
-            const found = store.inv.find(i => i.ID === String(productId).trim())
-            if (found) return found
+// key 使用 function 形式（響應式），路由參數變化時自動重新抓取
+const { data: currentProduct, pending } = await useAsyncData(
+    () => `product-${productId.value}`,
+    async () => {
+        const pid = productId.value
+        if (!pid) return null
+        try {
+            // store 已有資料時直接回傳（CSR 快取優化）
+            if (store.inv && store.inv.length > 0) {
+                const found = store.inv.find(i => i.ID === pid)
+                if (found) return found
+            }
+
+            // SSR 或 store 尚未載入時查詢 Supabase
+            const { data, error } = await supabase
+                .from('animals')
+                .select('id, species, morph, genes, gender_type, gender_value, birthday, listing_price, sold_price, status, note, image_url')
+                .eq('id', pid)
+                .single()
+
+            if (error || !data) return null
+
+            return {
+                ID: String(data.id || '').trim(),
+                Species: data.species,
+                Morph: data.morph,
+                Genes: Array.isArray(data.genes) ? data.genes : [],
+                GenderType: data.gender_type,
+                GenderValue: data.gender_value,
+                Birthday: data.birthday,
+                ListingPrice: data.listing_price,
+                SoldPrice: data.sold_price,
+                Status: data.status,
+                Note: data.note,
+                ImageURL: data.image_url
+            }
+        } catch (e) {
+            console.error('[product] 載入失敗:', e)
+            return null
         }
-
-        // SSR 或 store 尚未載入：直接查詢 Supabase
-        const { data, error } = await supabase
-            .from('animals')
-            .select('id, species, morph, genes, gender_type, gender_value, birthday, listing_price, sold_price, status, note, image_url')
-            .eq('id', productId)
-            .single()
-
-        if (error || !data) return null
-
-        return {
-            ID: String(data.id || '').trim(),
-            Species: data.species,
-            Morph: data.morph,
-            Genes: Array.isArray(data.genes) ? data.genes : [],
-            GenderType: data.gender_type,
-            GenderValue: data.gender_value,
-            Birthday: data.birthday,
-            ListingPrice: data.listing_price,
-            SoldPrice: data.sold_price,
-            Status: data.status,
-            Note: data.note,
-            ImageURL: data.image_url
-        }
-    } catch (e) {
-        console.error('[product] 載入失敗:', e)
-        return null
     }
-})
+)
 
 const productModules = computed(() => {
     const p = currentProduct.value
@@ -116,7 +124,7 @@ const siteData = computed(() => {
         title: '找不到此商品',
         desc: '該商品可能已下架或不存在。',
         img: 'https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/%E6%AD%A3%E9%9D%A2.png',
-        url: `https://www.genckobreeding.com/product/${productId}`,
+        url: `https://www.genckobreeding.com/product/${productId.value}`,
         script: [ ]
     }
 })

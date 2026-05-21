@@ -234,6 +234,8 @@ const placeBid = async () => {
         if (end_time - new Date().getTime() <= 180000) {
             const newEndTime = new Date(end_time + 180000).toISOString()
             await supabase.from('auctions').update({ end_time: newEndTime }).eq('id', currentAuction.value.id)
+            // 🌟 Bug fix：同步更新本地 currentAuction，讓倒計時立即反映延長後的時間，無需重整頁面
+            currentAuction.value = { ...currentAuction.value, end_time: newEndTime }
             alert('因在結標前三分鐘內出價，結標時間已自動延長 3 分鐘！')
         } else {
             alert('出價成功！')
