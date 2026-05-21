@@ -5,6 +5,11 @@ import { useHead, useAsyncData, useSupabaseClient } from '#imports'
 import { useMainStore } from '~/stores/useMainStore'
 import { getCleanUrl } from '~/utils/image.js'
 
+// 🌟 強制每個不同 URL 建立獨立元件實例，防止 CSR 元件複用導致 useAsyncData 不重新抓取
+definePageMeta({
+    key: route => route.fullPath
+})
+
 const route = useRoute()
 const router = useRouter()
 const store = useMainStore()

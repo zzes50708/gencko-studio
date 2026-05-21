@@ -5,36 +5,40 @@ import { useHead, useAsyncData, useSupabaseClient } from '#imports'
 import { useMainStore } from '~/stores/useMainStore'
 import { getCleanUrl } from '~/utils/image.js'
 
+// 🌟 強制每個不同 URL 建立獨立元件實例，避免 Nuxt CSR 元件複用導致
+//    useAsyncData 不重新抓取、currentProduct 停留在舊資料或 null 的問題。
+definePageMeta({
+    key: route => route.fullPath
+})
+
 const route = useRoute()
 const router = useRouter()
 const store = useMainStore()
 const supabase = useSupabaseClient()
 
-// 使用 computed 讓 productId 保持響應式，確保元件複用時 key 能正確更新
-const productId = computed(() => String(route.params.id || '').trim())
+// 使用當下路由參數作為靜態字串 key（與 articles/[id].vue 相同模式）
+// 不用 function key，避免 @unhead/vue immediate watch + computed ref 的 TDZ 風險
+const productId = String(route.params.id || '').trim()
 
 // [SEO] 透過 SSR 抓取單筆商品資料
-// key 使用 function 形式（響應式），路由參數變化時自動重新抓取
 const { data: currentProduct, pending } = await useAsyncData(
-    () => `product-${productId.value}`,
+    `product-${productId}`,
     async () => {
-        const pid = productId.value
-        if (!pid) return null
+        if (!productId) return null
         try {
-            // store 已有資料時直接回傳（CSR 快取優化）
-            if (store.inv && store.inv.length > 0) {
-                const found = store.inv.find(i => i.ID === pid)
-                if (found) return found
-            }
-
-            // SSR 或 store 尚未載入時查詢 Supabase
+            // 直接查 Supabase，確保 SSR 與 CSR 回傳的資料形狀完全一致
+            // 不走 store 快取：store 物件含 IsHot/CreatedDate 等多餘欄位，
+            // 與 SSR 路徑回傳的形狀不同，會造成 hydration mismatch
             const { data, error } = await supabase
                 .from('animals')
                 .select('id, species, morph, genes, gender_type, gender_value, birthday, listing_price, sold_price, status, note, image_url')
-                .eq('id', pid)
+                .eq('id', productId)
                 .single()
 
-            if (error || !data) return null
+            if (error || !data) {
+                console.warn('[product] 查無此個體或查詢失敗:', productId, error?.message)
+                return null
+            }
 
             return {
                 ID: String(data.id || '').trim(),
@@ -124,7 +128,7 @@ const siteData = computed(() => {
         title: '找不到此商品',
         desc: '該商品可能已下架或不存在。',
         img: 'https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/%E6%AD%A3%E9%9D%A2.png',
-        url: `https://www.genckobreeding.com/product/${productId.value}`,
+        url: `https://www.genckobreeding.com/product/${productId}`,
         script: [ ]
     }
 })
