@@ -176,7 +176,9 @@ const fmtDate = (d) => {
 
         <transition-group tag="div" name="list" class="grid">
             <div v-if="filteredArticles.length === 0" key="empty-msg" class="empty-state" style="grid-column: 1 / -1;">
-                找不到相關文章
+                <div style="font-size:2rem; margin-bottom:8px;">📭</div>
+                <div>找不到相關文章</div>
+                <button v-if="searchQuery || artCat !== 'All'" @click="searchQuery = ''; artCat = 'All'" style="margin-top:12px; padding:8px 20px; background:var(--pri); color:#fff; border:none; border-radius:20px; cursor:pointer; font-size:0.85rem;">清除篩選</button>
             </div>
 
             <article class="card article-card" v-for="item in filteredArticles" :key="item.ID">
@@ -196,7 +198,7 @@ const fmtDate = (d) => {
                     </div>
                     <div class="card-body">
                         <time :datetime="item.PublishDate" class="date-text">{{ fmtDate(item.PublishDate) }}</time>
-                        <h2 class="morph-title">{{ item.Title }}</h2>
+                        <h3 class="morph-title">{{ item.Title }}</h3>
                         <p class="art-summary">{{ item.Summary }}</p>
                     </div>
                 </NuxtLink>
