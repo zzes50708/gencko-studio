@@ -156,13 +156,25 @@ const siteData = computed(() => {
         const desc = `目前最高出價 NT$${highestBidAmount.value}。${a.note ? a.note.substring(0, 40) + '...' : 'Gencko Studio 嚴選守宮，點擊參與競標！'}`
         const img = a.images && a.images.length ? getCleanUrl(a.images[0]) : 'https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/%E6%AD%A3%E9%9D%A2.png'
         const url = `https://www.genckobreeding.com/auction/${a.id}`
-        return { title, desc, img, url }
+
+        const breadcrumb = {
+            "@context": "https://schema.org",
+            "@type": "BreadcrumbList",
+            "itemListElement": [
+                { "@type": "ListItem", "position": 1, "name": "首頁", "item": "https://www.genckobreeding.com/" },
+                { "@type": "ListItem", "position": 2, "name": "守宮競標", "item": "https://www.genckobreeding.com/auction" },
+                { "@type": "ListItem", "position": 3, "name": title, "item": url }
+            ]
+        }
+
+        return { title, desc, img, url, script:[{ type: 'application/ld+json', children: JSON.stringify(breadcrumb) }] }
     }
     return {
         title: '找不到此競標商品',
         desc: '該商品可能已下架或不存在。',
         img: 'https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/%E6%AD%A3%E9%9D%A2.png',
-        url: `https://www.genckobreeding.com/auction/${auctionId}`
+        url: `https://www.genckobreeding.com/auction/${auctionId}`,
+        script: []
     }
 })
 
@@ -176,7 +188,8 @@ useHead({
         { property: 'og:url', content: computed(() => siteData.value.url) },
         { property: 'og:type', content: 'website' },
         { name: 'twitter:card', content: 'summary_large_image' }
-    ]
+    ],
+    script: computed(() => siteData.value.script || [])
 })
 
 const placeBid = async () => {

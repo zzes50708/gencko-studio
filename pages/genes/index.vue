@@ -12,6 +12,34 @@ const geneSpecies = computed({
     set: (val) => { store.geneSpecies = val }
 })
 
+const allGeneNames = computed(() => {
+    const names = []
+    for (const species of Object.values(GENES_DB)) {
+        for (const list of Object.values(species)) {
+            names.push(...list)
+        }
+    }
+    return [...new Set(names)]
+})
+
+const collectionSchema = computed(() => ({
+    "@context": "https://schema.org",
+    "@type": "CollectionPage",
+    "name": "守宮基因圖鑑",
+    "description": "收錄完整豹紋守宮與肥尾守宮基因資料庫，提供基因簡介、選育特徵與遺傳法則說明。",
+    "url": "https://www.genckobreeding.com/genes",
+    "about": {
+        "@type": "Taxon",
+        "name": "Eublepharis macularius",
+        "alternateName": "豹紋守宮"
+    },
+    "hasPart": allGeneNames.value.map(name => ({
+        "@type": "DefinedTerm",
+        "name": name,
+        "url": `https://www.genckobreeding.com/genes/${encodeURIComponent(name)}`
+    }))
+}))
+
 useHead({
     title: '守宮基因圖鑑',
     meta:[
@@ -24,7 +52,8 @@ useHead({
     ],
     link:[
         { rel: 'canonical', href: 'https://www.genckobreeding.com/genes' }
-    ]
+    ],
+    script: computed(() => [{ type: 'application/ld+json', children: JSON.stringify(collectionSchema.value) }])
 })
 </script>
 
@@ -41,15 +70,16 @@ useHead({
 
         <div class="genes-content">
             <div v-for="(list, cat) in GENES_DB[geneSpecies]" :key="cat" class="gene-section">
-                <!-- 🌟 移除吸頂設定，恢復自然排版 -->
                 <div class="section-header">
-                    <h2 class="gene-cat-title">{{ cat }}</h2>
+                    <h2 class="gene-cat-title">
+                        <span class="cat-badge" :class="`cat-${cat}`">{{ cat }}</span>
+                    </h2>
                 </div>
-                
+
                 <div class="gene-btn-grid">
                     <NuxtLink v-for="g in list" :key="g" :to="`/genes/${encodeURIComponent(g)}`" class="gene-btn-item">
-                        <span class="g-name">{{ g }}</span> 
-                        <span class="g-arrow">➜</span>
+                        <span class="g-name">{{ g }}</span>
+                        <span class="g-cta">查看說明 ➜</span>
                     </NuxtLink>
                 </div>
             </div>
@@ -112,6 +142,28 @@ useHead({
     font-weight: 900;
     letter-spacing: 1px;
 }
+.cat-badge {
+    display: inline-block;
+    padding: 3px 12px;
+    border-radius: 20px;
+    font-size: 0.9rem;
+    font-weight: 700;
+    background: rgba(232,68,10,0.15);
+    color: var(--pri-light);
+    border: 1px solid rgba(232,68,10,0.3);
+}
+.g-cta {
+    font-size: 0.72rem;
+    color: var(--pri);
+    opacity: 0.75;
+    white-space: nowrap;
+    flex-shrink: 0;
+    margin-left: 8px;
+    transition: opacity 0.2s;
+}
+.gene-btn-item:hover .g-cta {
+    opacity: 1;
+}
 
 .gene-section {
     margin-bottom: 30px;
@@ -154,20 +206,6 @@ useHead({
     text-overflow: ellipsis;
 }
 
-.g-arrow {
-    color: var(--txt);
-    opacity: 0.3;
-    font-size: 0.9rem;
-    transition: transform 0.2s, opacity 0.2s, color 0.2s;
-    margin-left: 8px;
-    flex-shrink: 0;
-}
-
-.gene-btn-item:hover .g-arrow {
-    transform: translateX(3px);
-    opacity: 1;
-    color: var(--pri);
-}
 
 /* 🌟 Mobile Optimizations */
 @media (max-width: 768px) {

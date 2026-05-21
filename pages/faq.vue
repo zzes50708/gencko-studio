@@ -14,8 +14,21 @@ useHead({
     link:[
         { rel: 'canonical', href: 'https://www.genckobreeding.com/faq' }
     ],
-    // 🌟 FAQPage 結構化資料（涵蓋所有分類）
-    script:[{
+    script:[
+    {
+        type: 'application/ld+json',
+        children: JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "WebPage",
+            "name": "常見問題 FAQ",
+            "url": "https://www.genckobreeding.com/faq",
+            "speakable": {
+                "@type": "SpeakableSpecification",
+                "cssSelector": [".faq-item", ".faq-answer"]
+            }
+        })
+    },
+    {
         type: 'application/ld+json',
         children: JSON.stringify({
             "@context": "https://schema.org",

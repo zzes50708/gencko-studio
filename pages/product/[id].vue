@@ -112,7 +112,20 @@ const siteData = computed(() => {
             }
         }
 
-        return { title, desc, img, url, script:[{ type: 'application/ld+json', children: JSON.stringify(jsonLd) }] }
+        const breadcrumb = {
+            "@context": "https://schema.org",
+            "@type": "BreadcrumbList",
+            "itemListElement": [
+                { "@type": "ListItem", "position": 1, "name": "首頁", "item": "https://www.genckobreeding.com/" },
+                { "@type": "ListItem", "position": 2, "name": "線上選購", "item": "https://www.genckobreeding.com/shop" },
+                { "@type": "ListItem", "position": 3, "name": p.Morph, "item": url }
+            ]
+        }
+
+        return { title, desc, img, url, script:[
+            { type: 'application/ld+json', children: JSON.stringify(jsonLd) },
+            { type: 'application/ld+json', children: JSON.stringify(breadcrumb) }
+        ] }
     }
     
     return {

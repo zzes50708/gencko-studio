@@ -8,6 +8,23 @@ const store = useMainStore()
 // 取出全域狀態中的 aboutImg
 const aboutImg = computed(() => store.aboutImg)
 
+const aboutSchema = {
+    "@context": "https://schema.org",
+    "@type": "AboutPage",
+    "name": "關於 Gencko Studio",
+    "description": "Gencko Studio 致力於建立嚴謹的爬蟲繁殖標準，提供實體影像紀錄、全天候專業諮詢及完整的售後支持。",
+    "url": "https://www.genckobreeding.com/about",
+    "mainEntity": {
+        "@type": "Organization",
+        "name": "Gencko Studio",
+        "alternateName": "捷客工作室",
+        "foundingDate": "2023",
+        "url": "https://www.genckobreeding.com",
+        "areaServed": { "@type": "Country", "name": "Taiwan" },
+        "knowsAbout": ["豹紋守宮", "肥尾守宮", "爬蟲繁育", "守宮基因選育"]
+    }
+}
+
 useHead({
     title: '關於我們',
     meta:[
@@ -15,7 +32,8 @@ useHead({
         { property: 'og:title', content: '關於我們 | Gencko Studio' },
         { property: 'og:description', content: 'Gencko Studio 致力於建立嚴謹的爬蟲繁殖標準，確保個體呈現穩定的狀態與良好的體質。' },
         { property: 'og:url', content: 'https://www.genckobreeding.com/about' }
-    ]
+    ],
+    script: [{ type: 'application/ld+json', children: JSON.stringify(aboutSchema) }]
 })
 
 import { getCleanUrl } from '~/utils/image.js'

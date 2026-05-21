@@ -319,6 +319,7 @@ const compareItems = computed(() => (store.compareList || []).map(id => (store.i
                         <span v-for="t in tags[sp]" :key="t" class="chip-tag" :class="{sel: kw === t}" @click="toggleTag(t)">{{ t }}</span>
                     </div>
 
+                    <h2 class="sr-only">{{ sp }} 個體列表</h2>
                     <transition-group tag="div" name="list" class="grid photo-grid">
                         <div v-if="shopList.length === 0" key="empty-msg" class="shop-empty-state">
                             <div class="empty-icon">🦎💤</div>

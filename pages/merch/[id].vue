@@ -72,12 +72,25 @@ const siteData = computed(() => {
             }
         }
 
+        const breadcrumb = {
+            "@context": "https://schema.org",
+            "@type": "BreadcrumbList",
+            "itemListElement": [
+                { "@type": "ListItem", "position": 1, "name": "首頁", "item": "https://www.genckobreeding.com/" },
+                { "@type": "ListItem", "position": 2, "name": "周邊商品", "item": "https://www.genckobreeding.com/merch" },
+                { "@type": "ListItem", "position": 3, "name": m.Name, "item": itemUrl }
+            ]
+        }
+
         return {
             title,
             desc,
             img: imgUrl,
             url: itemUrl,
-            script:[{ type: 'application/ld+json', children: JSON.stringify(jsonLd) }]
+            script:[
+                { type: 'application/ld+json', children: JSON.stringify(jsonLd) },
+                { type: 'application/ld+json', children: JSON.stringify(breadcrumb) }
+            ]
         }
     }
     

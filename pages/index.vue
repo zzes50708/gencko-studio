@@ -14,7 +14,7 @@ useHead({
             name: 'description', 
             content: 'Gencko Studio 專注於豹紋守宮繁育、提供基因計算機工具、全台特寵醫院地圖，以及豐富的飼養知識專欄。新手入門首選的爬蟲與守宮平台。' 
         },
-        { property: 'og:title', content: 'Gencko Studio | 專業豹紋守宮繁育與爬蟲知識' },
+        { property: 'og:title', content: '專業豹紋守宮繁育與爬蟲知識 | Gencko Studio' },
         { property: 'og:description', content: '提供專業守宮選育、基因計算工具與特寵醫療地圖。' },
         { property: 'og:image', content: 'https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/%E6%9C%AA%E5%91%BD%E5%90%8D%E8%A8%AD%E8%A8%88.png' }
     ],
@@ -154,6 +154,43 @@ const setBeginnerMode = () => {
             </div>
             <div v-else class="empty-state-text">
                 暫無熱門精選商品
+            </div>
+        </section>
+
+        <!-- Knowledge Hub Section -->
+        <section class="home-section" aria-labelledby="knowledge-hub-title">
+            <div class="section-head">
+                <h2 id="knowledge-hub-title" class="sec-title">知識中心</h2>
+            </div>
+            <div class="knowledge-grid">
+                <NuxtLink to="/care" class="knowledge-card">
+                    <div class="knowledge-icon">🌡️</div>
+                    <div class="knowledge-info">
+                        <h3 class="knowledge-title">飼養指南</h3>
+                        <p class="knowledge-desc">溫度、底材、餵食頻率完整攻略</p>
+                    </div>
+                </NuxtLink>
+                <NuxtLink to="/genes" class="knowledge-card">
+                    <div class="knowledge-icon">🧬</div>
+                    <div class="knowledge-info">
+                        <h3 class="knowledge-title">基因圖鑑</h3>
+                        <p class="knowledge-desc">豹紋與肥尾守宮品系知識庫</p>
+                    </div>
+                </NuxtLink>
+                <NuxtLink to="/calculator" class="knowledge-card">
+                    <div class="knowledge-icon">🔬</div>
+                    <div class="knowledge-info">
+                        <h3 class="knowledge-title">基因計算機</h3>
+                        <p class="knowledge-desc">預測後代基因表現的專業工具</p>
+                    </div>
+                </NuxtLink>
+                <NuxtLink to="/articles" class="knowledge-card">
+                    <div class="knowledge-icon">📖</div>
+                    <div class="knowledge-info">
+                        <h3 class="knowledge-title">飼養知識專欄</h3>
+                        <p class="knowledge-desc">健康照護、環境佈置、新手必讀</p>
+                    </div>
+                </NuxtLink>
             </div>
         </section>
 
@@ -307,8 +344,54 @@ const setBeginnerMode = () => {
     text-overflow: ellipsis; 
 }
 
+/* 知識中心 */
+.knowledge-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+}
+.knowledge-card {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px;
+    background: rgba(232, 68, 10, 0.06);
+    border: 1px solid var(--bd);
+    border-radius: var(--radius-md);
+    text-decoration: none;
+    color: inherit;
+    transition: var(--transition);
+}
+.knowledge-card:hover {
+    border-color: var(--pri);
+    background: var(--pri-glow-soft);
+    box-shadow: var(--shadow-hover);
+}
+.knowledge-icon {
+    font-size: 1.8rem;
+    flex-shrink: 0;
+    width: 40px;
+    text-align: center;
+}
+.knowledge-title {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--txt);
+    margin: 0 0 3px 0;
+}
+.knowledge-desc {
+    font-size: 0.75rem;
+    color: var(--txt);
+    opacity: 0.55;
+    margin: 0;
+    line-height: 1.3;
+}
+@media (min-width: 600px) {
+    .knowledge-grid { grid-template-columns: repeat(4, 1fr); }
+}
+
 /* 首頁區塊微調 */
-.home-section { 
+.home-section {
     margin-bottom: 30px; 
     background: var(--card-bg); 
     padding: 20px; 

@@ -150,16 +150,14 @@ export default defineNuxtConfig({
     ]
   },
 
-  // 🌟 Robots 規則：私人頁面不索引
   robots: {
-    rules: [
+    groups: [
       {
-        UserAgent: '*',
-        Allow: '/',
-        Disallow: ['/profile', '/identity/']
+        userAgent: ['*'],
+        disallow: ['/profile', '/identity/']
       }
     ],
-    sitemap: 'https://www.genckobreeding.com/sitemap.xml'
+    sitemap: ['https://www.genckobreeding.com/sitemap.xml']
   },
 
   supabase: {
@@ -177,7 +175,7 @@ export default defineNuxtConfig({
     pageTransition: { name: 'page', mode: 'out-in' },
     head: {
       titleTemplate: '%s | Gencko Studio',
-      title: 'Gencko Studio｜專業豹紋守宮選育工作室',
+      title: '專業豹紋守宮選育工作室',
       htmlAttrs: { lang: 'zh-TW' },
       meta:[
         { charset: 'utf-8' },
@@ -230,6 +228,19 @@ export default defineNuxtConfig({
             "description": "Gencko Studio 是台灣專業的豹紋守宮（Eublepharis macularius）繁育工作室，提供基因計算機、飼養知識與線上競標服務。",
             "foundingDate": "2023",
             "areaServed": { "@type": "Country", "name": "Taiwan" },
+            "knowsAbout": [
+              "豹紋守宮（Leopard Gecko）",
+              "肥尾守宮（African Fat-Tail Gecko）",
+              "爬蟲繁育",
+              "守宮基因選育",
+              "Eublepharis macularius",
+              "Hemitheconyx caudicinctus"
+            ],
+            "hasOfferCatalog": {
+              "@type": "OfferCatalog",
+              "name": "守宮個體選購",
+              "url": "https://www.genckobreeding.com/shop"
+            },
             "sameAs": [
               "https://www.instagram.com/gencko_breeding",
               "https://www.facebook.com/profile.php?id=61579393505049",
