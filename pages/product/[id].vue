@@ -5,8 +5,6 @@ import { useHead, useAsyncData, useSupabaseClient } from '#imports'
 import { useMainStore } from '~/stores/useMainStore'
 import { getCleanUrl } from '~/utils/image.js'
 
-// 🌟 強制每個不同 URL 建立獨立元件實例，避免 Nuxt CSR 元件複用導致
-//    useAsyncData 不重新抓取、currentProduct 停留在舊資料或 null 的問題。
 definePageMeta({
     key: route => route.fullPath
 })
@@ -16,19 +14,13 @@ const router = useRouter()
 const store = useMainStore()
 const supabase = useSupabaseClient()
 
-// 使用當下路由參數作為靜態字串 key（與 articles/[id].vue 相同模式）
-// 不用 function key，避免 @unhead/vue immediate watch + computed ref 的 TDZ 風險
 const productId = String(route.params.id || '').trim()
 
-// [SEO] 透過 SSR 抓取單筆商品資料
 const { data: currentProduct, pending } = await useAsyncData(
     `product-${productId}`,
     async () => {
         if (!productId) return null
         try {
-            // 直接查 Supabase，確保 SSR 與 CSR 回傳的資料形狀完全一致
-            // 不走 store 快取：store 物件含 IsHot/CreatedDate 等多餘欄位，
-            // 與 SSR 路徑回傳的形狀不同，會造成 hydration mismatch
             const { data, error } = await supabase
                 .from('animals')
                 .select('id, species, morph, genes, gender_type, gender_value, birthday, listing_price, sold_price, status, note, image_url')
@@ -91,7 +83,6 @@ const productModules = computed(() => {
     }
 })
 
-//[SEO] 動態 Meta 與結構化資料
 const siteData = computed(() => {
     if (currentProduct.value) {
         const p = currentProduct.value
@@ -169,27 +160,23 @@ const getSexCls = (i) => {
     return 'mix'
 }
 
-// 從進行中競標列表找到對應場次，優先用 animal_id 精準比對，找不到再 fallback 至 morph 名稱比對
 const matchedAuctionId = computed(() => {
     if (!currentProduct.value || currentProduct.value.Status !== 'Auction') return null
     const pid = currentProduct.value.ID
     const morph = (currentProduct.value.Morph || '').trim().toLowerCase()
-    // 1. 精準比對：auction.animal_id === 個體 ID（需後台在建立競標時填入）
-    const exactMatch = store.auctionList.find(a => a.animal_id === pid)
+    const exactMatch = (store.auctionList || []).find(a => a.animal_id === pid)
     if (exactMatch) return exactMatch.id
-    // 2. 模糊比對：morph 名稱相同（同名品系有多隻時可能不準確）
-    const morphMatch = store.auctionList.find(a => (a.morph || '').trim().toLowerCase() === morph)
+    const morphMatch = (store.auctionList || []).find(a => (a.morph || '').trim().toLowerCase() === morph)
     return morphMatch?.id || null
 })
 
-// 🌟 相似個體推薦：同品系且有相同基因，依相似度排序，最多顯示 8 筆
 const relatedProducts = computed(() => {
-    if (!currentProduct.value || !store.inv.length) return []
+    if (!currentProduct.value || !(store.inv || []).length) return []
     const p = currentProduct.value
     const pGenes = Array.isArray(p.Genes) ? p.Genes : []
     const availStatuses = ['ForSale', 'Auction', 'Reserved']
 
-    return store.inv
+    return (store.inv || [])
         .filter(i => i.ID !== p.ID && i.Species === p.Species && availStatuses.includes(i.Status))
         .map(i => {
             const iGenes = Array.isArray(i.Genes) ? i.Genes : []
@@ -202,18 +189,16 @@ const relatedProducts = computed(() => {
         .slice(0, 8)
 })
 
-// 寫入瀏覽歷史（最多保留 50 筆，最新的在最前）
 onMounted(() => {
     if (currentProduct.value?.ID) {
         const id = currentProduct.value.ID
-        store.history = [id, ...store.history.filter(x => x !== id)].slice(0, 50)
+        store.history = [id, ...(store.history || []).filter(x => x !== id)].slice(0, 50)
         try {
             localStorage.setItem('gencko_history', JSON.stringify(store.history))
         } catch (e) {}
     }
 })
 
-// 原生系統分享 (Web Share API)
 const shareLink = async () => {
     if (navigator.share) {
         try {
@@ -235,91 +220,59 @@ const shareLink = async () => {
     }
 }
 
-// 📸 產生正方形 IG 宣傳圖卡 (Canvas 升級版：完整圖片 + 模糊背景)
 const generatedImage = ref(null)
 const isGenerating = ref(false)
 
 const generatePromo = async () => {
     if (!currentProduct.value) return
     isGenerating.value = true
-    
     try {
         const canvas = document.createElement('canvas')
         canvas.width = 1080
         canvas.height = 1080
         const ctx = canvas.getContext('2d')
-
-        // 1. 載入圖片
         const img = new Image()
         img.crossOrigin = "Anonymous"
         const targetUrl = productModules.value.visuals.list[0] 
             ? getCleanUrl(productModules.value.visuals.list[0]) 
             : 'https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/placeholder.jpg'
-
         img.src = targetUrl
-
-        await new Promise((resolve, reject) => {
-            img.onload = resolve
-            img.onerror = reject
-        })
-
+        await new Promise((resolve, reject) => { img.onload = resolve; img.onerror = reject })
         const imgAreaHeight = 820
-
-        // 2. 繪製高斯模糊背景 (解決黑邊問題的質感做法)
         ctx.filter = 'blur(40px)'
         const bgScale = Math.max(1080 / img.width, imgAreaHeight / img.height)
         const bgW = img.width * bgScale
         const bgH = img.height * bgScale
         ctx.drawImage(img, (1080 - bgW) / 2, (imgAreaHeight - bgH) / 2, bgW, bgH)
-        
-        // 重置濾鏡並蓋上一層半透明黑底，讓主圖更突出
         ctx.filter = 'none'
         ctx.fillStyle = 'rgba(0, 0, 0, 0.4)'
         ctx.fillRect(0, 0, 1080, imgAreaHeight)
-
-        // 3. 繪製主圖 (採用 Math.min，完整呈現絕不裁切)
         const scale = Math.min(1080 / img.width, imgAreaHeight / img.height)
         const w = img.width * scale
         const h = img.height * scale
         const x = (1080 - w) / 2
         const y = (imgAreaHeight - h) / 2
-        
-        // 加點陰影讓主圖立體
         ctx.shadowColor = 'rgba(0, 0, 0, 0.5)'
         ctx.shadowBlur = 20
         ctx.shadowOffsetY = 10
         ctx.drawImage(img, x, y, w, h)
-        
-        // 關閉陰影準備畫底部
         ctx.shadowColor = 'transparent'
-
-        // 4. 繪製底部資訊區塊背景 (品牌橘色)
         ctx.fillStyle = '#FF4500'
         ctx.fillRect(0, imgAreaHeight, 1080, 1080 - imgAreaHeight)
-
-        // 5. 繪製文字 (不含價格)
         ctx.fillStyle = '#FFFFFF'
         ctx.textAlign = 'left'
-        
-        // 品系名稱 (稍微往下移使其置中)
         ctx.font = 'bold 75px sans-serif'
         ctx.fillText(productModules.value.identity.morph.substring(0, 16), 50, 930)
-
-        // 性別
         ctx.font = 'bold 45px sans-serif'
         const genderVal = productModules.value.identity.gender
         if (genderVal && genderVal !== '未定') {
             ctx.fillText(`性別：${genderVal}`, 50, 1010)
         }
-
-        // 6. 繪製品牌 Logo 文字 (靠右)
         ctx.textAlign = 'right'
         ctx.font = 'bold 65px Arial, sans-serif'
         ctx.fillText('GENCKO', 1030, 930)
         ctx.font = 'bold 65px Arial, sans-serif'
         ctx.fillText('STUDIO', 1030, 1000)
-
-        // 匯出為 base64 圖片
         generatedImage.value = canvas.toDataURL('image/jpeg', 0.9)
     } catch (err) {
         console.error('圖卡生成失敗', err)
@@ -331,173 +284,165 @@ const generatePromo = async () => {
 </script>
 
 <template>
-    <div class="product-page-wrapper">
-        <div v-if="pending" style="text-align:center; padding:100px 0; color:#888;">
-            <div class="loader" style="margin:0 auto 20px auto;"></div>
-            <p>正在尋找這隻守宮的資料...</p>
-            <TheBackButton fallback="/shop" text="返回商城列表" style="margin: 20px auto; justify-content: center;" />
-        </div>
+    <div class="product-root-container">
+        <div class="product-page-wrapper">
+            <div v-if="pending" style="text-align:center; padding:100px 0; color:#888;">
+                <div class="loader" style="margin:0 auto 20px auto;"></div>
+                <p>正在尋找這隻守宮的資料...</p>
+                <TheBackButton fallback="/shop" text="返回商城列表" style="margin: 20px auto; justify-content: center;" />
+            </div>
 
-        <div v-else-if="!currentProduct" style="text-align:center; padding:100px 0; color:#888;">
-            <h2>找不到此守宮</h2>
-            <p>該商品可能已下架或不存在。</p>
-            <TheBackButton fallback="/shop" text="返回商城列表" style="margin: 20px auto; justify-content: center;" />
-        </div>
+            <div v-else-if="!currentProduct" style="text-align:center; padding:100px 0; color:#888;">
+                <h2>找不到此守宮</h2>
+                <p>該商品可能已下架或不存在。</p>
+                <TheBackButton fallback="/shop" text="返回商城列表" style="margin: 20px auto; justify-content: center;" />
+            </div>
 
-        <div v-else-if="!productModules" style="text-align:center; padding:100px 0; color:#888;">
-            <div class="loader" style="margin:0 auto 20px auto;"></div>
-            <p>資料載入中，請稍候...</p>
-        </div>
+            <div v-else-if="!productModules" style="text-align:center; padding:100px 0; color:#888;">
+                <div class="loader" style="margin:0 auto 20px auto;"></div>
+                <p>資料載入中，請稍候...</p>
+            </div>
 
-        <div v-else class="prod-container">
-            <TheBackButton fallback="/shop" text="返回列表" />
+            <div v-else class="prod-container">
+                <TheBackButton fallback="/shop" text="返回列表" />
 
-            <div class="prod-layout">
-                <div class="prod-img-box">
-                    <div v-if="productModules.transaction.status === 'Sold'" class="sold-stamp">SOLD OUT</div>
-                    
-                    <!-- 🌟 核心修正：將 NuxtImg 改為原生 img，徹底繞過 Vercel 402 收費限制 -->
-                    <img 
-                        v-for="(img, idx) in productModules.visuals.list" 
-                        :key="idx" 
-                        :src="getCleanUrl(img)" 
-                        class="prod-main-img" 
-                        @click="router.push(`/identity/${productModules.identity.id}`)" 
-                        style="cursor: pointer;" 
-                        title="查看專屬電子身分證"
-                        loading="eager"
-                        decoding="async"
-                    />
-                    
-                    <div class="prod-hint">點擊圖片可查看專屬電子身分證</div>
+                <div class="prod-layout">
+                    <div class="prod-img-box">
+                        <div v-if="productModules.transaction.status === 'Sold'" class="sold-stamp">SOLD OUT</div>
+                        <img 
+                            v-for="(img, idx) in productModules.visuals.list" 
+                            :key="idx" 
+                            :src="getCleanUrl(img)" 
+                            class="prod-main-img" 
+                            @click="router.push(`/identity/${productModules.identity.id}`)" 
+                            style="cursor: pointer;" 
+                            title="查看專屬電子身分證"
+                            loading="eager"
+                            decoding="async"
+                        />
+                        <div class="prod-hint">點擊圖片可查看專屬電子身分證</div>
+                    </div>
+                    <div class="prod-info-box">
+                        <div class="prod-header">
+                            <span class="prod-id">ID: {{ productModules.identity.id }}</span>
+                            <h1 class="prod-title">{{ productModules.identity.morph }}</h1>
+                            <div class="gene-tag-row">
+                                <span v-for="g in productModules.identity.genes" :key="g" class="gene-pill">{{ g }}</span>
+                            </div>
+                            <div v-if="productModules.identity.note" class="prod-note">
+                                📝 備註：{{ productModules.identity.note }}
+                            </div>
+                            <div class="spec-row">
+                                <span :class="getSexCls(currentProduct)" class="sex-val">{{ fmtSex(currentProduct) }}</span>
+                                <span class="birth-val">{{ productModules.identity.birth }} 出生</span>
+                            </div>
+                        </div>
+                        <div class="prod-price-area">
+                            <template v-if="productModules.transaction.status === 'Sold'">
+                                <span class="status-badge s-sold">已售出</span>
+                            </template>
+                            <template v-else-if="productModules.transaction.status === 'Auction' && matchedAuctionId">
+                                <span class="status-badge s-auction">競標中</span>
+                            </template>
+                            <template v-else-if="productModules.transaction.status === 'SelfKeep'">
+                                <span class="status-badge s-nfs">非賣（自留）</span>
+                            </template>
+                            <template v-else>
+                                <div class="price">NT$ {{ productModules.transaction.price }}</div>
+                            </template>
+                        </div>
+
+                        <div class="guarantee-icons-row">
+                            <div class="g-icon-pill g-pill-green"><span>🛡️</span> 100% 健康</div>
+                            <div class="g-icon-pill g-pill-blue"><span>🧬</span> 基因正確</div>
+                            <div class="g-icon-pill g-pill-orange"><span>🚚</span> 運輸賠償</div>
+                        </div>
+
+                        <div class="prod-guarantee">
+                            <span style="font-size:1.2rem; margin-right:10px;">🛡️</span>
+                            <span>{{ productModules.health.statement }}</span>
+                        </div>
+
+                        <div class="prod-actions">
+                            <NuxtLink
+                                v-if="productModules.transaction.status === 'Auction' && matchedAuctionId"
+                                :to="`/auction/${matchedAuctionId}`"
+                                class="btn-buy-lg"
+                                style="background: #e67e22; box-shadow: 0 4px 10px rgba(230,126,34,0.4);"
+                            >🔨 前往競標場次</NuxtLink>
+                            <a v-else-if="productModules.transaction.status === 'ForSale' || productModules.transaction.status === 'Auction'" :href="store.lineLink" target="_blank" class="btn-buy-lg">💬 私訊購買 (Line)</a>
+                            <div class="action-sub-buttons">
+                                <button class="btn-share" @click="shareLink">分享連結</button>
+                                <button class="btn-promo" @click="generatePromo" :disabled="isGenerating">
+                                    {{ isGenerating ? '⏳ 生成中...' : '產生圖卡' }}
+                                </button>
+                            </div>
+                        </div>
+                        <div class="prod-expect-notice">⚠️ {{ productModules.expectations.notice }}</div>
+                    </div>
                 </div>
-                <div class="prod-info-box">
-                    <div class="prod-header">
-                        <span class="prod-id">ID: {{ productModules.identity.id }}</span>
-                        <h1 class="prod-title">{{ productModules.identity.morph }}</h1>
-                        <div class="gene-tag-row">
-                            <span v-for="g in productModules.identity.genes" :key="g" class="gene-pill">{{ g }}</span>
-                        </div>
-                        <div v-if="productModules.identity.note" class="prod-note">
-                            📝 備註：{{ productModules.identity.note }}
-                        </div>
-                        <div class="spec-row">
-                            <span :class="getSexCls(currentProduct)" class="sex-val">{{ fmtSex(currentProduct) }}</span>
-                            <span class="birth-val">{{ productModules.identity.birth }} 出生</span>
-                        </div>
-                    </div>
-                    <div class="prod-price-area">
-                        <template v-if="productModules.transaction.status === 'Sold'">
-                            <span class="status-badge s-sold">已售出</span>
-                        </template>
-                        <!-- 競標中：需確認 auctionList 中有對應有效場次 -->
-                        <template v-else-if="productModules.transaction.status === 'Auction' && matchedAuctionId">
-                            <span class="status-badge s-auction">競標中</span>
-                        </template>
-                        <template v-else-if="productModules.transaction.status === 'SelfKeep'">
-                            <span class="status-badge s-nfs">非賣（自留）</span>
-                        </template>
-                        <template v-else>
-                            <!-- ForSale 或 Auction 已結標（後台未更新）→ 顯示售價 -->
-                            <div class="price">NT$ {{ productModules.transaction.price }}</div>
-                        </template>
-                    </div>
-
-                    <div class="guarantee-icons-row">
-                        <div class="g-icon-pill g-pill-green"><span>🛡️</span> 100% 健康</div>
-                        <div class="g-icon-pill g-pill-blue"><span>🧬</span> 基因正確</div>
-                        <div class="g-icon-pill g-pill-orange"><span>🚚</span> 運輸賠償</div>
-                    </div>
-
-                    <div class="prod-guarantee">
-                        <span style="font-size:1.2rem; margin-right:10px;">🛡️</span>
-                        <span>{{ productModules.health.statement }}</span>
-                    </div>
-
-                    <div class="prod-actions">
-                        <!-- 競標中且有有效場次 -->
-                        <NuxtLink
-                            v-if="productModules.transaction.status === 'Auction' && matchedAuctionId"
-                            :to="`/auction/${matchedAuctionId}`"
-                            class="btn-buy-lg"
-                            style="background: #e67e22; box-shadow: 0 4px 10px rgba(230,126,34,0.4);"
-                        >🔨 前往競標場次</NuxtLink>
-                        <!-- ForSale 或 Auction 已結標（顯示私訊購買） -->
-                        <a v-else-if="productModules.transaction.status === 'ForSale' || productModules.transaction.status === 'Auction'" :href="store.lineLink" target="_blank" class="btn-buy-lg">💬 私訊購買 (Line)</a>
-                        <div class="action-sub-buttons">
-                            <button class="btn-share" @click="shareLink">分享連結</button>
-                            <button class="btn-promo" @click="generatePromo" :disabled="isGenerating">
-                                {{ isGenerating ? '⏳ 生成中...' : '產生圖卡' }}
-                            </button>
-                        </div>
-                    </div>
-                    <div class="prod-expect-notice">⚠️ {{ productModules.expectations.notice }}</div>
+                <div class="prod-terms-box">
+                    <div class="terms-title">⚠️ 取貨注意事項 & 購買須知 ⚠️</div>
+                    <ul class="terms-list">
+                        <li>Gencko工作室出貨前皆確認個體100%健康，所有個體皆為負責人親自餵食，確保進食穩定且無隱憂才會上架販售。</li>
+                        <li>開箱請全程錄影，以利於後續爭議處理。</li>
+                        <li>有任何問題請於48小時內提出，逾期不候。</li>
+                        <li>請提前準備好守宮之飼養環境。</li>
+                        <li>守宮會因飼主飼養方式不當而造成問題，本工作室將不予退換貨。</li>
+                        <li>個體有缺陷且本工作室無事先告知，本方無條件退款 (需提供錄影確保個體無調包嫌疑)。</li>
+                        <li>運送過程死亡，本工作室全額退款；運送過程斷尾，本工作室退還50%款項 (需提供錄影確保個體無調包嫌疑)。</li>
+                        <li>購買前請做足功課，本社群、官方皆可無償教學，請做好準備再進行購買。</li>
+                        <li style="color:var(--pri); font-weight:bold; margin-top:10px;">購買視同同意以上須知事項。</li>
+                    </ul>
                 </div>
             </div>
-            <div class="prod-terms-box">
-                <div class="terms-title">⚠️ 取貨注意事項 & 購買須知 ⚠️</div>
-                <ul class="terms-list">
-                    <li>Gencko工作室出貨前皆確認個體100%健康，所有個體皆為負責人親自餵食，確保進食穩定且無隱憂才會上架販售。</li>
-                    <li>開箱請全程錄影，以利於後續爭議處理。</li>
-                    <li>有任何問題請於48小時內提出，逾期不候。</li>
-                    <li>請提前準備好守宮之飼養環境。</li>
-                    <li>守宮會因飼主飼養方式不當而造成問題，本工作室將不予退換貨。</li>
-                    <li>個體有缺陷且本工作室無事先告知，本方無條件退款 (需提供錄影確保個體無調包嫌疑)。</li>
-                    <li>運送過程死亡，本工作室全額退款；運送過程斷尾，本工作室退還50%款項 (需提供錄影確保個體無調包嫌疑)。</li>
-                    <li>購買前請做足功課，本社群、官方皆可無償教學，請做好準備再進行購買。</li>
-                    <li style="color:var(--pri); font-weight:bold; margin-top:10px;">購買視同同意以上須知事項。</li>
-                </ul>
-            </div>
-        </div>
 
-        <!-- 🌟 宣傳圖卡彈窗 Modal -->
-        <div v-if="generatedImage" class="promo-modal-overlay" @click="generatedImage = null">
-            <div class="promo-modal-content" @click.stop>
-                <button class="btn-close-promo" @click="generatedImage = null">✕</button>
-                <h3 style="color: var(--txt); margin-top: 10px;">📸 宣傳圖卡已生成</h3>
-                <p style="color: var(--txt); opacity: 0.8; font-size: 0.9rem;">請長按圖片儲存（或點擊右鍵另存），<br>即可完美分享至 IG 限時動態！</p>
-                <img :src="generatedImage" alt="Promo Result" class="promo-result-img" />
+            <div v-if="generatedImage" class="promo-modal-overlay" @click="generatedImage = null">
+                <div class="promo-modal-content" @click.stop>
+                    <button class="btn-close-promo" @click="generatedImage = null">✕</button>
+                    <h3 style="color: var(--txt); margin-top: 10px;">📸 宣傳圖卡已生成</h3>
+                    <p style="color: var(--txt); opacity: 0.8; font-size: 0.9rem;">請長按圖片儲存（或點擊右鍵另存），<br>即可完美分享至 IG 限時動態！</p>
+                    <img :src="generatedImage" alt="Promo Result" class="promo-result-img" />
+                </div>
             </div>
+            <section v-if="relatedProducts.length > 0" class="related-section">
+                <div class="section-head" style="margin-bottom:14px; border-bottom:1px solid var(--bd); padding-bottom:10px;">
+                    <h2 class="sec-title" style="font-size:1.2rem;">相似個體推薦</h2>
+                    <NuxtLink to="/shop" class="sec-more" style="text-decoration:none; font-size:0.85rem;">查看更多 →</NuxtLink>
+                </div>
+                <div class="related-grid">
+                    <NuxtLink
+                        v-for="item in relatedProducts"
+                        :key="item.ID"
+                        :to="`/product/${item.ID}`"
+                        class="related-card"
+                        style="text-decoration:none; color:inherit;"
+                    >
+                        <div class="related-img-wrap">
+                            <img
+                                v-if="item.ImageURL"
+                                :src="getCleanUrl(item.ImageURL, 300)"
+                                :alt="item.Morph"
+                                loading="lazy"
+                                decoding="async"
+                            />
+                            <div v-else class="related-img-placeholder">🦎</div>
+                            <span v-if="item.Status === 'Sold'" class="rel-badge rel-sold">售出</span>
+                            <span v-else-if="item.Status === 'Auction'" class="rel-badge rel-auction">競標</span>
+                        </div>
+                        <div class="related-info">
+                            <div class="related-morph">{{ item.Morph }}</div>
+                            <div class="related-price">
+                                <span v-if="item.Status === 'ForSale'">${{ item.ListingPrice }}</span>
+                                <span v-else-if="item.Status === 'Auction'" style="color:var(--pri);">競標中</span>
+                                <span v-else style="color:#888;">已售出</span>
+                            </div>
+                        </div>
+                    </NuxtLink>
+                </div>
+            </section>
         </div>
     </div>
-
-    <!-- 🌟 相似個體推薦 -->
-    <section v-if="relatedProducts.length > 0" class="related-section">
-        <div class="section-head" style="margin-bottom:14px; border-bottom:1px solid var(--bd); padding-bottom:10px;">
-            <h2 class="sec-title" style="font-size:1.2rem;">相似個體推薦</h2>
-            <NuxtLink to="/shop" class="sec-more" style="text-decoration:none; font-size:0.85rem;">查看更多 →</NuxtLink>
-        </div>
-        <div class="related-grid">
-            <NuxtLink
-                v-for="item in relatedProducts"
-                :key="item.ID"
-                :to="`/product/${item.ID}`"
-                class="related-card"
-                style="text-decoration:none; color:inherit;"
-            >
-                <div class="related-img-wrap">
-                    <img
-                        v-if="item.ImageURL"
-                        :src="getCleanUrl(item.ImageURL, 300)"
-                        :alt="item.Morph"
-                        loading="lazy"
-                        decoding="async"
-                    />
-                    <div v-else class="related-img-placeholder">🦎</div>
-                    <span v-if="item.Status === 'Sold'" class="rel-badge rel-sold">售出</span>
-                    <span v-else-if="item.Status === 'Auction'" class="rel-badge rel-auction">競標</span>
-                </div>
-                <div class="related-info">
-                    <div class="related-morph">{{ item.Morph }}</div>
-                    <div class="related-price">
-                        <span v-if="item.Status === 'ForSale'">${{ item.ListingPrice }}</span>
-                        <span v-else-if="item.Status === 'Auction'" style="color:var(--pri);">競標中</span>
-                        <span v-else style="color:#888;">已售出</span>
-                    </div>
-                </div>
-            </NuxtLink>
-        </div>
-    </section>
 </template>
 
 <style scoped>

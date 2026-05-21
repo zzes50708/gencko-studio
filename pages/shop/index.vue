@@ -10,7 +10,6 @@ const store = useMainStore()
 const route = useRoute()
 const router = useRouter()
 
-// --- 狀態管理（必須在 itemListSchema / useHead 之前宣告，避免 @unhead/vue immediate watch 觸發時 TDZ）---
 const sp = ref('豹紋守宮')
 const kw = ref('')
 const fil = ref({ stock: true, sold: false, minP: '', maxP: '', sexM: true, sexF: true, genes: [ ], beginner: false })
@@ -20,9 +19,8 @@ const sortOrder = ref('default')
 const showOnlyFav = ref(false)
 const showOnlyHistory = ref(false)
 
-// 🌟 ItemList schema：在售個體列表（前 12 筆，供搜尋引擎展示商品卡片）
 const itemListSchema = computed(() => {
-    const forSaleItems = store.inv
+    const forSaleItems = (store.inv || [])
         .filter(i => i.Status === 'ForSale' && i.Species === sp.value)
         .slice(0, 12)
     if (!forSaleItems.length) return null
@@ -75,7 +73,6 @@ const tags = {
     '肥尾守宮':[ '幽靈', '橘白', '無紋', '立可白' ]
 }
 
-// 🌟 將 URL Query 初始化至 State
 onMounted(() => {
     const q = route.query
     if (q.sp) sp.value = q.sp
@@ -90,13 +87,11 @@ onMounted(() => {
     if (q.genes) fil.value.genes = Array.isArray(q.genes) ? q.genes : q.genes.split(',')
     if (q.sort) sortOrder.value = q.sort
 
-    // 若是從首頁帶 beginner 參數過來，在手機版自動彈出面板
     if (q.beginner === 'true') {
         showMobileFilter.value = true
     }
 })
 
-// 🌟 監聽 State 變化，即時反向寫入 URL Query (使用 replace 避免產生過多歷史紀錄)
 watch([sp, kw, fil, sortOrder], () => {
     const query = {}
     if (sp.value !== '豹紋守宮') query.sp = sp.value
@@ -114,23 +109,20 @@ watch([sp, kw, fil, sortOrder], () => {
     router.replace({ query }).catch(() => {})
 }, { deep: true })
 
-// --- 計算屬性 ---
-
-// 有效狀態：Status='Auction' 但 auctionList 中無對應有效場次 → 視為 ForSale
 const getEffectiveStatus = (item) => {
-    if (item.Status === 'Auction' && !store.auctionList.some(a => a.animal_id === item.ID)) return 'ForSale'
+    if (item.Status === 'Auction' && !(store.auctionList || []).some(a => a.animal_id === item.ID)) return 'ForSale'
     return item.Status
 }
 
 const maxPrice = computed(() => {
-    const prices = store.inv.filter(i => i.Species === sp.value && ['ForSale','Auction'].includes(getEffectiveStatus(i))).map(i => Number(i.ListingPrice) || 0)
+    const prices = (store.inv || []).filter(i => i.Species === sp.value && ['ForSale','Auction'].includes(getEffectiveStatus(i))).map(i => Number(i.ListingPrice) || 0)
     return prices.length ? Math.max(...prices) : 0
 })
 
 const availableGenes = computed(() => {
     const s = new Set()
     const targetStatus = fil.value.sold ? ['ForSale', 'Auction', 'Sold'] : ['ForSale', 'Auction']
-    store.inv.filter(i => i.Species === sp.value && targetStatus.includes(getEffectiveStatus(i))).forEach(i => {
+    ;(store.inv || []).filter(i => i.Species === sp.value && targetStatus.includes(getEffectiveStatus(i))).forEach(i => {
         if (Array.isArray(i.Genes)) i.Genes.forEach(g => s.add(g === '白黃' ? 'WY' : g))
     })
     return Array.from(s)
@@ -143,7 +135,7 @@ const getSortedGenes = (list) => {
 }
 
 const shopList = computed(() => {
-    let l = store.inv.filter(i => {
+    let l = (store.inv || []).filter(i => {
         if (i.Species !== sp.value || i.Status === 'Trash' || i.Status === 'SelfKeep') return false
         const es = getEffectiveStatus(i)
         const isSold = es === 'Sold'
@@ -166,7 +158,6 @@ const shopList = computed(() => {
         if (fil.value.genes.length > 0) {
             const iGenes = Array.isArray(i.Genes) ? i.Genes : [ ]
             if (!fil.value.genes.every(g => {
-                // 🌟 修正 Bug：相容 WY 與白黃的別名問題
                 if (g === 'WY') return iGenes.includes('WY') || iGenes.includes('白黃')
                 return iGenes.includes(g)
             })) return false
@@ -175,8 +166,8 @@ const shopList = computed(() => {
     })
 
     if (kw.value) l = l.filter(i => JSON.stringify(i).toLowerCase().includes(kw.value.toLowerCase()))
-    if (showOnlyFav.value) l = l.filter(i => store.wishlist.includes(i.ID))
-    if (showOnlyHistory.value) l = l.filter(i => store.history.includes(i.ID))
+    if (showOnlyFav.value) l = l.filter(i => (store.wishlist || []).includes(i.ID))
+    if (showOnlyHistory.value) l = l.filter(i => (store.history || []).includes(i.ID))
     
     return l.sort((a, b) => {
         const imgA = a.ImageURL ? 1 : 0
@@ -196,7 +187,6 @@ const shopList = computed(() => {
     }).slice(0, store.displayLimit)
 })
 
-// --- 方法 ---
 const toggleTag = (t) => { 
     kw.value = (kw.value === t) ? '' : t
     store.displayLimit = 20 
@@ -221,13 +211,13 @@ const resetFilters = () => {
     store.displayLimit = 20
     showMobileFilter.value = false
     
-    // 清空網址參數
     router.replace({ query: {} }).catch(() => {})
     
     if (import.meta.client) window.scrollTo({ top: 0, behavior: 'smooth' })
 }
 
 const toggleWishlist = (id) => {
+    if (!store.wishlist) store.wishlist = []
     if (store.wishlist.includes(id)) {
         store.wishlist = store.wishlist.filter(x => x !== id)
     } else {
@@ -236,185 +226,181 @@ const toggleWishlist = (id) => {
     if (import.meta.client) localStorage.setItem('gencko_wishlist', JSON.stringify(store.wishlist))
 }
 
-// 🌟 並排比較
-const compareItems = computed(() => store.compareList.map(id => store.inv.find(i => i.ID === id)).filter(Boolean))
+const compareItems = computed(() => (store.compareList || []).map(id => (store.inv || []).find(i => i.ID === id)).filter(Boolean))
 </script>
 
 <template>
-    <div class="shop-page-wrapper">
-        <h1 class="page-title dt-only">線上選購守宮</h1>
+    <div class="shop-root-container">
+        <div class="shop-page-wrapper">
+            <h1 class="page-title dt-only">線上選購守宮</h1>
 
-        <div class="shop-layout">
-            <!-- 🌟 Left Filter Panel -->
-            <div class="filter-panel" :class="{ 'm-show': showMobileFilter }">
-                <div class="f-header m-only">
-                    <span>進階篩選</span>
-                    <button class="btn-close" @click="showMobileFilter = false">✕</button>
-                </div>
-                
-                <div class="f-group">
-                    <div class="f-label">精選標籤</div>
-                    <label class="f-check" style="color:var(--pri); font-weight:bold;">
-                        <input type="checkbox" v-model="fil.beginner"> 🌱 新手推薦
-                    </label>
-                </div>
-                <div class="f-group">
-                    <div class="f-label">庫存狀態</div>
-                    <label class="f-check"><input type="checkbox" v-model="fil.stock"> 有庫存</label>
-                    <label class="f-check"><input type="checkbox" v-model="fil.sold"> 已售出</label>
-                </div>
-                <div class="f-group">
-                    <div class="f-label">價格 (最高: {{ maxPrice }})</div>
-                    <div style="display:flex;gap:5px;">
-                        <input type="number" v-model="fil.minP" class="f-inp" placeholder="Min">
-                        <input type="number" v-model="fil.maxP" class="f-inp" placeholder="Max">
+            <div class="shop-layout">
+                <div class="filter-panel" :class="{ 'm-show': showMobileFilter }">
+                    <div class="f-header m-only">
+                        <span>進階篩選</span>
+                        <button class="btn-close" @click="showMobileFilter = false">✕</button>
                     </div>
-                </div>
-                <div class="f-group">
-                    <div class="f-label">性別</div>
-                    <label class="f-check"><input type="checkbox" v-model="fil.sexM"> 公 (含公溫)</label>
-                    <label class="f-check"><input type="checkbox" v-model="fil.sexF"> 母 (含母溫)</label>
-                </div>
-                <div class="f-group" style="padding-bottom: 30px;">
-                    <div class="f-label">基因篩選</div>
-                    <div v-for="(list, cat) in GENES_DB[sp]" :key="cat">
-                        <div class="f-cat" @click="openFCat = (openFCat === cat) ? null : cat">{{ cat }} <small>{{ openFCat === cat ? '▲' : '▼' }}</small></div>
-                        <div v-show="openFCat === cat" style="padding-left:10px;">
-                            <div v-for="g in getSortedGenes(list)" :key="g" style="margin:2px 0;">
-                                <label class="f-check" :class="{disabled: !isGeneAvail(g)}">
-                                    <input type="checkbox" :value="g" v-model="fil.genes" :disabled="!isGeneAvail(g)"> 
-                                    {{ g }}
-                                </label>
+                    
+                    <div class="f-group">
+                        <div class="f-label">精選標籤</div>
+                        <label class="f-check" style="color:var(--pri); font-weight:bold;">
+                            <input type="checkbox" v-model="fil.beginner"> 🌱 新手推薦
+                        </label>
+                    </div>
+                    <div class="f-group">
+                        <div class="f-label">庫存狀態</div>
+                        <label class="f-check"><input type="checkbox" v-model="fil.stock"> 有庫存</label>
+                        <label class="f-check"><input type="checkbox" v-model="fil.sold"> 已售出</label>
+                    </div>
+                    <div class="f-group">
+                        <div class="f-label">價格 (最高: {{ maxPrice }})</div>
+                        <div style="display:flex;gap:5px;">
+                            <input type="number" v-model="fil.minP" class="f-inp" placeholder="Min">
+                            <input type="number" v-model="fil.maxP" class="f-inp" placeholder="Max">
+                        </div>
+                    </div>
+                    <div class="f-group">
+                        <div class="f-label">性別</div>
+                        <label class="f-check"><input type="checkbox" v-model="fil.sexM"> 公 (含公溫)</label>
+                        <label class="f-check"><input type="checkbox" v-model="fil.sexF"> 母 (含母溫)</label>
+                    </div>
+                    <div class="f-group" style="padding-bottom: 30px;">
+                        <div class="f-label">基因篩選</div>
+                        <div v-for="(list, cat) in GENES_DB[sp]" :key="cat">
+                            <div class="f-cat" @click="openFCat = (openFCat === cat) ? null : cat">{{ cat }} <small>{{ openFCat === cat ? '▲' : '▼' }}</small></div>
+                            <div v-show="openFCat === cat" style="padding-left:10px;">
+                                <div v-for="g in getSortedGenes(list)" :key="g" style="margin:2px 0;">
+                                    <label class="f-check" :class="{disabled: !isGeneAvail(g)}">
+                                        <input type="checkbox" :value="g" v-model="fil.genes" :disabled="!isGeneAvail(g)"> 
+                                        {{ g }}
+                                    </label>
+                                </div>
                             </div>
                         </div>
                     </div>
-                </div>
 
-                <div class="m-filter-actions m-only">
-                    <button class="btn-clear" @click="resetFilters">清除條件</button>
-                    <button class="btn-apply" @click="showMobileFilter = false">套用設定</button>
-                </div>
-
-                <button class="btn-hero dt-only" style="width:100%;margin-top:20px;font-size:0.9rem;padding:10px;" @click="resetFilters">清除所有條件</button>
-            </div>
-
-            <!-- 🌟 Right Content -->
-            <div style="flex:1; min-width:0; display: flex; flex-direction: column;">
-                
-                <div class="search-filter-row">
-                    <div class="inp-wrap">
-                        <span class="search-icon">🔍</span>
-                        <input class="inp" :value="kw" @input="onSearchInput" placeholder="搜尋品系、基因、ID...">
+                    <div class="m-filter-actions m-only">
+                        <button class="btn-clear" @click="resetFilters">清除條件</button>
+                        <button class="btn-apply" @click="showMobileFilter = false">套用設定</button>
                     </div>
-                    <button class="btn-filter-icon m-only" :class="{active: fil.genes.length > 0 || fil.beginner || fil.minP || fil.maxP}" @click="showMobileFilter = true" aria-label="進階篩選">
-                        <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon></svg>
-                    </button>
+
+                    <button class="btn-hero dt-only" style="width:100%;margin-top:20px;font-size:0.9rem;padding:10px;" @click="resetFilters">清除所有條件</button>
                 </div>
-                
-                <div class="scroll-chips-row">
-                    <div class="chip-tab main-tab" :class="{active: sp === '豹紋守宮'}" @click="sp = '豹紋守宮'; store.displayLimit = 20">豹紋守宮</div>
-                    <div class="chip-tab main-tab" :class="{active: sp === '肥尾守宮'}" @click="sp = '肥尾守宮'; store.displayLimit = 20">肥尾守宮</div>
 
-                    <div class="chip-divider"></div>
-
-                    <select v-model="sortOrder" class="chip-select">
-                        <option value="default">預設排序</option>
-                        <option value="price_asc">價格由低到高</option>
-                        <option value="price_desc">價格由高到低</option>
-                    </select>
+                <div style="flex:1; min-width:0; display: flex; flex-direction: column;">
                     
-                    <div class="chip-toggle" :class="{active: showOnlyHistory}" @click="showOnlyHistory = !showOnlyHistory">🕒 瀏覽</div>
-                    <div class="chip-toggle" :class="{active: showOnlyFav}" @click="showOnlyFav = !showOnlyFav">❤ 收藏</div>
-
-                    <div class="chip-divider"></div>
-
-                    <span v-for="t in tags[sp]" :key="t" class="chip-tag" :class="{sel: kw === t}" @click="toggleTag(t)">{{ t }}</span>
-                </div>
-
-                <transition-group tag="div" name="list" class="grid photo-grid">
-                    <div v-if="shopList.length === 0" key="empty-msg" class="shop-empty-state">
-                        <div class="empty-icon">🦎💤</div>
-                        <h3 style="color:var(--txt); margin-bottom:10px;">找不到符合的守宮</h3>
-                        <p style="font-size:0.9rem;">牠們可能躲起來睡覺了，或是被買光囉！<br>試著調整篩選條件，或直接私訊我們許願吧。</p>
-                        <button class="btn-hero" @click="resetFilters" style="margin-top:20px;">🔄 清除篩選條件</button>
+                    <div class="search-filter-row">
+                        <div class="inp-wrap">
+                            <span class="search-icon">🔍</span>
+                            <input class="inp" :value="kw" @input="onSearchInput" placeholder="搜尋品系、基因、ID...">
+                        </div>
+                        <button class="btn-filter-icon m-only" :class="{active: fil.genes.length > 0 || fil.beginner || fil.minP || fil.maxP}" @click="showMobileFilter = true" aria-label="進階篩選">
+                            <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon></svg>
+                        </button>
                     </div>
                     
-                    <NuxtLink :to="`/product/${i.ID}`" class="card slim-card" v-for="(i, index) in shopList" :key="i.ID" style="text-decoration:none; color:inherit;">
-                        <div v-if="i.Status === 'Sold'" class="sold-stamp">SOLD</div>
-                        <div style="position:absolute;top:5px;right:5px;z-index:10; display:flex; flex-direction:column; gap:4px;">
-                            <span class="fav-btn" :class="{active: store.wishlist.includes(i.ID)}" @click.stop.prevent="toggleWishlist(i.ID)">❤</span>
-                            <span
-                                v-if="i.Status !== 'Sold'"
-                                class="cmp-btn"
-                                :class="{active: store.compareList.includes(i.ID), disabled: store.compareList.length >= 3 && !store.compareList.includes(i.ID)}"
-                                @click.stop.prevent="store.toggleCompare(i.ID)"
-                                :title="store.compareList.includes(i.ID) ? '移出比較' : store.compareList.length >= 3 ? '最多3隻' : '加入比較'"
-                            >⊕</span>
+                    <div class="scroll-chips-row">
+                        <div class="chip-tab main-tab" :class="{active: sp === '豹紋守宮'}" @click="sp = '豹紋守宮'; store.displayLimit = 20">豹紋守宮</div>
+                        <div class="chip-tab main-tab" :class="{active: sp === '肥尾守宮'}" @click="sp = '肥尾守宮'; store.displayLimit = 20">肥尾守宮</div>
+
+                        <div class="chip-divider"></div>
+
+                        <select v-model="sortOrder" class="chip-select">
+                            <option value="default">預設排序</option>
+                            <option value="price_asc">價格由低到高</option>
+                            <option value="price_desc">價格由高到低</option>
+                        </select>
+                        
+                        <div class="chip-toggle" :class="{active: showOnlyHistory}" @click="showOnlyHistory = !showOnlyHistory">🕒 瀏覽</div>
+                        <div class="chip-toggle" :class="{active: showOnlyFav}" @click="showOnlyFav = !showOnlyFav">❤ 收藏</div>
+
+                        <div class="chip-divider"></div>
+
+                        <span v-for="t in tags[sp]" :key="t" class="chip-tag" :class="{sel: kw === t}" @click="toggleTag(t)">{{ t }}</span>
+                    </div>
+
+                    <transition-group tag="div" name="list" class="grid photo-grid">
+                        <div v-if="shopList.length === 0" key="empty-msg" class="shop-empty-state">
+                            <div class="empty-icon">🦎💤</div>
+                            <h3 style="color:var(--txt); margin-bottom:10px;">找不到符合的守宮</h3>
+                            <p style="font-size:0.9rem;">牠們可能躲起來睡覺了，或是被買光囉！<br>試著調整篩選條件，或直接私訊我們許願吧。</p>
+                            <button class="btn-hero" @click="resetFilters" style="margin-top:20px;">🔄 清除篩選條件</button>
                         </div>
-                        <div style="position:relative;">
-                            
-                            <!-- 🌟 核心修正：將 NuxtImg 替換為原生 img -->
-                            <img 
-                                v-if="i.ImageURL" 
-                                :src="getCleanUrl(i.ImageURL, 400)" 
-                                :alt="i.Morph" 
-                                class="card-img slim-img" 
-                                :loading="index < 6 ? 'eager' : 'lazy'" 
-                                :fetchpriority="index < 6 ? 'high' : 'auto'" 
-                                decoding="async"
-                            />
-                            
-                            <div v-else class="card-img slim-img" style="display:flex;align-items:center;justify-content:center;color:#333;font-size:2rem;background:#000;">🦎</div>
-                            <div v-if="i.Status === 'ForSale'" class="trust-badge">🛡️ 100% HEALTH</div>
-                        </div>
-                        <div class="card-body slim-body">
-                            <h3 class="slim-title" style="margin:0;">{{ i.Morph }}</h3>
-                            <div class="slim-price-row" style="margin-top:4px;">
-                                <template v-if="i.Status === 'Sold'">
-                                    <span class="status-badge s-sold">已售出</span>
-                                </template>
-                                <!-- 競標中：需確認 auctionList 中有對應有效場次，避免已結標但 animals.status 未更新的誤判 -->
-                                <template v-else-if="i.Status === 'Auction' && store.auctionList.some(a => a.animal_id === i.ID)">
-                                    <span class="status-badge s-auction">競標中</span>
-                                </template>
-                                <template v-else-if="i.Status === 'SelfKeep'">
-                                    <span class="status-badge s-nfs">非賣</span>
-                                </template>
-                                <template v-else>
-                                    <div class="price slim-price">${{ i.ListingPrice }}</div>
-                                </template>
+                        
+                        <NuxtLink :to="`/product/${i.ID}`" class="card slim-card" v-for="(i, index) in shopList" :key="i.ID" style="text-decoration:none; color:inherit;">
+                            <div v-if="i.Status === 'Sold'" class="sold-stamp">SOLD</div>
+                            <div style="position:absolute;top:5px;right:5px;z-index:10; display:flex; flex-direction:column; gap:4px;">
+                                <span class="fav-btn" :class="{active: (store.wishlist || []).includes(i.ID)}" @click.stop.prevent="toggleWishlist(i.ID)">❤</span>
+                                <span
+                                    v-if="i.Status !== 'Sold'"
+                                    class="cmp-btn"
+                                    :class="{active: (store.compareList || []).includes(i.ID), disabled: (store.compareList || []).length >= 3 && !(store.compareList || []).includes(i.ID)}"
+                                    @click.stop.prevent="store.toggleCompare(i.ID)"
+                                    :title="(store.compareList || []).includes(i.ID) ? '移出比較' : (store.compareList || []).length >= 3 ? '最多3隻' : '加入比較'"
+                                >⊕</span>
                             </div>
-                        </div>
-                    </NuxtLink>
-                </transition-group>
+                            <div style="position:relative;">
+                                
+                                <img 
+                                    v-if="i.ImageURL" 
+                                    :src="getCleanUrl(i.ImageURL, 400)" 
+                                    :alt="i.Morph" 
+                                    class="card-img slim-img" 
+                                    :loading="index < 6 ? 'eager' : 'lazy'" 
+                                    :fetchpriority="index < 6 ? 'high' : 'auto'" 
+                                    decoding="async"
+                                />
+                                
+                                <div v-else class="card-img slim-img" style="display:flex;align-items:center;justify-content:center;color:#333;font-size:2rem;background:#000;">🦎</div>
+                                <div v-if="i.Status === 'ForSale'" class="trust-badge">🛡️ 100% HEALTH</div>
+                            </div>
+                            <div class="card-body slim-body">
+                                <h3 class="slim-title" style="margin:0;">{{ i.Morph }}</h3>
+                                <div class="slim-price-row" style="margin-top:4px;">
+                                    <template v-if="i.Status === 'Sold'">
+                                        <span class="status-badge s-sold">已售出</span>
+                                    </template>
+                                    <template v-else-if="i.Status === 'Auction' && (store.auctionList || []).some(a => a.animal_id === i.ID)">
+                                        <span class="status-badge s-auction">競標中</span>
+                                    </template>
+                                    <template v-else-if="i.Status === 'SelfKeep'">
+                                        <span class="status-badge s-nfs">非賣</span>
+                                    </template>
+                                    <template v-else>
+                                        <div class="price slim-price">${{ i.ListingPrice }}</div>
+                                    </template>
+                                </div>
+                            </div>
+                        </NuxtLink>
+                    </transition-group>
+                </div>
             </div>
         </div>
-    </div>
 
-    <!-- 🌟 浮動比較列 -->
-    <Teleport to="body">
-        <Transition name="cmp-bar">
-            <div v-if="store.compareList.length > 0" class="compare-bar">
-                <div class="cmp-bar-items">
-                    <div v-for="item in compareItems" :key="item.ID" class="cmp-bar-item">
-                        <img v-if="item.ImageURL" :src="getCleanUrl(item.ImageURL, 80)" :alt="item.Morph" />
-                        <div v-else class="cmp-bar-placeholder">🦎</div>
-                        <span class="cmp-bar-name">{{ item.Morph }}</span>
-                        <button class="cmp-bar-remove" @click="store.toggleCompare(item.ID)">✕</button>
+        <Teleport to="body">
+            <Transition name="cmp-bar">
+                <div v-if="(store.compareList || []).length > 0" class="compare-bar">
+                    <div class="cmp-bar-items">
+                        <div v-for="item in compareItems" :key="item.ID" class="cmp-bar-item">
+                            <img v-if="item.ImageURL" :src="getCleanUrl(item.ImageURL, 80)" :alt="item.Morph" />
+                            <div v-else class="cmp-bar-placeholder">🦎</div>
+                            <span class="cmp-bar-name">{{ item.Morph }}</span>
+                            <button class="cmp-bar-remove" @click="store.toggleCompare(item.ID)">✕</button>
+                        </div>
+                        <div v-for="n in (3 - (store.compareList || []).length)" :key="'empty-'+n" class="cmp-bar-empty">
+                            + 加入
+                        </div>
                     </div>
-                    <div v-for="n in (3 - store.compareList.length)" :key="'empty-'+n" class="cmp-bar-empty">
-                        + 加入
+                    <div class="cmp-bar-actions">
+                        <NuxtLink :to="`/compare?ids=${(store.compareList || []).join(',')}`" class="cmp-go-btn">
+                            比較 {{ (store.compareList || []).length }} 隻
+                        </NuxtLink>
+                        <button class="cmp-clear-btn" @click="store.clearCompare()">清除</button>
                     </div>
                 </div>
-                <div class="cmp-bar-actions">
-                    <NuxtLink :to="`/compare?ids=${store.compareList.join(',')}`" class="cmp-go-btn">
-                        比較 {{ store.compareList.length }} 隻
-                    </NuxtLink>
-                    <button class="cmp-clear-btn" @click="store.clearCompare()">清除</button>
-                </div>
-            </div>
-        </Transition>
-    </Teleport>
+            </Transition>
+        </Teleport>
+    </div>
 </template>
 
 <style scoped>
@@ -765,7 +751,6 @@ const compareItems = computed(() => store.compareList.map(id => store.inv.find(i
     .cmp-bar-name { font-size: 0.62rem; }
 }
 
-/* ── 比較按鈕 (卡片右上角) ── */
 .cmp-btn {
     display: flex;
     align-items: center;
@@ -786,7 +771,6 @@ const compareItems = computed(() => store.compareList.map(id => store.inv.find(i
 .cmp-btn.active { background: var(--pri); color: #fff; border-color: var(--pri); opacity: 1; }
 .cmp-btn.disabled { opacity: 0.3; cursor: not-allowed; }
 
-/* ── 浮動比較列 ── */
 .compare-bar {
     position: fixed;
     bottom: calc(70px + env(safe-area-inset-bottom, 0px));
@@ -895,7 +879,6 @@ const compareItems = computed(() => store.compareList.map(id => store.inv.find(i
 }
 .cmp-clear-btn:hover { opacity: 1; }
 
-/* 浮動列進場動畫 */
 .cmp-bar-enter-active, .cmp-bar-leave-active { transition: opacity 0.25s ease, transform 0.25s ease; }
 .cmp-bar-enter-from, .cmp-bar-leave-to { opacity: 0; transform: translateX(-50%) translateY(20px); }
 </style>

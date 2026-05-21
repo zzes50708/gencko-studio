@@ -3,6 +3,11 @@ export default defineNuxtConfig({
   compatibilityDate: '2024-04-16',
   devtools: { enabled: true },
 
+  // 修正 dev 時 Vite 無法解析 `#app-manifest`（Nuxt app manifest 虛擬模組）
+  experimental: {
+    appManifest: true
+  },
+
   // 註冊所需模組
   modules:[
     '@nuxtjs/supabase',

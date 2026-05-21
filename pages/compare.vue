@@ -11,17 +11,17 @@ const router = useRouter()
 
 useHead({ title: '個體比較' })
 
-// 從 URL query 或 compareList 取得比較 ID
+// 🌟 加入 (store.compareList || []) 保護
 const ids = computed(() => {
     if (route.query.ids) return String(route.query.ids).split(',').filter(Boolean).slice(0, 3)
-    return store.compareList.slice(0, 3)
+    return (store.compareList || []).slice(0, 3)
 })
 
+// 🌟 加入 (store.inv || []) 保護
 const items = computed(() =>
-    ids.value.map(id => store.inv.find(i => i.ID === id)).filter(Boolean)
+    ids.value.map(id => (store.inv || []).find(i => i.ID === id)).filter(Boolean)
 )
 
-// 基因比較：標示哪些基因是唯一的、哪些是共有的
 const allGenes = computed(() => {
     const sets = items.value.map(i => new Set(Array.isArray(i.Genes) ? i.Genes : []))
     const allSet = new Set(sets.flatMap(s => [...s]))
@@ -60,17 +60,17 @@ const fmtPrice = (i) => {
     return '-'
 }
 
-const hasActiveAuction = (id) => store.auctionList.some(a => a.animal_id === id)
+// 🌟 加入 (store.auctionList || []) 保護
+const hasActiveAuction = (id) => (store.auctionList || []).some(a => a.animal_id === id)
 
-// 🌟 Bug fix：查出對應的 auction.id，直接連結到競標詳頁（而非列表頁）
 const getAuctionLink = (id) => {
-    const auction = store.auctionList.find(a => a.animal_id === id)
+    const auction = (store.auctionList || []).find(a => a.animal_id === id)
     return auction ? `/auction/${auction.id}` : '/auction'
 }
 
 const removeItem = (id) => {
     store.toggleCompare(id)
-    if (store.compareList.length === 0) router.push('/shop')
+    if ((store.compareList || []).length === 0) router.push('/shop')
 }
 </script>
 

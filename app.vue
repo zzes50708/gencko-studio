@@ -7,7 +7,12 @@ import { useMainStore } from '~/stores/useMainStore'
 const store = useMainStore()
 const route = useRoute()
 const router = useRouter()
-const { $pwa } = useNuxtApp() 
+const { $pwa } = useNuxtApp()  
+const nuxtApp = useNuxtApp()
+
+// 排錯用：捕捉 runtime error，避免整站只剩背景 + 導引欄
+const lastRuntimeError = ref(null)
+const clearRuntimeError = () => { lastRuntimeError.value = null }
 
 // PWA 更新狀態管理
 const isUpdating = ref(false)
@@ -118,6 +123,27 @@ onMounted(() => {
   store.initLiff()
   store.initPWAInstallPrompt()
 
+  // 捕捉 Vue / JS runtime error，避免整站白屏時無法判斷根因
+  if (import.meta.client) {
+    try {
+      nuxtApp.vueApp.config.errorHandler = (err) => {
+        lastRuntimeError.value = err instanceof Error ? err : new Error(String(err))
+        console.error('[runtime error]', err)
+      }
+    } catch (e) {}
+
+    window.addEventListener('error', (event) => {
+      const err = event?.error || new Error(event?.message || 'Unknown error')
+      lastRuntimeError.value = err
+    })
+
+    window.addEventListener('unhandledrejection', (event) => {
+      const reason = event?.reason
+      const err = reason instanceof Error ? reason : new Error(String(reason || 'Unhandled rejection'))
+      lastRuntimeError.value = err
+    })
+  }
+
   try {
     const savedWish = localStorage.getItem('gencko_wishlist')
     if (savedWish) store.wishlist = JSON.parse(savedWish)
@@ -143,7 +169,24 @@ onUnmounted(() => {
 
 <template>
   <div class="cont">
-    <VitePwaManifest /> 
+    <VitePwaManifest />  
+
+    <!-- Debug overlay：發生 runtime error 時把訊息顯示出來，方便回報 -->
+    <div
+      v-if="lastRuntimeError"
+      style="position: fixed; inset: 12px 12px auto 12px; z-index: 1000000; max-width: 980px; margin: 0 auto; left: 0; right: 0;"
+    >
+      <div style="background: rgba(20,20,20,0.96); color: #fff; border: 1px solid rgba(255,255,255,0.18); border-radius: 12px; padding: 12px 12px 10px 12px; box-shadow: 0 20px 60px rgba(0,0,0,0.5);">
+        <div style="display:flex; align-items:center; justify-content: space-between; gap: 10px;">
+          <strong style="font-size: 0.95rem;">Runtime error（把下面內容貼給我）</strong>
+          <div style="display:flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end;">
+            <button class="btn-hero" style="padding: 6px 10px; font-size: 0.85rem;" @click="clearRuntimeError()">關閉</button>
+            <button class="btn-hero" style="padding: 6px 10px; font-size: 0.85rem; opacity: 0.9;" @click="clearRuntimeError(); router.push('/')">回首頁</button>
+          </div>
+        </div>
+        <pre style="margin: 10px 0 0 0; white-space: pre-wrap; font-size: 0.85rem; line-height: 1.25; max-height: 40vh; overflow: auto;">{{ lastRuntimeError?.stack || lastRuntimeError?.message || String(lastRuntimeError) }}</pre>
+      </div>
+    </div>
 
     <!-- 🌟 加入 Transition 動畫，讓 PWA 更新氣泡進退場更滑順 -->
     <Transition name="pwa-toast-anim">
@@ -189,7 +232,35 @@ onUnmounted(() => {
     />
 
     <main style="padding-top: 0; min-height: 80vh;">
-      <NuxtPage />
+      <!--
+        1) 強制 NuxtPage 依 fullPath 重新掛載：避免 CSR 導航時頁面實例複用導致資料/畫面卡死
+        2) NuxtErrorBoundary：避免單一頁面 runtime error 造成後續整站導航都只剩背景與導引欄
+      -->
+      <NuxtErrorBoundary>
+        <NuxtPage :page-key="route.fullPath" />
+
+        <template #error="{ error, clearError }">
+          <div style="max-width: 920px; margin: 0 auto; padding: 80px 16px; text-align: center; color: var(--txt);">
+            <h2 style="margin: 0 0 10px 0;">頁面載入發生錯誤</h2>
+            <p style="opacity: 0.8; margin: 0 0 18px 0;">
+              這通常是路由切換時的資料或元件狀態造成；你可以先回首頁，再重新進入該頁。
+            </p>
+            <pre style="white-space: pre-wrap; text-align: left; background: var(--card-bg); border: 1px solid var(--bd); border-radius: 12px; padding: 12px; max-height: 220px; overflow: auto; margin: 0 auto 16px auto;">{{ error?.message || String(error) }}</pre>
+            <div style="display:flex; gap:10px; justify-content:center; flex-wrap: wrap;">
+              <button
+                class="btn-hero"
+                style="min-width: 140px;"
+                @click="clearError(); router.push('/')"
+              >回首頁</button>
+              <button
+                class="btn-hero"
+                style="min-width: 140px; opacity: 0.85;"
+                @click="clearError(); router.go(0)"
+              >重新整理</button>
+            </div>
+          </div>
+        </template>
+      </NuxtErrorBoundary>
     </main>
 
     <a v-if="store.wishlist.length > 0" 
