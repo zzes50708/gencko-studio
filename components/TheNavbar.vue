@@ -116,12 +116,6 @@ const closeMobileMenu = () => {
                 <span style="font-weight:bold; background:var(--pri); color:#fff; padding:4px 12px; border-radius:20px; font-size:0.85rem;">安裝</span>
             </div>
 
-            <!-- 🌟 手機版：專欄文章改為獨立大項目 -->
-            <NuxtLink to="/articles" class="mm-summary" @click="closeMobileMenu" style="text-decoration: none;">
-                專欄文章
-                <span class="mm-arrow" style="transform: rotate(-90deg); opacity: 0.3;">▼</span>
-            </NuxtLink>
-
             <!-- Group 1: Service -->
             <div class="mm-group" :class="{active: mobileExpanded === 'service' || (mobileExpanded === null && isServiceActive)}">
                 <div class="mm-summary" @click="toggleMobileGroup('service')">
@@ -136,7 +130,13 @@ const closeMobileMenu = () => {
                     </div>
                 </div>
             </div>
-    
+            
+    <!-- 🌟 手機版：專欄文章改為獨立大項目 -->
+            <NuxtLink to="/articles" class="mm-summary" @click="closeMobileMenu" style="text-decoration: none;">
+                專欄文章
+                <span class="mm-arrow" style="transform: rotate(-90deg); opacity: 0.3;"> </span>
+            </NuxtLink>
+
             <!-- Group 2: Shop -->
             <div class="mm-group" :class="{active: mobileExpanded === 'shop' || (mobileExpanded === null && isShopActive)}">
                 <div class="mm-summary" @click="toggleMobileGroup('shop')">

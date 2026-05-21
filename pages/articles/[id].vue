@@ -181,7 +181,7 @@ const relatedArticles = computed(() => {
 
         <div v-else-if="!readingArticle" style="text-align:center; padding:100px 0; color:#888;">
             <h2>找不到此文章或文章已下架</h2>
-            <button @click="goBack" class="btn-back" style="margin-top:20px;">← 返回列表</button>
+            <button @click="goBack" class="btn-back" style="margin: 20px auto; justify-content: center;">← 返回列表</button>
         </div>
 
         <div v-else>
@@ -245,7 +245,7 @@ const relatedArticles = computed(() => {
                 </div>
             </section>
 
-            <button @click="goBack" class="btn-back" style="margin-top:30px;">← 返回列表</button>
+            <button @click="goBack" class="btn-back" style="margin: 20px auto; justify-content: center;">← 返回列表</button>
         </div>
     </div>
 </template>
