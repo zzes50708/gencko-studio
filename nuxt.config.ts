@@ -151,13 +151,8 @@ export default defineNuxtConfig({
   },
 
   robots: {
-    groups: [
-      {
-        userAgent: ['*'],
-        disallow: ['/profile', '/identity/']
-      }
-    ],
-    sitemap: ['https://www.genckobreeding.com/sitemap.xml']
+    disallow: ['/profile', '/identity/'],
+    sitemap: 'https://www.genckobreeding.com/sitemap.xml'
   },
 
   supabase: {
