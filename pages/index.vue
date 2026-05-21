@@ -14,7 +14,7 @@ useHead({
             name: 'description', 
             content: 'Gencko Studio 專注於豹紋守宮繁育、提供基因計算機工具、全台特寵醫院地圖，以及豐富的飼養知識專欄。新手入門首選的爬蟲與守宮平台。' 
         },
-        { property: 'og:title', content: 'Gencko Studio | 專業豹紋守宮繁育與爬蟲知識' },
+        { property: 'og:title', content: '專業豹紋守宮繁育與爬蟲知識 | Gencko Studio' },
         { property: 'og:description', content: '提供專業守宮選育、基因計算工具與特寵醫療地圖。' },
         { property: 'og:image', content: 'https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/%E6%9C%AA%E5%91%BD%E5%90%8D%E8%A8%AD%E8%A8%88.png' }
     ],

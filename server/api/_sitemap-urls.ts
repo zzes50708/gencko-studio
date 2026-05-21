@@ -18,7 +18,10 @@ export default defineEventHandler(async (event) => {
     { loc: '/breeders', changefreq: 'monthly', priority: 0.7 },
     { loc: '/merch', changefreq: 'weekly', priority: 0.8 },
     { loc: '/auction', changefreq: 'hourly', priority: 0.9 },
-    { loc: '/qs', changefreq: 'monthly', priority: 0.5 }
+    { loc: '/qs', changefreq: 'monthly', priority: 0.5 },
+    { loc: '/compare', changefreq: 'monthly', priority: 0.5 },
+    { loc: '/health', changefreq: 'monthly', priority: 0.5 }
+    // /profile 與 /identity/ 已在 robots.txt Disallow，不放入 sitemap
   ]
   urls.push(...staticRoutes)
 
@@ -71,7 +74,7 @@ export default defineEventHandler(async (event) => {
   if (genes) {
     genes.forEach(g => {
       urls.push({
-        loc: `/genes/${encodeURIComponent(g.name)}`,
+        loc: `/genes/${g.name}`,
         changefreq: 'monthly',
         priority: 0.7
       })

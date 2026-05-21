@@ -150,16 +150,14 @@ export default defineNuxtConfig({
     ]
   },
 
-  // 🌟 Robots 規則：私人頁面不索引
   robots: {
-    rules: [
+    groups: [
       {
-        UserAgent: '*',
-        Allow: '/',
-        Disallow: ['/profile', '/identity/']
+        userAgent: ['*'],
+        disallow: ['/profile', '/identity/']
       }
     ],
-    sitemap: 'https://www.genckobreeding.com/sitemap.xml'
+    sitemap: ['https://www.genckobreeding.com/sitemap.xml']
   },
 
   supabase: {
@@ -177,7 +175,7 @@ export default defineNuxtConfig({
     pageTransition: { name: 'page', mode: 'out-in' },
     head: {
       titleTemplate: '%s | Gencko Studio',
-      title: 'Gencko Studio｜專業豹紋守宮選育工作室',
+      title: '專業豹紋守宮選育工作室',
       htmlAttrs: { lang: 'zh-TW' },
       meta:[
         { charset: 'utf-8' },
