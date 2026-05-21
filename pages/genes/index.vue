@@ -12,6 +12,34 @@ const geneSpecies = computed({
     set: (val) => { store.geneSpecies = val }
 })
 
+const allGeneNames = computed(() => {
+    const names = []
+    for (const species of Object.values(GENES_DB)) {
+        for (const list of Object.values(species)) {
+            names.push(...list)
+        }
+    }
+    return [...new Set(names)]
+})
+
+const collectionSchema = computed(() => ({
+    "@context": "https://schema.org",
+    "@type": "CollectionPage",
+    "name": "守宮基因圖鑑",
+    "description": "收錄完整豹紋守宮與肥尾守宮基因資料庫，提供基因簡介、選育特徵與遺傳法則說明。",
+    "url": "https://www.genckobreeding.com/genes",
+    "about": {
+        "@type": "Taxon",
+        "name": "Eublepharis macularius",
+        "alternateName": "豹紋守宮"
+    },
+    "hasPart": allGeneNames.value.map(name => ({
+        "@type": "DefinedTerm",
+        "name": name,
+        "url": `https://www.genckobreeding.com/genes/${encodeURIComponent(name)}`
+    }))
+}))
+
 useHead({
     title: '守宮基因圖鑑',
     meta:[
@@ -24,7 +52,8 @@ useHead({
     ],
     link:[
         { rel: 'canonical', href: 'https://www.genckobreeding.com/genes' }
-    ]
+    ],
+    script: computed(() => [{ type: 'application/ld+json', children: JSON.stringify(collectionSchema.value) }])
 })
 </script>
 

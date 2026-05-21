@@ -85,13 +85,26 @@ const siteData = computed(() => {
             "mainEntityOfPage": url
         }
 
+        const breadcrumb = {
+            "@context": "https://schema.org",
+            "@type": "BreadcrumbList",
+            "itemListElement": [
+                { "@type": "ListItem", "position": 1, "name": "首頁", "item": "https://www.genckobreeding.com/" },
+                { "@type": "ListItem", "position": 2, "name": "守宮基因圖鑑", "item": "https://www.genckobreeding.com/genes" },
+                { "@type": "ListItem", "position": 3, "name": g.Name, "item": url }
+            ]
+        }
+
         return {
             title: g.Name,
             desc: desc,
             img: img,
             url: url,
             type: 'article',
-            script:[{ type: 'application/ld+json', children: JSON.stringify(jsonLd) }]
+            script:[
+                { type: 'application/ld+json', children: JSON.stringify(jsonLd) },
+                { type: 'application/ld+json', children: JSON.stringify(breadcrumb) }
+            ]
         }
     }
 

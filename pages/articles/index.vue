@@ -83,6 +83,26 @@ const toggleQuickTag = (tag) => {
     }
 }
 
+const blogSchema = computed(() => ({
+    "@context": "https://schema.org",
+    "@type": "Blog",
+    "name": "豹紋守宮飼養知識專欄",
+    "description": "豹紋守宮完整知識庫：飼養教學、健康照護、基因科普、環境佈置。由 Gencko Studio 專業繁育工作室整理。",
+    "url": "https://www.genckobreeding.com/articles",
+    "publisher": {
+        "@type": "Organization",
+        "name": "Gencko Studio",
+        "url": "https://www.genckobreeding.com"
+    },
+    "blogPost": store.articlesList.slice(0, 10).map(a => ({
+        "@type": "BlogPosting",
+        "headline": a.Title,
+        "url": `https://www.genckobreeding.com/articles/${a.ID}`,
+        "datePublished": a.PublishDate || '',
+        "description": a.Summary || ''
+    }))
+}))
+
 useHead({
     title: '豹紋守宮飼養知識專欄',
     meta: [
@@ -93,7 +113,8 @@ useHead({
     ],
     link: [
         { rel: 'canonical', href: 'https://www.genckobreeding.com/articles' }
-    ]
+    ],
+    script: computed(() => [{ type: 'application/ld+json', children: JSON.stringify(blogSchema.value) }])
 })
 
 const fmtDate = (d) => {

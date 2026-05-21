@@ -108,13 +108,26 @@ const siteData = computed(() => {
             "keywords": art.Keywords || "" // 🌟 新增：注入 JSON-LD
         }
 
+        const breadcrumb = {
+            "@context": "https://schema.org",
+            "@type": "BreadcrumbList",
+            "itemListElement": [
+                { "@type": "ListItem", "position": 1, "name": "首頁", "item": "https://www.genckobreeding.com/" },
+                { "@type": "ListItem", "position": 2, "name": "飼養知識專欄", "item": "https://www.genckobreeding.com/articles" },
+                { "@type": "ListItem", "position": 3, "name": art.Title, "item": artUrl }
+            ]
+        }
+
         return {
             title: art.Title,
             desc: art.Summary || 'Gencko Studio 專業爬蟲與守宮飼養專欄。',
-            keywords: art.Keywords || 'Gencko Studio, 豹紋守宮, 肥尾守宮, 爬蟲, 飼養教學', // 🌟 預設備用關鍵字
+            keywords: art.Keywords || 'Gencko Studio, 豹紋守宮, 肥尾守宮, 爬蟲, 飼養教學',
             img: imgUrl,
             url: artUrl,
-            script:[{ type: 'application/ld+json', children: JSON.stringify(jsonLd) }]
+            script:[
+                { type: 'application/ld+json', children: JSON.stringify(jsonLd) },
+                { type: 'application/ld+json', children: JSON.stringify(breadcrumb) }
+            ]
         }
     }
     
