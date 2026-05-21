@@ -10,6 +10,16 @@ const store = useMainStore()
 const route = useRoute()
 const router = useRouter()
 
+// --- 狀態管理（必須在 itemListSchema / useHead 之前宣告，避免 @unhead/vue immediate watch 觸發時 TDZ）---
+const sp = ref('豹紋守宮')
+const kw = ref('')
+const fil = ref({ stock: true, sold: false, minP: '', maxP: '', sexM: true, sexF: true, genes: [ ], beginner: false })
+const showMobileFilter = ref(false)
+const openFCat = ref(null)
+const sortOrder = ref('default')
+const showOnlyFav = ref(false)
+const showOnlyHistory = ref(false)
+
 // 🌟 ItemList schema：在售個體列表（前 12 筆，供搜尋引擎展示商品卡片）
 const itemListSchema = computed(() => {
     const forSaleItems = store.inv
@@ -59,16 +69,6 @@ useHead({
     ],
     script: computed(() => itemListSchema.value ? [{ type: 'application/ld+json', children: JSON.stringify(itemListSchema.value) }] : [])
 })
-
-// --- 狀態管理 ---
-const sp = ref('豹紋守宮')
-const kw = ref('')
-const fil = ref({ stock: true, sold: false, minP: '', maxP: '', sexM: true, sexF: true, genes: [ ], beginner: false })
-const showMobileFilter = ref(false)
-const openFCat = ref(null)
-const sortOrder = ref('default')
-const showOnlyFav = ref(false)
-const showOnlyHistory = ref(false)
 
 const tags = {
     '豹紋守宮':[ '黑夜', '蜜橘', '紅鑽石', '土匪' ],

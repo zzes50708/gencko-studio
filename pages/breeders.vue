@@ -6,11 +6,8 @@ import { getCleanUrl } from '~/utils/image.js'
 
 const store = useMainStore()
 
-// 物種切換
-const breederSp = computed({
-    get: () => store.breeder_sp || '豹紋守宮',
-    set: (val) => { store.breeder_sp = val }
-})
+// 物種切換（使用本地 ref，store 中未定義 breeder_sp，直接寫入 store 不具響應性）
+const breederSp = ref('豹紋守宮')
 
 // 性別篩選
 const breederGender = ref('全部')
