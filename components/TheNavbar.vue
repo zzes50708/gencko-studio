@@ -40,7 +40,8 @@ const closeMobileMenu = () => {
         <div class="sticky-nav" :class="{'nav-hidden': navHidden}">
             <div class="nav-container">
                 <!-- Logo -->
-                <NuxtLink to="/" class="nav-left" @click="$emit('scroll-top')" style="cursor:pointer; display:flex; align-items:center; gap:10px; text-decoration:none;">
+                <NuxtLink to="/" class="nav-left" @click="$emit('scroll-top')" style="cursor:pointer; display:flex; align-items:center; gap:8px; text-decoration:none;">
+                    <img v-if="store.logoUrl" :src="store.logoUrl" style="height:36px; width:auto; display:block;" alt="Gencko Studio Logo">
                     <div style="font-weight:900; font-size:1.2rem; color:var(--pri); letter-spacing:1px; line-height:1;">GENCKO</div>
                 </NuxtLink>
 
