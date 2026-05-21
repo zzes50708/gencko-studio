@@ -85,6 +85,19 @@ const siteData = computed(() => {
             "mainEntityOfPage": url
         }
 
+        const definedTerm = {
+            "@context": "https://schema.org",
+            "@type": "DefinedTerm",
+            "name": g.Name,
+            "description": desc,
+            "url": url,
+            "inDefinedTermSet": {
+                "@type": "DefinedTermSet",
+                "name": "守宮基因圖鑑",
+                "url": "https://www.genckobreeding.com/genes"
+            }
+        }
+
         const breadcrumb = {
             "@context": "https://schema.org",
             "@type": "BreadcrumbList",
@@ -103,6 +116,7 @@ const siteData = computed(() => {
             type: 'article',
             script:[
                 { type: 'application/ld+json', children: JSON.stringify(jsonLd) },
+                { type: 'application/ld+json', children: JSON.stringify(definedTerm) },
                 { type: 'application/ld+json', children: JSON.stringify(breadcrumb) }
             ]
         }

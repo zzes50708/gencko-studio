@@ -20,8 +20,21 @@ useHead({
     link:[
         { rel: 'canonical', href: 'https://www.genckobreeding.com/care' }
     ],
-    // 🌟 HowTo schema → 讓 Google 在搜尋結果展開步驟（AEO Featured Snippet）
-    script:[{
+    script:[
+    {
+        type: 'application/ld+json',
+        children: JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "WebPage",
+            "name": "豹紋守宮飼養方式",
+            "url": "https://www.genckobreeding.com/care",
+            "speakable": {
+                "@type": "SpeakableSpecification",
+                "cssSelector": [".care-info-list .info-row", ".care-info-list"]
+            }
+        })
+    },
+    {
         type: 'application/ld+json',
         children: JSON.stringify({
             "@context": "https://schema.org",
@@ -72,6 +85,7 @@ useHead({
         })
     }]
 })
+
 </script>
 
 <template>

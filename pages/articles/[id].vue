@@ -100,9 +100,10 @@ const siteData = computed(() => {
             "mainEntityOfPage": artUrl,
             "inLanguage": "zh-TW",
             "about": {
-                "@type": "Thing",
-                "name": "豹紋守宮",
-                "alternateName": "Eublepharis macularius"
+                "@type": "Taxon",
+                "name": "Eublepharis macularius",
+                "alternateName": "豹紋守宮",
+                "sameAs": "https://www.wikidata.org/wiki/Q185061"
             },
             "description": art.Summary,
             "keywords": art.Keywords || "" // 🌟 新增：注入 JSON-LD
