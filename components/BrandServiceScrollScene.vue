@@ -50,7 +50,7 @@ const navigateTo = (next) => {
 
   sceneTween = gsap.to(_proxy, {
     v:         next,
-    duration:  canUseMotion.value ? 1.8 : 0,   // reduced-motion嚗????
+    duration:  canUseMotion.value ? 1.8 : 0,   // reduced-motion：瞬切，不做長轉場
     ease:      'expo.inOut',    // ????皜??蔣?結皛?
     overwrite: true,
     onUpdate   () { animScene.value = _proxy.v },
@@ -126,7 +126,7 @@ if (import.meta.hot) {
 // ?喟策摮?隞嗥??湔瘚桅??潘?SSR / reduced-motion 靽風嚗?
 const scene = computed(() => {
   if (!isMounted.value) return 0
-  if (!canUseMotion.value) return 5
+  // prefers-reduced-motion 時：停用長轉場，但仍允許場景切換，避免內容被鎖死在 scene 5
   return animScene.value
 })
 
@@ -385,6 +385,11 @@ const geneTokens = computed(() => {
         <!-- eslint-disable-next-line vue/no-v-html -->
         <h1 v-if="scene.hero" class="scene-title scene-title--hero" v-html="scene.title" />
         <p v-if="scene.hero && scene.subtitle" class="scene-subtitle">{{ scene.subtitle }}</p>
+        <div v-if="idx === 0" class="scene-hero-skip" style="pointer-events: auto;">
+          <NuxtLink to="/" class="btn-app btn-app--ghost btn-app--sm btn-app--pill" aria-label="不看介紹，直接進入官網">
+            不看介紹，直接進入官網
+          </NuxtLink>
+        </div>
         <!-- ?脣?靽 3嚗cene 5 蝯偏撠嚗?蝙?刻?典???-->
         <div v-if="idx === 5" class="scene-end-nav">
           <NuxtLink to="/shop" class="btn-app btn-app--primary btn-app--md btn-app--pill">前往選購</NuxtLink>
@@ -583,12 +588,15 @@ const geneTokens = computed(() => {
 }
 .scene-subtitle {
   margin-top: 0.6rem;
-  font-size: clamp(0.9rem, 1.8vw, 1.1rem);
+  font-size: clamp(1.05rem, 2.2vw, 1.35rem);
   letter-spacing: 0.18em;
   text-transform: uppercase;
   color: var(--txt);
   opacity: 0.45;
   text-align: center;
+}
+.scene-hero-skip {
+  margin-top: 0.15rem;
 }
 
 /* ?? Day mode text adjustments ?? */

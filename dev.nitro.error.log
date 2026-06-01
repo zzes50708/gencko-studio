@@ -1461,3 +1461,87 @@ Error [ERR_UNSUPPORTED_ESM_URL_SCHEME]: Only URLs with a scheme in: file, data, 
     at ModuleLoader.getOrCreateModuleJob (node:internal/modules/esm/loader:630:12)
     at ModuleJob.syncLink (node:internal/modules/esm/module_job:143:33)
 
+
+[2026-06-01T07:03:22.507Z] url=/about
+Error [ERR_UNSUPPORTED_ESM_URL_SCHEME]: Only URLs with a scheme in: file, data, and node are supported by the default ESM loader. On Windows, absolute paths must be valid file:// URLs. Received protocol 'd:'
+    at throwIfUnsupportedURLScheme (node:internal/modules/esm/load:195:11)
+    at defaultLoadSync (node:internal/modules/esm/load:142:3)
+    at #loadAndMaybeBlockOnLoaderThread (node:internal/modules/esm/loader:795:12)
+    at #loadSync (node:internal/modules/esm/loader:815:49)
+    at ModuleLoader.load (node:internal/modules/esm/loader:780:26)
+    at ModuleLoader.loadAndTranslate (node:internal/modules/esm/loader:526:31)
+    at #getOrCreateModuleJobAfterResolve (node:internal/modules/esm/loader:571:36)
+    at afterResolve (node:internal/modules/esm/loader:624:52)
+    at ModuleLoader.getOrCreateModuleJob (node:internal/modules/esm/loader:630:12)
+    at ModuleJob.syncLink (node:internal/modules/esm/module_job:143:33)
+
+
+[2026-06-01T07:03:22.522Z] url=/__nuxt_error?error=true&url=%2Fabout&statusCode=500&statusMessage=Server+Error&message=Only+URLs+with+a+scheme+in:+file,+data,+and+node+are+supported+by+the+default+ESM+loader.+On+Windows,+absolute+paths+must+be+valid+file:%2F%2F+URLs.+Received+protocol+'d:'&stack=Only+URLs+with+a+scheme+in:+file,+data,+and+node+are+supported+by+the+default+ESM+loader.+On+Windows,+absolute+paths+must+be+valid+file:%2F%2F+URLs.+Received+protocol+'d:'%0Aat+throwIfUnsupportedURLScheme+(node:internal%2Fmodules%2Fesm%2Fload:195:11)%0Aat+defaultLoadSync+(node:internal%2Fmodules%2Fesm%2Fload:142:3)%0Aat+%23loadAndMaybeBlockOnLoaderThread+(node:internal%2Fmodules%2Fesm%2Floader:795:12)%0Aat+%23loadSync+(node:internal%2Fmodules%2Fesm%2Floader:815:49)%0Aat+ModuleLoader.load+(node:internal%2Fmodules%2Fesm%2Floader:780:26)%0Aat+ModuleLoader.loadAndTranslate+(node:internal%2Fmodules%2Fesm%2Floader:526:31)%0Aat+%23getOrCreateModuleJobAfterResolve+(node:internal%2Fmodules%2Fesm%2Floader:571:36)%0Aat+afterResolve+(node:internal%2Fmodules%2Fesm%2Floader:624:52)%0Aat+ModuleLoader.getOrCreateModuleJob+(node:internal%2Fmodules%2Fesm%2Floader:630:12)%0Aat+ModuleJob.syncLink+(node:internal%2Fmodules%2Fesm%2Fmodule_job:143:33)
+Error [ERR_UNSUPPORTED_ESM_URL_SCHEME]: Only URLs with a scheme in: file, data, and node are supported by the default ESM loader. On Windows, absolute paths must be valid file:// URLs. Received protocol 'd:'
+    at throwIfUnsupportedURLScheme (node:internal/modules/esm/load:195:11)
+    at defaultLoadSync (node:internal/modules/esm/load:142:3)
+    at #loadAndMaybeBlockOnLoaderThread (node:internal/modules/esm/loader:795:12)
+    at #loadSync (node:internal/modules/esm/loader:815:49)
+    at ModuleLoader.load (node:internal/modules/esm/loader:780:26)
+    at ModuleLoader.loadAndTranslate (node:internal/modules/esm/loader:526:31)
+    at #getOrCreateModuleJobAfterResolve (node:internal/modules/esm/loader:571:36)
+    at afterResolve (node:internal/modules/esm/loader:624:52)
+    at ModuleLoader.getOrCreateModuleJob (node:internal/modules/esm/loader:630:12)
+    at ModuleJob.syncLink (node:internal/modules/esm/module_job:143:33)
+
+
+[2026-06-01T07:03:24.684Z] url=/about
+Error [ERR_UNSUPPORTED_ESM_URL_SCHEME]: Only URLs with a scheme in: file, data, and node are supported by the default ESM loader. On Windows, absolute paths must be valid file:// URLs. Received protocol 'd:'
+    at throwIfUnsupportedURLScheme (node:internal/modules/esm/load:195:11)
+    at defaultLoadSync (node:internal/modules/esm/load:142:3)
+    at #loadAndMaybeBlockOnLoaderThread (node:internal/modules/esm/loader:795:12)
+    at #loadSync (node:internal/modules/esm/loader:815:49)
+    at ModuleLoader.load (node:internal/modules/esm/loader:780:26)
+    at ModuleLoader.loadAndTranslate (node:internal/modules/esm/loader:526:31)
+    at #getOrCreateModuleJobAfterResolve (node:internal/modules/esm/loader:571:36)
+    at afterResolve (node:internal/modules/esm/loader:624:52)
+    at ModuleLoader.getOrCreateModuleJob (node:internal/modules/esm/loader:630:12)
+    at ModuleJob.syncLink (node:internal/modules/esm/module_job:143:33)
+
+
+[2026-06-01T07:03:24.688Z] url=/__nuxt_error?error=true&url=%2Fabout&statusCode=500&statusMessage=Server+Error&message=Only+URLs+with+a+scheme+in:+file,+data,+and+node+are+supported+by+the+default+ESM+loader.+On+Windows,+absolute+paths+must+be+valid+file:%2F%2F+URLs.+Received+protocol+'d:'&stack=Only+URLs+with+a+scheme+in:+file,+data,+and+node+are+supported+by+the+default+ESM+loader.+On+Windows,+absolute+paths+must+be+valid+file:%2F%2F+URLs.+Received+protocol+'d:'%0Aat+throwIfUnsupportedURLScheme+(node:internal%2Fmodules%2Fesm%2Fload:195:11)%0Aat+defaultLoadSync+(node:internal%2Fmodules%2Fesm%2Fload:142:3)%0Aat+%23loadAndMaybeBlockOnLoaderThread+(node:internal%2Fmodules%2Fesm%2Floader:795:12)%0Aat+%23loadSync+(node:internal%2Fmodules%2Fesm%2Floader:815:49)%0Aat+ModuleLoader.load+(node:internal%2Fmodules%2Fesm%2Floader:780:26)%0Aat+ModuleLoader.loadAndTranslate+(node:internal%2Fmodules%2Fesm%2Floader:526:31)%0Aat+%23getOrCreateModuleJobAfterResolve+(node:internal%2Fmodules%2Fesm%2Floader:571:36)%0Aat+afterResolve+(node:internal%2Fmodules%2Fesm%2Floader:624:52)%0Aat+ModuleLoader.getOrCreateModuleJob+(node:internal%2Fmodules%2Fesm%2Floader:630:12)%0Aat+ModuleJob.syncLink+(node:internal%2Fmodules%2Fesm%2Fmodule_job:143:33)
+Error [ERR_UNSUPPORTED_ESM_URL_SCHEME]: Only URLs with a scheme in: file, data, and node are supported by the default ESM loader. On Windows, absolute paths must be valid file:// URLs. Received protocol 'd:'
+    at throwIfUnsupportedURLScheme (node:internal/modules/esm/load:195:11)
+    at defaultLoadSync (node:internal/modules/esm/load:142:3)
+    at #loadAndMaybeBlockOnLoaderThread (node:internal/modules/esm/loader:795:12)
+    at #loadSync (node:internal/modules/esm/loader:815:49)
+    at ModuleLoader.load (node:internal/modules/esm/loader:780:26)
+    at ModuleLoader.loadAndTranslate (node:internal/modules/esm/loader:526:31)
+    at #getOrCreateModuleJobAfterResolve (node:internal/modules/esm/loader:571:36)
+    at afterResolve (node:internal/modules/esm/loader:624:52)
+    at ModuleLoader.getOrCreateModuleJob (node:internal/modules/esm/loader:630:12)
+    at ModuleJob.syncLink (node:internal/modules/esm/module_job:143:33)
+
+
+[2026-06-01T07:26:16.101Z] url=/about
+Error [ERR_UNSUPPORTED_ESM_URL_SCHEME]: Only URLs with a scheme in: file, data, and node are supported by the default ESM loader. On Windows, absolute paths must be valid file:// URLs. Received protocol 'd:'
+    at throwIfUnsupportedURLScheme (node:internal/modules/esm/load:195:11)
+    at defaultLoadSync (node:internal/modules/esm/load:142:3)
+    at #loadAndMaybeBlockOnLoaderThread (node:internal/modules/esm/loader:795:12)
+    at #loadSync (node:internal/modules/esm/loader:815:49)
+    at ModuleLoader.load (node:internal/modules/esm/loader:780:26)
+    at ModuleLoader.loadAndTranslate (node:internal/modules/esm/loader:526:31)
+    at #getOrCreateModuleJobAfterResolve (node:internal/modules/esm/loader:571:36)
+    at afterResolve (node:internal/modules/esm/loader:624:52)
+    at ModuleLoader.getOrCreateModuleJob (node:internal/modules/esm/loader:630:12)
+    at ModuleJob.syncLink (node:internal/modules/esm/module_job:143:33)
+
+
+[2026-06-01T07:26:16.115Z] url=/__nuxt_error?error=true&url=%2Fabout&statusCode=500&statusMessage=Server+Error&message=Only+URLs+with+a+scheme+in:+file,+data,+and+node+are+supported+by+the+default+ESM+loader.+On+Windows,+absolute+paths+must+be+valid+file:%2F%2F+URLs.+Received+protocol+'d:'&stack=Only+URLs+with+a+scheme+in:+file,+data,+and+node+are+supported+by+the+default+ESM+loader.+On+Windows,+absolute+paths+must+be+valid+file:%2F%2F+URLs.+Received+protocol+'d:'%0Aat+throwIfUnsupportedURLScheme+(node:internal%2Fmodules%2Fesm%2Fload:195:11)%0Aat+defaultLoadSync+(node:internal%2Fmodules%2Fesm%2Fload:142:3)%0Aat+%23loadAndMaybeBlockOnLoaderThread+(node:internal%2Fmodules%2Fesm%2Floader:795:12)%0Aat+%23loadSync+(node:internal%2Fmodules%2Fesm%2Floader:815:49)%0Aat+ModuleLoader.load+(node:internal%2Fmodules%2Fesm%2Floader:780:26)%0Aat+ModuleLoader.loadAndTranslate+(node:internal%2Fmodules%2Fesm%2Floader:526:31)%0Aat+%23getOrCreateModuleJobAfterResolve+(node:internal%2Fmodules%2Fesm%2Floader:571:36)%0Aat+afterResolve+(node:internal%2Fmodules%2Fesm%2Floader:624:52)%0Aat+ModuleLoader.getOrCreateModuleJob+(node:internal%2Fmodules%2Fesm%2Floader:630:12)%0Aat+ModuleJob.syncLink+(node:internal%2Fmodules%2Fesm%2Fmodule_job:143:33)
+Error [ERR_UNSUPPORTED_ESM_URL_SCHEME]: Only URLs with a scheme in: file, data, and node are supported by the default ESM loader. On Windows, absolute paths must be valid file:// URLs. Received protocol 'd:'
+    at throwIfUnsupportedURLScheme (node:internal/modules/esm/load:195:11)
+    at defaultLoadSync (node:internal/modules/esm/load:142:3)
+    at #loadAndMaybeBlockOnLoaderThread (node:internal/modules/esm/loader:795:12)
+    at #loadSync (node:internal/modules/esm/loader:815:49)
+    at ModuleLoader.load (node:internal/modules/esm/loader:780:26)
+    at ModuleLoader.loadAndTranslate (node:internal/modules/esm/loader:526:31)
+    at #getOrCreateModuleJobAfterResolve (node:internal/modules/esm/loader:571:36)
+    at afterResolve (node:internal/modules/esm/loader:624:52)
+    at ModuleLoader.getOrCreateModuleJob (node:internal/modules/esm/loader:630:12)
+    at ModuleJob.syncLink (node:internal/modules/esm/module_job:143:33)
+

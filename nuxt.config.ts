@@ -7,6 +7,9 @@ export default defineNuxtConfig({
   compatibilityDate: '2024-04-16',
   devtools: { enabled: true },
 
+  // 注意：不要在這裡用 routeRules 對 `/` 做 redirect，
+  // 會影響 Nuxt 內部導覽（例如點 Logo 回 `/` 也會被導到 `/about`）。
+
   // 修正 dev 時 Vite 無法解析 `#app-manifest`（Nuxt app manifest 虛擬模組）
   experimental: {
     appManifest: true

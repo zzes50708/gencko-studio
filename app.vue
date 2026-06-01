@@ -222,7 +222,7 @@ onBeforeUnmount(() => {
         <span style="font-weight: bold;">偵測到新版本，可立即更新</span>
         <div class="pwa-update-actions">
           <button class="pwa-btn-update" :disabled="isUpdating" @click="handlePwaUpdate">
-            {{ isUpdating ? '?? ?湔銝?..' : '蝡?湔' }}
+            {{ isUpdating ? '更新中...' : '立即更新' }}
           </button>
           <button class="pwa-btn-cancel" :disabled="isUpdating" @click="$pwa?.cancelPrompt()">稍後</button>
         </div>
