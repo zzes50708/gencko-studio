@@ -11,6 +11,7 @@ const props = defineProps({
   transitionInfo: { type: Object,  default: () => ({ from: -1, to: -1, ts: 0 }) },
   isDayMode:      { type: Boolean, default: false },
 })
+const emit = defineEmits(['ready'])
 
 // 動畫速度倍率：0.3 = 全部動畫放慢到原本的 30%
 const MOTION_SPEED = 0.7
@@ -765,10 +766,11 @@ let conv23      = null  // Scene 2→3 兩段式 morph 狀態（null = 一般模
 let conv23Tween = null  // conv23 GSAP tween 持久引用（用於 kill）
 
 const { onBeforeRender } = useLoop()
+// 第一幀渲染時通知父層（載入動畫用）
+let _readyEmitted = false
 onBeforeRender(({ delta, elapsed }) => {
-  // TresJS 每幀呼叫 setClearColor(color) 不帶 alpha → alpha 被重設為 1（黑）
-  // 在每幀 render 之前強制把 clearAlpha 鎖回 0（透明），蓋過 TresJS 的覆寫
-  renderer.value?.setClearAlpha(0)
+  if (!_readyEmitted) { _readyEmitted = true; emit('ready') }
+
 
   const s = Math.max(0, Math.min(5, props.scene))
 

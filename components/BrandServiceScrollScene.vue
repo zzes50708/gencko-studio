@@ -131,8 +131,14 @@ const scene = computed(() => {
 })
 
 const isDayMode = computed(() => false)
-// 讓 /about 可以透出全站（首頁同款）的 body::before 幾何背景
-const bgColor   = computed(() => '#000000')   // clearColor=黑；mix-blend-mode:screen 讓黑色等同透明
+const bgColor   = computed(() => '#0D0B0A')   // canvas clearColor = 同 stage 背景色
+
+// ── 載入動畫 ──────────────────────────────────────────────────────────────────
+const isLoading = ref(true)
+function onSceneReady() {
+  // GeckoScene3D 第一幀後再延遲一點，讓粒子先出現再收起 loader
+  setTimeout(() => { isLoading.value = false }, 600)
+}
 
 const activeDot = computed(() => Math.min(5, Math.max(0, Math.round(animScene.value))))
 
@@ -275,7 +281,7 @@ const geneTokens = computed(() => {
             :intensity="isDayMode ? 0.35 : 1.5"
             :color="isDayMode ? '#e06030' : '#e8440a'"
           />
-          <GeckoScene3D :scene="scene" :snap-trigger="snapTrigger" :transition-info="transitionInfo" :is-day-mode="isDayMode" />
+          <GeckoScene3D :scene="scene" :snap-trigger="snapTrigger" :transition-info="transitionInfo" :is-day-mode="isDayMode" @ready="onSceneReady" />
         </TresCanvas>
       </ClientOnly>
     </div>
@@ -408,7 +414,25 @@ const geneTokens = computed(() => {
       </div>
     </Transition>
 
+    <!-- ── Hex 紋理覆蓋層（z-index:10，高於 canvas z-index:2，低於 UI z-index:30）
+         canvas clearColor 為實心黑色，此層將官網蜂巢格紋疊在 WebGL 畫面上方，
+         使格紋在粒子動畫期間保持可見 ── -->
+    <div class="hex-overlay" aria-hidden="true" />
+
   </div>
+
+  <!-- ── 載入動畫（position: fixed，在 .stage 外層）─────────────────────────── -->
+  <Transition name="loader-out">
+    <div v-if="isLoading" class="about-loader" aria-hidden="true">
+      <div class="about-loader__center">
+        <div class="about-loader__brand">GENCKO</div>
+        <div class="about-loader__sub">STUDIO</div>
+        <div class="about-loader__dna">
+          <span v-for="i in 7" :key="i" class="about-loader__bar" :style="`--i:${i}`" />
+        </div>
+      </div>
+    </div>
+  </Transition>
 </template>
 
 <style scoped>
@@ -449,7 +473,7 @@ const geneTokens = computed(() => {
   background: transparent !important;
   /* mix-blend-mode: screen：黑色像素 = 透明，蜂巢透出；粒子顏色在極深底色下色差 < 5%
      繞過 THREE.Color 忽略 rgba alpha 的限制，不依賴 WebGL alpha 合成 */
-  mix-blend-mode: screen;
+  /* mix-blend-mode removed: hex-overlay handles texture */
 }
 
 /*
@@ -568,6 +592,83 @@ const geneTokens = computed(() => {
 }
 
 /* ?? Day mode text adjustments ?? */
+
+/* ── Hex 紋理覆蓋層：官網蜂巢格紋疊在 WebGL canvas 上方 ──────────────────────
+   z-index:10 高於 bg-layer(z:2)，低於 scene-ui(z:30)；pointer-events:none 不攔截輸入 */
+.hex-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  pointer-events: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='70' height='120'%3E%3Cpolygon points='35,0 70,20 70,60 35,80 0,60 0,20' fill='rgba(255,255,255,0.06)' stroke='rgba(255,110,10,0.15)' stroke-width='1.2' stroke-linejoin='round'/%3E%3Cpolygon points='0,60 35,80 35,120 0,140 -35,120 -35,60' fill='rgba(255,255,255,0.06)' stroke='rgba(255,110,10,0.15)' stroke-width='1.2' stroke-linejoin='round'/%3E%3Cpolygon points='70,60 105,80 105,120 70,140 35,120 35,80' fill='rgba(255,255,255,0.06)' stroke='rgba(255,110,10,0.15)' stroke-width='1.2' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-size: 70px 120px;
+  background-repeat: repeat;
+}
+
+/* ── 載入動畫 ─────────────────────────────────────────────────────────────────*/
+.about-loader {
+  position: fixed;
+  inset: 0;
+  z-index: 99999;
+  background-color: #0D0B0A;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='70' height='120'%3E%3Cpolygon points='35,0 70,20 70,60 35,80 0,60 0,20' fill='rgba(255,255,255,0.06)' stroke='rgba(255,110,10,0.15)' stroke-width='1.2' stroke-linejoin='round'/%3E%3Cpolygon points='0,60 35,80 35,120 0,140 -35,120 -35,60' fill='rgba(255,255,255,0.06)' stroke='rgba(255,110,10,0.15)' stroke-width='1.2' stroke-linejoin='round'/%3E%3Cpolygon points='70,60 105,80 105,120 70,140 35,120 35,80' fill='rgba(255,255,255,0.06)' stroke='rgba(255,110,10,0.15)' stroke-width='1.2' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-size: 70px 120px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+.about-loader__center {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+}
+.about-loader__brand {
+  font-family: inherit;
+  font-size: clamp(2.8rem, 7vw, 5.5rem);
+  font-weight: 700;
+  letter-spacing: 0.30em;
+  color: #fff;
+  text-shadow:
+    0 0 30px rgba(232,68,10,0.70),
+    0 0 70px rgba(232,68,10,0.25);
+  animation: loader-brand-pulse 2.4s ease-in-out infinite;
+}
+@keyframes loader-brand-pulse {
+  0%, 100% { opacity: 0.80; text-shadow: 0 0 30px rgba(232,68,10,0.50), 0 0 70px rgba(232,68,10,0.18); }
+  50%       { opacity: 1.00; text-shadow: 0 0 30px rgba(232,68,10,0.90), 0 0 80px rgba(232,68,10,0.40), 0 0 120px rgba(232,68,10,0.12); }
+}
+.about-loader__sub {
+  font-size: 0.80rem;
+  letter-spacing: 0.55em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.35);
+  margin-top: -0.6rem;
+}
+/* DNA 均衡器：7 條垂直色條以波浪節奏振盪，象徵 DNA 橫桿 */
+.about-loader__dna {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 1.4rem;
+}
+.about-loader__bar {
+  display: block;
+  width: 3px;
+  border-radius: 2px;
+  background: #e8440a;
+  box-shadow: 0 0 8px rgba(232,68,10,0.70), 0 0 20px rgba(232,68,10,0.30);
+  animation: dna-bar 1.6s ease-in-out infinite;
+  animation-delay: calc((var(--i) - 1) * 0.13s);
+}
+@keyframes dna-bar {
+  0%, 100% { height: 6px;  opacity: 0.35; }
+  50%       { height: 36px; opacity: 1.00; }
+}
+/* 淡出轉場 */
+.loader-out-leave-active { transition: opacity 0.9s cubic-bezier(0.4, 0, 0.2, 1); }
+.loader-out-leave-to     { opacity: 0; }
 .stage--day .scene-title {
   text-shadow: none;
   color: var(--txt);

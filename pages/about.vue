@@ -2,6 +2,9 @@
 import { useHead } from '#imports'
 import BrandServiceScrollScene from '~/components/BrandServiceScrollScene.vue'
 
+// ── 關閉頁面轉場：防止 page-enter-from { opacity:0 } 透出前一頁白色 ──
+definePageMeta({ pageTransition: false, layoutTransition: false })
+
 const aboutSchema = {
   '@context': 'https://schema.org',
   '@type': 'AboutPage',
@@ -20,6 +23,10 @@ useHead({
     { property: 'og:url', content: aboutSchema.url },
   ],
   script: [{ type: 'application/ld+json', children: JSON.stringify(aboutSchema) }],
+  // ── 強制 html/body 為深色，覆蓋全站 isDayMode 預設（day-mode 白底）──
+  // 因為 /about 永遠是暗色（isDayMode = false），不受全站主題影響
+  bodyAttrs: { style: 'background-color: #0D0B0A !important;' },
+  htmlAttrs: { style: 'background-color: #0D0B0A !important;' },
 })
 </script>
 
@@ -32,27 +39,23 @@ useHead({
 <style scoped>
 .about-anim-page {
   padding: 0;
-  background: #0D0B0A;  /* 與 .stage 蜂巢底色一致，消除白色閃爍 */
+  background: #0D0B0A;
 }
 
-/* /about 需要滿版，讓 Stage/FXScroll 對齊視窗 */
 .full-bleed {
   width: 100vw;
   margin-left: calc(50% - 50vw);
   margin-right: calc(50% - 50vw);
 }
 
-/* ── 僅限 /about 頁面隱藏捲軸 ──────────────────────────────────────────────
-   .stage 已是 position:fixed;overflow:hidden，頁面本身不需捲軸。
-   隱藏以防捲軸空間與 GSAP Observer 動畫衝突。
-   scoped style 的 :global() 只在 about.vue 活躍期間注入，離開後自動移除。 */
+/* ── 僅限 /about 頁面隱藏捲軸 ── */
 :global(html):has(.about-anim-page),
 :global(body):has(.about-anim-page) {
   overflow: hidden;
-  scrollbar-width: none;       /* Firefox */
+  scrollbar-width: none;
 }
 :global(html:has(.about-anim-page)::-webkit-scrollbar),
 :global(body:has(.about-anim-page)::-webkit-scrollbar) {
-  display: none;               /* Chrome / Safari / Edge */
+  display: none;
 }
 </style>
