@@ -1,5 +1,5 @@
 ﻿<script setup>
-import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { useMediaQuery } from '@vueuse/core'
 import { useMainStore } from '~/stores/useMainStore'
@@ -228,6 +228,15 @@ let loaderFailSafeTimer = null
 
 const activeDot = computed(() => Math.min(5, Math.max(0, Math.round(animScene.value))))
 
+// 修正：某些滾動/觸控情境下只推進 animScene，但 currentSceneIndex 沒有同步更新
+// 會導致（1）場景 0 的 skip 按鈕離開後仍可誤觸（因為 currentSceneIndex 仍是 0）
+//       （2）場景 3 的 holo 卡片顯示條件不穩定
+watch(activeDot, (v) => {
+  if (!isMounted.value) return
+  if (isTransitioning.value) return
+  currentSceneIndex.value = v
+})
+
 // Per-scene alpha嚗?蝺改??臭?蝺拙???GSAP tween ??expo.inOut嚗?
 const ss = x => x * x * (3 - 2 * x)   // 靽?靘隞?嫣蝙??
 const ALPHA_FADE = 0.65
@@ -290,7 +299,8 @@ const geneFxA = computed(() => {
 })
 const geneFxActive = computed(() => isMounted.value && isDesktop.value && geneFxA.value > 0.01)
 
-const cardShowing = computed(() => Math.abs(scene.value - 3) < 0.55)
+// 3D holo 卡片：以「四捨五入的場景索引」為準，避免浮點推進卡在閾值外導致看不到
+const cardShowing = computed(() => activeDot.value === 3)
 
 const HOLO_CARDS = [
   { pct: '50%',  gene: 'TREMPER ALBINO', label: 'GENETICS / RESULT', status: 'HET / CONFIRMED',    left: '33%', top: '16%', rotateY: '-14deg', rotateX: '5deg',  delay: '0s',    srcDx: '29vw', srcDy: '12vh',  connSide: 'right', connAngle: '22deg' },
@@ -471,7 +481,7 @@ const geneTokens = computed(() => {
         <!-- eslint-disable-next-line vue/no-v-html -->
         <h1 v-if="scene.hero" class="scene-title scene-title--hero" v-html="scene.title" />
         <p v-if="scene.hero && scene.subtitle" class="scene-subtitle">{{ scene.subtitle }}</p>
-        <div v-if="!exportMode && idx === 0" class="scene-hero-skip" style="pointer-events: auto;">
+        <div v-if="!exportMode && idx === 0 && currentSceneIndex === 0" class="scene-hero-skip" style="pointer-events: auto;">
           <NuxtLink to="/" class="btn-app btn-app--ghost btn-app--sm btn-app--pill" aria-label="不看介紹，直接進入官網">
             不看介紹，直接進入官網
           </NuxtLink>
