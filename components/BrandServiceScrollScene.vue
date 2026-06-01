@@ -224,8 +224,8 @@ const geneFxA = computed(() => {
 })
 const geneFxActive = computed(() => isMounted.value && isDesktop.value && geneFxA.value > 0.01)
 
-// 3D holo 卡片：以「四捨五入的場景索引」為準，避免浮點推進卡在閾值外導致看不到
-const cardShowing = computed(() => activeDot.value === 3)
+// 3D holo 卡片：以 scene≈3 為主（避免四捨五入剛好落在 2/4 導致看不到），再補 activeDot 保險
+const cardShowing = computed(() => Math.abs(scene.value - 3) < 0.75 || activeDot.value === 3)
 
 const HOLO_CARDS = [
   { pct: '50%',  gene: 'TREMPER ALBINO', label: 'GENETICS / RESULT', status: 'HET / CONFIRMED',    left: '33%', top: '16%', rotateY: '-14deg', rotateX: '5deg',  delay: '0s',    srcDx: '29vw', srcDy: '12vh',  connSide: 'right', connAngle: '22deg' },
@@ -420,7 +420,7 @@ const geneTokens = computed(() => {
             pointerEvents: activeDot === 0 ? 'auto' : 'none',
           }"
         >
-          <NuxtLink to="/" class="btn-app btn-app--ghost btn-app--sm btn-app--pill" aria-label="不看介紹，直接進入官網">
+          <NuxtLink to="/home" class="btn-app btn-app--ghost btn-app--sm btn-app--pill" aria-label="不看介紹，直接進入官網">
             不看介紹，直接進入官網
           </NuxtLink>
         </div>
