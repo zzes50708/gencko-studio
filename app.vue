@@ -17,7 +17,8 @@ const nuxtApp = useNuxtApp()
 let globalLenis = null
 let globalLenisTicker = null
 
-const isAboutPage = computed(() => route.path.startsWith('/about'))
+// `/` 現在也是 about 動畫頁（不改網址），因此也要視為 about，避免全域 Lenis 介入造成導覽列閃動/版面跳動
+const isAboutPage = computed(() => route.path === '/' || route.path.startsWith('/about'))
 
 const handleLenisScroll = ({ scroll }) => {
   const st = Math.max(0, scroll)
@@ -209,7 +210,7 @@ onBeforeUnmount(() => {
           <strong style="font-size: 0.95rem;">Runtime error嚗?銝?批捆鞎潛策??</strong>
           <div style="display:flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end;">
             <button class="btn-hero" style="padding: 6px 10px; font-size: 0.85rem;" @click="clearRuntimeError()">關閉</button>
-            <button class="btn-hero" style="padding: 6px 10px; font-size: 0.85rem; opacity: 0.9;" @click="clearRuntimeError(); router.push('/')">回到首頁</button>
+            <button class="btn-hero" style="padding: 6px 10px; font-size: 0.85rem; opacity: 0.9;" @click="clearRuntimeError(); router.push('/home')">回到首頁</button>
           </div>
         </div>
         <pre style="margin: 10px 0 0 0; white-space: pre-wrap; font-size: 0.85rem; line-height: 1.25; max-height: 40vh; overflow: auto;">{{ lastRuntimeError?.stack || lastRuntimeError?.message || String(lastRuntimeError) }}</pre>
@@ -276,7 +277,7 @@ onBeforeUnmount(() => {
               <button
                 class="btn-hero"
                 style="min-width: 140px;"
-                @click="clearError(); router.push('/')"
+                @click="clearError(); router.push('/home')"
               >回到首頁</button>
               <button
                 class="btn-hero"

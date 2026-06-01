@@ -6,7 +6,7 @@ const route = useRoute()
 const sheetOpen = ref(false)
 const activeSheet = ref(null) // 'articles' | 'shop' | 'tools' | null
 
-const isServiceActive = computed(() => route.path.startsWith('/about'))
+const isServiceActive = computed(() => route.path === '/' || route.path.startsWith('/about'))
 const isArticlesActive = computed(() => route.path.startsWith('/articles') || route.path.startsWith('/care') || route.path.startsWith('/faq'))
 const isShopActive = computed(() =>
   route.path.startsWith('/shop') ||
@@ -45,7 +45,7 @@ watch(
 <template>
   <div>
     <nav class="bottom-nav" aria-label="底部導覽（上拉式選單）">
-      <NuxtLink to="/about" class="nav-item" :class="{ active: isServiceActive }" aria-label="品牌服務">
+      <NuxtLink to="/" class="nav-item" :class="{ active: isServiceActive }" aria-label="品牌服務">
         <span class="label">品牌服務</span>
       </NuxtLink>
 

@@ -92,7 +92,8 @@ onMounted(async () => {
     target:         stageEl.value || window,
     type:           'wheel,touch,pointer',
     tolerance:      10,
-    preventDefault: false,
+    // about 場景用 Observer 接管滾動；避免真的讓頁面 scroll，造成頂部導覽列閃動/底部導覽列跳動
+    preventDefault: true,
     onDown: () => navigateTo(currentSceneIndex.value + 1),
     onUp:   () => navigateTo(currentSceneIndex.value - 1),
   })
@@ -393,7 +394,7 @@ const geneTokens = computed(() => {
         <!-- ?脣?靽 3嚗cene 5 蝯偏撠嚗?蝙?刻?典???-->
         <div v-if="idx === 5" class="scene-end-nav">
           <NuxtLink to="/shop" class="btn-app btn-app--primary btn-app--md btn-app--pill">前往選購</NuxtLink>
-          <NuxtLink to="/" class="btn-app btn-app--ghost btn-app--md btn-app--pill">回到首頁</NuxtLink>
+          <NuxtLink to="/home" class="btn-app btn-app--ghost btn-app--md btn-app--pill">回到首頁</NuxtLink>
         </div>
       </div>
     </div>
