@@ -14,7 +14,16 @@
 
   /* ── 背景層 ── */
   --bg-dark:    #0D0B0A;          /* 暖調極深黑 */
-  --card-bg:    rgba(28, 20, 14, 0.93);
+  --card-bg:    rgba(28, 20, 14, 0.86);
+  /* 按鈕用實色（避免透明度/半透明背景） */
+  --card-bg-solid: #1C140E;
+  --gb-inner-bg:   #130D08;
+  /* 首頁情境卡（快速導覽）硬邊陰影：深色模式用橘色凸起感 */
+  --scenario-shadow: rgba(255, 110, 10, 0.32);
+  --bd-solid: #3A2F28;
+  --bd-hover-solid: #E8440A;
+  --btn-secondary-bg: #241A12;
+  --btn-secondary-active-bg: #2B1D14;
 
   /* ── 文字 ── */
   --txt:  #F0EDE8;                /* 帶暖調的白 */
@@ -31,6 +40,138 @@
   --shadow-card: 0 2px 12px rgba(0, 0, 0, 0.4), 0 1px 3px rgba(0, 0, 0, 0.3);
   --shadow-hover: 0 8px 28px rgba(0, 0, 0, 0.5), 0 0 0 1px var(--bd-hover);
   --shadow-btn:   0 4px 14px var(--pri-glow);
+}
+
+/* 日間模式：暖白底視覺，所有關鍵變數一起覆寫 */
+html.day-mode {
+  /* 卡片/區塊背景 */
+  --card-bg:          rgba(255, 255, 255, 0.92);
+  --card-bg-solid:    #ffffff;
+  --gb-inner-bg:      #ffffff;
+  /* 文字 */
+  --txt:              #1A1210;
+  /* 邊框 */
+  --bd:               rgba(0, 0, 0, 0.09);
+  --bd-hover:         rgba(232, 68, 10, 0.40);
+  --bd-solid:         #dddddd;
+  --bd-hover-solid:   rgba(232, 68, 10, 0.55);
+  /* 按鈕 */
+  --btn-secondary-bg:        #f5f5f5;
+  --btn-secondary-active-bg: #eeeeee;
+  /* 陰影（日間降低對比） */
+  --shadow-card:  0 2px 12px rgba(0, 0, 0, 0.10), 0 1px 3px rgba(0, 0, 0, 0.06);
+  --shadow-hover: 0 8px 28px rgba(0, 0, 0, 0.14), 0 0 0 1px var(--bd-hover);
+  /* 首頁情境卡（快速導覽）硬邊陰影：亮色模式用黑色凸起感 */
+  --scenario-shadow: rgba(0, 0, 0, 0.30);
+}
+html.day-mode .btn-app--ghost,
+html.day-mode .btn-app--secondary {
+  color: #1A1210;
+}
+
+/* ==============================
+   全站按鈕系統（定案 B）
+   - 主 CTA：Shimmer Button（Inspira UI）
+     https://inspira-ui.com/docs/components/buttons/shimmer-button
+   - 次 CTA：Ripple Button（Inspira UI）
+     https://inspira-ui.com/docs/components/buttons/ripple-button
+   - 返回/低干擾：Ghost Button（本專案統一規格）
+   ============================== */
+
+.btn-app {
+    appearance: none;
+    -webkit-appearance: none;
+    border: 1px solid transparent;
+    cursor: pointer;
+    user-select: none;
+    -webkit-user-select: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    font-weight: 800;
+    letter-spacing: 0.2px;
+    text-decoration: none;
+    position: relative;
+    overflow: hidden;
+    transition: transform var(--transition), box-shadow var(--transition), background-color var(--transition), border-color var(--transition), color var(--transition), opacity var(--transition);
+}
+
+.btn-app--pill { border-radius: 999px; }
+.btn-app--sm { padding: 8px 12px; font-size: 0.85rem; }
+.btn-app--md { padding: 10px 16px; font-size: 0.95rem; }
+.btn-app--lg { padding: 12px 22px; font-size: 1.05rem; }
+.btn-app--xs { padding: 6px 10px; font-size: 0.82rem; }
+
+/* Ghost（返回 / 低干擾） */
+.btn-app--ghost {
+    background: var(--card-bg-solid);
+    border-color: var(--bd-solid);
+    color: var(--txt);
+    box-shadow: none;
+}
+@media (hover: hover) and (pointer: fine) {
+    .btn-app--ghost:hover { border-color: var(--bd-hover-solid); color: var(--pri); }
+}
+.btn-app--ghost:active { transform: scale(0.98); }
+
+/* Primary（Shimmer） */
+.btn-app--primary {
+    background: var(--pri);
+    color: #fff;
+    border-color: var(--bd-solid);
+    box-shadow: 0 6px 22px var(--pri-glow), 0 2px 6px rgba(0,0,0,0.30);
+}
+.btn-app--primary::after {
+    content: "";
+    position: absolute;
+    top: -50%;
+    left: -60%;
+    width: 40%;
+    height: 200%;
+    transform: rotate(25deg);
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.55), transparent);
+    opacity: 0;
+}
+@media (hover: hover) and (pointer: fine) {
+    .btn-app--primary:hover { transform: translateY(-2px); box-shadow: 0 10px 28px var(--pri-glow), 0 2px 8px rgba(0,0,0,0.30); }
+    /* 桌機預設就有低頻 Shimmer（讓使用者不需要 hover 也能看到動畫） */
+    .btn-app--primary::after { opacity: 0.22; animation: btnShimmer 3.8s ease-in-out infinite; }
+    /* hover 時加強亮度與頻率 */
+    .btn-app--primary:hover::after { opacity: 0.9; animation-duration: 1.6s; }
+}
+.btn-app--primary:active { transform: scale(0.98); }
+
+@keyframes btnShimmer {
+    0% { left: -60%; }
+    100% { left: 140%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .btn-app--primary::after { animation: none !important; }
+}
+
+/* Secondary（Ripple：以 CSS 簡化版呈現，手機也可用） */
+.btn-app--secondary {
+    background: var(--btn-secondary-bg);
+    color: var(--txt);
+    border-color: var(--bd-solid);
+    box-shadow: 0 2px 12px rgba(0,0,0,0.18);
+}
+@media (hover: hover) and (pointer: fine) {
+    .btn-app--secondary:hover { border-color: var(--bd-hover-solid); color: var(--pri); }
+}
+.btn-app--secondary:active {
+    transform: scale(0.98);
+    background: var(--btn-secondary-active-bg);
+}
+
+.btn-app:disabled,
+.btn-app[aria-disabled="true"] {
+    opacity: 0.45;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
 }
 ::-webkit-scrollbar { width: 8px; height: 8px; }
 ::-webkit-scrollbar-track { background: #000; }
@@ -62,26 +203,20 @@ body::before {
     pointer-events: none;
     transition: background-color 0.4s ease;
 
-    /* 深色模式：暖黑底 + 橘紅蜂巢六邊形 + 邊緣光暈 */
     background-color: #0D0B0A;
     background-image:
-        /* 中央暗化（讓邊緣六邊形更明顯） */
-        radial-gradient(ellipse 65% 50% at 50% 50%, rgba(13, 11, 10, 0.80) 0%, rgba(13, 11, 10, 0.35) 55%, transparent 85%),
-        /* 左側橘紅光暈 */
-        radial-gradient(ellipse 30% 80% at 0%   50%, rgba(232, 68, 10, 0.13) 0%, transparent 70%),
-        /* 右側橘紅光暈 */
-        radial-gradient(ellipse 30% 80% at 100% 50%, rgba(232, 68, 10, 0.13) 0%, transparent 70%),
-        /* 頂部橘紅光暈 */
-        radial-gradient(ellipse 80% 25% at 50%  0%,  rgba(232, 68, 10, 0.08) 0%, transparent 70%),
-        /* 六邊形蜂巢 SVG tile — pointy-top, R=40, tile 70×120 */
-        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='70' height='120'%3E%3Cpolygon points='35,0 70,20 70,60 35,80 0,60 0,20' fill='none' stroke='rgba(232,68,10,0.10)' stroke-width='10' stroke-linejoin='round'/%3E%3Cpolygon points='35,0 70,20 70,60 35,80 0,60 0,20' fill='none' stroke='rgba(232,68,10,0.40)' stroke-width='1.2' stroke-linejoin='round'/%3E%3Cpolygon points='0,60 35,80 35,120 0,140 -35,120 -35,60' fill='none' stroke='rgba(232,68,10,0.10)' stroke-width='10' stroke-linejoin='round'/%3E%3Cpolygon points='0,60 35,80 35,120 0,140 -35,120 -35,60' fill='none' stroke='rgba(232,68,10,0.40)' stroke-width='1.2' stroke-linejoin='round'/%3E%3Cpolygon points='70,60 105,80 105,120 70,140 35,120 35,80' fill='none' stroke='rgba(232,68,10,0.10)' stroke-width='10' stroke-linejoin='round'/%3E%3Cpolygon points='70,60 105,80 105,120 70,140 35,120 35,80' fill='none' stroke='rgba(232,68,10,0.40)' stroke-width='1.2' stroke-linejoin='round'/%3E%3C/svg%3E");
-    background-size:
-        100% 100%,
-        100% 100%,
-        100% 100%,
-        100% 100%,
-        70px 120px;
-    background-repeat: no-repeat, no-repeat, no-repeat, no-repeat, repeat;
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='70' height='120'%3E%3Cpolygon points='35,0 70,20 70,60 35,80 0,60 0,20' fill='rgba(255,255,255,0.06)' stroke='rgba(255,110,10,0.15)' stroke-width='1.2' stroke-linejoin='round'/%3E%3Cpolygon points='0,60 35,80 35,120 0,140 -35,120 -35,60' fill='rgba(255,255,255,0.06)' stroke='rgba(255,110,10,0.15)' stroke-width='1.2' stroke-linejoin='round'/%3E%3Cpolygon points='70,60 105,80 105,120 70,140 35,120 35,80' fill='rgba(255,255,255,0.06)' stroke='rgba(255,110,10,0.15)' stroke-width='1.2' stroke-linejoin='round'/%3E%3C/svg%3E");
+    background-size: 70px 120px;
+    background-repeat: repeat;
+}
+
+/* 日間模式：暖白底 + 淡橘蜂巢（與深色模式同構，降低對比） */
+html.day-mode body::before {
+    background-color: #ffffff;
+    background-image:
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='70' height='120'%3E%3Cpolygon points='35,0 70,20 70,60 35,80 0,60 0,20' fill='none' stroke='rgba(255,110,10,0.10)' stroke-width='1.2' stroke-linejoin='round'/%3E%3Cpolygon points='0,60 35,80 35,120 0,140 -35,120 -35,60' fill='none' stroke='rgba(255,110,10,0.10)' stroke-width='1.2' stroke-linejoin='round'/%3E%3Cpolygon points='70,60 105,80 105,120 70,140 35,120 35,80' fill='none' stroke='rgba(255,110,10,0.10)' stroke-width='1.2' stroke-linejoin='round'/%3E%3C/svg%3E");
+    background-size: 70px 120px;
+    background-repeat: repeat;
 }
 
 /* 🌟 Body 上方內距加上系統頂部安全區 (瀏海) */
@@ -247,6 +382,55 @@ html.day-mode .dt-dropdown a:hover, html.day-mode .dt-dropdown div:hover { backg
 .hot-marquee-mask { overflow: hidden; width: 100%; position: relative; padding: 5px 0; mask-image: linear-gradient(to right, transparent, #000 5%, #000 95%, transparent); -webkit-mask-image: linear-gradient(to right, transparent, #000 5%, #000 95%, transparent); }
 .hot-track { display: grid; grid-template-rows: repeat(2, 1fr); grid-auto-flow: column; gap: 10px; width: max-content; animation: hotScroll 60s linear infinite; }
 .hot-track:hover { animation-play-state: paused; }
+
+/* 首頁熱門精選：外層容器要全透明（避免 mask 漸層造成「灰色軌道」視覺） */
+.home-hot-picks .hot-marquee-mask {
+    background: transparent !important;
+    mask-image: none !important;
+    -webkit-mask-image: none !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+}
+
+/* 首頁熱門精選：兩側加一點橘灰色陰影（邊界氛圍，不影響內容互動） */
+.home-hot-picks .hot-marquee-mask::before,
+.home-hot-picks .hot-marquee-mask::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 36px;
+    pointer-events: none;
+    z-index: 5;
+}
+.home-hot-picks .hot-marquee-mask::before {
+    left: 0;
+    background: linear-gradient(
+        to right,
+        rgba(28, 20, 14, 0.65),
+        rgba(232, 68, 10, 0.12),
+        rgba(0, 0, 0, 0)
+    );
+}
+.home-hot-picks .hot-marquee-mask::after {
+    right: 0;
+    background: linear-gradient(
+        to left,
+        rgba(28, 20, 14, 0.65),
+        rgba(232, 68, 10, 0.12),
+        rgba(0, 0, 0, 0)
+    );
+}
+
+/* 首頁熱門精選：避免跑馬燈軌道出現任何底色/漸層（有時由其他共用容器樣式帶出） */
+.home-hot-picks .hot-marquee-rows,
+.home-hot-picks .app-marquee,
+.home-hot-picks .app-marquee__track,
+.home-hot-picks .app-marquee__group {
+    background: transparent !important;
+    background-image: none !important;
+    filter: none !important;
+}
 .hot-card-item {
     width: 200px;
     flex-shrink: 0;
@@ -259,6 +443,22 @@ html.day-mode .dt-dropdown a:hover, html.day-mode .dt-dropdown div:hover { backg
 }
 .hot-card-item:hover { transform: translateY(-4px); border-color: var(--bd-hover); box-shadow: var(--shadow-hover); }
 @keyframes hotScroll { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
+
+/* 桌機：熱門卡片微重疊 + 預設 Y 軸微斜，Hover 回正 */
+@media (hover: hover) and (pointer: fine) {
+    .hot-marquee-mask { perspective: 900px; perspective-origin: 50% 40%; }
+    .hot-track { gap: 0; }
+    .hot-card-item.hot-card-tilt {
+        position: relative;
+        transform-origin: left center;
+        margin-right: -18px;
+    }
+    .hot-track:hover .hot-card-item.hot-card-tilt { opacity: 0.92; }
+    .hot-card-item.hot-card-tilt:hover {
+        opacity: 1;
+        z-index: 50;
+    }
+}
 
 /* Gencko Breeding Standard */
 .breeding-std-box { display: flex; align-items: flex-start; gap: 20px; background: rgba(255,255,255,0.03); border: 1px solid var(--bd); padding: 20px; border-radius: 10px; margin-bottom: 25px; }
@@ -574,15 +774,6 @@ html.day-mode {
   --shadow-btn:    0 4px 12px var(--pri-glow);
 }
 
-/* 日間模式：白底 + 極淡灰色蜂巢六邊形 */
-html.day-mode body::before {
-    background-color: #FFFFFF;
-    background-image:
-        /* 六邊形蜂巢 SVG tile — 極淡灰 */
-        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='70' height='120'%3E%3Cpolygon points='35,0 70,20 70,60 35,80 0,60 0,20' fill='none' stroke='rgba(180,190,200,0.18)' stroke-width='1.2' stroke-linejoin='round'/%3E%3Cpolygon points='0,60 35,80 35,120 0,140 -35,120 -35,60' fill='none' stroke='rgba(180,190,200,0.18)' stroke-width='1.2' stroke-linejoin='round'/%3E%3Cpolygon points='70,60 105,80 105,120 70,140 35,120 35,80' fill='none' stroke='rgba(180,190,200,0.18)' stroke-width='1.2' stroke-linejoin='round'/%3E%3C/svg%3E");
-    background-size: 70px 120px;
-    background-repeat: repeat;
-}
 
 /* Day Mode Titles & Sections */
 html.day-mode .sec-title, html.day-mode .page-title, html.day-mode .morph-title, html.day-mode .gene-head, html.day-mode .faq-q, html.day-mode .care-p, html.day-mode .care-h { color: #111 !important; text-shadow: none; }
@@ -610,7 +801,7 @@ html.day-mode .sec-title { border-left-color: var(--pri); color: #1A1210; }
 html.day-mode .sec-more { color: rgba(26, 18, 16, 0.4); }
 html.day-mode .sec-more:hover { color: var(--pri); }
 
-html.day-mode .sticky-nav { background: rgba(196, 207, 216, 0.97); border-bottom: 1px solid rgba(160, 175, 185, 0.50); box-shadow: 0 2px 12px rgba(0, 0, 0, 0.14); }
+html.day-mode .sticky-nav { background: rgba(255, 255, 255, 0.96); border-bottom: 1px solid rgba(0, 0, 0, 0.07); box-shadow: 0 2px 10px rgba(0, 0, 0, 0.06); }
 html.day-mode .nav-item-dt { color: rgba(26, 18, 16, 0.55); }
 html.day-mode .nav-item-dt:hover { color: #111; background: rgba(0,0,0,0.04); }
 html.day-mode .nav-item-dt.active { color: var(--pri); text-shadow: none; }
@@ -696,7 +887,8 @@ html.day-mode .skeleton { background: #e0e0e0; background-image: linear-gradient
 .list-leave-active { transition: opacity 0.2s ease; }
 .list-enter-from   { opacity: 0; transform: translateY(16px) scale(0.97); }
 .list-leave-to     { opacity: 0; }
-.list-leave-active { position: absolute; width: 100%; pointer-events: none; }
+/* 注意：width:100% 會讓 grid/卡片在離場時瞬間撐滿整排，造成「一張大照片閃一下」 */
+.list-leave-active { position: absolute; pointer-events: none; }
 
 /* ── 觸控 / 點擊回饋 ── */
 .btn-hero:active, .btn-buy:active, .gene-btn-item:active, .tag:active { transform: scale(0.96); transition: transform 0.08s; }
@@ -719,7 +911,7 @@ html.day-mode .skeleton { background: #e0e0e0; background-image: linear-gradient
 .article-card .card-body div:last-child { margin-top: 15px; }
 
 /* 🌟 Floating & Scenario */
-.home-scenario-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 25px; }
+.home-scenario-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 0; padding-inline: 0.5rem; box-sizing: border-box; }
 @media (max-width: 768px) { .home-scenario-grid { grid-template-columns: repeat(2, 1fr); } }
 .scenario-card {
     background: var(--card-bg);
@@ -786,7 +978,7 @@ html.day-mode .skeleton { background: #e0e0e0; background-image: linear-gradient
 }
 .floating-inquire-btn:hover { transform: translateY(-2px) scale(1.04); box-shadow: 0 10px 28px var(--pri-glow), 0 2px 8px rgba(0,0,0,0.3); }
 
-html.day-mode .scenario-card { background: #fff; border-color: #ddd; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
+html.day-mode .scenario-card { background: #fff; border-color: #ddd; box-shadow: 4px 4px 0 var(--scenario-shadow); }
 html.day-mode .scenario-title { color: #d84315; }
 html.day-mode .g-pill-green { background: #e8f5e9; color: #2e7d32; }
 html.day-mode .g-pill-blue { background: #e3f2fd; color: #1565c0; }
