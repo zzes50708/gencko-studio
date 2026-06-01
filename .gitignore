@@ -25,3 +25,8 @@ pnpm-debug.log*
 *.sw?
 .claude/
 .npm-cache/
+
+# export/render outputs & local logs
+out/
+dev.nitro.error.log
+*.nitro.error.log

@@ -28,6 +28,7 @@
     "pinia": "^2.3.0"
   },
   "devDependencies": {
+    "ffmpeg-static": "^5.2.0",
     "playwright": "^1.60.0"
   }
 }

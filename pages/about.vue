@@ -1,6 +1,7 @@
 <script setup>
 import { useHead } from '#imports'
 import BrandServiceScrollScene from '~/components/BrandServiceScrollScene.vue'
+import { onBeforeUnmount, onMounted } from 'vue'
 
 // ── 關閉頁面轉場：防止 page-enter-from { opacity:0 } 透出前一頁白色 ──
 definePageMeta({ pageTransition: false, layoutTransition: false })
@@ -28,6 +29,22 @@ useHead({
   bodyAttrs: { style: 'background-color: #0D0B0A !important;' },
   htmlAttrs: { style: 'background-color: #0D0B0A !important;' },
 })
+
+// about 動畫頁需要鎖住頁面捲動（避免 iOS Safari 造成 layout 跳動）
+let prevHtmlOverflow = null
+let prevBodyOverflow = null
+onMounted(() => {
+  if (!import.meta.client) return
+  prevHtmlOverflow = document.documentElement.style.overflow
+  prevBodyOverflow = document.body.style.overflow
+  document.documentElement.style.overflow = 'hidden'
+  document.body.style.overflow = 'hidden'
+})
+onBeforeUnmount(() => {
+  if (!import.meta.client) return
+  document.documentElement.style.overflow = prevHtmlOverflow ?? ''
+  document.body.style.overflow = prevBodyOverflow ?? ''
+})
 </script>
 
 <template>
@@ -49,13 +66,5 @@ useHead({
 }
 
 /* ── 僅限 /about 頁面隱藏捲軸 ── */
-:global(html):has(.about-anim-page),
-:global(body):has(.about-anim-page) {
-  overflow: hidden;
-  scrollbar-width: none;
-}
-:global(html:has(.about-anim-page)::-webkit-scrollbar),
-:global(body:has(.about-anim-page)::-webkit-scrollbar) {
-  display: none;
-}
+/* 捲動鎖由上方 JS 控制，避免 :has 在行動裝置出現不一致行為 */
 </style>
