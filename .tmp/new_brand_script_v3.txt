@@ -1,0 +1,256 @@
+<script setup>
+import { computed, nextTick, onBeforeUnmount, onMounted, onUnmounted, ref, watch } from 'vue'
+import { useMediaQuery } from '@vueuse/core'
+import { useMainStore } from '~/stores/useMainStore'
+import MatrixGeneRain from '~/components/MatrixGeneRain.vue'
+import Lenis from 'lenis'
+import { gsap } from 'gsap'
+import { ScrollTrigger } from 'gsap/ScrollTrigger'
+
+const store = useMainStore()
+
+// ── 單引擎架構（Single Engine Architecture）─────────────────────────────────
+// 平滑引擎：Lenis（expo ease-out，duration 0.8s，貼近使用者視覺停止感）
+// 磁吸引擎：GSAP ScrollTrigger snap（expo.out，delay 0.02s）
+//
+// 對齊矩陣（Alignment Matrix）所有動畫峰值精確對齊同一整數：
+//  scene 0  edge-scatter   大標題（開場）    carousel 隱藏    cards 隱藏
+//  scene 1  micro+dna      守宮 DNA 散點     carousel  0°     cards 隱藏
+//  scene 2  geckoDNA       守宮輪廓+DNA      carousel -45°    cards 隱藏
+//  scene 3  geckoFill      填充+計算機       carousel -90°    cards 可見
+//  scene 4  taiwan         台灣地圖          carousel -135°   cards 隱藏
+//  scene 5  edge-scatter   大標題（結尾）    carousel 隱藏    cards 隱藏
+// ─────────────────────────────────────────────────────────────────────────────
+const fxScrollEl   = ref(null)
+const isMounted    = ref(false)
+const canUseMotion = useMediaQuery('(prefers-reduced-motion: no-preference)')
+const isDesktop    = useMediaQuery('(hover: hover) and (pointer: fine)')
+
+// 唯一動畫值：rawScene（0.0~5.0），Lenis 提供平滑，無額外 lerp
+const rawScene = ref(0)
+
+let lenis           = null
+let st              = null
+let gsapLenisTicker = null
+
+const destroyLenisGsap = () => {
+  if (gsapLenisTicker) { gsap.ticker.remove(gsapLenisTicker); gsapLenisTicker = null }
+  st?.kill(); st = null
+  try { ScrollTrigger.getAll().forEach(t => t.kill()) } catch (e) {}
+  lenis?.destroy(); lenis = null
+}
+
+onMounted(async () => {
+  await nextTick()
+  isMounted.value = true
+  if (!import.meta.client) return
+
+  const el = fxScrollEl.value
+  if (!el) return
+
+  try { window.history.scrollRestoration = 'manual' } catch (e) {}
+  el.scrollTop   = 0
+  rawScene.value = 0
+
+  gsap.registerPlugin(ScrollTrigger)
+
+  // ① Lenis 平滑物理慣性
+  //    duration 0.8s（診斷確認：1.2s 的尾段漂移讓使用者誤判「已停止」，縮短後
+  //    物理停止點與視覺感知停止點更接近，消除 Snap 啟動時的「再啟動」突兀感）
+  lenis = new Lenis({
+    wrapper:             el,
+    content:             el.querySelector('.scroll-spacer'),
+    duration:            0.8,
+    easing:              t => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
+    orientation:         'vertical',
+    gestureOrientation:  'vertical',
+    smoothWheel:         true,
+    wheelMultiplier:     1.0,
+    touchMultiplier:     2.0,
+    infinite:            false,
+  })
+
+  // ② RAF 同步：GSAP ticker 統一驅動 Lenis，單一 RAF 迴圈，無競爭
+  gsapLenisTicker = time => lenis.raf(time * 1000)
+  gsap.ticker.add(gsapLenisTicker)
+  gsap.ticker.lagSmoothing(0)
+  lenis.on('scroll', ScrollTrigger.update)
+
+  // ③ ScrollTrigger proxy：讓 GSAP 讀寫 Lenis 的虛擬捲軸
+  ScrollTrigger.scrollerProxy(el, {
+    scrollTop (v) {
+      if (!lenis) return 0
+      if (arguments.length) lenis.scrollTo(v, { immediate: true })
+      return lenis.scroll
+    },
+    getBoundingClientRect () {
+      return { top: 0, left: 0, width: window.innerWidth, height: window.innerHeight }
+    },
+    pinType: 'transform',
+  })
+
+  const maxScroll = lenis.limit || (el.scrollHeight - el.clientHeight)
+  st = ScrollTrigger.create({
+    scroller: el,
+    trigger:  el.querySelector('.scroll-spacer'),
+    start:    'top top',
+    end:      `+=${maxScroll}`,
+    snap: {
+      snapTo:   [0, 0.2, 0.4, 0.6, 0.8, 1.0],
+      ease:     'expo.out',
+      delay:    0.02,
+      duration: { min: 0.3, max: 0.7 },
+      onComplete () {
+        rawScene.value = Math.round(rawScene.value)
+      },
+    },
+    onUpdate (self) {
+      rawScene.value = self.progress * 5
+    },
+  })
+
+  ScrollTrigger.refresh()
+  document.documentElement.classList.add('about-fxscroll-lock')
+  document.body.classList.add('about-fxscroll-lock')
+})
+
+onBeforeUnmount(() => {
+  destroyLenisGsap()
+  isMounted.value = false
+  if (!import.meta.client) return
+  document.documentElement.classList.remove('about-fxscroll-lock')
+  document.body.classList.remove('about-fxscroll-lock')
+  try { window.history.scrollRestoration = 'auto' } catch (e) {}
+})
+
+onUnmounted(() => { destroyLenisGsap() })
+
+if (import.meta.hot) {
+  import.meta.hot.dispose(() => {
+    try { destroyLenisGsap() } catch (e) {}
+    try {
+      document.documentElement.classList.remove('about-fxscroll-lock')
+      document.body.classList.remove('about-fxscroll-lock')
+    } catch (e) {}
+  })
+}
+
+// 傳給子元件的場景浮點值（含 SSR / reduced-motion 保護）
+const scene = computed(() => {
+  if (!isMounted.value) return 0
+  if (!canUseMotion.value) return 5
+  return rawScene.value
+})
+
+const isDayMode = computed(() => false)
+const bgColor   = computed(() => '#151110')
+
+// 活躍指示點：四捨五入到最近整數場景
+const activeDot = computed(() => Math.min(5, Math.max(0, Math.round(rawScene.value))))
+
+// ── Per-scene alpha：消除 Dark Zone ──────────────────────────────────────────
+// 診斷確認：舊 ±0.5 截斷在場景中點（dist=0.5）使全部 alpha=0 → 視覺黑洞。
+// 修復：擴大至 ±0.65，讓中點兩場景各有 ~0.13 alpha，加總 ~0.27（明顯可見）。
+// 效果：轉場中任何時刻都有元素保持可見，消除「停頓感」的視覺根源。
+const ss = x => x * x * (3 - 2 * x)
+const ALPHA_FADE = 0.65  // 從 ±0.5 擴大至 ±0.65，交叉淡入淡出重疊 0.3 單位
+const centerAlpha = (s, n) => {
+  const dist = Math.abs(s - n)
+  if (dist >= ALPHA_FADE) return 0
+  return ss(1 - dist / ALPHA_FADE)
+}
+const sceneAlpha = computed(() => {
+  const s = scene.value
+  return [0, 1, 2, 3, 4, 5].map(n => centerAlpha(s, n))
+})
+
+// sceneStyle：僅控制 opacity（scene-block 1-4 無可見內容）
+const sceneStyle = (idx) => ({ opacity: String(sceneAlpha.value[idx]) })
+
+// Scene content
+const scenes = [
+  { kicker: '',                  title: '— 內容待補 —',           desc: '', cta: false, hero: true  },
+  { kicker: 'Microscopic World', title: '探索基因的<br>無限可能',   desc: '每一個基因組合都是大自然精心設計的傑作<br>我們用科學解碼，讓美麗不再是偶然',      cta: false, hero: false },
+  { kicker: 'Gencko Studio',     title: '專業選育<br>一脈傳承',     desc: '專注於豹紋守宮的科學化選育<br>追求基因的純粹與每個生命的健康',            cta: false, hero: false },
+  { kicker: 'Gene Science',      title: '基因計算機<br>科學化選育', desc: '不再盲目配對，用數據支持每一次繁殖決策<br>引領台灣守宮繁育進入新世代',        cta: false, hero: false },
+  { kicker: 'Taiwan Coverage',   title: '全台佈局<br>責任守護',     desc: '與全台特寵獸醫院建立資訊連結<br>48 小時健康保固，是品質，更是承諾',          cta: true,  hero: false },
+  { kicker: '',                  title: '— 內容待補 —',           desc: '', cta: false, hero: true  },
+]
+
+const clamp01 = (v) => Math.max(0, Math.min(1, v))
+
+// Matrix Gene Rain：以 scene=3 為中心（±0.6，與 centerAlpha 一致）
+const geneFxA = computed(() => {
+  const dist = Math.abs(scene.value - 3)
+  if (dist >= 0.6) return 0
+  return ss(1 - dist / 0.6)
+})
+const geneFxActive = computed(() => isMounted.value && isDesktop.value && geneFxA.value > 0.01)
+
+// 全像卡片：scene=3 ±0.55 時顯示（略比 ALPHA_FADE 小，確保場景先穩定再彈卡片）
+const cardShowing = computed(() => Math.abs(scene.value - 3) < 0.55)
+
+const HOLO_CARDS = [
+  {
+    pct: '50%', gene: 'TREMPER ALBINO', label: 'GENETICS · RESULT', status: 'HET · CONFIRMED',
+    left: '33%', top: '16%', rotateY: '-14deg', rotateX: '5deg', delay: '0s',
+    srcDx: '29vw', srcDy: '12vh', connSide: 'right', connAngle: '22deg',
+  },
+  {
+    pct: '100%', gene: 'HET ECLIPSE', label: 'GENETICS · RESULT', status: 'VISUAL · CONFIRMED',
+    left: '66%', top: '40%', rotateY: '10deg', rotateX: '2deg', delay: '0.12s',
+    srcDx: '-6vw', srcDy: '8vh', connSide: 'left', connAngle: '28deg',
+  },
+  {
+    pct: '25%', gene: 'BLIZZARD', label: 'GENETICS · RESULT', status: 'HET · POSSIBLE',
+    left: '42%', top: '67%', rotateY: '-6deg', rotateX: '-3deg', delay: '0.22s',
+    srcDx: '20vw', srcDy: '-17vh', connSide: 'top', connAngle: '22deg',
+  },
+]
+
+const holoCardStyle = (card) => ({
+  left: card.left,
+  top: card.top,
+  '--conn-angle': card.connAngle,
+  '--delay': card.delay,
+  transitionDelay: cardShowing.value ? card.delay : '0s',
+  transform: cardShowing.value
+    ? `perspective(900px) rotateY(${card.rotateY}) rotateX(${card.rotateX}) scale(1)`
+    : `perspective(900px) rotateY(${card.rotateY}) rotateX(${card.rotateX}) translateX(${card.srcDx}) translateY(${card.srcDy}) scale(0.04)`,
+})
+
+// 3D 標題轉盤：scene N -> carouselDeg = -(N-1) x 45deg 精確對齊
+const CAROUSEL_STEP  = 45
+const carouselRadius = computed(() => isDesktop.value ? 200 : 130)
+const carouselScenes = scenes.slice(1, 5)
+
+const carouselDeg = computed(() => {
+  const s = scene.value
+  return Math.max(-135, Math.min(0, -(s - 1) * CAROUSEL_STEP))
+})
+
+// ── carouselAlpha：smoothstep 寬過渡，消除截斷感 ──────────────────────────────
+// 診斷確認：舊版在 s<0.5 硬截為 0（場景 0→1 瞬間出現），s>4.5 硬截（場景 4→5 瞬間消失）。
+// 修復：用 smoothstep 過渡，起點從 0.35 開始淡入，終點延伸到 4.65 後淡出。
+const carouselAlpha = computed(() => {
+  const s = scene.value
+  if (s < 0.35 || s > 4.65) return 0
+  if (s < 1.0)  return ss((s - 0.35) / 0.65)   // 0.35→1.0：smoothstep 淡入
+  if (s > 4.0)  return ss((4.65 - s) / 0.65)   // 4.0→4.65：smoothstep 淡出
+  return 1
+})
+
+const carouselItemOpacity = (idx) => {
+  const frontIdx = scene.value - 1
+  const dist = Math.abs(idx - frontIdx)
+  if (dist >= 2) return 0
+  if (dist >= 1) return 0.3 * (2 - dist)
+  return 1 - dist * 0.7
+}
+
+// gene rain tokens
+const geneTokens = computed(() => {
+  const raw = store.genePages?.value || []
+  return raw.map(g => g?.Name).filter(Boolean)
+})
+</script>

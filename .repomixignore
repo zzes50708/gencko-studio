@@ -1,0 +1,30 @@
+# 1. 擋掉最肥的套件與快取
+node_modules/
+.npm-cache/
+
+# 2. 擋掉編譯產物與暫存檔 (Nuxt & Vercel)
+.nuxt/
+.output/
+.tmp/
+.tmp-playwright/
+.vercel-tmp/
+.claude/
+
+# 3. 擋掉版本控制
+.git/
+
+# 4. 擋掉靜態大檔案 (圖片/影片/字型)
+assets/
+public/
+*.png
+*.jpg
+*.jpeg
+*.svg
+*.gif
+*.mp4
+*.webm
+
+# 5. 擋掉 Log 紀錄檔與打包後的自己
+*.log
+repomix-output.txt
+repomix-output.xml

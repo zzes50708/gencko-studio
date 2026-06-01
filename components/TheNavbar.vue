@@ -1,37 +1,22 @@
-<script setup>
+﻿<script setup>
 import { ref, computed, watch } from 'vue'
-import { useMainStore } from '~/stores/useMainStore' // 🌟 引入 store
+import { useMainStore } from '~/stores/useMainStore' // ?? 撘 store
 
 const props = defineProps({
     navHidden: { type: Boolean, default: false },
     isDayMode: { type: Boolean, default: true },
-    mobileMenuOpen: { type: Boolean, default: false },
     curTab: { type: String, default: '' },
     readingArticle: { type: Object, default: null },
     readingProgress: { type: Number, default: 0 }
 })
 
-const emit = defineEmits(['toggle-theme', 'update:mobileMenuOpen', 'scroll-top'])
+const emit = defineEmits(['toggle-theme', 'scroll-top'])
 
-const store = useMainStore() // 🌟 取得安裝狀態與方法
-const mobileExpanded = ref(null)
+const store = useMainStore() // ?? ??摰?????寞?
+const isShopActive = computed(() => ['shop', 'auction', 'breeders', 'merch'].includes(props.curTab))
+const isToolActive = computed(() => ['calculator', 'genes', 'health', 'qs', 'hospital'].includes(props.curTab))
+const isArticlesActive = computed(() => ['articles', 'care', 'faq'].includes(props.curTab))
 
-const isShopActive = computed(() =>['shop', 'auction', 'breeders', 'merch'].includes(props.curTab))
-const isToolActive = computed(() =>['calculator', 'genes', 'health', 'qs', 'hospital'].includes(props.curTab))
-// 🌟 移除 articles，專欄文章現在是獨立項目
-const isServiceActive = computed(() =>['about', 'care', 'faq'].includes(props.curTab))
-
-watch(() => props.mobileMenuOpen, (val) => {
-    if (!val) mobileExpanded.value = null
-})
-
-const toggleMobileGroup = (groupName) => {
-    mobileExpanded.value = mobileExpanded.value === groupName ? null : groupName
-}
-
-const closeMobileMenu = () => {
-    emit('update:mobileMenuOpen', false)
-}
 </script>
 
 <template>
@@ -41,19 +26,27 @@ const closeMobileMenu = () => {
             <div class="nav-container">
                 <!-- Logo -->
                 <NuxtLink to="/" class="nav-left" @click="$emit('scroll-top')" style="cursor:pointer; display:flex; align-items:center; gap:8px; text-decoration:none;">
-                    <img v-if="store.logoUrl" :src="store.logoUrl" style="height:36px; width:auto; display:block;" alt="Gencko Studio Logo">
+                    <img v-if="store.logoUrl" :src="store.logoUrl" class="nav-logo-img" alt="Gencko Studio Logo" />
                     <div style="font-weight:900; font-size:1.2rem; color:var(--pri); letter-spacing:1px; line-height:1;">GENCKO</div>
                 </NuxtLink>
 
                 <!-- Desktop Menu -->
                 <div class="dt-nav">
-                    <!-- 🌟 專欄文章獨立到第一層 -->
-                    <NuxtLink to="/articles" class="nav-item-dt" :class="{active: curTab === 'articles'}">
-                        專欄文章
+                    <NuxtLink to="/about" class="nav-item-dt" :class="{active: curTab === 'about'}">
+                        品牌服務
                     </NuxtLink>
 
+                    <div class="nav-item-dt dropdown-hover" :class="{active: isArticlesActive}">
+                        <NuxtLink to="/articles" class="nav-item-dt-link" aria-label="專欄文章">專欄文章</NuxtLink> ▾
+                        <div class="dt-dropdown">
+                            <NuxtLink to="/care">飼養指南</NuxtLink>
+                            <NuxtLink to="/articles">文章列表</NuxtLink>
+                            <NuxtLink to="/faq">常見問題</NuxtLink>
+                        </div>
+                    </div>
+
                     <div class="nav-item-dt dropdown-hover" :class="{active: isShopActive}">
-                        探索選購 ▾
+                        <NuxtLink to="/shop" class="nav-item-dt-link" aria-label="探索選購">探索選購</NuxtLink> ▾
                         <div class="dt-dropdown">
                             <NuxtLink to="/shop">選購守宮</NuxtLink>
                             <NuxtLink to="/auction">線上競標</NuxtLink>
@@ -62,115 +55,43 @@ const closeMobileMenu = () => {
                         </div>
                     </div>
                     <div class="nav-item-dt dropdown-hover" :class="{active: isToolActive}">
-                        工具知識 ▾
+                        <NuxtLink to="/genes" class="nav-item-dt-link" aria-label="工具知識">工具知識</NuxtLink> ▾
                         <div class="dt-dropdown">
-                            <NuxtLink to="/calculator">基因計算機</NuxtLink>
                             <NuxtLink to="/genes">基因圖鑑</NuxtLink>
-                            <NuxtLink to="/health">健康評估</NuxtLink>
-                            <NuxtLink to="/qs">飼養評估</NuxtLink>
+                            <NuxtLink to="/calculator">基因計算機</NuxtLink>
                             <NuxtLink to="/hospital">特寵醫院</NuxtLink>
-                        </div>
-                    </div>                    
-                    <div class="nav-item-dt dropdown-hover" :class="{active: isServiceActive}">
-                        品牌服務 ▾
-                        <div class="dt-dropdown">
-                            <NuxtLink to="/about">關於我們</NuxtLink>
-                            <NuxtLink to="/care">飼養方式</NuxtLink>
-                            <NuxtLink to="/faq">常見問題</NuxtLink>
+                            <NuxtLink to="/health">健康評估</NuxtLink>
+                            <NuxtLink to="/qs">飼養前評估</NuxtLink>
                         </div>
                     </div>
                 </div>
 
                 <!-- Right Controls -->
                 <div class="nav-right">
-                    <button v-if="store.canInstall" @click="store.installApp" class="dt-install-btn dt-only">
-                        📲 下載 App
+                    <button v-if="store.canInstall" @click="store.installApp" class="btn-app btn-app--secondary btn-app--sm btn-app--pill dt-install-btn dt-only">
+                        下載 App
                     </button>
                     
-                    <NuxtLink to="/profile" class="profile-link-dt dt-only" style="text-decoration:none; margin-right:15px; font-size:1.2rem; display:flex; align-items:center;" title="我的專區">👤</NuxtLink>
+                    <NuxtLink
+                        to="/profile"
+                        class="btn-app btn-app--ghost btn-app--sm btn-app--pill member-btn"
+                        style="text-decoration:none; display:flex; align-items:center;"
+                        title="會員"
+                    >會員</NuxtLink>
                     
-                    <!-- 🌟 加入 ClientOnly 解決伺服器與瀏覽器文字不一致的 Mismatch -->
-                    <div class="theme-toggle" @click="$emit('toggle-theme')" style="cursor:pointer;font-size:1rem;font-weight:bold;margin-right:15px;color:var(--txt);display:flex;align-items:center;border:1px solid var(--bd);padding:4px 10px;border-radius:20px;">
+                    <!-- ?? ? ClientOnly 閫?捱隡箸??刻??汗?冽?摮?銝?渡? Mismatch -->
+                    <div class="theme-toggle" @click="$emit('toggle-theme')">
                         <ClientOnly>
-                            {{ isDayMode ? '夜間' : '日間' }}
+                            {{ isDayMode ? '亮色' : '暗色' }}
                             <template #fallback>
-                                <span>切換</span>
+                                <span>載入中</span>
                             </template>
                         </ClientOnly>
                     </div>
-                    <div class="hamburger" @click="$emit('update:mobileMenuOpen', !mobileMenuOpen)">☰</div>
                 </div>
             </div>
         </div>
 
-        <!-- Mobile Menu -->
-        <div class="mobile-menu-overlay" :class="{open: mobileMenuOpen}" style="position:fixed; top:90px; left:0; width:100%; height:calc(100vh - 90px); overflow-y:auto; padding-bottom: 100px;">
-            
-            <!-- 🌟 手機版的下載 App 按鈕 (展開選單時顯示在最上面) -->
-            <div v-if="store.canInstall" class="mobile-install-banner" @click="store.installApp(); closeMobileMenu();">
-                <span style="font-size:1.5rem;">📲</span>
-                <div style="flex:1;">
-                    <div style="font-weight:bold; color:var(--pri);">下載 Gencko 專屬 App</div>
-                    <div style="font-size:0.8rem; opacity:0.8;">享有無廣告全螢幕最佳體驗</div>
-                </div>
-                <span style="font-weight:bold; background:var(--pri); color:#fff; padding:4px 12px; border-radius:20px; font-size:0.85rem;">安裝</span>
-            </div>
-
-            <!-- Group 1: Service -->
-            <div class="mm-group" :class="{active: mobileExpanded === 'service' || (mobileExpanded === null && isServiceActive)}">
-                <div class="mm-summary" @click="toggleMobileGroup('service')">
-                    品牌服務
-                    <span class="mm-arrow">▼</span>
-                </div>
-                <div class="mm-anim-wrapper">
-                    <div class="mm-anim-inner">
-                        <NuxtLink to="/about" class="mm-sub" @click="closeMobileMenu">關於我們</NuxtLink>
-                        <NuxtLink to="/care" class="mm-sub" @click="closeMobileMenu">飼養方式</NuxtLink>
-                        <NuxtLink to="/faq" class="mm-sub" @click="closeMobileMenu">常見問題</NuxtLink>
-                    </div>
-                </div>
-            </div>
-            
-    <!-- 🌟 手機版：專欄文章改為獨立大項目 -->
-            <NuxtLink to="/articles" class="mm-summary" @click="closeMobileMenu" style="text-decoration: none;">
-                專欄文章
-                <span class="mm-arrow" style="transform: rotate(-90deg); opacity: 0.3;"> </span>
-            </NuxtLink>
-
-            <!-- Group 2: Shop -->
-            <div class="mm-group" :class="{active: mobileExpanded === 'shop' || (mobileExpanded === null && isShopActive)}">
-                <div class="mm-summary" @click="toggleMobileGroup('shop')">
-                    探索選購
-                    <span class="mm-arrow">▼</span>
-                </div>
-                <div class="mm-anim-wrapper">
-                    <div class="mm-anim-inner">
-                        <NuxtLink to="/shop" class="mm-sub" @click="closeMobileMenu">選購守宮</NuxtLink>
-                        <NuxtLink to="/auction" class="mm-sub" @click="closeMobileMenu">線上競標</NuxtLink>
-                        <NuxtLink to="/breeders" class="mm-sub" @click="closeMobileMenu">種群展示</NuxtLink>
-                        <NuxtLink to="/merch" class="mm-sub" @click="closeMobileMenu">周邊商品</NuxtLink>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Group 3: Tools -->
-            <div class="mm-group" :class="{active: mobileExpanded === 'tool' || (mobileExpanded === null && isToolActive)}">
-                <div class="mm-summary" @click="toggleMobileGroup('tool')">
-                    工具知識
-                    <span class="mm-arrow">▼</span>
-                </div>
-                <div class="mm-anim-wrapper">
-                    <div class="mm-anim-inner">
-                        <NuxtLink to="/calculator" class="mm-sub" @click="closeMobileMenu">基因計算機</NuxtLink>
-                        <NuxtLink to="/genes" class="mm-sub" @click="closeMobileMenu">基因圖鑑</NuxtLink>
-                        <NuxtLink to="/health" class="mm-sub" @click="closeMobileMenu">健康評估</NuxtLink>
-                        <NuxtLink to="/qs" class="mm-sub" @click="closeMobileMenu">飼養評估</NuxtLink>
-                        <NuxtLink to="/hospital" class="mm-sub" @click="closeMobileMenu">特寵醫院</NuxtLink>
-                    </div>
-                </div>
-            </div>
-        </div>
-        
         <!-- Reading Progress Bar -->
         <div v-if="curTab==='articles' && readingArticle" class="reading-progress-bar">
             <div class="progress-fill" :style="{width: readingProgress + '%'}"></div>
@@ -179,7 +100,7 @@ const closeMobileMenu = () => {
 </template>
 
 <style scoped>
-/* Sticky Navigation — 背景由全域 CSS 控制（夜間深色 / 日間 Logo 冷藍灰） */
+/* Sticky Navigation ????勗??CSS ?批嚗??楛??/ ?仿? Logo ?瑁??堆? */
 .sticky-nav {
     position: fixed;
     top: calc(40px + env(safe-area-inset-top, 0px));
@@ -196,12 +117,15 @@ const closeMobileMenu = () => {
 
 .nav-container { max-width: 1300px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; height: 50px; }
 .nav-left { display: flex; align-items: center; gap: 10px; }
+.nav-logo-img { width: 36px; height: 36px; border-radius: 999px; object-fit: cover; display: block; background: var(--card-bg-solid); border: 1px solid var(--bd); }
 
 /* Desktop Navigation */
 .dt-nav { display: flex; gap: 5px; height: 100%; align-items: center; }
 .nav-item-dt { padding: 0 12px; height: 100%; display: flex; align-items: center; font-size: 0.95rem; font-weight: 700; color: var(--txt); opacity: 0.8; cursor: pointer; transition: 0.2s; position: relative; white-space: nowrap; text-decoration: none; }
 .nav-item-dt:hover, .nav-item-dt.active { color: var(--pri); opacity: 1; background: rgba(128, 128, 128, 0.05); }
 .nav-item-dt.active { border-bottom: 3px solid var(--pri); }
+.nav-item-dt-link { color: inherit; text-decoration: none; display: inline-flex; align-items: center; height: 100%; }
+.nav-item-dt-link:visited { color: inherit; }
 
 /* Dropdown */
 .dropdown-hover { position: relative; }
@@ -213,24 +137,24 @@ const closeMobileMenu = () => {
 
 /* Right Controls */
 .nav-right { display: flex; align-items: center; gap: 12px; }
-.hamburger { display: none; }
 
-/* 🌟 桌機版安裝按鈕 */
-.dt-install-btn {
-    background: var(--pri);
-    color: #fff;
-    border: none;
-    padding: 6px 12px;
-    border-radius: 20px;
-    font-size: 0.85rem;
-    font-weight: bold;
+.member-btn { margin-right: 4px; font-size: 1rem; font-weight: bold; }
+
+.theme-toggle {
     cursor: pointer;
-    box-shadow: 0 2px 10px var(--pri-glow);
-    transition: 0.2s;
-    margin-right: 10px;
+    font-size: 1rem;
+    font-weight: bold;
+    color: var(--txt);
+    display: flex;
+    align-items: center;
+    border: 1px solid var(--bd);
+    padding: 4px 10px;
+    border-radius: 20px;
 }
-.dt-install-btn:hover {
-    transform: scale(1.05);
+
+/* ?? 獢???鋆???*/
+.dt-install-btn {
+    margin-right: 10px;
 }
 
 .dt-only { display: block; }
@@ -243,38 +167,10 @@ const closeMobileMenu = () => {
 @media (max-width: 768px) {
     .dt-only { display: none !important; }
     .dt-nav { display: none; }
-    
-    .hamburger { display: block; font-size: 1.6rem; cursor: pointer; color: var(--txt); padding: 10px; margin-right: -10px; }
 
-    .mobile-menu-overlay { display: flex; position: fixed; top: calc(90px + env(safe-area-inset-top, 0px)); left: 0; width: 100%; height: calc(100vh - 90px - env(safe-area-inset-top, 0px)); background: var(--card-bg); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); z-index: 2000; transform: translateX(100%); transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1); padding: 5px 15px 100px 15px; overflow-y: auto; flex-direction: column; gap: 0; border-top: 1px solid var(--bd); box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
-    .mobile-menu-overlay.open { transform: translateX(0); }
-
-    /* 🌟 手機版安裝橫幅 */
-    .mobile-install-banner {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        background: rgba(255, 69, 0, 0.05);
-        border: 1px solid var(--pri);
-        padding: 15px;
-        border-radius: 12px;
-        margin: 10px 0 20px 0;
-        cursor: pointer;
-        color: var(--txt);
-    }
-
-    .mm-summary { font-size: 1.1rem; font-weight: bold; padding: 15px 10px; border-bottom: 1px solid var(--bd); color: var(--txt); cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
-    .mm-group.active .mm-summary { color: var(--pri); border-bottom: none; }
-    
-    .mm-arrow { transition: transform 0.3s ease; font-size: 0.8rem; opacity: 0.6; }
-    .mm-group.active .mm-arrow { transform: rotate(180deg); opacity: 1; color: var(--pri); }
-
-    .mm-anim-wrapper { display: grid; grid-template-rows: 0fr; transition: grid-template-rows 0.3s ease-out; }
-    .mm-group.active .mm-anim-wrapper { grid-template-rows: 1fr; }
-    .mm-anim-inner { overflow: hidden; background: rgba(128, 128, 128, 0.05); border-radius: 8px; }
-
-    .mm-sub { display: block; padding: 15px 20px; color: var(--txt); opacity: 0.8; font-size: 1rem; border-bottom: 1px dashed var(--bd); cursor: pointer; font-weight: bold; text-decoration: none; transition: 0.2s; }
-    .mm-sub:last-child { border-bottom: none; }
-    .mm-sub:active, .mm-summary:active { background: rgba(255, 69, 0, 0.1); color: var(--pri); opacity: 1; }
+    /* 手機：會員按鈕放右上（原亮色按鈕位置），亮/暗切換放最右（原漢堡位置） */
+    .member-btn { margin-right: 0; }
+    .theme-toggle { margin-right: -10px; }
 }
 </style>
+

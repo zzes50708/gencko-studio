@@ -366,13 +366,13 @@ const generatePromo = async () => {
                         </div>
 
                         <div class="guarantee-icons-row">
-                            <div class="g-icon-pill g-pill-green"><span>🛡️</span> 100% 健康</div>
-                            <div class="g-icon-pill g-pill-blue"><span>🧬</span> 基因正確</div>
-                            <div class="g-icon-pill g-pill-orange"><span>🚚</span> 運輸賠償</div>
+                            <div class="g-icon-pill g-pill-green">100% 健康</div>
+                            <div class="g-icon-pill g-pill-blue">基因正確</div>
+                            <div class="g-icon-pill g-pill-orange">運輸賠償</div>
                         </div>
 
                         <div class="prod-guarantee">
-                            <span style="font-size:1.2rem; margin-right:10px;">🛡️</span>
+                            <span style="font-size:1.2rem; margin-right:10px;">健康保證</span>
                             <span>{{ productModules.health.statement }}</span>
                         </div>
 
@@ -380,10 +380,10 @@ const generatePromo = async () => {
                             <NuxtLink
                                 v-if="productModules.transaction.status === 'Auction' && matchedAuctionId"
                                 :to="`/auction/${matchedAuctionId}`"
-                                class="btn-buy-lg"
+                                class="btn-app btn-app--primary btn-app--lg btn-app--pill btn-buy-lg"
                                 style="background: #e67e22; box-shadow: 0 4px 10px rgba(230,126,34,0.4);"
                             >🔨 前往競標場次</NuxtLink>
-                            <a v-else-if="productModules.transaction.status === 'ForSale' || productModules.transaction.status === 'Auction'" :href="store.lineLink" target="_blank" class="btn-buy-lg">💬 私訊購買 (Line)</a>
+                            <a v-else-if="productModules.transaction.status === 'ForSale' || productModules.transaction.status === 'Auction'" :href="store.lineLink" target="_blank" class="btn-app btn-app--primary btn-app--lg btn-app--pill btn-buy-lg">私訊購買（Line）</a>
                             <div class="action-sub-buttons">
                                 <button class="btn-share" @click="shareLink">分享連結</button>
                                 <button class="btn-promo" @click="generatePromo" :disabled="isGenerating">

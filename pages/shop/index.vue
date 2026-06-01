@@ -1,10 +1,11 @@
-<script setup>
+﻿<script setup>
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useHead } from '#imports'
 import { useMainStore } from '~/stores/useMainStore'
 import { GENES_DB } from '~/utils/genes-db.js'
 import { getCleanUrl } from '~/utils/image.js'
+import ShopFlipCard from '~/components/ShopFlipCard.vue'
 
 const store = useMainStore()
 const route = useRoute()
@@ -27,37 +28,37 @@ const itemListSchema = computed(() => {
     return {
         "@context": "https://schema.org",
         "@type": "ItemList",
-        "name": `${sp.value}選購列表`,
-        "description": `Gencko Studio 目前在售的${sp.value}個體`,
+        "name": sp.value + " 商品列表",
+        "description": "Gencko Studio " + sp.value + " 商品列表",
         "url": "https://www.genckobreeding.com/shop",
         "numberOfItems": forSaleItems.length,
         "itemListElement": forSaleItems.map((item, idx) => ({
             "@type": "ListItem",
             "position": idx + 1,
-            "item": {
-                "@type": "Product",
-                "name": item.Morph,
-                "url": `https://www.genckobreeding.com/product/${item.ID}`,
-                "image": item.ImageURL || '',
-                "description": `${item.Species} ${item.Morph}，${item.GenderType}，基因：${(item.Genes || []).join('、') || '純種'}`,
-                "offers": {
-                    "@type": "Offer",
-                    "price": item.ListingPrice,
-                    "priceCurrency": "TWD",
+                "item": {
+                    "@type": "Product",
+                    "name": item.Morph,
+                    "url": "https://www.genckobreeding.com/product/" + item.ID,
+                    "image": item.ImageURL || '',
+                    "description": (item.Species || '') + ' ' + (item.Morph || '') + '，性別：' + (item.GenderType || '') + '，基因：' + (((item.Genes || []).join('、')) || '無'),
+                    "offers": {
+                        "@type": "Offer",
+                        "price": item.ListingPrice,
+                        "priceCurrency": "TWD",
                     "availability": "https://schema.org/InStock",
                     "seller": { "@type": "Organization", "name": "Gencko Studio" }
                 }
             }
         }))
     }
-})
+});
 
 useHead({
-    title: '線上選購豹紋守宮',
+    title: '選購｜Gencko Studio',
     meta:[
-        { name: 'description', content: 'Gencko Studio 提供多樣化的豹紋守宮（Eublepharis macularius）與肥尾守宮選購。依基因、性別、價格篩選，找到你的夢幻守宮。新手推薦、競標個體一覽無遺。' },
-        { property: 'og:title', content: '線上選購豹紋守宮 | Gencko Studio' },
-        { property: 'og:description', content: '台灣專業繁育工作室，豹紋守宮與肥尾守宮直接選購，100% 健康保證。' },
+        { name: 'description', content: 'Gencko Studio 選購頁，提供在售商品與篩選搜尋。' },
+        { property: 'og:title', content: '選購｜Gencko Studio' },
+        { property: 'og:description', content: 'Gencko Studio 選購頁，提供在售商品與篩選搜尋。' },
         { property: 'og:image', content: 'https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/%E6%AD%A3%E9%9D%A2.png' },
         { property: 'og:url', content: 'https://www.genckobreeding.com/shop' },
         { name: 'twitter:card', content: 'summary_large_image' }
@@ -66,12 +67,9 @@ useHead({
         { rel: 'canonical', href: 'https://www.genckobreeding.com/shop' }
     ],
     script: computed(() => itemListSchema.value ? [{ type: 'application/ld+json', children: JSON.stringify(itemListSchema.value) }] : [])
-})
+});
 
-const tags = {
-    '豹紋守宮':[ '黑夜', '蜜橘', '紅鑽石', '土匪' ],
-    '肥尾守宮':[ '幽靈', '橘白', '無紋', '立可白' ]
-}
+const tags = {}
 
 onMounted(() => {
     const q = route.query
@@ -93,9 +91,9 @@ onMounted(() => {
 })
 
 watch([sp, kw, fil, sortOrder], () => {
-    const query = {}
-    if (sp.value !== '豹紋守宮') query.sp = sp.value
-    if (kw.value) query.kw = kw.value
+  const query = {}
+  if (sp.value !== '豹紋守宮') query.sp = sp.value
+  if (kw.value) query.kw = kw.value
     if (!fil.value.stock) query.stock = 'false'
     if (fil.value.sold) query.sold = 'true'
     if (fil.value.minP) query.minP = fil.value.minP
@@ -108,6 +106,19 @@ watch([sp, kw, fil, sortOrder], () => {
 
     router.replace({ query }).catch(() => {})
 }, { deep: true })
+
+const availableSpecies = computed(() => {
+  const set = new Set()
+  for (const i of (store.inv || [])) {
+    if (i?.Species) set.add(String(i.Species))
+  }
+  return Array.from(set)
+})
+
+watch(availableSpecies, (list) => {
+  if (!list.length) return
+  if (!list.includes(sp.value)) sp.value = list[0]
+}, { immediate: true })
 
 const getEffectiveStatus = (item) => {
     if (item.Status === 'Auction' && !(store.auctionList || []).some(a => a.animal_id === item.ID)) return 'ForSale'
@@ -123,7 +134,7 @@ const availableGenes = computed(() => {
     const s = new Set()
     const targetStatus = fil.value.sold ? ['ForSale', 'Auction', 'Sold'] : ['ForSale', 'Auction']
     ;(store.inv || []).filter(i => i.Species === sp.value && targetStatus.includes(getEffectiveStatus(i))).forEach(i => {
-        if (Array.isArray(i.Genes)) i.Genes.forEach(g => s.add(g === '白黃' ? 'WY' : g))
+        if (Array.isArray(i.Genes)) i.Genes.forEach(g => s.add(g))
     })
     return Array.from(s)
 })
@@ -147,18 +158,18 @@ const shopList = computed(() => {
         if (fil.value.minP && p < fil.value.minP) return false
         if (fil.value.maxP && p > fil.value.maxP) return false
 
-        const sex = i.GenderType
-        const isM = sex === '公' || (sex === '溫控' && Number(i.GenderValue) >= 30)
-        const isF = sex === '母' || (sex === '溫控' && Number(i.GenderValue) <= 27)
+        const sexText = String(i.GenderType || '')
+        const isM = sexText.includes('Male') || sexText.includes('公')
+        const isF = sexText.includes('Female') || sexText.includes('母')
         if (!fil.value.sexM && isM) return false
         if (!fil.value.sexF && isF) return false
 
-        if (fil.value.beginner && (!i.Note || !i.Note.includes('新手推薦'))) return false
+        if (fil.value.beginner && (!i.Note || !String(i.Note).includes('新手'))) return false
 
         if (fil.value.genes.length > 0) {
             const iGenes = Array.isArray(i.Genes) ? i.Genes : [ ]
             if (!fil.value.genes.every(g => {
-                if (g === 'WY') return iGenes.includes('WY') || iGenes.includes('白黃')
+                if (g === 'WY') return iGenes.includes('WY')
                 return iGenes.includes(g)
             })) return false
         }
@@ -227,47 +238,82 @@ const toggleWishlist = (id) => {
 }
 
 const compareItems = computed(() => (store.compareList || []).map(id => (store.inv || []).find(i => i.ID === id)).filter(Boolean))
+
+const activeFilterCount = computed(() => {
+    let n = 0
+    if (!fil.value.stock)    n++
+    if (fil.value.sold)      n++
+    if (fil.value.minP)      n++
+    if (fil.value.maxP)      n++
+    if (!fil.value.sexM)     n++
+    if (!fil.value.sexF)     n++
+    if (fil.value.beginner)  n++
+    n += fil.value.genes.length
+    return n
+})
 </script>
 
 <template>
     <div class="shop-root-container">
         <div class="shop-page-wrapper">
-            <h1 class="page-title dt-only">線上選購守宮</h1>
+            <h1 class="page-title dt-only">選購守宮</h1>
 
             <div class="shop-layout">
+                <!-- 手機篩選遮罩 -->
+                <div
+                    class="filter-backdrop m-only"
+                    :class="{ 'filter-backdrop--show': showMobileFilter }"
+                    @click="showMobileFilter = false"
+                />
+
                 <div class="filter-panel" :class="{ 'm-show': showMobileFilter }">
                     <div class="f-header m-only">
-                        <span>進階篩選</span>
-                        <button class="btn-close" @click="showMobileFilter = false">✕</button>
+                        <button class="btn-back-arrow" @click="showMobileFilter = false" aria-label="返回">
+                            <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+                        </button>
+                        <span class="f-header-title">
+                            篩選條件
+                            <span v-if="activeFilterCount > 0" class="f-active-badge">{{ activeFilterCount }}</span>
+                        </span>
+                        <button v-if="activeFilterCount > 0" class="btn-clear-inline" @click="resetFilters">清除全部</button>
+                        <div v-else class="f-header-spacer" />
                     </div>
                     
                     <div class="f-group">
-                        <div class="f-label">精選標籤</div>
+                        <div class="f-label">快速篩選</div>
                         <label class="f-check" style="color:var(--pri); font-weight:bold;">
-                            <input type="checkbox" v-model="fil.beginner"> 🌱 新手推薦
+                            <input type="checkbox" v-model="fil.beginner"> 新手推薦
                         </label>
                     </div>
                     <div class="f-group">
-                        <div class="f-label">庫存狀態</div>
-                        <label class="f-check"><input type="checkbox" v-model="fil.stock"> 有庫存</label>
-                        <label class="f-check"><input type="checkbox" v-model="fil.sold"> 已售出</label>
+                        <div class="f-label">狀態</div>
+                        <label class="f-check"><input type="checkbox" v-model="fil.stock"> 在售</label>
+                        <label class="f-check"><input type="checkbox" v-model="fil.sold"> 已售</label>
                     </div>
                     <div class="f-group">
-                        <div class="f-label">價格 (最高: {{ maxPrice }})</div>
+                        <div class="f-label">價格（最高 {{ maxPrice }}）</div>
                         <div style="display:flex;gap:5px;">
-                            <input type="number" v-model="fil.minP" class="f-inp" placeholder="Min">
-                            <input type="number" v-model="fil.maxP" class="f-inp" placeholder="Max">
+                            <input type="number" v-model="fil.minP" class="f-inp" placeholder="最低">
+                            <input type="number" v-model="fil.maxP" class="f-inp" placeholder="最高">
                         </div>
                     </div>
                     <div class="f-group">
                         <div class="f-label">性別</div>
-                        <label class="f-check"><input type="checkbox" v-model="fil.sexM"> 公 (含公溫)</label>
-                        <label class="f-check"><input type="checkbox" v-model="fil.sexF"> 母 (含母溫)</label>
+                        <label class="f-check"><input type="checkbox" v-model="fil.sexM"> 公</label>
+                        <label class="f-check"><input type="checkbox" v-model="fil.sexF"> 母</label>
                     </div>
                     <div class="f-group" style="padding-bottom: 30px;">
                         <div class="f-label">基因篩選</div>
                         <div v-for="(list, cat) in GENES_DB[sp]" :key="cat">
-                            <div class="f-cat" @click="openFCat = (openFCat === cat) ? null : cat">{{ cat }} <small>{{ openFCat === cat ? '▲' : '▼' }}</small></div>
+                            <div class="f-cat" @click="openFCat = (openFCat === cat) ? null : cat">
+                                <span>
+                                    {{ cat }}
+                                    <span v-if="fil.genes.some(g => list.includes(g))" class="f-cat-count">
+                                        {{ fil.genes.filter(g => list.includes(g)).length }}
+                                    </span>
+                                </span>
+                                <span class="f-cat-arrow" :class="{ 'f-cat-arrow--open': openFCat === cat }">›</span>
+                            </div>
                             <div v-show="openFCat === cat" style="padding-left:10px;">
                                 <div v-for="g in getSortedGenes(list)" :key="g" style="margin:2px 0;">
                                     <label class="f-check" :class="{disabled: !isGeneAvail(g)}">
@@ -280,22 +326,23 @@ const compareItems = computed(() => (store.compareList || []).map(id => (store.i
                     </div>
 
                     <div class="m-filter-actions m-only">
-                        <button class="btn-clear" @click="resetFilters">清除條件</button>
-                        <button class="btn-apply" @click="showMobileFilter = false">套用設定</button>
+                        <button class="btn-clear" @click="resetFilters">清除</button>
+                        <button class="btn-apply" @click="showMobileFilter = false">套用篩選</button>
                     </div>
 
-                    <button class="btn-hero dt-only" style="width:100%;margin-top:20px;font-size:0.9rem;padding:10px;" @click="resetFilters">清除所有條件</button>
+                    <button class="btn-hero dt-only" style="width:100%;margin-top:20px;font-size:0.9rem;padding:10px;" @click="resetFilters">重置全部篩選</button>
                 </div>
 
                 <div style="flex:1; min-width:0; display: flex; flex-direction: column;">
                     
                     <div class="search-filter-row">
                         <div class="inp-wrap">
-                            <span class="search-icon">🔍</span>
-                            <input class="inp" :value="kw" @input="onSearchInput" placeholder="搜尋品系、基因、ID...">
+                            <span class="search-icon">搜尋</span>
+                            <input class="inp" :value="kw" @input="onSearchInput" placeholder="搜尋關鍵字或 ID...">
                         </div>
-                        <button class="btn-filter-icon m-only" :class="{active: fil.genes.length > 0 || fil.beginner || fil.minP || fil.maxP}" @click="showMobileFilter = true" aria-label="進階篩選">
+                        <button class="btn-filter-icon m-only" :class="{active: activeFilterCount > 0}" @click="showMobileFilter = true" aria-label="篩選">
                             <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon></svg>
+                            <span v-if="activeFilterCount > 0" class="filter-count-badge">{{ activeFilterCount }}</span>
                         </button>
                     </div>
                     
@@ -307,73 +354,47 @@ const compareItems = computed(() => (store.compareList || []).map(id => (store.i
 
                         <select v-model="sortOrder" class="chip-select">
                             <option value="default">預設排序</option>
-                            <option value="price_asc">價格由低到高</option>
-                            <option value="price_desc">價格由高到低</option>
+                            <option value="price_asc">價格：低 → 高</option>
+                            <option value="price_desc">價格：高 → 低</option>
                         </select>
                         
-                        <div class="chip-toggle" :class="{active: showOnlyHistory}" @click="showOnlyHistory = !showOnlyHistory">🕒 瀏覽</div>
-                        <div class="chip-toggle" :class="{active: showOnlyFav}" @click="showOnlyFav = !showOnlyFav">❤ 收藏</div>
+                        <div class="chip-toggle" :class="{active: showOnlyHistory}" @click="showOnlyHistory = !showOnlyHistory">歷史紀錄</div>
+                        <div class="chip-toggle" :class="{active: showOnlyFav}" @click="showOnlyFav = !showOnlyFav">只看收藏</div>
 
                         <div class="chip-divider"></div>
 
-                        <span v-for="t in tags[sp]" :key="t" class="chip-tag" :class="{sel: kw === t}" @click="toggleTag(t)">{{ t }}</span>
+                        <span v-for="t in (tags[sp] || [])" :key="t" class="chip-tag" :class="{sel: kw === t}" @click="toggleTag(t)">{{ t }}</span>
                     </div>
 
-                    <h2 class="sr-only">{{ sp }} 個體列表</h2>
-                    <transition-group tag="div" name="list" class="grid photo-grid">
-                        <div v-if="shopList.length === 0" key="empty-msg" class="shop-empty-state">
-                            <div class="empty-icon">🦎💤</div>
-                            <h3 style="color:var(--txt); margin-bottom:10px;">找不到符合的守宮</h3>
-                            <p style="font-size:0.9rem;">牠們可能躲起來睡覺了，或是被買光囉！<br>試著調整篩選條件，或直接私訊我們許願吧。</p>
-                            <button class="btn-hero" @click="resetFilters" style="margin-top:20px;">🔄 清除篩選條件</button>
-                        </div>
-                        
-                        <NuxtLink :to="`/product/${i.ID}`" class="card slim-card" v-for="(i, index) in shopList" :key="i.ID" style="text-decoration:none; color:inherit;">
-                            <div v-if="i.Status === 'Sold'" class="sold-stamp">SOLD</div>
-                            <div style="position:absolute;top:5px;right:5px;z-index:10; display:flex; flex-direction:column; gap:4px;">
-                                <span class="fav-btn" :class="{active: (store.wishlist || []).includes(i.ID)}" @click.stop.prevent="toggleWishlist(i.ID)">❤</span>
-                                <span
-                                    v-if="i.Status !== 'Sold'"
-                                    class="cmp-btn"
-                                    :class="{active: (store.compareList || []).includes(i.ID), disabled: (store.compareList || []).length >= 3 && !(store.compareList || []).includes(i.ID)}"
-                                    @click.stop.prevent="store.toggleCompare(i.ID)"
-                                    :title="(store.compareList || []).includes(i.ID) ? '移出比較' : (store.compareList || []).length >= 3 ? '最多3隻' : '加入比較'"
-                                >⊕</span>
-                            </div>
-                            <div style="position:relative;">
-                                
-                                <img 
-                                    v-if="i.ImageURL" 
-                                    :src="getCleanUrl(i.ImageURL, 400)" 
-                                    :alt="i.Morph" 
-                                    class="card-img slim-img" 
-                                    :loading="index < 6 ? 'eager' : 'lazy'" 
-                                    :fetchpriority="index < 6 ? 'high' : 'auto'" 
-                                    decoding="async"
-                                />
-                                
-                                <div v-else class="card-img slim-img" style="display:flex;align-items:center;justify-content:center;color:#333;font-size:2rem;background:#000;">🦎</div>
-                                <div v-if="i.Status === 'ForSale'" class="trust-badge">🛡️ 100% HEALTH</div>
-                            </div>
-                            <div class="card-body slim-body">
-                                <h3 class="slim-title" style="margin:0;">{{ i.Morph }}</h3>
-                                <div class="slim-price-row" style="margin-top:4px;">
-                                    <template v-if="i.Status === 'Sold'">
-                                        <span class="status-badge s-sold">已售出</span>
-                                    </template>
-                                    <template v-else-if="i.Status === 'Auction' && (store.auctionList || []).some(a => a.animal_id === i.ID)">
-                                        <span class="status-badge s-auction">競標中</span>
-                                    </template>
-                                    <template v-else-if="i.Status === 'SelfKeep'">
-                                        <span class="status-badge s-nfs">非賣</span>
-                                    </template>
-                                    <template v-else>
-                                        <div class="price slim-price">${{ i.ListingPrice }}</div>
-                                    </template>
+                    <h2 class="sr-only">{{ sp }} 商品列表</h2>
+                    <div v-if="store.loading && !shopList.length" class="grid photo-grid">
+                        <SkeletonCard v-for="n in 12" :key="n" :square="true" />
+                    </div>
+                    <Transition v-else name="sp-fade" mode="out-in">
+                        <div :key="sp">
+                            <transition-group tag="div" name="shoplist" class="grid photo-grid">
+                                <div v-if="shopList.length === 0" key="empty-msg" class="shop-empty-state">
+                                    <div class="empty-icon">無</div>
+                                    <h3 style="color:var(--txt); margin-bottom:10px;">目前沒有符合條件的商品</h3>
+                                    <p style="font-size:0.9rem;">請調整篩選條件或清除篩選後再試一次。</p>
+                                    <button class="btn-hero" @click="resetFilters" style="margin-top:20px;">重置篩選</button>
                                 </div>
-                            </div>
-                        </NuxtLink>
-                    </transition-group>
+
+                                <ShopFlipCard
+                                    v-for="(i, index) in shopList"
+                                    :key="i.ID"
+                                    :item="i"
+                                    :index="index"
+                                    :is-wishlisted="(store.wishlist || []).includes(i.ID)"
+                                    :is-compared="(store.compareList || []).includes(i.ID)"
+                                    :compare-disabled="(store.compareList || []).length >= 3 && !(store.compareList || []).includes(i.ID)"
+                                    :has-auction="(store.auctionList || []).some(a => a.animal_id === i.ID)"
+                                    :on-toggle-wishlist="toggleWishlist"
+                                    :on-toggle-compare="store.toggleCompare"
+                                />
+                            </transition-group>
+                        </div>
+                    </Transition>
                 </div>
             </div>
         </div>
@@ -384,19 +405,19 @@ const compareItems = computed(() => (store.compareList || []).map(id => (store.i
                     <div class="cmp-bar-items">
                         <div v-for="item in compareItems" :key="item.ID" class="cmp-bar-item">
                             <img v-if="item.ImageURL" :src="getCleanUrl(item.ImageURL, 80)" :alt="item.Morph" />
-                            <div v-else class="cmp-bar-placeholder">🦎</div>
+                            <div v-else class="cmp-bar-placeholder">＋</div>
                             <span class="cmp-bar-name">{{ item.Morph }}</span>
-                            <button class="cmp-bar-remove" @click="store.toggleCompare(item.ID)">✕</button>
+                            <button class="cmp-bar-remove" @click="store.toggleCompare(item.ID)"></button>
                         </div>
                         <div v-for="n in (3 - (store.compareList || []).length)" :key="'empty-'+n" class="cmp-bar-empty">
-                            + 加入
+                            + 加入比較
                         </div>
                     </div>
                     <div class="cmp-bar-actions">
-                        <NuxtLink :to="`/compare?ids=${(store.compareList || []).join(',')}`" class="cmp-go-btn">
-                            比較 {{ (store.compareList || []).length }} 隻
+                        <NuxtLink :to="`/compare?ids=${(store.compareList || []).join(',')}`" class="btn-app btn-app--primary btn-app--sm btn-app--pill cmp-go-btn">
+                            前往比較（{{ (store.compareList || []).length }}）
                         </NuxtLink>
-                        <button class="cmp-clear-btn" @click="store.clearCompare()">清除</button>
+                        <button class="btn-app btn-app--ghost btn-app--sm btn-app--pill cmp-clear-btn" @click="store.clearCompare()">清空</button>
                     </div>
                 </div>
             </Transition>
@@ -461,25 +482,44 @@ const compareItems = computed(() => (store.compareList || []).map(id => (store.i
     pointer-events: none; 
 }
 
-.btn-filter-icon { 
-    background: var(--card-bg); 
-    border: 1px solid var(--bd); 
-    color: var(--txt); 
-    border-radius: 8px; 
-    width: 40px; 
-    height: 40px; 
-    display: flex; 
-    align-items: center; 
-    justify-content: center; 
-    cursor: pointer; 
-    flex-shrink: 0; 
-    transition: 0.2s; 
+.btn-filter-icon {
+    position: relative;
+    background: var(--card-bg);
+    border: 1px solid var(--bd);
+    color: var(--txt);
+    border-radius: 8px;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: 0.2s;
 }
-.btn-filter-icon.active { 
-    background: var(--pri); 
-    color: #fff; 
-    border-color: var(--pri); 
-    box-shadow: 0 0 8px var(--pri-glow); 
+.btn-filter-icon.active {
+    background: var(--pri);
+    color: #fff;
+    border-color: var(--pri);
+    box-shadow: 0 0 8px var(--pri-glow);
+}
+.filter-count-badge {
+    position: absolute;
+    top: -6px;
+    right: -6px;
+    background: #e8440a;
+    color: #fff;
+    font-size: 0.65rem;
+    font-weight: 800;
+    min-width: 17px;
+    height: 17px;
+    border-radius: 9px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 4px;
+    border: 1.5px solid var(--bg, #111);
+    line-height: 1;
 }
 
 .scroll-chips-row { 
@@ -621,17 +661,48 @@ const compareItems = computed(() => (store.compareList || []).map(id => (store.i
 .f-check:hover { opacity: 1; }
 .f-check.disabled { opacity: 0.3; cursor: not-allowed; }
 
-.f-cat { 
-    cursor: pointer; 
-    padding: 10px; 
-    background: var(--card-bg); 
+.f-cat {
+    cursor: pointer;
+    padding: 10px 12px;
+    background: var(--card-bg);
     border: 1px solid var(--bd);
-    margin-bottom: 6px; 
-    border-radius: 6px; 
-    font-size: 0.9rem; 
-    font-weight: bold; 
-    display: flex; 
-    justify-content: space-between; 
+    margin-bottom: 6px;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    font-weight: bold;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+    transition: border-color 0.18s, background 0.18s;
+}
+.f-cat:hover { border-color: var(--pri); }
+.f-cat-count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--pri);
+    color: #fff;
+    font-size: 0.65rem;
+    font-weight: 800;
+    min-width: 16px;
+    height: 16px;
+    border-radius: 8px;
+    padding: 0 4px;
+    margin-left: 4px;
+    vertical-align: middle;
+}
+.f-cat-arrow {
+    font-size: 1.2rem;
+    line-height: 1;
+    color: var(--txt);
+    opacity: 0.45;
+    transition: transform 0.2s ease;
+    display: inline-block;
+}
+.f-cat-arrow--open {
+    transform: rotate(90deg);
+    opacity: 0.8;
 }
 .f-inp { 
     width: 100%; 
@@ -647,85 +718,159 @@ const compareItems = computed(() => (store.compareList || []).map(id => (store.i
 @media (max-width: 768px) {
     .dt-only { display: none !important; }
     .m-only { display: flex !important; }
-    
+
     .shop-page-wrapper { padding: 5px 10px 15px 10px; }
     .shop-layout { flex-direction: column; align-items: stretch; gap: 0; }
-    
-    .filter-panel { 
-        display: none; 
-        position: fixed; 
-        top: 0; left: 0; 
-        width: 100vw; height: 100vh; 
-        z-index: 100000; 
-        background: var(--card-bg); 
-        overflow-y: auto; 
-        border-radius: 0; 
-        padding: calc(20px + env(safe-area-inset-top, 0px)) 20px 100px 20px; 
-        margin: 0; 
-        flex-shrink: unset; 
-    }
-    .filter-panel.m-show { 
-        display: block; 
-        animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1); 
-    }
-    @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
 
-    .f-header { 
-        display: flex; 
-        justify-content: space-between; 
-        align-items: center; 
-        font-size: 1.2rem; 
-        font-weight: bold; 
-        margin-bottom: 20px; 
-        padding-bottom: 15px; 
-        border-bottom: 1px solid var(--bd); 
-        color: var(--txt); 
+    /* ── 遮罩 ── */
+    .filter-backdrop {
+        display: none;
+        position: fixed;
+        inset: 0;
+        z-index: 99999;
+        background: rgba(0, 0, 0, 0.5);
+        backdrop-filter: blur(3px);
+        -webkit-backdrop-filter: blur(3px);
+        opacity: 0;
+        transition: opacity 0.3s ease;
+        pointer-events: none;
     }
-    .btn-close { 
-        background: var(--bd); 
-        border: none; 
-        color: var(--txt); 
-        font-size: 1.2rem; 
-        cursor: pointer; 
-        width: 36px; 
-        height: 36px; 
-        border-radius: 50%; 
-        display: flex; 
-        align-items: center; 
-        justify-content: center; 
+    .filter-backdrop--show {
+        display: block;
+        opacity: 1;
+        pointer-events: auto;
     }
 
-    .m-filter-actions { 
-        position: fixed; 
-        bottom: 0; left: 0; 
-        width: 100%; 
-        display: flex; 
-        gap: 10px; 
-        padding: 15px 20px calc(15px + env(safe-area-inset-bottom, 0px)) 20px; 
-        background: var(--card-bg); 
-        border-top: 1px solid var(--bd); 
-        z-index: 10; 
+    /* ── 篩選面板 ── */
+    .filter-panel {
+        display: none;
+        position: fixed;
+        bottom: 0; left: 0; right: 0;
+        height: 92dvh;
+        z-index: 100000;
+        background: var(--card-bg);
+        overflow-y: auto;
+        border-radius: 20px 20px 0 0;
+        padding: 0 20px calc(90px + env(safe-area-inset-bottom, 0px)) 20px;
+        margin: 0;
+        flex-shrink: unset;
+        box-shadow: 0 -4px 32px rgba(0, 0, 0, 0.28);
+        overscroll-behavior: contain;
     }
-    .btn-clear { 
-        flex: 1; 
-        padding: 12px; 
-        border-radius: 8px; 
-        background: transparent; 
-        border: 1px solid var(--bd); 
-        color: var(--txt); 
-        font-weight: bold; 
-        font-size: 1rem; 
+    .filter-panel.m-show {
+        display: block;
+        animation: filterSlideUp 0.38s cubic-bezier(0.16, 1, 0.3, 1) both;
     }
-    .btn-apply { 
-        flex: 2; 
-        padding: 12px; 
-        border-radius: 8px; 
-        background: var(--pri); 
-        border: none; 
-        color: #fff; 
-        font-weight: bold; 
-        font-size: 1rem; 
-        box-shadow: 0 4px 10px var(--pri-glow); 
+    @keyframes filterSlideUp {
+        from { transform: translateY(100%); opacity: 0.6; }
+        to   { transform: translateY(0);    opacity: 1;   }
+    }
+
+    /* ── 面板頂部拖曳把手 ── */
+    .filter-panel::before {
+        content: '';
+        display: block;
+        width: 40px;
+        height: 4px;
+        border-radius: 2px;
+        background: var(--bd);
+        margin: 12px auto 0;
+        opacity: 0.6;
+    }
+
+    /* ── 篩選 Header ── */
+    .f-header {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin: 14px 0 18px;
+        padding-bottom: 16px;
+        border-bottom: 1px solid var(--bd);
+    }
+    .btn-back-arrow {
+        background: var(--card-bg);
+        border: 1px solid var(--bd);
+        color: var(--txt);
+        border-radius: 50%;
+        width: 34px;
+        height: 34px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        flex-shrink: 0;
+    }
+    .f-header-title {
+        flex: 1;
+        font-size: 1.1rem;
+        font-weight: 800;
+        color: var(--txt);
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    .f-active-badge {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background: var(--pri);
+        color: #fff;
+        font-size: 0.68rem;
+        font-weight: 800;
+        min-width: 18px;
+        height: 18px;
+        border-radius: 9px;
+        padding: 0 5px;
+        line-height: 1;
+    }
+    .btn-clear-inline {
+        background: transparent;
+        border: none;
+        color: var(--pri);
+        font-size: 0.88rem;
+        font-weight: 700;
+        cursor: pointer;
+        padding: 4px 0;
+        white-space: nowrap;
+        flex-shrink: 0;
+    }
+    .f-header-spacer { width: 56px; flex-shrink: 0; }
+
+    /* ── 底部操作列 ── */
+    .m-filter-actions {
+        position: fixed;
+        bottom: 0; left: 0;
+        width: 100%;
+        display: flex;
+        gap: 10px;
+        padding: 12px 20px calc(12px + env(safe-area-inset-bottom, 0px)) 20px;
+        background: var(--card-bg);
+        border-top: 1px solid var(--bd);
+        z-index: 10;
+        box-sizing: border-box;
+    }
+    .btn-clear {
+        flex: 1;
+        padding: 13px;
+        border-radius: 12px;
+        background: transparent;
+        border: 1px solid var(--bd);
+        color: var(--txt);
+        font-weight: 700;
+        font-size: 0.95rem;
+        cursor: pointer;
+    }
+    .btn-apply {
+        flex: 2;
+        padding: 13px;
+        border-radius: 12px;
+        background: var(--pri);
+        border: none;
+        color: #fff;
+        font-weight: 800;
+        font-size: 0.95rem;
+        box-shadow: 0 4px 14px var(--pri-glow);
+        cursor: pointer;
     }
 
     .grid.photo-grid { 
@@ -734,14 +879,16 @@ const compareItems = computed(() => (store.compareList || []).map(id => (store.i
         gap: 8px !important; 
     }
     
-    .card-img.slim-img { height: auto !important; aspect-ratio: 1 / 1 !important; }
+    /* 注意：卡片已改成元件（ShopFlipCard），scoped 樣式不會套用到子元件內部
+       所以這裡用 :deep 確保圖片尺寸在切換物種時不會閃成大圖。 */
+    :deep(.card-img.slim-img) { height: auto !important; aspect-ratio: 1 / 1 !important; display: block; width: 100%; object-fit: cover; }
     .slim-body { padding: 6px !important; }
     .slim-title { font-size: 0.85rem !important; margin-bottom: 2px !important; }
     .slim-price { font-size: 1rem !important; }
     
     .trust-badge { font-size: 0.5rem; padding: 2px 4px; bottom: 2px; left: 2px; }
-    .fav-btn { font-size: 1rem; width: 26px; height: 26px; top: 3px; right: 3px; }
-    .cmp-btn { font-size: 0.85rem; width: 22px; height: 22px; }
+    .card-action-stack { top: 3px; right: 3px; gap: 4px; }
+    .card-action-btn { padding: 5px 8px; font-size: 0.78rem; }
     .sold-stamp { font-size: 0.55rem; padding: 2px 4px; top: 4px; left: 4px; }
     .status-badge { padding: 2px 6px !important; font-size: 0.75rem !important; }
     .shop-empty-state { grid-column: 1 / -1 !important; }
@@ -752,25 +899,67 @@ const compareItems = computed(() => (store.compareList || []).map(id => (store.i
     .cmp-bar-name { font-size: 0.62rem; }
 }
 
-.cmp-btn {
+.card-action-stack {
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    z-index: 10;
     display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 28px;
-    height: 28px;
-    border-radius: 50%;
-    background: var(--card-bg);
-    border: 1px solid var(--bd);
-    color: var(--txt);
-    font-size: 1rem;
-    cursor: pointer;
-    transition: 0.2s;
-    opacity: 0.8;
-    line-height: 1;
+    flex-direction: column;
+    gap: 6px;
 }
-.cmp-btn:hover { opacity: 1; border-color: var(--pri); color: var(--pri); }
-.cmp-btn.active { background: var(--pri); color: #fff; border-color: var(--pri); opacity: 1; }
-.cmp-btn.disabled { opacity: 0.3; cursor: not-allowed; }
+
+/* 物種切換：整個 grid 淡出再淡入，避免大量卡片同時 enter/leave 造成版面崩塌 */
+.sp-fade-enter-active,
+.sp-fade-leave-active {
+    transition: opacity 0.18s ease;
+}
+.sp-fade-enter-from,
+.sp-fade-leave-to {
+    opacity: 0;
+}
+
+/* 個別卡片篩選/排序：純淡入淡出，不做 transform 也不做 FLIP move，
+   避免大量卡片同時跑 GPU 合成層造成卡頓 */
+:deep(.shoplist-enter-active),
+:deep(.shoplist-leave-active) {
+    transition: opacity 0.15s ease;
+}
+:deep(.shoplist-enter-from),
+:deep(.shoplist-leave-to) {
+    opacity: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .sp-fade-enter-active,
+    .sp-fade-leave-active { transition: none !important; }
+    .sp-fade-enter-from,
+    .sp-fade-leave-to { opacity: 1 !important; }
+
+    :deep(.shoplist-enter-active),
+    :deep(.shoplist-leave-active) {
+        transition: none !important;
+    }
+    :deep(.shoplist-enter-from),
+    :deep(.shoplist-leave-to) {
+        opacity: 1 !important;
+    }
+}
+
+.card-action-btn {
+    white-space: nowrap;
+    padding: 6px 10px;
+    /* 疊在圖片上時，避免「只有文字沒有形式」 */
+    background: var(--card-bg-solid);
+    border-color: var(--bd-solid);
+    color: #fff;
+}
+
+.card-action-btn--active {
+    border-color: var(--pri) !important;
+    color: var(--pri) !important;
+    opacity: 1 !important;
+}
 
 .compare-bar {
     position: fixed;
@@ -853,33 +1042,15 @@ const compareItems = computed(() => (store.compareList || []).map(id => (store.i
 }
 .cmp-bar-actions { display: flex; flex-direction: column; gap: 6px; }
 .cmp-go-btn {
-    background: var(--pri);
-    color: #fff;
-    border: none;
-    padding: 10px 18px;
-    border-radius: 20px;
-    font-size: 0.88rem;
-    font-weight: bold;
-    cursor: pointer;
-    box-shadow: 0 3px 10px var(--pri-glow);
-    white-space: nowrap;
-    text-decoration: none;
-    display: block;
     text-align: center;
+    width: 100%;
 }
 .cmp-clear-btn {
-    background: transparent;
-    color: var(--txt);
-    border: 1px solid var(--bd);
-    padding: 6px 12px;
-    border-radius: 20px;
-    font-size: 0.78rem;
-    cursor: pointer;
-    opacity: 0.7;
     white-space: nowrap;
+    width: 100%;
 }
-.cmp-clear-btn:hover { opacity: 1; }
 
 .cmp-bar-enter-active, .cmp-bar-leave-active { transition: opacity 0.25s ease, transform 0.25s ease; }
 .cmp-bar-enter-from, .cmp-bar-leave-to { opacity: 0; transform: translateX(-50%) translateY(20px); }
 </style>
+

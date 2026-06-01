@@ -77,9 +77,9 @@ const removeItem = (id) => {
 <template>
     <div class="compare-page">
         <div class="compare-header">
-            <NuxtLink to="/shop" class="back-btn">← 返回商城</NuxtLink>
+            <NuxtLink to="/shop" class="btn-app btn-app--ghost btn-app--sm btn-app--pill back-btn" style="text-decoration:none;">返回商城</NuxtLink>
             <h1 class="page-title" style="margin:0;">個體並排比較</h1>
-            <button v-if="store.compareList.length > 0" class="clear-all-btn" @click="store.clearCompare(); router.push('/shop')">清除全部</button>
+            <button v-if="store.compareList.length > 0" class="btn-app btn-app--ghost btn-app--sm btn-app--pill clear-all-btn" @click="store.clearCompare(); router.push('/shop')">清空</button>
         </div>
 
         <div v-if="items.length === 0" class="empty-compare">

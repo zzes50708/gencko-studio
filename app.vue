@@ -1,41 +1,96 @@
-<script setup>
-import { onMounted, onUnmounted, watch, ref } from 'vue'
+﻿<script setup>
+import { computed, onMounted, onUnmounted, onBeforeUnmount, watch, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useHead, useNuxtApp } from '#imports'
 import { useMainStore } from '~/stores/useMainStore'
+import Lenis from 'lenis'
+import { gsap } from 'gsap'
 
 const store = useMainStore()
 const route = useRoute()
 const router = useRouter()
-const { $pwa } = useNuxtApp()  
+const { $pwa } = useNuxtApp()
 const nuxtApp = useNuxtApp()
 
-// 排錯用：捕捉 runtime error，避免整站只剩背景 + 導引欄
+// ── 全域 Lenis Smooth Scroll（非 /about 頁使用）────────────────────────────
+// /about 頁由 BrandServiceScrollScene 自帶私有 Lenis，此處必須讓路
+let globalLenis = null
+let globalLenisTicker = null
+
+const isAboutPage = computed(() => route.path.startsWith('/about'))
+
+const handleLenisScroll = ({ scroll }) => {
+  const st = Math.max(0, scroll)
+  if (st > 100 && st > store.lastScrollY) store.navHidden = true
+  else store.navHidden = false
+  if (st + window.innerHeight >= document.documentElement.scrollHeight - 300) {
+    if (st > store.lastScrollY && store.displayLimit < 2000) store.displayLimit += 20
+  }
+  store.lastScrollY = st
+  if (route.path.startsWith('/articles/') && store.readingArticle) {
+    const docH = document.documentElement.scrollHeight
+    const winH = window.innerHeight
+    store.readingProgress = Math.min(100, Math.max(0, (st / (docH - winH)) * 100))
+  }
+}
+
+const destroyGlobalLenis = () => {
+  if (globalLenisTicker) { gsap.ticker.remove(globalLenisTicker); globalLenisTicker = null }
+  if (globalLenis) { try { globalLenis.off('scroll', handleLenisScroll) } catch (e) {} globalLenis.destroy(); globalLenis = null }
+}
+
+const initGlobalLenis = () => {
+  if (!import.meta.client || isAboutPage.value) return
+  destroyGlobalLenis()
+  globalLenis = new Lenis({
+    duration:           1.2,
+    easing:             t => Math.min(1, 1.001 - Math.pow(2, -10 * t)), // expo ease-out
+    orientation:        'vertical',
+    gestureOrientation: 'vertical',
+    smoothWheel:        true,
+    wheelMultiplier:    1.0,
+    touchMultiplier:    2.0,
+    infinite:           false,
+  })
+  globalLenisTicker = time => globalLenis.raf(time * 1000)
+  gsap.ticker.add(globalLenisTicker)
+  gsap.ticker.lagSmoothing(0)
+  globalLenis.on('scroll', handleLenisScroll)
+}
+
+// /about ↔ 其他頁切換時：啟停全域 Lenis
+watch(isAboutPage, (isAbout) => {
+  if (!import.meta.client) return
+  if (isAbout) destroyGlobalLenis()
+  else initGlobalLenis()
+})
+
+// 收集 Vue / JS runtime error（用於除錯用的 overlay）
 const lastRuntimeError = ref(null)
 const clearRuntimeError = () => { lastRuntimeError.value = null }
 
-// PWA 更新狀態管理
+// PWA ?湔??恣??
 const isUpdating = ref(false)
 
-// 🌟 修正卡死 Bug：拔除 await，加入絕對防線強制重整
+// ?? 靽格迤?⊥香 Bug嚗???await嚗??亦?撠蝺撥?園???
 const handlePwaUpdate = () => {
   if (!$pwa) return
   isUpdating.value = true 
   
-  // 1. 把更新指令丟給 Service Worker (不使用 await 等待)
+  // 1. ??唳?隞支?蝯?Service Worker (銝蝙??await 蝑?)
   try {
     $pwa.updateServiceWorker(true) 
   } catch (err) {
-    console.error('PWA 更新指令發送失敗:', err)
+    console.error('PWA ?湔?誘?潮仃??', err)
   }
   
-  // 2. 絕對防線：給予 300 毫秒讓 Service Worker 接收指令，時間一到「無條件」強制重新整理
+  // 2. 蝯??脩?嚗策鈭?300 瘥怎?霈?Service Worker ?交?誘嚗????啜璇辣?撥?園??唳??
   setTimeout(() => {
     window.location.reload()
   }, 300)
 }
 
-// 修正 FOUC 閃屏問題
+// 靽格迤 FOUC ????
 useHead({
   script:[
     {
@@ -56,15 +111,13 @@ useHead({
 })
 
 watch(() => route.path, (newPath) => {
-  store.mobileMenuOpen = false
-
-  // 離開文章內頁時，歸零進度條（否則下次進其他頁面 Navbar 進度條仍留在上次讀到的位置）
+  // ?ａ????折???甇賊?脣漲璇??血?銝活?脣隞???Navbar ?脣漲璇??銝活霈?啁?雿蔭嚗?
   if (!newPath.startsWith('/articles/')) {
     store.readingProgress = 0
     store.readingArticle = null
   }
 
-  // 以路徑 startsWith 明確映射，避免依賴 route.name 自動命名不穩定的問題
+  // 隞亥楝敺?startsWith ?Ⅱ??嚗??鞈?route.name ?芸??賢?銝帘摰???
   if (newPath === '/') store.curTab = 'home'
   else if (newPath.startsWith('/articles'))  store.curTab = 'articles'
   else if (newPath.startsWith('/shop') || newPath.startsWith('/product') || newPath.startsWith('/identity')) store.curTab = 'shop'
@@ -83,38 +136,10 @@ watch(() => route.path, (newPath) => {
   else store.curTab = 'home'
 })
 
-// 滾動節流與效能優化
-let isScrolling = false
-const handleScroll = () => {
-  if (isScrolling) return
-  isScrolling = true
-
-  window.requestAnimationFrame(() => {
-    const st = Math.max(0, window.scrollY)
-    
-    if (st > 100 && st > store.lastScrollY) store.navHidden = true
-    else store.navHidden = false
-
-    if (st + window.innerHeight >= document.documentElement.scrollHeight - 300) {
-      if (st > store.lastScrollY && store.displayLimit < 2000) {
-        store.displayLimit += 20
-      }
-    }
-
-    store.lastScrollY = st
-
-    if (route.path.startsWith('/articles/') && store.readingArticle) {
-      const docH = document.documentElement.scrollHeight
-      const winH = window.innerHeight
-      const progress = (st / (docH - winH)) * 100
-      store.readingProgress = Math.min(100, Math.max(0, progress))
-    }
-    
-    isScrolling = false
-  })
+const scrollToTop = () => {
+  if (globalLenis) globalLenis.scrollTo(0, { duration: 1.0 })
+  else window.scrollTo({ top: 0, behavior: 'smooth' })
 }
-
-const scrollToTop = () => window.scrollTo(0, 0)
 
 onMounted(() => {
   store.initTheme()
@@ -123,7 +148,7 @@ onMounted(() => {
   store.initLiff()
   store.initPWAInstallPrompt()
 
-  // 捕捉 Vue / JS runtime error，避免整站白屏時無法判斷根因
+  // ?? Vue / JS runtime error嚗?蝡撅??⊥??斗?孵?
   if (import.meta.client) {
     try {
       nuxtApp.vueApp.config.errorHandler = (err) => {
@@ -159,61 +184,64 @@ onMounted(() => {
     if (savedHist) store.history = JSON.parse(savedHist)
   } catch (e) { localStorage.removeItem('gencko_history') }
 
-  window.addEventListener('scroll', handleScroll, { passive: true })
+  // 啟動全域 Lenis（/about 頁有自己的 Lenis，非 about 頁由此接管）
+  initGlobalLenis()
 })
 
-onUnmounted(() => {
-  window.removeEventListener('scroll', handleScroll)
+onBeforeUnmount(() => {
+  destroyGlobalLenis()
 })
 </script>
 
 <template>
-  <div class="cont">
-    <VitePwaManifest />  
+  <BackgroundInteractiveGrid />
 
-    <!-- Debug overlay：發生 runtime error 時把訊息顯示出來，方便回報 -->
+  <div class="cont">
+    <VitePwaManifest />
+
+    <!-- Debug overlay嚗??runtime error ??閮憿舐內?箔?嚗靘踹???-->
     <div
       v-if="lastRuntimeError"
-      style="position: fixed; inset: 12px 12px auto 12px; z-index: 1000000; max-width: 980px; margin: 0 auto; left: 0; right: 0;"
+      style="position: fixed; inset: 12px 12px auto 12px; z-index: 1000000; max-width: 980px; margin: 0 auto; left: 0; right: 0; pointer-events: none;"
     >
-      <div style="background: rgba(20,20,20,0.96); color: #fff; border: 1px solid rgba(255,255,255,0.18); border-radius: 12px; padding: 12px 12px 10px 12px; box-shadow: 0 20px 60px rgba(0,0,0,0.5);">
+      <div style="background: rgba(20,20,20,0.96); color: #fff; border: 1px solid rgba(255,255,255,0.18); border-radius: 12px; padding: 12px 12px 10px 12px; box-shadow: 0 20px 60px rgba(0,0,0,0.5); pointer-events: auto;">
         <div style="display:flex; align-items:center; justify-content: space-between; gap: 10px;">
-          <strong style="font-size: 0.95rem;">Runtime error（把下面內容貼給我）</strong>
+          <strong style="font-size: 0.95rem;">Runtime error嚗?銝?批捆鞎潛策??</strong>
           <div style="display:flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end;">
             <button class="btn-hero" style="padding: 6px 10px; font-size: 0.85rem;" @click="clearRuntimeError()">關閉</button>
-            <button class="btn-hero" style="padding: 6px 10px; font-size: 0.85rem; opacity: 0.9;" @click="clearRuntimeError(); router.push('/')">回首頁</button>
+            <button class="btn-hero" style="padding: 6px 10px; font-size: 0.85rem; opacity: 0.9;" @click="clearRuntimeError(); router.push('/')">回到首頁</button>
           </div>
         </div>
         <pre style="margin: 10px 0 0 0; white-space: pre-wrap; font-size: 0.85rem; line-height: 1.25; max-height: 40vh; overflow: auto;">{{ lastRuntimeError?.stack || lastRuntimeError?.message || String(lastRuntimeError) }}</pre>
       </div>
     </div>
 
-    <!-- 🌟 加入 Transition 動畫，讓 PWA 更新氣泡進退場更滑順 -->
+    <!-- ?? ? Transition ?嚗? PWA ?湔瘞?部?脤?湔皛? -->
     <Transition name="pwa-toast-anim">
       <div v-if="$pwa?.needRefresh" class="pwa-update-toast">
-        <span style="font-weight: bold;">🚀 發現新版本！請更新以獲得最佳體驗</span>
+        <span style="font-weight: bold;">偵測到新版本，可立即更新</span>
         <div class="pwa-update-actions">
           <button class="pwa-btn-update" :disabled="isUpdating" @click="handlePwaUpdate">
-            {{ isUpdating ? '🔄 更新中...' : '立即更新' }}
+            {{ isUpdating ? '?? ?湔銝?..' : '蝡?湔' }}
           </button>
           <button class="pwa-btn-cancel" :disabled="isUpdating" @click="$pwa?.cancelPrompt()">稍後</button>
         </div>
       </div>
     </Transition>
 
-    <!-- iOS 下載安裝教學彈窗 -->
+    <!-- iOS 銝?摰??飛敶? -->
     <div v-if="store.showIOSGuide" class="ios-install-guide-overlay" @click="store.showIOSGuide = false">
       <div class="ios-guide-box" @click.stop>
-        <button class="btn-close-guide" @click="store.showIOSGuide = false">✕</button>
-        <h3>如何安裝 Gencko App？</h3>
-        <p>因為 Apple 系統限制，請跟著以下兩個步驟輕鬆安裝：</p>
-        <ol class="ios-steps">
-          <li>1. 點擊 Safari 瀏覽器正下方的 <strong>「分享 ⍐」</strong> 圖示。</li>
-          <li>2. 往下滑，選擇 <strong>「➕ 加入主畫面」</strong>，然後按右上角的「新增」。</li>
-        </ol>
-        <p style="font-size:0.85rem; color:#888; margin-top:10px; text-align:center;">安裝後即可獲得全螢幕無廣告的最佳體驗！</p>
-        <div class="ios-arrow-down">⬇</div>
-      </div>
+        <button class="btn-close-guide" @click="store.showIOSGuide = false">關閉</button>
+        <h3>安裝 Gencko App（iOS）</h3>
+<p>iOS 需要手動將網站加入主畫面，以下為操作步驟：</p>
+<ol class="ios-steps">
+  <li>1. 使用 Safari 開啟網站，點右下角「分享」按鈕</li>
+  <li>2. 選擇「加入主畫面」，完成安裝</li>
+</ol>
+<p style="font-size:0.85rem; color:#888; margin-top:10px; text-align:center;">若找不到選項，請先向上滑動清單。</p>
+<div class="ios-arrow-down">↓</div>
+    </div>
     </div>
 
     <TheLightbox :item="store.lightboxItem" :line-link="store.lineLink" @close="store.closeLightbox" />
@@ -223,7 +251,6 @@ onUnmounted(() => {
     <TheNavbar
       :nav-hidden="store.navHidden"
       :is-day-mode="store.isDayMode"
-      v-model:mobile-menu-open="store.mobileMenuOpen"
       :cur-tab="store.curTab"
       :reading-article="store.readingArticle"
       :reading-progress="store.readingProgress"
@@ -233,25 +260,24 @@ onUnmounted(() => {
 
     <main style="padding-top: 0; min-height: 80vh;">
       <!--
-        1) 強制 NuxtPage 依 fullPath 重新掛載：避免 CSR 導航時頁面實例複用導致資料/畫面卡死
-        2) NuxtErrorBoundary：避免單一頁面 runtime error 造成後續整站導航都只剩背景與導引欄
-      -->
+        1) 撘瑕 NuxtPage 靘?fullPath ???嚗??CSR 撠???Ｗ祕靘??典??渲????恍?⊥香
+        2) NuxtErrorBoundary嚗?銝? runtime error ??敺??渡?撠?賢?抵??航?撠?甈?      -->
       <NuxtErrorBoundary>
-        <NuxtPage :page-key="route.fullPath" />
+        <!-- 避免 query 變動（例如選購切換物種/篩選）就整頁卸載重掛，造成「噸級閃爍」 -->
+        <NuxtPage :page-key="route.path" />
 
         <template #error="{ error, clearError }">
           <div style="max-width: 920px; margin: 0 auto; padding: 80px 16px; text-align: center; color: var(--txt);">
-            <h2 style="margin: 0 0 10px 0;">頁面載入發生錯誤</h2>
+            <h2 style="margin: 0 0 10px 0;">?頛?潛??航炊</h2>
             <p style="opacity: 0.8; margin: 0 0 18px 0;">
-              這通常是路由切換時的資料或元件狀態造成；你可以先回首頁，再重新進入該頁。
-            </p>
+              ?虜?航楝?勗????????辣???嚗??臭誑??擐?嚗???脣閰脤???            </p>
             <pre style="white-space: pre-wrap; text-align: left; background: var(--card-bg); border: 1px solid var(--bd); border-radius: 12px; padding: 12px; max-height: 220px; overflow: auto; margin: 0 auto 16px auto;">{{ error?.message || String(error) }}</pre>
             <div style="display:flex; gap:10px; justify-content:center; flex-wrap: wrap;">
               <button
                 class="btn-hero"
                 style="min-width: 140px;"
                 @click="clearError(); router.push('/')"
-              >回首頁</button>
+              >回到首頁</button>
               <button
                 class="btn-hero"
                 style="min-width: 140px; opacity: 0.85;"
@@ -264,11 +290,10 @@ onUnmounted(() => {
     </main>
 
     <a v-if="store.wishlist.length > 0" 
-       :href="'https://line.me/R/ti/p/@219abdzn?text=' + encodeURIComponent('Hi Gencko, 我有興趣詢問收藏清單中的守宮 (' + store.wishlist.length + '隻) ID：\n' + store.wishlist.join(', '))" 
+       :href="'https://line.me/R/ti/p/@219abdzn?text=' + encodeURIComponent('Hi Gencko, ???閎閰Ｗ??嗉?皜銝剔?摰悅 (' + store.wishlist.length + '?? ID嚗n' + store.wishlist.join(', '))" 
        target="_blank"
-       class="floating-inquire-btn">
-       <span>❤ 已選 {{ store.wishlist.length }} 隻｜一次詢問</span>
-       <span>➜</span>
+       class="btn-app btn-app--primary btn-app--md btn-app--pill floating-inquire-btn">
+       <span>已選 {{ store.wishlist.length }} 隻｜一次詢問</span>
     </a>
     
     <TheFooter />
@@ -277,7 +302,7 @@ onUnmounted(() => {
 </template>
 
 <style scoped>
-/* 🌟 新增的 PWA 提示氣泡滑順進退場動畫 */
+/* ?? ?啣???PWA ?內瘞?部皛??脤?游???*/
 .pwa-toast-anim-enter-active,
 .pwa-toast-anim-leave-active {
   transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
@@ -301,7 +326,7 @@ onUnmounted(() => {
 .pwa-btn-cancel { flex: 1; background: transparent; color: var(--txt); opacity: 0.8; border: 1px solid var(--bd); padding: 10px; border-radius: 8px; cursor: pointer; transition: 0.2s; }
 .pwa-btn-cancel:disabled { opacity: 0.5; cursor: not-allowed; }
 
-/* iOS 教學彈窗樣式保持不變 */
+/* iOS ?飛敶?璅??靽?銝? */
 .ios-install-guide-overlay {
   position: fixed; top: 0; left: 0; width: 100%; height: 100vh;
   background: rgba(0,0,0,0.6); backdrop-filter: blur(5px);
@@ -336,8 +361,11 @@ onUnmounted(() => {
 </style>
 
 <style>
-/* 全站路由過場動畫 */
+/* ?函?頝舐?? */
 .page-enter-active, .page-leave-active { transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); }
 .page-enter-from { opacity: 0; transform: translateY(15px) scale(0.98); filter: blur(2px); }
 .page-leave-to { opacity: 0; transform: translateY(-15px) scale(0.98); filter: blur(2px); }
+
 </style>
+
+

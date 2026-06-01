@@ -1,5 +1,5 @@
-<script setup>
-import { ref } from 'vue'
+﻿<script setup>
+import { ref, onMounted, onUnmounted } from 'vue'
 import { getCleanUrl } from '~/utils/image.js'
 
 const props = defineProps({
@@ -9,7 +9,19 @@ const props = defineProps({
 
 const emit = defineEmits(['close'])
 
-// --- 🌟 PWA 手勢滑動追蹤 ---
+const onKeydown = (e) => {
+    if (e.key === 'Escape') emit('close')
+}
+
+onMounted(() => {
+    if (import.meta.client) window.addEventListener('keydown', onKeydown)
+})
+
+onUnmounted(() => {
+    if (import.meta.client) window.removeEventListener('keydown', onKeydown)
+})
+
+// --- ?? PWA ?皛?餈質馱 ---
 const touchStartY = ref(0)
 const touchDeltaY = ref(0)
 const isDragging = ref(false)
@@ -29,19 +41,19 @@ const onTouchEnd = () => {
     if (!isDragging.value) return
     isDragging.value = false
     
-    // 如果上下滑動超過 100px，則觸發關閉視窗
+    // 憒?銝?皛?頞? 100px嚗?閫貊??閬?
     if (Math.abs(touchDeltaY.value) > 100) {
         emit('close')
     }
     
-    // 恢復原位，若沒有被關閉則利用 CSS transition 彈回
+    // ?Ｗ儔??嚗瘝?鋡恍????拍 CSS transition 敶?
     touchDeltaY.value = 0
 }
 
-// 🌟 安全取得圖片網址邏輯：確保 GitHub 與舊有網址皆能直接顯示
+// ?? 摰????蝬脣??摩嚗Ⅱ靽?GitHub ???雯???湔憿舐內
 const getImgSrc = (item) => {
     if (!item) return ''
-    // 同時檢查大寫與小寫欄位
+    // ??瑼Ｘ憭批神??撖急?雿?
     const rawUrl = item.ImageURL || item.image_url || ''
     return getCleanUrl(rawUrl)
 }
@@ -61,13 +73,14 @@ const getImgSrc = (item) => {
              @touchend="onTouchEnd"
              @click.stop
         >
-            <!-- 🌟 下滑關閉的小提示 -->
+            <button class="lightbox-close-btn" type="button" @click="emit('close')" aria-label="關閉">×</button>
+            <!-- ?? 銝??????內 -->
             <div class="swipe-hint-container">
                 <div class="swipe-indicator"></div>
-                <span class="swipe-text">下拉關閉圖片</span>
+                <span class="swipe-text">向下滑動可關閉</span>
             </div>
 
-            <!-- 🌟 使用原生 img 以確保 GitHub 直連網址的最高穩定性，不經過 Nuxt Image 處理 -->
+            <!-- ?? 雿輻?? img 隞亦Ⅱ靽?GitHub ?湧?雯???擃帘摰改?銝???Nuxt Image ?? -->
             <img 
                 v-if="getImgSrc(item)"
                 :src="getImgSrc(item)" 
@@ -83,9 +96,9 @@ const getImgSrc = (item) => {
                 <a v-if="item.Status === 'ForSale' || (item.Available && item.Available !== 'No')"
                    :href="item.ExternalLink || lineLink" 
                    target="_blank" 
-                   class="app-btn-buy" 
+                   class="btn-app btn-app--primary btn-app--lg btn-app--pill app-btn-buy" 
                    rel="noopener noreferrer">
-                   💬 立即私訊購買
+                   立即私訊購買
                 </a>
             </div>
         </div>
@@ -105,6 +118,29 @@ const getImgSrc = (item) => {
     justify-content: center;
     align-items: center;
     flex-direction: column;
+}
+
+.lightbox-close-btn {
+    position: fixed;
+    top: calc(12px + env(safe-area-inset-top, 0px));
+    right: 12px;
+    width: 40px;
+    height: 40px;
+    border-radius: 999px;
+    border: 1px solid var(--bd);
+    background: rgba(0,0,0,0.25);
+    color: var(--txt);
+    cursor: pointer;
+    font-size: 22px;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000002;
+}
+
+@media (hover: hover) and (pointer: fine) {
+    .lightbox-close-btn:hover { border-color: var(--bd-hover); color: var(--pri); }
 }
 
 .lightbox-content-wrapper {
@@ -178,28 +214,7 @@ const getImgSrc = (item) => {
     text-shadow: 0 2px 10px rgba(0,0,0,0.05);
 }
 
-.app-btn-buy {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    font-size: 1.1rem;
-    padding: 14px 35px;
-    background: var(--pri);
-    color: #fff;
-    border-radius: 30px;
-    font-weight: bold;
-    text-decoration: none;
-    box-shadow: 0 5px 20px var(--pri-glow);
-    transition: transform 0.2s, box-shadow 0.2s;
-    position: relative;
-    z-index: 100001;
-}
-
-.app-btn-buy:active {
-    transform: scale(0.95);
-    box-shadow: 0 2px 10px rgba(255, 69, 0, 0.2);
-}
+.app-btn-buy { z-index: 100001; }
 
 @media (max-width: 768px) {
     .lightbox-img {
@@ -211,9 +226,7 @@ const getImgSrc = (item) => {
         margin-bottom: 12px;
     }
     
-    .app-btn-buy {
-        padding: 12px 25px;
-        font-size: 1rem;
-    }
+    .app-btn-buy { padding: 12px 25px; font-size: 1rem; }
 }
 </style>
+

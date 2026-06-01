@@ -1,0 +1,107 @@
+
+> dev
+> nuxt dev --port 3051
+
+|
+•  [32mNuxt [1m3.21.2[22m[39m[90m (with [39m[90mNitro [1m2.13.3[22m[39m[90m, Vite [1m7.3.2[22m[39m[90m and Vue [1m3.5.32[22m[39m[90m)[39m
+
+[32m  ➜ Local:   [39m [36m[4mhttp://localhost:[1m3051[22m/[24m[39m
+[90m  ➜ Network:  use [37m--host[90m to expose[39m
+
+[33m  ➜ DevTools: [39m[2mpress [22m[32mShift[39m[2m + [22m[32mAlt[39m[2m + [22m[32mD[39m[2m in the browser (v3.2.4)[22m
+
+[32m√[39m Vite client built in 46ms
+[32m√[39m Vite server built in 1131ms
+[90m[[90mnitro[90m][39m [32m√[39m Nuxt Nitro server built in 1688ms
+[36mi[39m Vite server warmed up in 1ms
+[36mi[39m Vite client warmed up in 2ms
+[41m[30m ERROR [39m[49m [request error] [unhandled] [GET] http://localhost:3051/
+
+ 
+[31mℹ Error: IPC connection closed[39m
+
+ ⁃ at Socket.onClose [33m(D:/Users/User/Desktop/gencko-vercel/node_modules/@nuxt/vite-builder/dist/vite-node.mjs:140:101)[39m
+
+   [2m135[22m [2m┃[22m  				}
+   [2m136[22m [2m┃[22m  			};
+   [2m137[22m [2m┃[22m  			const onClose = () => {
+   [2m138[22m [2m┃[22m  				cleanup();
+   [2m139[22m [2m┃[22m  				resetBuffer();
+ [41m❯ 140 ┃  				for (const { reject: rejectRequest } of pendingRequests.values()) rejectRequest(/* @__PURE__ */ new Error("IPC connection closed"));[49m
+   [2m141[22m [2m┃[22m  				pendingRequests.clear();
+   [2m142[22m [2m┃[22m  				if (clientSocket === socket) clientSocket = void 0;
+   [2m143[22m [2m┃[22m  				if (currentConnectPromise === thisPromise) currentConnectPromise = void 0;
+   [2m144[22m [2m┃[22m  			};
+   [2m145[22m [2m┃[22m  			socket.on([32m"connect"[0m, onConnect);
+
+[2m ⁃ at [3mSocket.emit[23m ([3mnode:events:508:28[23m)[22m
+[2m ⁃ at [3mPipe.<anonymous>[23m ([3mnode:net:346:12[23m)[22m
+
+[31m[CAUSE][39m
+Error {
+  stack: 'IPC connection closed\n' +
+  'at Socket.onClose (D:/Users/User/Desktop/gencko-vercel/node_modules/@nuxt/vite-builder/dist/vite-node.mjs:140:101)\n' +
+  '    at Socket.emit (node:events:508:28)\n' +
+  '    at Pipe.<anonymous> (node:net:346:12)',
+  message: 'IPC connection closed',
+}
+[41m[30m ERROR [39m[49m [request error] [unhandled] [GET] http://localhost:3051/__nuxt_error?error=true&url=%2F&statusCode=500&statusMessage=Server+Error&message=IPC+connection+closed&stack=IPC+connection+closed%0Aat+Socket.onClose+(D:%2FUsers%2FUser%2FDesktop%2Fgencko-vercel%2Fnode_modules%2F@nuxt%2Fvite-builder%2Fdist%2Fvite-node.mjs:140:101)%0Aat+Socket.emit+(node:events:508:28)%0Aat+Pipe.%3Canonymous%3E+(node:net:346:12)
+
+ 
+[31mℹ Error: IPC connection closed[39m
+
+ ⁃ at Socket.onClose [33m(D:/Users/User/Desktop/gencko-vercel/node_modules/@nuxt/vite-builder/dist/vite-node.mjs:140:101)[39m
+
+   [2m135[22m [2m┃[22m  				}
+   [2m136[22m [2m┃[22m  			};
+   [2m137[22m [2m┃[22m  			const onClose = () => {
+   [2m138[22m [2m┃[22m  				cleanup();
+   [2m139[22m [2m┃[22m  				resetBuffer();
+ [41m❯ 140 ┃  				for (const { reject: rejectRequest } of pendingRequests.values()) rejectRequest(/* @__PURE__ */ new Error("IPC connection closed"));[49m
+   [2m141[22m [2m┃[22m  				pendingRequests.clear();
+   [2m142[22m [2m┃[22m  				if (clientSocket === socket) clientSocket = void 0;
+   [2m143[22m [2m┃[22m  				if (currentConnectPromise === thisPromise) currentConnectPromise = void 0;
+   [2m144[22m [2m┃[22m  			};
+   [2m145[22m [2m┃[22m  			socket.on([32m"connect"[0m, onConnect);
+
+[2m ⁃ at [3mSocket.emit[23m ([3mnode:events:508:28[23m)[22m
+[2m ⁃ at [3mPipe.<anonymous>[23m ([3mnode:net:346:12[23m)[22m
+
+[31m[CAUSE][39m
+Error {
+  stack: 'IPC connection closed\n' +
+  'at Socket.onClose (D:/Users/User/Desktop/gencko-vercel/node_modules/@nuxt/vite-builder/dist/vite-node.mjs:140:101)\n' +
+  '    at Socket.emit (node:events:508:28)\n' +
+  '    at Pipe.<anonymous> (node:net:346:12)',
+  message: 'IPC connection closed',
+}
+[41m[30m ERROR [39m[49m [request error] [unhandled] [GET] http://localhost:3051/
+
+ 
+[31mℹ Error: IPC connection closed[39m
+
+ ⁃ at Socket.onClose [33m(D:/Users/User/Desktop/gencko-vercel/node_modules/@nuxt/vite-builder/dist/vite-node.mjs:140:101)[39m
+
+   [2m135[22m [2m┃[22m  				}
+   [2m136[22m [2m┃[22m  			};
+   [2m137[22m [2m┃[22m  			const onClose = () => {
+   [2m138[22m [2m┃[22m  				cleanup();
+   [2m139[22m [2m┃[22m  				resetBuffer();
+ [41m❯ 140 ┃  				for (const { reject: rejectRequest } of pendingRequests.values()) rejectRequest(/* @__PURE__ */ new Error("IPC connection closed"));[49m
+   [2m141[22m [2m┃[22m  				pendingRequests.clear();
+   [2m142[22m [2m┃[22m  				if (clientSocket === socket) clientSocket = void 0;
+   [2m143[22m [2m┃[22m  				if (currentConnectPromise === thisPromise) currentConnectPromise = void 0;
+   [2m144[22m [2m┃[22m  			};
+   [2m145[22m [2m┃[22m  			socket.on([32m"connect"[0m, onConnect);
+
+[2m ⁃ at [3mSocket.emit[23m ([3mnode:events:508:28[23m)[22m
+[2m ⁃ at [3mPipe.<anonymous>[23m ([3mnode:net:346:12[23m)[22m
+
+[31m[CAUSE][39m
+Error {
+  stack: 'IPC connection closed\n' +
+  'at Socket.onClose (D:/Users/User/Desktop/gencko-vercel/node_modules/@nuxt/vite-builder/dist/vite-node.mjs:140:101)\n' +
+  '    at Socket.emit (node:events:508:28)\n' +
+  '    at Pipe.<anonymous> (node:net:346:12)',
+  message: 'IPC connection closed',
+}

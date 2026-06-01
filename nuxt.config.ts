@@ -1,4 +1,8 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
+import { fileURLToPath } from 'node:url'
+const gaId = process.env.NUXT_PUBLIC_GA_ID || 'G-93T0C2KMEZ'
+const enableGa = process.env.NODE_ENV === 'production' || process.env.NUXT_PUBLIC_ENABLE_GA === 'true'
+
 export default defineNuxtConfig({
   compatibilityDate: '2024-04-16',
   devtools: { enabled: true },
@@ -8,6 +12,15 @@ export default defineNuxtConfig({
     appManifest: true
   },
 
+  // 修正 dev 模式 Vite 無法解析 `#app-manifest`（避免全站掉樣式/只剩文字）
+  vite: {
+    resolve: {
+      alias: {
+        '#app-manifest': fileURLToPath(new URL('./app-manifest.stub.mjs', import.meta.url))
+      }
+    }
+  },
+
   // 註冊所需模組
   modules:[
     '@nuxtjs/supabase',
@@ -15,8 +28,9 @@ export default defineNuxtConfig({
     '@vueuse/nuxt',
     '@nuxtjs/sitemap',
     '@nuxtjs/robots',
-    '@nuxt/image', // 🌟 新增圖片最佳化模組
-    '@vite-pwa/nuxt' // 🌟 導入 PWA 模組
+    '@nuxt/image',
+    '@vite-pwa/nuxt',
+    '@tresjs/nuxt'
   ],
 
   // 🌟 Nuxt Image 設定
@@ -134,7 +148,8 @@ export default defineNuxtConfig({
 ],
     },
     devOptions: {
-      enabled: true,
+      // 開發模式不啟用 dev service worker，避免缺少 `.nuxt/dev-sw-dist/sw.js` 時造成 Vite PWA 外掛報錯
+      enabled: false,
       type: 'module'
     }
   },
@@ -162,7 +177,7 @@ export default defineNuxtConfig({
   },
 
   css:[
-    '~/assets/css/style.css'
+    '~/assets/css/style.css',
   ],
 
   // 🌟 全站應用程式設定
@@ -200,16 +215,18 @@ export default defineNuxtConfig({
         { rel: 'stylesheet', href: 'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+TC:wght@300;400;500;700;900&family=Black+Ops+One&display=swap' }
       ],
       script:[
-        // ⚠️ GA4：script src 與 config ID 統一為 G-93T0C2KMEZ（原 G-Q97CS08YRH 不一致已修正）
-        { src: 'https://www.googletagmanager.com/gtag/js?id=G-93T0C2KMEZ', async: true },
-        {
-          children: `
-            window.dataLayer = window.dataLayer || [];
-            function gtag(){dataLayer.push(arguments);}
-            gtag('js', new Date());
-            gtag('config', 'G-93T0C2KMEZ');
-          `
-        },
+        ...(enableGa ? [
+          // ⚠️ GA4：script src 與 config ID 統一為 G-93T0C2KMEZ（原 G-Q97CS08YRH 不一致已修正）
+          { src: `https://www.googletagmanager.com/gtag/js?id=${gaId}`, async: true },
+          {
+            children: `
+              window.dataLayer = window.dataLayer || [];
+              function gtag(){dataLayer.push(arguments);}
+              gtag('js', new Date());
+              gtag('config', '${gaId}');
+            `
+          }
+        ] : []),
         // Organization 結構化資料（品牌身份，GEO / Knowledge Panel 基礎）
         {
           type: 'application/ld+json',

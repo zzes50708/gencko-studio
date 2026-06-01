@@ -135,7 +135,7 @@ const fmtDate = (d) => {
                 placeholder="搜尋標題或隱藏關鍵字..." 
                 class="search-input" 
             />
-            <button v-if="searchQuery" @click="searchQuery = ''" class="clear-btn">✕</button>
+            <button v-if="searchQuery" @click="searchQuery = ''" class="btn-app btn-app--ghost btn-app--xs btn-app--pill clear-btn" aria-label="清除搜尋">清除</button>
         </div>
 
         <!-- 🌟 第二層：固定六大分類 (固定一行) -->
@@ -174,11 +174,14 @@ const fmtDate = (d) => {
             </h2>
         </div>
 
-        <transition-group tag="div" name="list" class="grid">
+        <div v-if="store.loading && !filteredArticles.length" class="grid">
+            <SkeletonCard v-for="n in 6" :key="n" variant="article" :img-height="180" />
+        </div>
+        <transition-group v-else tag="div" name="list" class="grid">
             <div v-if="filteredArticles.length === 0" key="empty-msg" class="empty-state" style="grid-column: 1 / -1;">
                 <div style="font-size:2rem; margin-bottom:8px;">📭</div>
                 <div>找不到相關文章</div>
-                <button v-if="searchQuery || artCat !== 'All'" @click="searchQuery = ''; artCat = 'All'" style="margin-top:12px; padding:8px 20px; background:var(--pri); color:#fff; border:none; border-radius:20px; cursor:pointer; font-size:0.85rem;">清除篩選</button>
+                <button v-if="searchQuery || artCat !== 'All'" @click="searchQuery = ''; artCat = 'All'" class="btn-app btn-app--primary btn-app--sm btn-app--pill" style="margin-top:12px;">清除篩選</button>
             </div>
 
             <article class="card article-card" v-for="item in filteredArticles" :key="item.ID">
@@ -251,13 +254,9 @@ const fmtDate = (d) => {
     right: 15px;
     top: 50%;
     transform: translateY(-50%);
-    background: rgba(128,128,128,0.2);
-    border: none;
-    color: var(--txt);
-    width: 24px;
-    height: 24px;
-    border-radius: 50%;
-    cursor: pointer;
+    padding: 6px 10px;
+    height: auto;
+    min-height: 30px;
 }
 
 /* 🌟 固定一行分類導覽 */

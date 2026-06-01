@@ -1,4 +1,4 @@
-<script setup>
+﻿<script setup>
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { useHead, useAsyncData, useSupabaseClient } from '#imports'
@@ -10,15 +10,15 @@ const store = useMainStore()
 const supabase = useSupabaseClient()
 const merchId = route.params.id
 
-//[SEO] 為了在伺服器端渲染 (SSR) 期間就能拿到該商品資料以產生正確的 Meta
-const { data: currentMerch, pending } = await useAsyncData(`merch-${merchId}`, async () => {
-    // 若 Store 中已經有周邊商品列表，先試著從裡面找
+//[SEO] ?箔??其撩?蝡舀葡??(SSR) ??撠梯?踹閰脣????誑?Ｙ?甇?Ⅱ??Meta
+const { data: currentMerch, pending } = await useAsyncData('merch-' + merchId, async () => {
+    // ??Store 銝剖歇蝬??券????”嚗?閰西?敺ㄐ?Ｘ
     if (store.merchList && store.merchList.length > 0) {
         const found = store.merchList.find(m => String(m.ItemID) === String(merchId))
         if (found) return found
     }
 
-    // 若無資料 (SSR 或直接進入內頁)，向 Supabase 查詢
+    // ?亦鞈? (SSR ??仿脣?折?)嚗? Supabase ?亥岷
     const { data, error } = await supabase
         .from('merchandise')
         .select('*')
@@ -37,17 +37,17 @@ const { data: currentMerch, pending } = await useAsyncData(`merch-${merchId}`, a
         Available: data.available,
         ExternalLink: data.external_link
     }
-})
+});
 
-//[SEO] 動態 Meta 與結構化資料
+//[SEO] ?? Meta ??瑽?鞈?
 const siteData = computed(() => {
     if (currentMerch.value) {
         const m = currentMerch.value
         
         const imgUrl = m.ImageURL ? getCleanUrl(m.ImageURL) : 'https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/%E6%AD%A3%E9%9D%A2.png'
-        const itemUrl = `https://www.genckobreeding.com/merch/${m.ItemID}`
-        const title = `${m.Name} - NT$${m.Price}`
-        const desc = m.Description ? m.Description.slice(0, 150) + '...' : `Gencko 特選周邊：${m.Name}，售價 NT$${m.Price}。`
+        const itemUrl = 'https://www.genckobreeding.com/merch/' + m.ItemID
+        const title = m.Name + ' - NT$' + m.Price
+        const desc = m.Description ? (m.Description.slice(0, 150) + '...') : ('Gencko 周邊商品：' + m.Name + '，價格 NT$' + m.Price)
         const isAvailable = m.Available !== 'No'
 
         // Product Schema
@@ -76,7 +76,7 @@ const siteData = computed(() => {
             "@context": "https://schema.org",
             "@type": "BreadcrumbList",
             "itemListElement": [
-                { "@type": "ListItem", "position": 1, "name": "首頁", "item": "https://www.genckobreeding.com/" },
+                { "@type": "ListItem", "position": 1, "name": "擐?", "item": "https://www.genckobreeding.com/" },
                 { "@type": "ListItem", "position": 2, "name": "周邊商品", "item": "https://www.genckobreeding.com/merch" },
                 { "@type": "ListItem", "position": 3, "name": m.Name, "item": itemUrl }
             ]
@@ -95,10 +95,10 @@ const siteData = computed(() => {
     }
     
     return {
-        title: '找不到此周邊商品',
-        desc: '該周邊商品可能已下架或不存在。',
+        title: '找不到該商品',
+        desc: '請確認網址是否正確，或稍後再試一次。',
         img: 'https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/%E6%AD%A3%E9%9D%A2.png',
-        url: `https://www.genckobreeding.com/merch/${merchId}`,
+        url: 'https://www.genckobreeding.com/merch/' + merchId,
         script:[ ]
     }
 })
@@ -107,7 +107,7 @@ useHead({
     title: computed(() => siteData.value.title),
     meta:[
         { name: 'description', content: computed(() => siteData.value.desc) },
-        { property: 'og:title', content: computed(() => `${siteData.value.title} | Gencko Studio`) },
+        { property: 'og:title', content: computed(() => siteData.value.title + ' | Gencko Studio') },
         { property: 'og:description', content: computed(() => siteData.value.desc) },
         { property: 'og:image', content: computed(() => siteData.value.img) },
         { property: 'og:url', content: computed(() => siteData.value.url) },
@@ -125,7 +125,7 @@ const copyCurrentLink = async () => {
         await navigator.clipboard.writeText(window.location.href)
         store.triggerToast()
     } catch (err) {
-        console.error('複製失敗:', err)
+        console.error('銴ˊ憭望?:', err)
     }
 }
 </script>
@@ -135,25 +135,25 @@ const copyCurrentLink = async () => {
         <!-- Loading State -->
         <div v-if="pending" style="text-align:center; padding:100px 0; color:#888;">
             <div class="loader" style="margin:0 auto 20px auto;"></div>
-            <p>正在載入周邊商品...</p>
+            <p>載入商品中...</p>
             <TheBackButton fallback="/merch" text="返回周邊列表" style="justify-content: center; margin-top: 20px;" />
         </div>
 
         <!-- Not Found State -->
         <div v-else-if="!currentMerch" style="text-align:center; padding:100px 0; color:#888;">
-            <h2>找不到此周邊商品</h2>
-            <p>該商品可能已下架或不存在。</p>
+            <h2>找不到該商品</h2>
+            <p>請確認網址是否正確，或稍後再試一次。</p>
             <TheBackButton fallback="/merch" text="返回周邊列表" style="justify-content: center; margin-top: 20px;" />
         </div>
 
         <!-- Detail View -->
         <div v-else class="prod-container">
-            <!-- 🌟 引入全域共用的 App-like 返回按鈕 -->
+            <!-- ?? 撘?典??梁??App-like 餈??? -->
             <TheBackButton fallback="/merch" text="返回列表" />
 
             <div class="prod-layout">
                 <div class="prod-img-box">
-                    <!-- 🌟 核心修正：將 NuxtImg 改為原生 img，並設為 eager 優先載入 -->
+                    <!-- ?? ?詨?靽格迤嚗? NuxtImg ?寧?? img嚗蒂閮剔 eager ?芸?頛 -->
                     <img 
                         v-if="currentMerch.ImageURL"
                         :src="getCleanUrl(currentMerch.ImageURL)" 
@@ -161,11 +161,11 @@ const copyCurrentLink = async () => {
                         class="prod-main-img" 
                         @click="store.openLightbox(currentMerch)" 
                         style="cursor: pointer;" 
-                        title="點擊放大圖片"
+                        title="暺??曉之??"
                         loading="eager"
                         decoding="async"
                     />
-                    <div class="prod-hint">🔍 點擊放大圖片</div>
+                    <div class="prod-hint">點擊圖片可放大</div>
                 </div>
                 
                 <div class="prod-info-box">
@@ -180,11 +180,11 @@ const copyCurrentLink = async () => {
                         <a v-if="currentMerch.Available !== 'No'" 
                            :href="currentMerch.ExternalLink || store.lineLink" 
                            target="_blank" 
-                           class="btn-buy-lg" 
+                           class="btn-app btn-app--primary btn-app--lg btn-app--pill btn-buy-lg" 
                            rel="noopener noreferrer">
-                           🛒 立即購買
+                           立即私訊購買
                         </a>
-                        <button class="btn-share" @click="copyCurrentLink">🔗 複製連結分享</button>
+                        <button class="btn-share" @click="copyCurrentLink">複製連結</button>
                     </div>
                 </div>
             </div>
@@ -194,10 +194,10 @@ const copyCurrentLink = async () => {
 
 <style scoped>
 /* 
-  [局部樣式修復] 
-  已清除寫死的深色背景與淺色字體色碼。
-  全面導入 CSS 變數，移除所有不必要的 :global(body.day-mode) 覆寫。
-  已刪除重複的 app-back-btn 相關樣式。
+  [撅?冽見撘耨敺夜 
+  撌脫??文神甇餌?瘛梯??滓?脣?擃蝣潦?
+  ?券撠 CSS 霈嚗宏?斗???敹???:global(body.day-mode) 閬神??
+  撌脣?日?銴? app-back-btn ?賊?璅????
 */
 .merch-detail-wrapper { width: 100%; }
 
@@ -327,11 +327,11 @@ const copyCurrentLink = async () => {
     color: var(--pri); 
 }
 
-/* 🌟 Mobile Optimizations (左圖右文雙欄) */
+/* ?? Mobile Optimizations (撌血??單???) */
 @media (max-width: 768px) {
     .merch-detail-wrapper { padding: 0 10px 15px 10px; }
     
-    /* 改為並排雙欄 Grid，左側固定寬度放照片 */
+    /* ?寧銝行??? Grid嚗椰?游摰祝摨行?抒? */
     .prod-layout { 
         display: grid; 
         grid-template-columns: 200px 1fr; 
@@ -351,7 +351,7 @@ const copyCurrentLink = async () => {
         max-height: none; 
     }
     
-    .prod-hint { display: none; } /* 手機版並排時隱藏文字以省空間 */
+    .prod-hint { display: none; } /* ???蒂???梯???隞亦?蝛粹? */
     
     .prod-info-box { 
         padding: 10px; 
@@ -382,3 +382,6 @@ const copyCurrentLink = async () => {
     .btn-share { width: 100%; flex: auto; padding: 8px; font-size: 0.85rem; }
 }
 </style>
+
+
+

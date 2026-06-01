@@ -34,7 +34,7 @@ export const useMainStore = defineStore('main', () => {
   const showToast = ref(false)
   const lightboxItem = ref(null)
   const navHidden = ref(false)
-  const mobileMenuOpen = ref(false)
+  // mobileMenuOpen：已改為底部上拉式導覽，保留欄位會造成誤用，故移除
   const lastScrollY = ref(0)
   const displayLimit = ref(20)
   const readingArticle = ref(null)
@@ -77,6 +77,7 @@ export const useMainStore = defineStore('main', () => {
       const { data: invData, error: invErr } = await supabase
         .from('animals')
         .select('id, source, species, morph, genes, gender_type, gender_value, birthday, listing_price, sold_price, status, note, image_url, is_hot, created_at')
+        .order('created_at', { ascending: false })
       if (invErr) throw invErr
 
       inv.value = invData.map(i => ({
@@ -228,6 +229,17 @@ export const useMainStore = defineStore('main', () => {
 
   function initLiff() {
     if (!import.meta.client || isLiffInitialized.value) return
+
+    // 本機開發（localhost / 非正式網域）時，LIFF 會因 endpoint 不符合而噴 warning：
+    // 「liff.init() was called with a current URL that is not related to the endpoint URL」
+    // 這不影響一般頁面瀏覽，但會洗版 console；因此在非正式網域直接略過初始化。
+    try {
+      const endpointOrigin = 'https://www.genckobreeding.com'
+      if (!window.location.origin.startsWith(endpointOrigin)) return
+    } catch (e) {
+      return
+    }
+
     const script = document.createElement('script')
     script.src = 'https://static.line-scdn.net/liff/edge/2/sdk.js'
     script.onload = async () => {
@@ -381,12 +393,26 @@ export const useMainStore = defineStore('main', () => {
 
   function openLightbox(item) {
     lightboxItem.value = item
-    if (import.meta.client && window && window.history) window.history.pushState({ lightbox: true }, '')
+    if (import.meta.client && window?.history) {
+      try {
+        window.history.pushState({ ...(window.history.state || {}), lightbox: true }, '')
+      } catch (e) {}
+    }
   }
 
   function closeLightbox() {
-    if (import.meta.client && window && window.history && window.history.state?.lightbox) window.history.back()
-    else lightboxItem.value = null
+    lightboxItem.value = null
+    if (import.meta.client && window?.history?.state?.lightbox) {
+      try {
+        window.history.back()
+      } catch (e) {}
+    }
+  }
+
+  if (import.meta.client) {
+    window.addEventListener('popstate', () => {
+      if (lightboxItem.value) lightboxItem.value = null
+    })
   }
 
   function triggerToast() {
@@ -396,7 +422,7 @@ export const useMainStore = defineStore('main', () => {
 
   return {
     loading, isDayMode, curTab, inv, merchList, articlesList, genePages, marqueeList, hotList, auctionList,
-    currentUser, wishlist, hospWishlist, history, showToast, lightboxItem, navHidden, mobileMenuOpen, lastScrollY,
+    currentUser, wishlist, hospWishlist, history, showToast, lightboxItem, navHidden, lastScrollY,
     displayLimit, readingArticle, readingProgress, viewingGene, geneSpecies, careImg, aboutImg, logoUrl, lineLink,
     canInstall, showIOSGuide,
     compareList, toggleCompare, clearCompare,

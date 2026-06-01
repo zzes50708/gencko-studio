@@ -195,20 +195,20 @@ const relatedArticles = computed(() => {
 
         <div v-else-if="!readingArticle" style="text-align:center; padding:100px 0; color:#888;">
             <h2>找不到此文章或文章已下架</h2>
-            <button @click="goBack" class="btn-back" style="margin: 20px auto; justify-content: center;">← 返回列表</button>
+            <button @click="goBack" class="btn-app btn-app--ghost btn-app--md btn-app--pill" style="margin: 20px auto; justify-content: center;">返回列表</button>
         </div>
 
         <div v-else>
-            <button @click="goBack" class="btn-back">← 返回列表</button>
+            <button @click="goBack" class="btn-app btn-app--ghost btn-app--md btn-app--pill">返回列表</button>
             <article class="reader-container">
                 <div v-if="readingArticle.ImageURL" class="article-hero-image">
                     <img :src="getCleanUrl(readingArticle.ImageURL)" :alt="readingArticle.Title" style="width:100%; height:auto; max-height:200px; object-fit:cover; border-radius:8px; margin-bottom:0px;" loading="eager">
                 </div>
                 <h1 style="color:var(--txt);font-size:2rem;margin-bottom:15px;">{{ readingArticle.Title }}</h1>
                 <div style="color:#666;font-size:0.9rem;margin-bottom:20px;">
-                    <time :datetime="readingArticle.PublishDate">📅 {{ fmtDate(readingArticle.PublishDate) }}</time>
-                    <span style="margin-left:15px;">👤 {{ readingArticle.Author }}</span>
-                    <span style="margin-left:15px;">📂 {{ readingArticle.Category }}</span>
+                    <time :datetime="readingArticle.PublishDate">{{ fmtDate(readingArticle.PublishDate) }}</time>
+                    <span style="margin-left:15px;">{{ readingArticle.Author }}</span>
+                    <span style="margin-left:15px;">{{ readingArticle.Category }}</span>
                 </div>
                 <hr style="border-color:rgba(255,255,255,0.1); margin: 0px 0;">
                 <div class="reader-content" v-html="readingArticle.Content"></div>
@@ -259,7 +259,7 @@ const relatedArticles = computed(() => {
                 </div>
             </section>
 
-            <button @click="goBack" class="btn-back" style="margin: 20px auto; justify-content: center;">← 返回列表</button>
+            <button @click="goBack" class="btn-app btn-app--ghost btn-app--md btn-app--pill" style="margin: 20px auto; justify-content: center;">返回列表</button>
         </div>
     </div>
 </template>
