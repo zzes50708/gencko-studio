@@ -1,6 +1,5 @@
 ﻿<script setup>
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import { useRoute } from 'vue-router'
 import { useMediaQuery } from '@vueuse/core'
 import { useMainStore } from '~/stores/useMainStore'
 import MatrixGeneRain from '~/components/MatrixGeneRain.vue'
@@ -8,26 +7,6 @@ import { gsap } from 'gsap'
 import { Observer } from 'gsap/Observer'
 
 const store = useMainStore()
-const route = useRoute()
-
-// 匯出模式：用於製作宣傳片素材（固定時間軸自動播放、關閉互動/按鈕/提示）
-const exportMode = computed(() => {
-  if (!import.meta.client) return false
-  const v = route.query?.export
-  return v === '1' || v === 'true' || v === 'yes'
-})
-const exportFps = computed(() => {
-  const raw = Number(route.query?.fps || 60)
-  return Number.isFinite(raw) && raw > 0 ? raw : 60
-})
-const exportHoldSec = computed(() => {
-  const raw = Number(route.query?.hold || 2.5)
-  return Number.isFinite(raw) && raw > 0 ? raw : 2.5
-})
-const exportTransSec = computed(() => {
-  const raw = Number(route.query?.trans || 1.2)
-  return Number.isFinite(raw) && raw >= 0 ? raw : 1.2
-})
 
 // ?? Virtual Triggered Navigation ?????????????????????????????????????????????
 // ?嗆?嚗蜓?孛?潸??湛??蔣??嚗??◤??scrub
@@ -52,8 +31,6 @@ const _proxy    = { v: 0 }   // GSAP 銝?湔 tween Vue ref嚗 pro
 let sceneTween     = null   // ?桀?????tween
 let gsapObserver   = null   // GSAP Observer 撖虫?
 let keydownHandler = null   // ?萇???剁?onBeforeUnmount ?宏?歹?
-let exportTicker   = null   // 匯出模式計時器（自動推進 animScene）
-let exportFrameHandler = null // 匯出模式：接收逐幀驅動事件
 
 // ?? ?詨?嚗蜓???迎?4 撅日霅瘀?????????????????????????????????????????????????
 const navigateTo = (next) => {
@@ -94,14 +71,6 @@ const destroyObserver = () => {
     window.removeEventListener('keydown', keydownHandler)
     keydownHandler = null
   }
-  if (exportTicker) {
-    try { clearInterval(exportTicker) } catch (e) {}
-    exportTicker = null
-  }
-  if (exportFrameHandler) {
-    try { window.removeEventListener('gencko-export-frame', exportFrameHandler) } catch (e) {}
-    exportFrameHandler = null
-  }
   // 蝣箔????Observer 撖虫??質◤皜嚗?瘙⊥??嗡??
   try { Observer.getAll().forEach(o => o.kill()) } catch (e) {}
 }
@@ -118,77 +87,33 @@ onMounted(async () => {
   _proxy.v                = 0
   isTransitioning.value   = false
 
-  // 影片/匯出模式不需要載入畫面；一般模式也加 fail-safe 避免卡死
-  if (exportMode.value) {
-    isLoading.value = false
-  } else {
-    loaderFailSafeTimer = setTimeout(() => { isLoading.value = false }, 4500)
-  }
+  // 一般模式也加 fail-safe 避免卡死
+  loaderFailSafeTimer = setTimeout(() => { isLoading.value = false }, 4500)
 
-  if (exportMode.value) {
-    // 匯出模式：由外部「逐幀」驅動（避免截圖速度慢導致時間軸跑完、後面全是結尾）
-    // 外部會透過 window.__GENCKO_EXPORT_FRAME 設定當前 frame (0-based)，並派發事件 gencko-export-frame
-    const holdMs = exportHoldSec.value * 1000
-    const transMs = exportTransSec.value * 1000
-    const sceneCount = 6
-    const fps = exportFps.value
+  // Layer 4：GSAP Observer 接管滾動；避免真的讓頁面 scroll，造成頂部導覽列閃動/底部導覽列跳動
+  gsapObserver = Observer.create({
+    target:         stageEl.value || window,
+    type:           'wheel,touch,pointer',
+    tolerance:      10,
+    preventDefault: true,
+    // 觸控裝置：手指往上滑（視覺上內容往上）應該要進入下一幕
+    // 目前 Observer 的 onDown/onUp 在 touch 上的語意與直覺容易相反，因此在非桌機時反轉一次
+    onDown: () => (isDesktop.value ? navigateTo(currentSceneIndex.value + 1) : navigateTo(currentSceneIndex.value - 1)),
+    onUp:   () => (isDesktop.value ? navigateTo(currentSceneIndex.value - 1) : navigateTo(currentSceneIndex.value + 1)),
+  })
 
-    exportFrameHandler = () => {
-      const frame = Number(window.__GENCKO_EXPORT_FRAME || 0)
-      const t = (frame / Math.max(1, fps)) * 1000
-
-      const totalMs = (sceneCount - 1) * (holdMs + transMs) + holdMs
-      if (t >= totalMs) {
-        animScene.value = 5
-        currentSceneIndex.value = 5
-        return
-      }
-
-      let acc = 0
-      let v = 0
-      for (let i = 0; i < sceneCount; i++) {
-        if (t < acc + holdMs) { v = i; break }
-        acc += holdMs
-        if (i < sceneCount - 1) {
-          if (t < acc + transMs) {
-            const p = (t - acc) / Math.max(1, transMs)
-            v = i + p
-            break
-          }
-          acc += transMs
-        }
-      }
-      animScene.value = Math.min(5, Math.max(0, v))
-      currentSceneIndex.value = Math.round(animScene.value)
+  // PageDown / ArrowDown = 往下；PageUp / ArrowUp = 往上
+  keydownHandler = (e) => {
+    if (e.key === 'ArrowDown' || e.key === 'PageDown') {
+      e.preventDefault()
+      navigateTo(currentSceneIndex.value + 1)
     }
-    window.addEventListener('gencko-export-frame', exportFrameHandler)
-    exportFrameHandler()
-  } else {
-    // Layer 4：GSAP Observer 接管滾動；避免真的讓頁面 scroll，造成頂部導覽列閃動/底部導覽列跳動
-    gsapObserver = Observer.create({
-      target:         stageEl.value || window,
-      type:           'wheel,touch,pointer',
-      tolerance:      10,
-      preventDefault: true,
-      // 觸控裝置：手指往上滑（視覺上內容往上）應該要進入下一幕
-      // 目前 Observer 的 onDown/onUp 在 touch 上的語意與直覺容易相反，因此在非桌機時反轉一次
-      onDown: () => (isDesktop.value ? navigateTo(currentSceneIndex.value + 1) : navigateTo(currentSceneIndex.value - 1)),
-      onUp:   () => (isDesktop.value ? navigateTo(currentSceneIndex.value - 1) : navigateTo(currentSceneIndex.value + 1)),
-    })
-
-    // PageDown / ArrowDown = 往下；PageUp / ArrowUp = 往上
-    keydownHandler = (e) => {
-      if (e.key === 'ArrowDown' || e.key === 'PageDown') {
-        e.preventDefault()
-        navigateTo(currentSceneIndex.value + 1)
-      }
-      if (e.key === 'ArrowUp' || e.key === 'PageUp') {
-        e.preventDefault()
-        navigateTo(currentSceneIndex.value - 1)
-      }
+    if (e.key === 'ArrowUp' || e.key === 'PageUp') {
+      e.preventDefault()
+      navigateTo(currentSceneIndex.value - 1)
     }
-    window.addEventListener('keydown', keydownHandler)
   }
+  window.addEventListener('keydown', keydownHandler)
 })
 
 onBeforeUnmount(() => {
@@ -377,7 +302,13 @@ const geneTokens = computed(() => {
             :intensity="isDayMode ? 0.35 : 1.5"
             :color="isDayMode ? '#e06030' : '#e8440a'"
           />
-          <GeckoScene3D :scene="scene" :snap-trigger="snapTrigger" :transition-info="transitionInfo" :is-day-mode="isDayMode" @ready="onSceneReady" />
+          <GeckoScene3D
+            :scene="scene"
+            :snap-trigger="snapTrigger"
+            :transition-info="transitionInfo"
+            :is-day-mode="isDayMode"
+            @ready="onSceneReady"
+          />
         </TresCanvas>
       </ClientOnly>
     </div>
@@ -481,13 +412,27 @@ const geneTokens = computed(() => {
         <!-- eslint-disable-next-line vue/no-v-html -->
         <h1 v-if="scene.hero" class="scene-title scene-title--hero" v-html="scene.title" />
         <p v-if="scene.hero && scene.subtitle" class="scene-subtitle">{{ scene.subtitle }}</p>
-        <div v-if="!exportMode && idx === 0 && currentSceneIndex === 0" class="scene-hero-skip" style="pointer-events: auto;">
+        <div
+          v-if="idx === 0"
+          class="scene-hero-skip"
+          :style="{
+            opacity: String(sceneAlpha[0]),
+            pointerEvents: activeDot === 0 ? 'auto' : 'none',
+          }"
+        >
           <NuxtLink to="/" class="btn-app btn-app--ghost btn-app--sm btn-app--pill" aria-label="不看介紹，直接進入官網">
             不看介紹，直接進入官網
           </NuxtLink>
         </div>
         <!-- ?脣?靽 3嚗cene 5 蝯偏撠嚗?蝙?刻?典???-->
-        <div v-if="!exportMode && idx === 5" class="scene-end-nav">
+        <div
+          v-if="idx === 5"
+          class="scene-end-nav"
+          :style="{
+            opacity: String(sceneAlpha[5]),
+            pointerEvents: activeDot === 5 ? 'auto' : 'none',
+          }"
+        >
           <NuxtLink to="/shop" class="btn-app btn-app--primary btn-app--md btn-app--pill">前往選購</NuxtLink>
           <NuxtLink to="/home" class="btn-app btn-app--ghost btn-app--md btn-app--pill">回到首頁</NuxtLink>
         </div>
@@ -495,7 +440,7 @@ const geneTokens = computed(() => {
     </div>
 
     <!-- ?? z-index 32: Visual chrome (dots, scroll hint) ??pointer-events:none ?? -->
-    <div v-if="!exportMode" class="dots-nav" aria-hidden="true">
+    <div class="dots-nav" aria-hidden="true">
       <span
         v-for="i in 6"
         :key="i"
@@ -505,7 +450,7 @@ const geneTokens = computed(() => {
     </div>
 
     <Transition name="hint-fade">
-      <div v-if="!exportMode && currentSceneIndex < 5" class="scroll-hint">
+      <div v-if="currentSceneIndex < 5" class="scroll-hint">
         <span class="hint-text">往下滾動</span>
         <span class="lamp-hint" aria-hidden="true">
           <span class="lamp-hint__cone" />

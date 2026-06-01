@@ -771,7 +771,7 @@ let _readyEmitted = false
 onBeforeRender(({ delta, elapsed }) => {
   if (!_readyEmitted) { _readyEmitted = true; emit('ready') }
 
-
+  // 匯出模式：固定時間軸（避免 headless 截圖速度影響動畫快慢）
   const s = Math.max(0, Math.min(5, props.scene))
 
   // ── Gecko + DNA morph ────────────────────────────────────────────────────────
@@ -787,6 +787,7 @@ onBeforeRender(({ delta, elapsed }) => {
     geckoPosAttr.needsUpdate = true
   }
 
+  // 匯出模式沒有 navigateTo/transitionInfo，因此以 s 的區段模擬 2→3 的「聚集→發散」兩段式轉場
   if (conv23 !== null) {
     // dnaGrp 收斂→發散（conv23 兩段式覆蓋）
     const ct   = conv23.t
