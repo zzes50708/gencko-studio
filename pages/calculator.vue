@@ -205,14 +205,16 @@ const formatWarningText = (text) => {
             </div>
         </div>
 
-        <!-- Mobile Dropdown Backdrop -->
-        <Transition name="sheet-fade">
-            <div
-                v-if="calcActiveSelector"
-                class="calc-dropdown-backdrop"
-                @click="calcActiveSelector = null; calcExpandType = null; calcExpandGroup = null"
-            />
-        </Transition>
+        <!-- Mobile Dropdown Backdrop (Teleport 到 body，避免 stacking context 衝突) -->
+        <Teleport to="body">
+            <Transition name="sheet-fade">
+                <div
+                    v-if="calcActiveSelector"
+                    class="calc-dropdown-backdrop"
+                    @click="calcActiveSelector = null; calcExpandType = null; calcExpandGroup = null"
+                />
+            </Transition>
+        </Teleport>
 
         <div class="calc-parent-grid">
             <!-- Male Card -->
@@ -472,7 +474,7 @@ const formatWarningText = (text) => {
   已清除所有寫死深淺色的色碼 (如 #fff, #333, #eee)。
   全面導入 CSS 變數，徹底移除所有 :global(body.day-mode) 與 !important 的強制覆寫。
 */
-.calc-container { max-width: 1100px; margin: 0 auto; position: relative; z-index: 2; padding-top: 15px; }
+.calc-container { max-width: 1100px; margin: 0 auto; position: relative; padding-top: 15px; }
 
 .calc-dropdown-backdrop {
     display: none;
