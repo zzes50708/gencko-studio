@@ -7,11 +7,11 @@ import { onBeforeUnmount, onMounted } from 'vue'
 definePageMeta({ pageTransition: false, layoutTransition: false })
 
 useHead({
-  title: '品牌服務',
+  title: 'Gencko Studio — 豹紋守宮繁育工作室',
   meta: [
-    { name: 'description', content: 'Gencko Studio 品牌服務與核心能力介紹。' },
-    { property: 'og:title', content: '品牌服務｜Gencko Studio' },
-    { property: 'og:description', content: 'Gencko Studio 品牌服務與核心能力介紹。' },
+    { name: 'description', content: 'Gencko Studio 豹紋守宮專業繁育工作室，提供基因知識、在售個體與飼養資訊。' },
+    { property: 'og:title', content: 'Gencko Studio — 豹紋守宮繁育工作室' },
+    { property: 'og:description', content: 'Gencko Studio 豹紋守宮專業繁育工作室，提供基因知識、在售個體與飼養資訊。' },
     { property: 'og:url', content: 'https://www.genckobreeding.com/' },
   ],
   // 維持 /about 的深色全螢幕背景與禁止捲動效果

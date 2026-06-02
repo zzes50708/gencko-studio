@@ -347,8 +347,8 @@ const activeFilterCount = computed(() => {
                     </div>
                     
                     <div class="scroll-chips-row">
-                        <div class="chip-tab main-tab" :class="{active: sp === '豹紋守宮'}" @click="sp = '豹紋守宮'; store.displayLimit = 20">豹紋守宮</div>
-                        <div class="chip-tab main-tab" :class="{active: sp === '肥尾守宮'}" @click="sp = '肥尾守宮'; store.displayLimit = 20">肥尾守宮</div>
+                        <div class="chip-tab main-tab" :class="{active: sp === '豹紋守宮'}" role="button" tabindex="0" @click="sp = '豹紋守宮'; store.displayLimit = 20" @keydown.enter.space.prevent="sp = '豹紋守宮'; store.displayLimit = 20">豹紋守宮</div>
+                        <div class="chip-tab main-tab" :class="{active: sp === '肥尾守宮'}" role="button" tabindex="0" @click="sp = '肥尾守宮'; store.displayLimit = 20" @keydown.enter.space.prevent="sp = '肥尾守宮'; store.displayLimit = 20">肥尾守宮</div>
 
                         <div class="chip-divider"></div>
 
@@ -358,8 +358,8 @@ const activeFilterCount = computed(() => {
                             <option value="price_desc">價格：高 → 低</option>
                         </select>
                         
-                        <div class="chip-toggle" :class="{active: showOnlyHistory}" @click="showOnlyHistory = !showOnlyHistory">歷史紀錄</div>
-                        <div class="chip-toggle" :class="{active: showOnlyFav}" @click="showOnlyFav = !showOnlyFav">只看收藏</div>
+                        <div class="chip-toggle chip-toggle--history" :class="{active: showOnlyHistory}" @click="showOnlyHistory = !showOnlyHistory">歷史紀錄</div>
+                        <div class="chip-toggle chip-toggle--fav" :class="{active: showOnlyFav}" @click="showOnlyFav = !showOnlyFav">只看收藏</div>
 
                         <div class="chip-divider"></div>
 
@@ -595,15 +595,17 @@ const activeFilterCount = computed(() => {
     transition: 0.2s; 
     flex-shrink: 0; 
 }
-.chip-toggle.active { 
-    background: #e91e63; 
-    color: #fff; 
-    border-color: #e91e63; 
+.chip-toggle--history.active {
+    background: #2196F3;
+    color: #fff;
+    border-color: #2196F3;
     opacity: 1;
 }
-.chip-toggle.active:nth-child(5) { 
-    background: #2196F3; 
-    border-color: #2196F3; 
+.chip-toggle--fav.active {
+    background: #e91e63;
+    color: #fff;
+    border-color: #e91e63;
+    opacity: 1;
 }
 
 .chip-tag { 
@@ -899,6 +901,14 @@ const activeFilterCount = computed(() => {
     .cmp-bar-name { font-size: 0.62rem; }
 }
 
+.shop-empty-state {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 50px 20px;
+    color: var(--txt);
+    opacity: 0.6;
+}
+
 .card-action-stack {
     position: absolute;
     top: 5px;
@@ -1013,20 +1023,23 @@ const activeFilterCount = computed(() => {
 }
 .cmp-bar-remove {
     position: absolute;
-    top: -5px;
-    right: -5px;
-    width: 18px;
-    height: 18px;
+    top: -8px;
+    right: -8px;
+    width: 24px;
+    height: 24px;
     border-radius: 50%;
     background: #e74c3c;
     border: none;
     color: #fff;
-    font-size: 0.6rem;
+    font-size: 0.7rem;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
     line-height: 1;
+    /* 擴大觸控區域 */
+    padding: 0;
+    touch-action: manipulation;
 }
 .cmp-bar-empty {
     width: 80px;

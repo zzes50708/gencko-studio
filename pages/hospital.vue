@@ -302,8 +302,8 @@ useHead({
     .hosp-page-wrapper { padding-top: 0; }
     
     .hosp-alert-box {
-        padding: 0px;
-        margin-bottom: 0px; /* 縮減間距 */
+        padding: 10px 12px;    /* #16: 確保提示訊息可見 */
+        margin-bottom: 10px;
         font-size: 0.8rem;
     }
     
@@ -321,9 +321,9 @@ useHead({
 
     .hosp-label { margin-bottom: 0px; }
     
-    /* 🌟 極致壓縮卡片高度 */
+    /* #3: 卡片保留最低垂直內距，確保資訊與動作區有視覺分隔 */
     .hosp-card {
-        padding: 0px 12px; /* 縮小內距 */
+        padding: 12px;
         border-radius: 15px;
     }
 
@@ -350,15 +350,20 @@ useHead({
         justify-content: space-between; 
         align-items: center; 
         width: 100%; 
-        margin-top: 0px; /* 縮減按鈕區上間距 */
-        border-top: 1px solid var(--bd); 
-        padding-top: 0px; /* 縮減按鈕區內距 */
+        margin-top: 8px;
+        border-top: 1px solid var(--bd);
+        padding-top: 10px;
     }
 
+    /* #2: 撥打電話按鈕 touch target ≥ 44px（WCAG 建議） */
     .hosp-call-btn {
         width: auto !important;
-        padding: 6px 16px; /* 縮小按鈕高度 */
-        font-size: 0.7rem;
+        padding: 10px 16px;
+        min-height: 44px;
+        font-size: 0.82rem;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
     }
     
     .hosp-tag { font-size: 0.7rem; padding: 2px 6px; }

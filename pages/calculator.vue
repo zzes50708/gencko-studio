@@ -195,15 +195,24 @@ const formatWarningText = (text) => {
             <div class="calc-sub-desc">非100%血系請統稱前綴(如橘化)。</div>
             
             <div class="tabs" style="margin: 20px 0;">
-                <div class="tab" :class="{active: calcSp === '豹紋守宮'}" @click="calcSp = '豹紋守宮'">豹紋守宮</div>
-                <div class="tab" :class="{active: calcSp === '肥尾守宮'}" @click="calcSp = '肥尾守宮'">肥尾守宮</div>
+                <div class="tab" :class="{active: calcSp === '豹紋守宮'}" role="button" tabindex="0" @click="calcSp = '豹紋守宮'" @keydown.enter.space.prevent="calcSp = '豹紋守宮'">豹紋守宮</div>
+                <div class="tab" :class="{active: calcSp === '肥尾守宮'}" role="button" tabindex="0" @click="calcSp = '肥尾守宮'" @keydown.enter.space.prevent="calcSp = '肥尾守宮'">肥尾守宮</div>
             </div>
 
             <div class="calc-helper-btns">
-                <div class="calc-help-btn" @click="calcActiveInfo = 'types'; calcModalOpen = true">🎓 基因觀念</div>
-                <div class="calc-help-btn" @click="calcActiveInfo = 'poly'; calcModalOpen = true">⚡ 選育介紹</div>
+                <button type="button" class="calc-help-btn" @click="calcActiveInfo = 'types'; calcModalOpen = true">🎓 基因觀念</button>
+                <button type="button" class="calc-help-btn" @click="calcActiveInfo = 'poly'; calcModalOpen = true">⚡ 選育介紹</button>
             </div>
         </div>
+
+        <!-- Mobile Dropdown Backdrop -->
+        <Transition name="sheet-fade">
+            <div
+                v-if="calcActiveSelector"
+                class="calc-dropdown-backdrop"
+                @click="calcActiveSelector = null; calcExpandType = null; calcExpandGroup = null"
+            />
+        </Transition>
 
         <div class="calc-parent-grid">
             <!-- Male Card -->
@@ -465,6 +474,23 @@ const formatWarningText = (text) => {
 */
 .calc-container { max-width: 1100px; margin: 0 auto; position: relative; z-index: 2; padding-top: 15px; }
 
+.calc-dropdown-backdrop {
+    display: none;
+}
+@media (max-width: 768px) {
+    .calc-dropdown-backdrop {
+        display: block;
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.55);
+        z-index: 2147483646;
+        backdrop-filter: blur(2px);
+        -webkit-backdrop-filter: blur(2px);
+    }
+}
+.sheet-fade-enter-active, .sheet-fade-leave-active { transition: opacity 0.22s ease; }
+.sheet-fade-enter-from, .sheet-fade-leave-to { opacity: 0; }
+
 .calc-header { text-align: center; margin-bottom: 20px; }
 .calc-top-desc { text-align: center; color: var(--pri); font-weight: 700; margin-bottom: 4px; font-size: 0.95rem; letter-spacing: 1px; }
 .calc-sub-desc { text-align: center; color: var(--txt); opacity: 0.6; font-size: 0.85rem; margin-bottom: 15px; }
@@ -475,7 +501,7 @@ const formatWarningText = (text) => {
 .tab.active { background: var(--pri); color: #fff; opacity: 1; }
 
 .calc-helper-btns { display: flex; justify-content: center; gap: 8px; flex-wrap: wrap; margin-bottom: 15px; }
-.calc-help-btn { display: flex; align-items: center; gap: 4px; padding: 5px 12px; border-radius: 20px; border: 1px dashed var(--bd); font-size: 0.85rem; color: var(--txt); opacity: 0.7; cursor: pointer; transition: 0.2s; background: var(--card-bg); }
+.calc-help-btn { display: flex; align-items: center; gap: 4px; padding: 5px 12px; border-radius: 20px; border: 1px dashed var(--bd); font-size: 0.85rem; color: var(--txt); opacity: 0.7; cursor: pointer; transition: 0.2s; background: var(--card-bg); font-family: inherit; line-height: 1.4; }
 .calc-help-btn:hover { border-color: var(--pri); color: var(--pri); opacity: 1; background: rgba(255, 69, 0, 0.05); }
 
 .calc-parent-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 25px; }

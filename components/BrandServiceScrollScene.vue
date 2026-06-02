@@ -969,6 +969,34 @@ const geneTokens = computed(() => {
   .scene-title--hero {
     font-size: clamp(2.4rem, 10vw, 3.8rem);
   }
+
+  /* ── 手機版整頁縮放：文字、UI 元素等比縮小至約 80% ── */
+  .carousel-item .scene-title  { font-size: clamp(1.55rem, 6.5vw, 2.2rem); }
+  .carousel-item .scene-kicker { font-size: 0.52rem; }
+  .carousel-item .scene-desc   { font-size: 0.75rem; line-height: 1.65; }
+  .scene-title--hero            { font-size: clamp(1.85rem, 7.8vw, 3rem); }
+  .scene-subtitle               { font-size: 0.68rem; letter-spacing: 0.14em; margin-top: 0.3rem; }
+  .scene-kicker                 { font-size: 0.50rem; letter-spacing: 0.22em; }
+  .hint-text                    { font-size: 0.68rem; }
+
+  /* 全像卡片縮小 */
+  .holo-card { width: 82px; }
+  .holo-card__pct    { font-size: 1.1rem; }
+  .holo-card__gene   { font-size: 0.50rem; }
+  .holo-card__status { font-size: 0.42rem; }
+
+  /* 燈光特效縮小 */
+  .lamp-hint       { width: min(280px, 58vw); height: 88px; }
+  .lamp-hint__spot { width: 180px; height: 62px; }
+  .lamp-hint__line { height: 54px; }
+
+  /* 結尾 CTA 按鈕縮小 */
+  .scene-end-nav .btn-app { font-size: 0.82rem; padding: 0.6em 1.4em; }
+
+  /* 指示點縮小（行動版改為顯示） */
+  .dots-nav { display: flex; gap: 6px; }
+  .dot       { width: 4px; height: 4px; }
+
 }
 
 /* ??????????????????????????????????????????????????????????????????????

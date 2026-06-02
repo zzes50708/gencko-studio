@@ -140,12 +140,15 @@ const fmtDate = (d) => {
 
         <!-- 🌟 第二層：固定六大分類 (固定一行) -->
         <div class="category-nav-row">
-            <div 
-                v-for="cat in fixedCats" 
+            <div
+                v-for="cat in fixedCats"
                 :key="cat.value"
                 class="nav-chip"
                 :class="{ active: artCat === cat.value, beginner: cat.value === 'Beginner' }"
+                role="button"
+                tabindex="0"
                 @click="setCategory(cat.value)"
+                @keydown.enter.space.prevent="setCategory(cat.value)"
             >
                 {{ cat.label }}
             </div>
@@ -184,28 +187,31 @@ const fmtDate = (d) => {
                 <button v-if="searchQuery || artCat !== 'All'" @click="searchQuery = ''; artCat = 'All'" class="btn-app btn-app--primary btn-app--sm btn-app--pill" style="margin-top:12px;">清除篩選</button>
             </div>
 
-            <article class="card article-card" v-for="item in filteredArticles" :key="item.ID">
-                <NuxtLink :to="`/articles/${item.ID}`" style="display:block; text-decoration:none; color:inherit; height:100%;">
-                    <div style="position:relative; overflow:hidden;">
-                        <!-- 🌟 核心修正：將 NuxtImg 替換為原生 img，徹底繞過 Vercel 402 收費限制 -->
-                        <img 
-                            v-if="item.ImageURL" 
-                            :src="getCleanUrl(item.ImageURL, 600)" 
-                            :alt="item.Title" 
-                            class="card-img" 
-                            style="height:180px;" 
-                            loading="lazy"
-                        />
-                        <div v-else class="card-img" style="height:180px;display:flex;align-items:center;justify-content:center;font-size:3rem;background:#1a1a1a;">📝</div>
-                        <div class="art-cat-tag">{{ item.Category }}</div>
-                    </div>
-                    <div class="card-body">
-                        <time :datetime="item.PublishDate" class="date-text">{{ fmtDate(item.PublishDate) }}</time>
-                        <h3 class="morph-title">{{ item.Title }}</h3>
-                        <p class="art-summary">{{ item.Summary }}</p>
-                    </div>
-                </NuxtLink>
-            </article>
+            <NuxtLink
+                class="card article-card"
+                :to="`/articles/${item.ID}`"
+                v-for="item in filteredArticles"
+                :key="item.ID"
+                style="text-decoration:none; color:inherit; display:flex; flex-direction:column;"
+            >
+                <div style="position:relative; overflow:hidden;">
+                    <img
+                        v-if="item.ImageURL"
+                        :src="getCleanUrl(item.ImageURL, 600)"
+                        :alt="item.Title"
+                        class="card-img"
+                        style="height:180px;"
+                        loading="lazy"
+                    />
+                    <div v-else class="card-img" style="height:180px;display:flex;align-items:center;justify-content:center;font-size:3rem;background:#1a1a1a;">📝</div>
+                    <div class="art-cat-tag">{{ item.Category }}</div>
+                </div>
+                <div class="card-body" style="flex:1;">
+                    <time :datetime="item.PublishDate" class="date-text">{{ fmtDate(item.PublishDate) }}</time>
+                    <h3 class="morph-title">{{ item.Title }}</h3>
+                    <p class="art-summary">{{ item.Summary }}</p>
+                </div>
+            </NuxtLink>
         </transition-group>
     </div>
 </template>
@@ -326,7 +332,7 @@ const fmtDate = (d) => {
     cursor: pointer;
     white-space: nowrap;
 }
-.q-tag.active { border-color: var(--pri); color: var(--pri); }
+.q-tag.active { border-color: var(--pri); color: var(--pri); background: rgba(232, 68, 10, 0.10); }
 
 /* 文章列表與卡片 */
 .list-title {
@@ -346,7 +352,7 @@ const fmtDate = (d) => {
 }
 .date-text { font-size: 0.8rem; opacity: 0.5; margin-bottom: 5px; display: block; }
 .morph-title { font-size: 1.1rem; margin-bottom: 5px; color: var(--txt); }
-.art-summary { font-size: 0.85rem; opacity: 0.7; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.art-summary { font-size: 0.85rem; opacity: 0.7; line-height: 1.6; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 
 @media (max-width: 768px) {
     .dt-only { display: none !important; }

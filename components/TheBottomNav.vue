@@ -64,7 +64,7 @@ watch(
 
     <Transition name="sheet-slide">
       <div v-if="sheetOpen" class="sheet" role="dialog" aria-modal="true" aria-label="導覽選單">
-        <div class="sheet-handle" />
+        <div class="sheet-handle" aria-hidden="true" />
         <div class="sheet-header">
           <div class="sheet-title">
             {{ activeSheet === 'articles' ? '專欄文章' : activeSheet === 'shop' ? '探索選購' : '工具知識' }}

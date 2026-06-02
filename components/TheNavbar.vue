@@ -76,14 +76,21 @@ const isArticlesActive = computed(() => ['articles', 'care', 'faq'].includes(pro
                     >會員</NuxtLink>
                     
                     <!-- ?? ? ClientOnly 閫?捱隡箸??刻??汗?冽?摮?銝?渡? Mismatch -->
-                    <div class="theme-toggle" @click="$emit('toggle-theme')">
+                    <button
+                        type="button"
+                        class="theme-toggle"
+                        role="switch"
+                        :aria-checked="isDayMode"
+                        :aria-label="isDayMode ? '切換為暗色模式' : '切換為亮色模式'"
+                        @click="$emit('toggle-theme')"
+                    >
                         <ClientOnly>
                             {{ isDayMode ? '亮色' : '暗色' }}
                             <template #fallback>
                                 <span>載入中</span>
                             </template>
                         </ClientOnly>
-                    </div>
+                    </button>
                 </div>
             </div>
         </div>
@@ -146,6 +153,9 @@ const isArticlesActive = computed(() => ['articles', 'care', 'faq'].includes(pro
     border: 1px solid var(--bd);
     padding: 4px 10px;
     border-radius: 20px;
+    background: transparent;
+    min-height: 32px;
+    line-height: 1;
 }
 
 /* ?? 獢???鋆???*/
@@ -156,7 +166,7 @@ const isArticlesActive = computed(() => ['articles', 'care', 'faq'].includes(pro
 .dt-only { display: block; }
 
 /* Reading Progress Bar */
-.reading-progress-bar { position: absolute; bottom: 0; left: 0; width: 100%; height: 2px; background: var(--bd); }
+.reading-progress-bar { position: fixed; top: calc(40px + env(safe-area-inset-top, 0px) + 50px); left: 0; width: 100%; height: 2px; background: var(--bd); z-index: 999; }
 .progress-fill { height: 100%; background: var(--pri); width: 0%; transition: width 0.1s linear; box-shadow: 0 0 10px var(--pri-glow); }
 
 /* Mobile Menu Overlay & Responsive */
