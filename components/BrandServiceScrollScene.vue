@@ -226,6 +226,7 @@ const geneFxActive = computed(() => isMounted.value && isDesktop.value && geneFx
 
 // 3D holo 卡片：以 scene≈3 為主（避免四捨五入剛好落在 2/4 導致看不到），再補 activeDot 保險
 const cardShowing = computed(() => Math.abs(scene.value - 3) < 0.75 || activeDot.value === 3)
+const cardRenderState = computed(() => `${isDesktop.value ? 'desktop' : 'mobile'}-${cardShowing.value ? 'visible' : 'hidden'}`)
 
 const HOLO_CARDS = [
   { pct: '50%',  gene: 'TREMPER ALBINO', label: 'GENETICS / RESULT', status: 'HET / CONFIRMED',    left: '33%', top: '16%', rotateY: '-14deg', rotateX: '5deg',  delay: '0s',    srcDx: '29vw', srcDy: '12vh',  connSide: 'right', connAngle: '22deg' },
@@ -249,6 +250,7 @@ const holoCardStyle = (card) => {
     left: card.left, top: card.top,
     '--conn-angle': card.connAngle, '--delay': card.delay,
     transitionDelay: cardShowing.value ? card.delay : '0s',
+    opacity: cardShowing.value ? 1 : 0,
     transform: cardShowing.value
       ? `perspective(900px) rotateY(${card.rotateY}) rotateX(${card.rotateX}) scale(1)`
       : `perspective(900px) rotateY(${card.rotateY}) rotateX(${card.rotateX}) translateX(${card.srcDx}) translateY(${card.srcDy}) scale(0.04)`,
@@ -1045,7 +1047,7 @@ const geneTokens = computed(() => {
 .holo-layer {
   position: absolute;
   inset: 0;
-  z-index: 20;
+  z-index: 31;
   pointer-events: none;
 }
 
