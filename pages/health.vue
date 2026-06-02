@@ -184,7 +184,7 @@ const healthResult = computed(() => {
 .health-form-box { background: var(--card-bg); border: 1px solid var(--bd); border-radius: 12px; padding: 25px; display: flex; flex-direction: column; justify-content: center; gap: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
 .form-item { display: flex; flex-direction: column; }
 .health-label { font-size: 0.85rem; font-weight: 700; color: var(--pri); margin-bottom: 6px; letter-spacing: 1px; }
-.health-select { width: 100%; padding: 12px; background: rgba(128, 128, 128, 0.05); border: 1px solid var(--bd); color: var(--txt); border-radius: 8px; font-size: 0.95rem; font-weight: bold; cursor: pointer; transition: 0.3s; appearance: none; }
+.health-select { width: 100%; padding: 12px 36px 12px 12px; background: rgba(128, 128, 128, 0.05); border: 1px solid var(--bd); color: var(--txt); border-radius: 8px; font-size: 0.95rem; font-weight: bold; cursor: pointer; transition: 0.3s; appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23E8440A' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 12px center; }
 .health-select:focus { border-color: var(--pri); outline: none; box-shadow: 0 0 10px var(--pri-glow); }
 
 .c-green { color: #4ade80; } .bg-green { background-color: #4ade80; }

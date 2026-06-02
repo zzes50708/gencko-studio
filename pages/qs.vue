@@ -59,7 +59,7 @@ const resetQuiz = () => {
 <template>
     <div class="qs-container">
         <div v-if="!qsState.finished">
-            <div class="page-title">飼養前自我評估</div>
+            <h1 class="page-title">飼養前自我評估</h1>
             
             <!-- Progress -->
             <div class="qs-progress-area">
@@ -76,10 +76,10 @@ const resetQuiz = () => {
             <div class="qs-question-box" :key="qsState.step">
                 <div class="qs-question-text">{{ qsCurrentQ.text }}</div>
                 <div class="qs-options-grid">
-                    <div v-for="opt in qsCurrentQ.options" :key="opt.id" class="qs-option-btn" @click="selectOption(qsCurrentQ.id, opt.score)">
+                    <button type="button" v-for="opt in qsCurrentQ.options" :key="opt.id" class="qs-option-btn" @click="selectOption(qsCurrentQ.id, opt.score)">
                         <span class="qs-option-label">{{ opt.label }}</span>
                         <div class="qs-check-circle"></div>
-                    </div>
+                    </button>
                 </div>
             </div>
 
@@ -150,19 +150,21 @@ const resetQuiz = () => {
 }
 
 .qs-options-grid { display: flex; flex-direction: column; gap: 12px; }
-.qs-option-btn { 
-    width: 100%; 
-    text-align: left; 
-    padding: 15px; 
-    background: var(--card-bg); 
-    border: 1px solid var(--bd); 
-    border-radius: 12px; 
-    cursor: pointer; 
-    transition: 0.2s; 
-    display: flex; 
-    justify-content: space-between; 
-    align-items: center; 
-    color: var(--txt); 
+.qs-option-btn {
+    width: 100%;
+    text-align: left;
+    padding: 15px;
+    background: var(--card-bg);
+    border: 1px solid var(--bd);
+    border-radius: 12px;
+    cursor: pointer;
+    transition: 0.2s;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    color: var(--txt);
+    font-family: inherit;
+    font-size: inherit;
 }
 .qs-option-btn:hover { 
     border-color: var(--pri); 
@@ -252,13 +254,13 @@ const resetQuiz = () => {
     margin-bottom: 20px; 
     line-height: 1.4;
 }
-.qs-reset-btn { 
-    width: 100%; 
-    padding: 14px; 
-    background: var(--pri); 
-    color: #fff; 
-    border: none; 
-    border-radius: 12px; 
+.qs-reset-btn {
+    width: 100%;
+    padding: 14px;
+    background: var(--pri);
+    color: #fff;
+    border: none;
+    border-radius: var(--radius-md); 
     font-weight: bold; 
     font-size: 1.05rem; 
     cursor: pointer; 

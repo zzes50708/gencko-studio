@@ -178,18 +178,18 @@ const getMapLink = (h) => {
 
         <!-- 🌟 App-like 分段切換器 (新增歷史紀錄) -->
         <div class="segmented-tabs">
-            <div class="seg-tab" :class="{active: activeTab === 'wishlist'}" @click="activeTab = 'wishlist'">
+            <button type="button" class="seg-tab" :class="{active: activeTab === 'wishlist'}" @click="activeTab = 'wishlist'">
                 收藏 <span>{{ wishlistItems.length }}</span>
-            </div>
-            <div class="seg-tab" :class="{active: activeTab === 'history'}" @click="activeTab = 'history'">
+            </button>
+            <button type="button" class="seg-tab" :class="{active: activeTab === 'history'}" @click="activeTab = 'history'">
                 瀏覽 <span>{{ historyItems.length }}</span>
-            </div>
-            <div class="seg-tab" :class="{active: activeTab === 'hospitals'}" @click="activeTab = 'hospitals'">
+            </button>
+            <button type="button" class="seg-tab" :class="{active: activeTab === 'hospitals'}" @click="activeTab = 'hospitals'">
                 醫院 <span>{{ hospWishlistItems.length }}</span>
-            </div>
-            <div class="seg-tab" :class="{active: activeTab === 'bids'}" @click="activeTab = 'bids'">
+            </button>
+            <button type="button" class="seg-tab" :class="{active: activeTab === 'bids'}" @click="activeTab = 'bids'">
                 競標 <span v-if="store.currentUser">{{ myBids.length }}</span><span v-else>🔒</span>
-            </div>
+            </button>
         </div>
 
         <!-- 🌟 內容顯示區 -->
@@ -207,7 +207,7 @@ const getMapLink = (h) => {
                     <NuxtLink :to="`/product/${i.ID}`" class="card slim-card" v-for="i in wishlistItems" :key="i.ID" style="text-decoration:none; color:inherit;">
                         <div v-if="i.Status === 'Sold'" class="sold-stamp">SOLD</div>
                         <div style="position:absolute;top:5px;right:5px;z-index:10;">
-                            <span class="fav-btn active" @click.stop.prevent="toggleWishlist(i.ID)">❤</span>
+                            <button type="button" class="fav-btn active" @click.stop.prevent="toggleWishlist(i.ID)" aria-label="取消收藏">❤</button>
                         </div>
                         <div style="position:relative;">
                             <!-- 🌟 核心修正：NuxtImg 替換為原生 img -->
@@ -247,7 +247,7 @@ const getMapLink = (h) => {
                     <NuxtLink :to="`/product/${i.ID}`" class="card slim-card" v-for="i in historyItems" :key="`hist-${i.ID}`" style="text-decoration:none; color:inherit;">
                         <div v-if="i.Status === 'Sold'" class="sold-stamp">SOLD</div>
                         <div style="position:absolute;top:5px;right:5px;z-index:10;">
-                            <span class="fav-btn" :class="{active: store.wishlist.includes(i.ID)}" @click.stop.prevent="toggleWishlist(i.ID)">❤</span>
+                            <button type="button" class="fav-btn" :class="{active: store.wishlist.includes(i.ID)}" @click.stop.prevent="toggleWishlist(i.ID)" :aria-label="store.wishlist.includes(i.ID) ? '取消收藏' : '加入收藏'">❤</button>
                         </div>
                         <div style="position:relative;">
                             <!-- 🌟 核心修正：NuxtImg 替換為原生 img -->
@@ -448,23 +448,26 @@ const getMapLink = (h) => {
 }
 .segmented-tabs::-webkit-scrollbar { display: none; }
 
-.seg-tab { 
-    flex: 1; 
-    text-align: center; 
-    padding: 10px 0; 
-    border-radius: 25px; 
-    font-size: 0.9rem; 
-    font-weight: bold; 
-    color: var(--txt); 
+.seg-tab {
+    flex: 1;
+    text-align: center;
+    padding: 10px 0;
+    border-radius: 25px;
+    font-size: 0.9rem;
+    font-weight: bold;
+    color: var(--txt);
     opacity: 0.6;
-    cursor: pointer; 
-    transition: all 0.3s ease; 
-    display: flex; 
-    align-items: center; 
-    justify-content: center; 
-    gap: 6px; 
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
     white-space: nowrap;
     min-width: 80px;
+    background: transparent;
+    border: none;
+    font-family: inherit;
 }
 .seg-tab span { background: rgba(128,128,128,0.2); padding: 2px 6px; border-radius: 10px; font-size: 0.75rem; color: var(--txt); }
 .seg-tab.active { background: var(--pri); color: #fff; opacity: 1; box-shadow: 0 4px 10px rgba(255, 69, 0, 0.2); }
@@ -557,18 +560,22 @@ const getMapLink = (h) => {
     font-family: monospace; 
     border-radius: 4px; 
 }
-.hosp-call-btn { 
-    padding: 6px 12px; 
-    font-size: 0.7rem; 
-    font-weight: bold; 
-    text-transform: uppercase; 
-    letter-spacing: 1px; 
-    border: 1px solid var(--pri); 
-    color: var(--pri); 
-    text-decoration: none; 
-    transition: 0.2s; 
-    border-radius: 4px; 
+.hosp-call-btn {
+    padding: 10px 14px;
+    min-height: 44px;
+    font-size: 0.82rem;
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    border: 1px solid var(--pri);
+    color: var(--pri);
+    text-decoration: none;
+    transition: 0.2s;
+    border-radius: 6px;
     background: transparent;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
 }
 .hosp-call-btn:hover { background: var(--pri); color: #fff; }
 
@@ -604,6 +611,6 @@ const getMapLink = (h) => {
         padding-top: 10px; 
     }
     
-    .btn-hero { width: 100%; }
+    .btn-hero { width: 100%; max-width: 280px; }
 }
 </style>

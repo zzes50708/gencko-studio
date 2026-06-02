@@ -64,8 +64,8 @@ useHead({
         
         <!-- 🌟 App-like 分段切換器 -->
         <div class="segmented-control">
-            <div class="segment" :class="{active: geneSpecies === '豹紋守宮'}" @click="geneSpecies = '豹紋守宮'">豹紋守宮</div>
-            <div class="segment" :class="{active: geneSpecies === '肥尾守宮'}" @click="geneSpecies = '肥尾守宮'">肥尾守宮</div>
+            <button type="button" class="segment" :class="{active: geneSpecies === '豹紋守宮'}" @click="geneSpecies = '豹紋守宮'">豹紋守宮</button>
+            <button type="button" class="segment" :class="{active: geneSpecies === '肥尾守宮'}" @click="geneSpecies = '肥尾守宮'">肥尾守宮</button>
         </div>
 
         <div class="genes-content">
@@ -117,6 +117,9 @@ useHead({
     opacity: 0.6;
     cursor: pointer;
     transition: all 0.3s ease;
+    background: transparent;
+    border: none;
+    font-family: inherit;
 }
 
 .segment.active {
@@ -236,8 +239,9 @@ useHead({
         padding: 10px 12px;
         border-radius: 10px;
         min-height: 54px;
-        align-items: center; 
+        align-items: center;
     }
+    .g-cta { display: none; }
     
     .g-name {
         white-space: normal !important;

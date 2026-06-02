@@ -205,16 +205,16 @@ const formatWarningText = (text) => {
             </div>
         </div>
 
-        <!-- Mobile Dropdown Backdrop (Teleport 到 body，避免 stacking context 衝突) -->
-        <Teleport to="body">
-            <Transition name="sheet-fade">
-                <div
-                    v-if="calcActiveSelector"
-                    class="calc-dropdown-backdrop"
-                    @click="calcActiveSelector = null; calcExpandType = null; calcExpandGroup = null"
-                />
-            </Transition>
-        </Teleport>
+        <!-- Mobile Dropdown Backdrop -->
+        <!-- 根本原因：.cont { z-index:2 } 建立 stacking context，Teleport 反讓遮罩高於整個 .cont
+             修法：留在 .cont 內部，z-index 高於 bottom-nav(9999) 但低於 dropdown(2147483647) -->
+        <Transition name="sheet-fade">
+            <div
+                v-if="calcActiveSelector"
+                class="calc-dropdown-backdrop"
+                @click="calcActiveSelector = null; calcExpandType = null; calcExpandGroup = null"
+            />
+        </Transition>
 
         <div class="calc-parent-grid">
             <!-- Male Card -->
@@ -485,7 +485,7 @@ const formatWarningText = (text) => {
         position: fixed;
         inset: 0;
         background: rgba(0, 0, 0, 0.55);
-        z-index: 2147483646;
+        z-index: 100000;
         backdrop-filter: blur(2px);
         -webkit-backdrop-filter: blur(2px);
     }

@@ -91,10 +91,15 @@ const toggleQ = (key) => {
                     class="faq-item"
                     :class="{ active: activeIndex === `${activeCategory}-${idx}` }"
                 >
-                    <div class="faq-q" @click="toggleQ(`${activeCategory}-${idx}`)">
+                    <button
+                        type="button"
+                        class="faq-q"
+                        :aria-expanded="activeIndex === `${activeCategory}-${idx}`"
+                        @click="toggleQ(`${activeCategory}-${idx}`)"
+                    >
                         <span class="q-text">{{ q.title }}</span>
                         <span class="q-icon">{{ activeIndex === `${activeCategory}-${idx}` ? '▲' : '▼' }}</span>
-                    </div>
+                    </button>
                     <div class="faq-body-wrapper">
                         <div class="faq-body-inner">
                             <div class="faq-a" v-html="q.ans ? q.ans.replace(/\n/g, '<br>') : ''"></div>
@@ -161,7 +166,7 @@ const toggleQ = (key) => {
 .faq-item { background: var(--card-bg); border: 1px solid var(--bd); border-radius: 10px; overflow: hidden; transition: 0.25s; }
 .faq-item.active { border-color: var(--pri); box-shadow: 0 4px 15px var(--pri-glow-soft); }
 
-.faq-q { padding: 16px 18px; cursor: pointer; font-weight: bold; display: flex; justify-content: space-between; align-items: center; color: var(--txt); font-size: 1rem; transition: 0.2s; }
+.faq-q { width: 100%; padding: 16px 18px; cursor: pointer; font-weight: bold; display: flex; justify-content: space-between; align-items: center; color: var(--txt); font-size: 1rem; transition: 0.2s; background: transparent; border: none; font-family: inherit; text-align: left; }
 .faq-item.active .faq-q { background: rgba(232,68,10,0.05); color: var(--pri); }
 .q-text { flex: 1; padding-right: 12px; line-height: 1.4; }
 .q-icon { font-size: 0.75rem; opacity: 0.5; transition: 0.2s; flex-shrink: 0; }

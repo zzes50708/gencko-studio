@@ -58,8 +58,8 @@ useHead({
         <h1 class="page-title dt-only">種群展示</h1>
         
         <div class="tabs">
-            <div class="tab" :class="{active: breederSp === '豹紋守宮'}" @click="breederSp = '豹紋守宮'; breederGender = '全部'">豹紋守宮</div>
-            <div class="tab" :class="{active: breederSp === '肥尾守宮'}" @click="breederSp = '肥尾守宮'; breederGender = '全部'">肥尾守宮</div>
+            <button type="button" class="tab" :class="{active: breederSp === '豹紋守宮'}" @click="breederSp = '豹紋守宮'; breederGender = '全部'">豹紋守宮</button>
+            <button type="button" class="tab" :class="{active: breederSp === '肥尾守宮'}" @click="breederSp = '肥尾守宮'; breederGender = '全部'">肥尾守宮</button>
         </div>
 
         <!-- 性別篩選 -->
@@ -81,7 +81,7 @@ useHead({
 
         <!-- Breeders Grid (Photo Grid) -->
         <div class="grid photo-grid" v-else>
-            <div class="card" v-for="i in breedersList" :key="i.ID" @click="store.openLightbox(i)">
+            <div class="card" v-for="i in breedersList" :key="i.ID" role="button" tabindex="0" :aria-label="`查看 ${i.Morph} 大圖`" @click="store.openLightbox(i)" @keydown.enter.space.prevent="store.openLightbox(i)">
                 <!-- 🌟 核心修正：將 NuxtImg 替換為原生 img -->
                 <img 
                     v-if="i.ImageURL"
@@ -125,17 +125,22 @@ useHead({
     overflow: hidden; 
     border: 1px solid var(--bd); 
 }
-.tab { 
-    flex: 1; 
-    padding: 12px; 
-    text-align: center; 
-    cursor: pointer; 
-    color: var(--txt); 
+.tab {
+    flex: 1;
+    padding: 12px;
+    text-align: center;
+    cursor: pointer;
+    color: var(--txt);
     opacity: 0.6;
-    font-weight: 700; 
-    font-size: 1rem; 
-    transition: 0.3s; 
-    border-right: 1px solid var(--bd); 
+    font-weight: 700;
+    font-size: 1rem;
+    transition: 0.3s;
+    border-right: 1px solid var(--bd);
+    background: transparent;
+    border-top: none;
+    border-bottom: none;
+    border-left: none;
+    font-family: inherit;
 }
 .tab:last-child { 
     border-right: none; 
