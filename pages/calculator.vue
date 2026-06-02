@@ -205,17 +205,6 @@ const formatWarningText = (text) => {
             </div>
         </div>
 
-        <!-- Mobile Dropdown Backdrop -->
-        <!-- 根本原因：.cont { z-index:2 } 建立 stacking context，Teleport 反讓遮罩高於整個 .cont
-             修法：留在 .cont 內部，z-index 高於 bottom-nav(9999) 但低於 dropdown(2147483647) -->
-        <Transition name="sheet-fade">
-            <div
-                v-if="calcActiveSelector"
-                class="calc-dropdown-backdrop"
-                @click="calcActiveSelector = null; calcExpandType = null; calcExpandGroup = null"
-            />
-        </Transition>
-
         <div class="calc-parent-grid">
             <!-- Male Card -->
             <div class="calc-parent-card" :style="{ zIndex: calcActiveSelector === 'Male' ? 101 : 1 }">
@@ -475,23 +464,6 @@ const formatWarningText = (text) => {
   全面導入 CSS 變數，徹底移除所有 :global(body.day-mode) 與 !important 的強制覆寫。
 */
 .calc-container { max-width: 1100px; margin: 0 auto; position: relative; padding-top: 15px; }
-
-.calc-dropdown-backdrop {
-    display: none;
-}
-@media (max-width: 768px) {
-    .calc-dropdown-backdrop {
-        display: block;
-        position: fixed;
-        inset: 0;
-        background: rgba(0, 0, 0, 0.55);
-        z-index: 100000;
-        backdrop-filter: blur(2px);
-        -webkit-backdrop-filter: blur(2px);
-    }
-}
-.sheet-fade-enter-active, .sheet-fade-leave-active { transition: opacity 0.22s ease; }
-.sheet-fade-enter-from, .sheet-fade-leave-to { opacity: 0; }
 
 .calc-header { text-align: center; margin-bottom: 20px; }
 .calc-top-desc { text-align: center; color: var(--pri); font-weight: 700; margin-bottom: 4px; font-size: 0.95rem; letter-spacing: 1px; }
