@@ -45,10 +45,6 @@ watch(
 <template>
   <div>
     <nav class="bottom-nav" aria-label="底部導覽（上拉式選單）">
-      <NuxtLink to="/" class="nav-item" :class="{ active: isServiceActive }" aria-label="品牌服務">
-        <span class="label">品牌服務</span>
-      </NuxtLink>
-
       <button type="button" class="nav-item nav-item-btn" :class="{ active: isArticlesActive }" @click="openSheet('articles')" aria-label="專欄文章">
         <span class="label">專欄文章 <span class="sheet-caret" aria-hidden="true">▴</span></span>
       </button>

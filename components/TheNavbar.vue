@@ -32,10 +32,6 @@ const isArticlesActive = computed(() => ['articles', 'care', 'faq'].includes(pro
 
                 <!-- Desktop Menu -->
                 <div class="dt-nav">
-                    <NuxtLink to="/about" class="nav-item-dt" :class="{active: curTab === 'about'}">
-                        品牌服務
-                    </NuxtLink>
-
                     <div class="nav-item-dt dropdown-hover" :class="{active: isArticlesActive}">
                         <NuxtLink to="/articles" class="nav-item-dt-link" aria-label="專欄文章">專欄文章</NuxtLink> ▾
                         <div class="dt-dropdown">
