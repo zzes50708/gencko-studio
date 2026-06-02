@@ -1,4 +1,4 @@
-import { CALC_SPECIES, CALC_TYPES, ZYG, CALC_COMBO_RULES } from './genes.js';
+import { CALC_TYPES, ZYG } from './genes.js';
 
 // --- 輔助函式：取得機率分數顯示 ---
 export function getProbFraction(prob) {
@@ -9,10 +9,20 @@ export function getProbFraction(prob) {
 }
 
 // --- 核心運算函式 ---
-export function calculateGenetics(species, maleGenes, femaleGenes, defs) {
+// @param speciesConfig {Object} 物種配置，包含 genes, comboRules, checks, warnings
+// @param maleGenes {Array} 公代基因陣列
+// @param femaleGenes {Array} 母代基因陣列
+// @returns {Object|null} 計算結果或 null
+export function calculateGenetics(speciesConfig, maleGenes, femaleGenes) {
     if (maleGenes.length === 0 && femaleGenes.length === 0) {
         return null;
     }
+
+    // 從 speciesConfig 中提取數據
+    const defs = speciesConfig.genes;
+    const comboRules = speciesConfig.comboRules || [];
+    const checks = speciesConfig.checks || {};
+    const speciesWarnings = speciesConfig.warnings || [];
 
     // 展開 Combo 基因
     const expand = (list) => {
@@ -41,16 +51,14 @@ export function calculateGenetics(species, maleGenes, femaleGenes, defs) {
     let warning = '';
     let notices = [ ];
 
-    if(allGenes.some(g => g.geneId === 'lemonfrost')) warning += "檸檬霜 (Lemon Frost) 易導致腫瘤。\n";
-    if(allGenes.some(g => g.geneId === 'ndbe')) warning += "慾望黑眼 (NDBE) 母體不孕且子代易眼部萎縮。\n";
-    if(allGenes.some(g => g.geneId === 'enigman')) notices.push("謎 (Enigma) 可能伴隨神經症狀 (ES)。");
-    if(allGenes.some(g => g.geneId === 'whiteandyellow')) notices.push("白黃 (W&Y) 可能伴隨輕微神經症狀。");
-    
-    // 🌟 修正 Bug：超級立可白致死基因應檢查雙親 (allGenes)，而非僅檢查母代
-    const hasSuperWhiteout = allGenes.some(g => g.geneId === 'aft_whiteout' && g.zygosity === ZYG.SUP);
-    if(hasSuperWhiteout) warning += "超級立可白為致死基因。\n";
+    // 從物種配置讀取警告
+    speciesWarnings.forEach(w => {
+        if(allGenes.some(g => g.geneId === w.check)) {
+            warning += w.message;
+        }
+    });
 
-    // 新增：檢查是否存在多遺傳基因，並顯示警告
+    // 多遺傳基因警告（通用邏輯）
     const hasPolygenicGene = allGenes.some(g => {
         const def = defs.find(d => d.id === g.geneId);
         return def && (def.type === CALC_TYPES.POLY || def.type === CALC_TYPES.BLOOD);
@@ -59,26 +67,26 @@ export function calculateGenetics(species, maleGenes, femaleGenes, defs) {
         warning += "含有多遺傳基因之品系需視表現而定。\n";
     }
 
-    if (species === CALC_SPECIES.LG) {
-        const albinoTypes =[ 'tremper', 'bell', 'rainwater' ];
-        const getAlbinos = (list) => {
-             const rawIds = list.map(g => g.geneId);
-             const expandedIds = expand(list).map(g => g.geneId);
-             return new Set([ ...rawIds, ...expandedIds ].filter(id => albinoTypes.includes(id)));
-        };
-        const mAlbinos = getAlbinos(maleGenes);
-        const fAlbinos = getAlbinos(femaleGenes);
-        const union = new Set([ ...mAlbinos, ...fAlbinos ]);
-        if(union.size > 1) {
-             warning += "不同白化基因 (川普/貝爾/雨水) 互配，子代將不表現白化且造成基因混亂。\n";
+    // 執行物種特定的檢查函數
+    if (checks.validateAlbinos) {
+        const albinoCheck = checks.validateAlbinos(allGenes, defs);
+        if (albinoCheck && albinoCheck.hasWarning) {
+            warning += albinoCheck.warning;
         }
     }
 
-    if (species === CALC_SPECIES.AFT) {
-        const fHasCaramel = femaleGenes.some(g => g.geneId === 'aft_caramel');
-        const fHasGhost = femaleGenes.some(g => g.geneId === 'aft_ghost');
-        if(fHasCaramel) warning += "母焦糖 (Caramel) 會有不孕問題。\n";
-        if(fHasGhost) warning += "母幽靈 (Ghost) 會有不孕問題。\n";
+    if (checks.validateCaramelFemale) {
+        const caramelCheck = checks.validateCaramelFemale(femaleGenes);
+        if (caramelCheck && caramelCheck.hasWarning) {
+            warning += caramelCheck.warning;
+        }
+    }
+
+    if (checks.validateGhostFemale) {
+        const ghostCheck = checks.validateGhostFemale(femaleGenes);
+        if (ghostCheck && ghostCheck.hasWarning) {
+            warning += ghostCheck.warning;
+        }
     }
 
     // 2. 孟德爾遺傳計算
@@ -196,7 +204,7 @@ export function calculateGenetics(species, maleGenes, femaleGenes, defs) {
         const descParts = [ ];
         const consumed = new Set();
 
-        CALC_COMBO_RULES.forEach(rule => {
+        comboRules.forEach(rule => {
             const met = rule.required.every(r => {
                 const match = visualGenes.find(a => a.geneId === r.id);
                 if(!match || consumed.has(match.geneId)) return false;
@@ -335,15 +343,36 @@ export function calculateGenetics(species, maleGenes, femaleGenes, defs) {
             fullLabel += ` (${extraInfo.join(', ')})`;
         }
 
+        // 計算「完整表現隱性基因數」用於推薦排序
+        // 完整表現 = 隱性基因（REC）中，zygosity === ZYG.VIS 的個數
+        let completeExpressionCount = 0;
+        raw.forEach(r => {
+            r.gens.forEach(g => {
+                const gDef = defs.find(d => d.id === g.geneId);
+                if(gDef && gDef.type === CALC_TYPES.REC && g.zygosity === ZYG.VIS) {
+                    completeExpressionCount++;
+                }
+            });
+        });
+        completeExpressionCount = completeExpressionCount / raw.length;  // 平均值
+
         finalOutcomes.push({
             description: name,
             fullLabel: fullLabel,
             prob: prob,
+            completeExpressionCount: completeExpressionCount,
             gens: [ ]
         });
     });
 
-    finalOutcomes.sort((a,b) => b.prob - a.prob);
+    // 排序：首先按「完整表現隱性基因數」降序（表現最多的優先）
+    // 其次按「概率」降序
+    finalOutcomes.sort((a,b) => {
+        if(a.completeExpressionCount !== b.completeExpressionCount) {
+            return b.completeExpressionCount - a.completeExpressionCount;
+        }
+        return b.prob - a.prob;
+    });
 
     return {
         totalCombos: finalOutcomes.length,

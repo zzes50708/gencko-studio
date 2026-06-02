@@ -2,8 +2,9 @@
 import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
 import { useHead } from '#imports'
 import { useMainStore } from '~/stores/useMainStore'
-import { ZYG, CALC_TYPES, GENE_DEFINITIONS } from '~/utils/genes.js'
+import { ZYG, CALC_TYPES } from '~/utils/genes.js'
 import { calculateGenetics, getProbFraction } from '~/utils/calcUtils.js'
+import { getSpeciesConfig } from '~/utils/genetics/index.js'
 
 const store = useMainStore()
 
@@ -56,7 +57,15 @@ const calcActiveSelector = ref(null)
 const calcExpandType = ref(null)
 const calcExpandGroup = ref(null)
 
-const calcCurrentDefs = computed(() => GENE_DEFINITIONS[calcSp.value] || [ ])
+// 🎨 UX 重構：操作模式、搜索、反向流程
+const calcMode = ref('forward') // 'forward' | 'reverse' | 'recommend'
+const geneSearchQuery = ref('')
+const selectedOutcomeForReverse = ref(null)
+const reverseParentsPanelOpen = ref(false)
+
+const currentSpeciesConfig = computed(() => getSpeciesConfig(calcSp.value))
+
+const calcCurrentDefs = computed(() => currentSpeciesConfig.value?.genes || [ ])
 
 const calcGroupedGenes = computed(() => {
     const groups = {}
@@ -69,6 +78,46 @@ const calcGroupedGenes = computed(() => {
 
 const calcTypeOrder = computed(() =>[ CALC_TYPES.DOM, CALC_TYPES.REC, CALC_TYPES.CODOM, CALC_TYPES.POLY, CALC_TYPES.COMBO, CALC_TYPES.BLOOD ])
 const calcComboGroups = computed(() =>[ '川普白化', '貝爾白化', '雨水白化', '無白化' ])
+
+// 🎨 UX 重構：基因搜索過濾
+const filteredGenesBySearch = computed(() => {
+    if (!geneSearchQuery.value.trim()) return calcGroupedGenes
+
+    const query = geneSearchQuery.value.toLowerCase()
+    const filtered = {}
+
+    Object.keys(calcGroupedGenes).forEach(type => {
+        const typeGenes = calcGroupedGenes[type].filter(g => {
+            const name = g.name.toLowerCase()
+            const id = g.id.toLowerCase()
+            return name.includes(query) || id.includes(query)
+        })
+        if (typeGenes.length > 0) {
+            filtered[type] = typeGenes
+        }
+    })
+
+    return filtered
+})
+
+// 🎨 UX 重構：結果按層級分組
+const outcomeTiers = computed(() => {
+    if (!calcResult.value || !calcResult.value.outcomes) {
+        return { tier1: [], tier2: [], tier3: [] }
+    }
+
+    const tier1 = calcResult.value.outcomes.filter(o => o.completeExpressionCount >= 2.0)
+    const tier2 = calcResult.value.outcomes.filter(o => o.completeExpressionCount >= 1.0 && o.completeExpressionCount < 2.0)
+    const tier3 = calcResult.value.outcomes.filter(o => o.completeExpressionCount < 1.0)
+
+    return { tier1, tier2, tier3 }
+})
+
+// 🎨 UX 重構：推薦模式（只顯示前3-5個結果）
+const recommendedOutcomes = computed(() => {
+    if (!calcResult.value) return []
+    return calcResult.value.outcomes.slice(0, 5)
+})
 
 const handleGlobalClick = (e) => {
     if (calcActiveSelector.value) {
@@ -96,10 +145,9 @@ const calcRun = () => {
         return
     }
     calcResult.value = calculateGenetics(
-        calcSp.value, 
-        JSON.parse(JSON.stringify(calcMale.value)), 
-        JSON.parse(JSON.stringify(calcFemale.value)), 
-        calcCurrentDefs.value
+        currentSpeciesConfig.value,
+        JSON.parse(JSON.stringify(calcMale.value)),
+        JSON.parse(JSON.stringify(calcFemale.value))
     )
 }
 
@@ -110,6 +158,9 @@ watch(calcSp, () => {
     calcFemale.value = [ ]
     calcResult.value = null
     calcActiveSelector.value = null
+    geneSearchQuery.value = ''
+    selectedOutcomeForReverse.value = null
+    calcMode.value = 'forward'
 })
 
 const calcToggleSelector = (sex) => {
@@ -185,6 +236,19 @@ const formatWarningText = (text) => {
     if (!text) return ''
     return text.replace(/Lethal/gi, '致死').replace(/Super/gi, '超級')
 }
+
+// 🎨 UX 重構：反向模式輔助方法
+const reverseSelectOutcome = (outcome) => {
+    selectedOutcomeForReverse.value = outcome
+    reverseParentsPanelOpen.value = true
+}
+
+const closeReversePanel = () => {
+    reverseParentsPanelOpen.value = false
+    setTimeout(() => {
+        selectedOutcomeForReverse.value = null
+    }, 300)
+}
 </script>
 
 <template>
@@ -199,13 +263,106 @@ const formatWarningText = (text) => {
                 <div class="tab" :class="{active: calcSp === '肥尾守宮'}" role="button" tabindex="0" @click="calcSp = '肥尾守宮'" @keydown.enter.space.prevent="calcSp = '肥尾守宮'">肥尾守宮</div>
             </div>
 
+            <!-- 🎨 UX 重構：操作模式選擇 -->
+            <div class="calc-mode-selector">
+                <button
+                    :class="['calc-mode-btn', {active: calcMode === 'forward'}]"
+                    @click="calcMode = 'forward'">
+                    📥 正向
+                </button>
+                <button
+                    :class="['calc-mode-btn', {active: calcMode === 'reverse'}]"
+                    @click="calcMode = 'reverse'">
+                    📤 反向
+                </button>
+                <button
+                    :class="['calc-mode-btn', {active: calcMode === 'recommend'}]"
+                    @click="calcMode = 'recommend'">
+                    ⭐ 推薦
+                </button>
+            </div>
+
             <div class="calc-helper-btns">
                 <button type="button" class="calc-help-btn" @click="calcActiveInfo = 'types'; calcModalOpen = true">🎓 基因觀念</button>
                 <button type="button" class="calc-help-btn" @click="calcActiveInfo = 'poly'; calcModalOpen = true">⚡ 選育介紹</button>
             </div>
         </div>
 
-        <div class="calc-parent-grid">
+        <!-- 🎨 UX 重構：條件渲染不同模式 -->
+        <div v-if="calcMode === 'reverse'" class="calc-reverse-mode">
+            <div class="calc-outcome-preview">
+                <h3>🎯 可能的子代表型</h3>
+                <p style="font-size:0.85rem; color:var(--txt); opacity:0.6; margin:10px 0;">選擇想要的表型，查看當前親代配置是否能產生</p>
+
+                <div v-if="!calcResult" style="text-align:center; padding:20px; color:var(--txt); opacity:0.5;">
+                    <p>尚未設置親代，請先切換到「正向」模式進行計算</p>
+                </div>
+                <div v-else class="calc-outcome-list">
+                    <div
+                        v-for="(outcome, idx) in calcResult.outcomes"
+                        :key="idx"
+                        :class="['calc-outcome-preview-item', 'tier-' + (outcome.completeExpressionCount >= 2.0 ? '1' : outcome.completeExpressionCount >= 1.0 ? '2' : '3'), {selected: selectedOutcomeForReverse && selectedOutcomeForReverse.description === outcome.description}]"
+                        @click="reverseSelectOutcome(outcome)">
+                        <div style="display:flex; justify-content:space-between; align-items:center; width:100%;">
+                            <div style="flex:1; overflow:hidden;">
+                                <div style="font-weight:bold; white-space:normal; word-break:break-word;">{{ outcome.description }}</div>
+                                <div style="font-size:0.75rem; color:var(--txt); opacity:0.6; margin-top:3px;">
+                                    完整表現: {{ outcome.completeExpressionCount.toFixed(1) }} | 機率: {{ Math.round(outcome.prob * 100) }}%
+                                </div>
+                            </div>
+                            <span style="margin-left:10px; color:var(--pri); font-size:1.2rem; flex-shrink:0;">→</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 🎨 UX 重構：反向模式 - 親代推薦面板 -->
+            <Transition name="panel-anim">
+                <div v-if="reverseParentsPanelOpen && selectedOutcomeForReverse" class="calc-reverse-parents-panel">
+                    <div class="calc-reverse-panel-header">
+                        <div>
+                            <h3 style="margin:0; color:var(--pri); font-weight:900;">{{ selectedOutcomeForReverse.description }}</h3>
+                            <p style="margin:5px 0 0 0; font-size:0.85rem; color:var(--txt); opacity:0.6;">
+                                完整表現隱性基因數: {{ selectedOutcomeForReverse.completeExpressionCount.toFixed(1) }}
+                                | 出現機率: {{ Math.round(selectedOutcomeForReverse.prob * 100) }}%
+                            </p>
+                        </div>
+                        <button class="calc-reverse-close" @click="closeReversePanel">✕</button>
+                    </div>
+
+                    <div class="calc-reverse-panel-content">
+                        <div style="background:rgba(255,69,0,0.08); border-left:4px solid var(--pri); padding:15px; border-radius:6px; margin-bottom:20px;">
+                            <div style="font-weight:bold; color:var(--pri); margin-bottom:8px;">✅ 當前親代設置可以產生此表型</div>
+                            <div style="font-size:0.85rem; color:var(--txt); opacity:0.8;">
+                                <div><strong>父代:</strong> {{ calcMale.length === 0 ? '未設置' : calcMale.map(g => calcCurrentDefs.find(d => d.id === g.geneId)?.name || '').join(' / ') }}</div>
+                                <div style="margin-top:5px;"><strong>母代:</strong> {{ calcFemale.length === 0 ? '未設置' : calcFemale.map(g => calcCurrentDefs.find(d => d.id === g.geneId)?.name || '').join(' / ') }}</div>
+                            </div>
+                        </div>
+
+                        <div style="padding:15px; background:var(--card-bg); border:1px solid var(--bd); border-radius:6px;">
+                            <div style="font-weight:bold; color:var(--txt); margin-bottom:10px;">📊 此表型詳情</div>
+                            <div style="font-size:0.85rem; color:var(--txt); opacity:0.8; line-height:1.6;">
+                                <div><strong>完整表型名稱:</strong> {{ selectedOutcomeForReverse.fullLabel }}</div>
+                                <div style="margin-top:8px;"><strong>隱性基因完整表現:</strong></div>
+                                <div style="margin-left:15px; margin-top:3px; font-size:0.8rem; opacity:0.7;">
+                                    {{ selectedOutcomeForReverse.completeExpressionCount >= 2.0 ? '⭐⭐ 最高價值（隱性基因完整表現最多）' : selectedOutcomeForReverse.completeExpressionCount >= 1.0 ? '⭐ 中等價值' : '○ 無隱性基因或部分表現' }}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div style="margin-top:15px; padding:15px; background:rgba(255,193,7,0.05); border-left:4px solid #ffc107; border-radius:6px;">
+                            <div style="font-weight:bold; color:var(--txt); margin-bottom:8px;">💡 提示</div>
+                            <p style="margin:0; font-size:0.85rem; color:var(--txt); opacity:0.8;">
+                                切換回「正向」模式可調整親代配置。如果想嘗試不同的親代組合，請切換模式並調整選擇。
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </Transition>
+        </div>
+
+        <!-- 正向/推薦模式：親代設定 -->
+        <div v-else class="calc-parent-grid">
             <!-- Male Card -->
             <div class="calc-parent-card" :style="{ zIndex: calcActiveSelector === 'Male' ? 101 : 1 }">
                 <div class="calc-p-header calc-sex-m calc-mobile-trigger" @click.stop="calcToggleSelector('Male')">
@@ -227,23 +384,31 @@ const formatWarningText = (text) => {
                                     <span @click="calcActiveSelector = null" class="mobile-close-x">✕</span>
                                 </div>
 
+                                <!-- 🎨 UX 重構：基因搜索框 -->
+                                <div class="calc-gene-search">
+                                    <input
+                                        type="text"
+                                        placeholder="搜索基因... (如:橘化、日蝕)"
+                                        v-model="geneSearchQuery"
+                                        @input="$event.stopPropagation()">
+                                </div>
+
                                 <div v-for="type in calcTypeOrder" :key="type">
-                                    <div v-if="calcGroupedGenes[type]" class="calc-dd-group-btn" :class="{active: calcExpandType === type}" @click="calcToggleType(type)">
+                                    <div v-if="filteredGenesBySearch[type]" class="calc-dd-group-btn" :class="{active: calcExpandType === type}" @click="calcToggleType(type)">
                                         {{ type }} <span>></span>
                                     </div>
-                                    
+
                                     <Transition name="slide-anim">
                                         <div v-if="calcExpandType === type" class="calc-dd-sub">
                                             <template v-if="type === '品系'">
                                                 <div v-for="group in calcComboGroups" :key="group">
                                                     <div class="calc-dd-combo-group" @click.stop="calcToggleComboGroup(group)">📁 {{ group }}</div>
-                                                    
+
                                                     <Transition name="slide-anim">
                                                         <div v-if="calcExpandGroup === group">
-                                                            <!-- 🌟 修正：補上 :key="g.id" -->
-                                                            <div v-for="g in calcGroupedGenes[type].filter(x => x.group === group && x.id !== 'normal' && x.id !== 'aft_normal')" 
+                                                            <div v-for="g in filteredGenesBySearch[type]?.filter(x => x.group === group && x.id !== 'normal' && x.id !== 'aft_normal') || []"
                                                                 :key="g.id"
-                                                                class="calc-dd-item" 
+                                                                class="calc-dd-item"
                                                                 :class="{disabled: calcIsGeneDisabled(g.id, 'Male')}"
                                                                 @click.stop="!calcIsGeneDisabled(g.id, 'Male') && calcAddGene(g.id, 'Male')">
                                                                 {{ g.name }} <span v-if="calcIsGeneDisabled(g.id, 'Male')" style="color:var(--pri)">✓</span>
@@ -253,8 +418,7 @@ const formatWarningText = (text) => {
                                                 </div>
                                             </template>
                                             <template v-else>
-                                                <!-- 🌟 修正：補上 :key="g.id" -->
-                                                <div v-for="g in calcGroupedGenes[type].filter(x => x.id !== 'normal' && x.id !== 'aft_normal')" 
+                                                <div v-for="g in filteredGenesBySearch[type]?.filter(x => x.id !== 'normal' && x.id !== 'aft_normal') || []"
                                                     :key="g.id"
                                                     class="calc-dd-item"
                                                     :class="{disabled: calcIsGeneDisabled(g.id, 'Male')}"
@@ -319,23 +483,31 @@ const formatWarningText = (text) => {
                                     <span @click="calcActiveSelector = null" class="mobile-close-x">✕</span>
                                 </div>
 
+                                <!-- 🎨 UX 重構：基因搜索框 -->
+                                <div class="calc-gene-search">
+                                    <input
+                                        type="text"
+                                        placeholder="搜索基因... (如:橘化、日蝕)"
+                                        v-model="geneSearchQuery"
+                                        @input="$event.stopPropagation()">
+                                </div>
+
                                 <div v-for="type in calcTypeOrder" :key="type">
-                                    <div v-if="calcGroupedGenes[type]" class="calc-dd-group-btn" :class="{active: calcExpandType === type}" @click="calcToggleType(type)">
+                                    <div v-if="filteredGenesBySearch[type]" class="calc-dd-group-btn" :class="{active: calcExpandType === type}" @click="calcToggleType(type)">
                                         {{ type }} <span>></span>
                                     </div>
-                                    
+
                                     <Transition name="slide-anim">
                                         <div v-if="calcExpandType === type" class="calc-dd-sub">
                                             <template v-if="type === '品系'">
                                                 <div v-for="group in calcComboGroups" :key="group">
                                                     <div class="calc-dd-combo-group" @click.stop="calcToggleComboGroup(group)">📁 {{ group }}</div>
-                                                    
+
                                                     <Transition name="slide-anim">
                                                         <div v-if="calcExpandGroup === group">
-                                                            <!-- 🌟 修正：補上 :key="g.id" -->
-                                                            <div v-for="g in calcGroupedGenes[type].filter(x => x.group === group && x.id !== 'normal' && x.id !== 'aft_normal')" 
+                                                            <div v-for="g in filteredGenesBySearch[type]?.filter(x => x.group === group && x.id !== 'normal' && x.id !== 'aft_normal') || []"
                                                                 :key="g.id"
-                                                                class="calc-dd-item" 
+                                                                class="calc-dd-item"
                                                                 :class="{disabled: calcIsGeneDisabled(g.id, 'Female')}"
                                                                 @click.stop="!calcIsGeneDisabled(g.id, 'Female') && calcAddGene(g.id, 'Female')">
                                                                 {{ g.name }} <span v-if="calcIsGeneDisabled(g.id, 'Female')" style="color:var(--pri)">✓</span>
@@ -345,8 +517,7 @@ const formatWarningText = (text) => {
                                                 </div>
                                             </template>
                                             <template v-else>
-                                                <!-- 🌟 修正：補上 :key="g.id" -->
-                                                <div v-for="g in calcGroupedGenes[type].filter(x => x.id !== 'normal' && x.id !== 'aft_normal')" 
+                                                <div v-for="g in filteredGenesBySearch[type]?.filter(x => x.id !== 'normal' && x.id !== 'aft_normal') || []"
                                                     :key="g.id"
                                                     class="calc-dd-item"
                                                     :class="{disabled: calcIsGeneDisabled(g.id, 'Female')}"
@@ -391,8 +562,8 @@ const formatWarningText = (text) => {
             </div>
         </div>
 
-        <!-- Results -->
-        <div v-if="calcResult" class="calc-result-area">
+        <!-- 🎨 UX 重構：結果展示（支持層級和推薦模式） -->
+        <div v-if="calcResult && calcMode !== 'reverse'" class="calc-result-area">
             <div class="calc-res-header">
                 <h2 class="calc-res-title">預測結果</h2>
                 <div class="calc-res-count">組合數: {{ calcResult.totalCombos }}</div>
@@ -410,15 +581,115 @@ const formatWarningText = (text) => {
                 </div>
             </div>
 
-            <div class="calc-res-card" v-for="(o, idx) in calcResult.outcomes" :key="idx" :class="{lethal: o.description && o.description.includes('致死')}">
-                <div class="calc-prob-box">
-                    <div class="calc-prob-val">{{ Math.round(o.prob * 100) }}<small style="font-size:0.8rem">%</small></div>
-                    <div class="calc-prob-sub" style="font-size:0.75rem;color:#888;font-family:monospace;margin-top:2px;" v-if="o.prob < 0.99">
-                        {{ getProbFraction(o.prob) }}
+            <!-- 推薦模式：只顯示前5個 -->
+            <div v-if="calcMode === 'recommend'">
+                <div class="calc-results-section">
+                    <h3 style="color:var(--pri); font-weight:900; margin-bottom:15px;">⭐ 推薦結果 (前{{ recommendedOutcomes.length }}個)</h3>
+                    <div class="calc-res-card-grid">
+                        <div
+                            v-for="(o, idx) in recommendedOutcomes"
+                            :key="idx"
+                            :class="['calc-res-card', 'tier-' + (o.completeExpressionCount >= 2.0 ? '1' : o.completeExpressionCount >= 1.0 ? '2' : '3'), {lethal: o.description && o.description.includes('致死')}]">
+                            <div class="calc-prob-box">
+                                <div class="calc-prob-val">{{ Math.round(o.prob * 100) }}<small style="font-size:0.8rem">%</small></div>
+                                <div class="calc-prob-sub" style="font-size:0.75rem;color:#888;font-family:monospace;margin-top:2px;" v-if="o.prob < 0.99">
+                                    {{ getProbFraction(o.prob) }}
+                                </div>
+                            </div>
+                            <div class="calc-res-info" style="display:flex; align-items:center;">
+                                <div class="calc-res-name" style="margin:0; line-height:1.4;" v-html="formatResultText(o.fullLabel)"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <details style="margin-top:20px;">
+                        <summary style="cursor:pointer; color:var(--txt); opacity:0.6; font-weight:700;">查看所有結果 ({{ calcResult.totalCombos }}個)</summary>
+                        <div style="margin-top:15px;">
+                            <div
+                                v-for="(o, idx) in calcResult.outcomes"
+                                :key="idx"
+                                :class="['calc-res-card', 'tier-' + (o.completeExpressionCount >= 2.0 ? '1' : o.completeExpressionCount >= 1.0 ? '2' : '3'), {lethal: o.description && o.description.includes('致死')}]">
+                                <div class="calc-prob-box">
+                                    <div class="calc-prob-val">{{ Math.round(o.prob * 100) }}<small style="font-size:0.8rem">%</small></div>
+                                    <div class="calc-prob-sub" style="font-size:0.75rem;color:#888;font-family:monospace;margin-top:2px;" v-if="o.prob < 0.99">
+                                        {{ getProbFraction(o.prob) }}
+                                    </div>
+                                </div>
+                                <div class="calc-res-info" style="display:flex; align-items:center;">
+                                    <div class="calc-res-name" style="margin:0; line-height:1.4;" v-html="formatResultText(o.fullLabel)"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </details>
+                </div>
+            </div>
+
+            <!-- 正向模式：層級分組 -->
+            <div v-else class="calc-results-grouped">
+                <!-- Tier 1: 高優先級 -->
+                <div v-if="outcomeTiers.tier1.length" class="calc-results-tier-1">
+                    <h3 style="color:var(--pri); font-weight:900; margin-bottom:15px;">⭐ 推薦結果</h3>
+                    <div class="calc-res-card-grid">
+                        <div
+                            v-for="(o, idx) in outcomeTiers.tier1"
+                            :key="idx"
+                            :class="['calc-res-card', 'tier-1', {lethal: o.description && o.description.includes('致死')}]">
+                            <div class="calc-prob-box">
+                                <div class="calc-prob-val">{{ Math.round(o.prob * 100) }}<small style="font-size:0.8rem">%</small></div>
+                                <div class="calc-prob-sub" style="font-size:0.75rem;color:#888;font-family:monospace;margin-top:2px;" v-if="o.prob < 0.99">
+                                    {{ getProbFraction(o.prob) }}
+                                </div>
+                            </div>
+                            <div class="calc-res-info" style="display:flex; align-items:center;">
+                                <div class="calc-res-name" style="margin:0; line-height:1.4;" v-html="formatResultText(o.fullLabel)"></div>
+                            </div>
+                        </div>
                     </div>
                 </div>
-                <div class="calc-res-info" style="display:flex; align-items:center;">
-                     <div class="calc-res-name" style="margin:0; line-height:1.4;" v-html="formatResultText(o.fullLabel)"></div>
+
+                <!-- Tier 2: 中優先級 -->
+                <div v-if="outcomeTiers.tier2.length" class="calc-results-tier-2">
+                    <h3 style="color:var(--txt); font-weight:700; opacity:0.8; margin-bottom:15px; margin-top:25px;">其他可能</h3>
+                    <div class="calc-res-card-grid calc-res-card-grid-tier2">
+                        <div
+                            v-for="(o, idx) in outcomeTiers.tier2"
+                            :key="idx"
+                            :class="['calc-res-card', 'tier-2', {lethal: o.description && o.description.includes('致死')}]">
+                            <div class="calc-prob-box">
+                                <div class="calc-prob-val">{{ Math.round(o.prob * 100) }}<small style="font-size:0.8rem">%</small></div>
+                                <div class="calc-prob-sub" style="font-size:0.75rem;color:#888;font-family:monospace;margin-top:2px;" v-if="o.prob < 0.99">
+                                    {{ getProbFraction(o.prob) }}
+                                </div>
+                            </div>
+                            <div class="calc-res-info" style="display:flex; align-items:center;">
+                                <div class="calc-res-name" style="margin:0; line-height:1.4;" v-html="formatResultText(o.fullLabel)"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tier 3: 低優先級（可折疊） -->
+                <div v-if="outcomeTiers.tier3.length" class="calc-results-tier-3">
+                    <details style="margin-top:25px;">
+                        <summary style="cursor:pointer; color:var(--txt); opacity:0.6; font-weight:700; margin-bottom:15px;">
+                            更多結果 ({{ outcomeTiers.tier3.length }})
+                        </summary>
+                        <div class="calc-res-card-grid calc-res-card-grid-tier3">
+                            <div
+                                v-for="(o, idx) in outcomeTiers.tier3"
+                                :key="idx"
+                                :class="['calc-res-card', 'tier-3', {lethal: o.description && o.description.includes('致死')}]">
+                                <div class="calc-prob-box">
+                                    <div class="calc-prob-val">{{ Math.round(o.prob * 100) }}<small style="font-size:0.8rem">%</small></div>
+                                    <div class="calc-prob-sub" style="font-size:0.75rem;color:#888;font-family:monospace;margin-top:2px;" v-if="o.prob < 0.99">
+                                        {{ getProbFraction(o.prob) }}
+                                    </div>
+                                </div>
+                                <div class="calc-res-info" style="display:flex; align-items:center;">
+                                    <div class="calc-res-name" style="margin:0; line-height:1.4;" v-html="formatResultText(o.fullLabel)"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </details>
                 </div>
             </div>
         </div>
@@ -695,4 +966,352 @@ const formatWarningText = (text) => {
 .slide-anim-leave-active { transition: all 0.2s ease; max-height: 500px; overflow: hidden; }
 .slide-anim-enter-from,
 .slide-anim-leave-to { opacity: 0; max-height: 0; }
+
+/* 🎨 UX 重構：操作模式選擇 */
+.calc-mode-selector {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.calc-mode-btn {
+    padding: 10px 18px;
+    border: 2px solid var(--bd);
+    border-radius: 8px;
+    background: var(--card-bg);
+    color: var(--txt);
+    cursor: pointer;
+    transition: all 0.3s;
+    font-weight: 700;
+    font-size: 0.9rem;
+    font-family: inherit;
+}
+
+.calc-mode-btn:hover {
+    border-color: var(--pri);
+    color: var(--pri);
+}
+
+.calc-mode-btn.active {
+    background: var(--pri);
+    color: #fff;
+    border-color: var(--pri);
+    box-shadow: 0 4px 12px rgba(255, 69, 0, 0.3);
+}
+
+/* 🎨 UX 重構：基因搜索框 */
+.calc-gene-search {
+    width: 100%;
+    padding: 10px;
+    border-bottom: 1px solid var(--bd);
+    background: var(--card-bg);
+    box-sizing: border-box;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+.calc-gene-search input {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid var(--bd);
+    border-radius: 6px;
+    background: var(--card-bg);
+    color: var(--txt);
+    font-size: 0.9rem;
+    font-family: inherit;
+    outline: none;
+    transition: 0.2s;
+    box-sizing: border-box;
+}
+
+.calc-gene-search input:focus {
+    border-color: var(--pri);
+    box-shadow: 0 0 8px rgba(255, 69, 0, 0.2);
+}
+
+.calc-gene-search input::placeholder {
+    color: var(--txt);
+    opacity: 0.5;
+}
+
+/* 🎨 UX 重構：反向模式 */
+.calc-reverse-mode {
+    margin-bottom: 25px;
+}
+
+.calc-outcome-preview {
+    background: var(--card-bg);
+    border: 1px solid var(--bd);
+    border-radius: 10px;
+    padding: 20px;
+    border-top: 3px solid var(--pri);
+}
+
+.calc-outcome-preview h3 {
+    color: var(--txt);
+    font-size: 1.2rem;
+    font-weight: 900;
+    margin: 0 0 10px 0;
+}
+
+.calc-outcome-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.calc-outcome-preview-item {
+    padding: 15px;
+    background: var(--card-bg);
+    border: 1px solid var(--bd);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.calc-outcome-preview-item:hover {
+    border-color: var(--pri);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    transform: translateX(5px);
+}
+
+.calc-outcome-preview-item.tier-1 {
+    border-left: 4px solid var(--pri);
+    background: rgba(255, 69, 0, 0.08);
+    font-weight: 700;
+}
+
+.calc-outcome-preview-item.tier-2 {
+    border-left: 2px solid var(--pri);
+}
+
+.calc-outcome-preview-item.tier-3 {
+    border-left: 1px solid var(--bd);
+    opacity: 0.7;
+}
+
+.calc-outcome-preview-item.selected {
+    border: 2px solid var(--pri);
+    box-shadow: 0 0 12px rgba(255, 69, 0, 0.3);
+}
+
+/* 🎨 UX 重構：反向模式 - 親代推薦面板 */
+.calc-reverse-parents-panel {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: var(--card-bg);
+    border-top: 2px solid var(--pri);
+    border-radius: 20px 20px 0 0;
+    padding: 20px;
+    max-height: 70vh;
+    overflow-y: auto;
+    z-index: 100;
+    box-shadow: 0 -5px 30px rgba(0, 0, 0, 0.15);
+    animation: slideUp 0.3s ease;
+}
+
+.calc-reverse-panel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 20px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid var(--bd);
+}
+
+.calc-reverse-panel-header h3 {
+    margin: 0 0 5px 0;
+    font-size: 1.2rem;
+    word-break: break-word;
+    white-space: normal;
+}
+
+.calc-reverse-close {
+    background: transparent;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    color: var(--txt);
+    opacity: 0.6;
+    transition: 0.2s;
+    padding: 5px;
+    line-height: 1;
+}
+
+.calc-reverse-close:hover {
+    opacity: 1;
+    color: var(--pri);
+    transform: scale(1.1);
+}
+
+.calc-reverse-panel-content {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+@keyframes slideUp {
+    from {
+        transform: translateY(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+.panel-anim-enter-active,
+.panel-anim-leave-active {
+    transition: all 0.3s ease;
+}
+
+.panel-anim-enter-from,
+.panel-anim-leave-to {
+    transform: translateY(100%);
+    opacity: 0;
+}
+
+@media (max-width: 768px) {
+    .calc-reverse-parents-panel {
+        padding: 15px;
+        max-height: 60vh;
+    }
+
+    .calc-reverse-panel-header {
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .calc-reverse-close {
+        position: absolute;
+        top: 10px;
+        right: 15px;
+    }
+}
+
+/* 🎨 UX 重構：結果層級視覺化 */
+.calc-res-card-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 12px;
+    margin-bottom: 0;
+}
+
+.calc-res-card-grid-tier2 {
+    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+}
+
+.calc-res-card-grid-tier3 {
+    grid-template-columns: 1fr;
+}
+
+/* Tier 1: 高優先級 */
+.calc-res-card.tier-1 {
+    border-left: 4px solid var(--pri) !important;
+    background: rgba(255, 69, 0, 0.08) !important;
+    min-height: 90px;
+    position: relative;
+}
+
+.calc-res-card.tier-1::before {
+    content: '⭐ 推薦';
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: rgba(255, 69, 0, 0.2);
+    color: var(--pri);
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: bold;
+    z-index: 1;
+}
+
+.calc-res-card.tier-1 .calc-res-name {
+    font-weight: 900 !important;
+    font-size: 1.05rem !important;
+}
+
+.calc-res-card.tier-1 .calc-prob-val {
+    color: var(--pri);
+    font-size: 1.5rem !important;
+}
+
+/* Tier 2: 中優先級 */
+.calc-res-card.tier-2 {
+    border-left: 2px solid var(--pri) !important;
+    background: var(--card-bg) !important;
+}
+
+.calc-res-card.tier-2 .calc-prob-val {
+    color: var(--pri);
+}
+
+/* Tier 3: 低優先級 */
+.calc-res-card.tier-3 {
+    border-left: 1px solid var(--bd) !important;
+    background: rgba(128, 128, 128, 0.03) !important;
+    opacity: 0.8;
+}
+
+.calc-res-card.tier-3 .calc-prob-val {
+    color: var(--txt);
+    opacity: 0.6;
+}
+
+.calc-res-card.tier-3 .calc-res-name {
+    opacity: 0.7;
+}
+
+/* 🎨 UX 重構：分組區塊標題 */
+.calc-results-tier-1,
+.calc-results-tier-2,
+.calc-results-tier-3 {
+    margin-bottom: 20px;
+}
+
+.calc-results-grouped {
+    /* 分組展示區域 */
+}
+
+/* 🎨 UX 重構：移動端適應 */
+@media (max-width: 768px) {
+    .calc-mode-selector {
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .calc-mode-btn {
+        width: 100%;
+        padding: 12px;
+    }
+
+    .calc-res-card-grid-tier2 {
+        grid-template-columns: 1fr;
+    }
+
+    .calc-res-card.tier-1 {
+        min-height: 70px;
+    }
+
+    .calc-res-card.tier-1::before {
+        font-size: 0.7rem;
+        padding: 3px 8px;
+    }
+
+    .calc-outcome-preview-item {
+        padding: 12px;
+    }
+}
+
+/* 確保日/夜模式兼容性 */
+.calc-res-card.lethal .calc-prob-val {
+    color: #f44336 !important;
+}
 </style>
