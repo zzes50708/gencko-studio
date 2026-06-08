@@ -478,18 +478,19 @@ const calcReverseMatches = computed(() => {
 
             if (matchProbability <= 0 && carrierProbability <= 0) return null
 
-            // Filter out invalid results where matchProbability > 0 is impossible
-            // For each visible gene in child, check if it's possible to produce
+            // Filter out impossible results
+            // If child requires a visible gene that known parent lacks, only carrier matches are valid
             const childVisibleGenes = childGenes.filter(g => g.zygosity === ZYG.VIS)
             for (const childGene of childVisibleGenes) {
-                const childDef = getGeneDef(childGene.geneId)
-                if (!childDef) continue
+                const knownParentHasVis = knownParentGenes.some(g =>
+                    g.geneId === childGene.geneId && g.zygosity === ZYG.VIS
+                )
+                const candidateHasVis = candidateGenes.some(g =>
+                    g.geneId === childGene.geneId && g.zygosity === ZYG.VIS
+                )
 
-                const knownParentHasGene = knownParentGenes.some(g => g.geneId === childGene.geneId)
-                const candidateHasVisGene = candidateGenes.some(g => g.geneId === childGene.geneId && g.zygosity === ZYG.VIS)
-
-                // If known parent lacks this visible gene, candidate MUST have Vis for exact match
-                if (!knownParentHasGene && !candidateHasVisGene && matchProbability > 0) {
+                // If both parents lack Vis form of a gene child needs visible, impossible
+                if (!knownParentHasVis && !candidateHasVis) {
                     return null
                 }
             }
