@@ -687,21 +687,21 @@ const formatWarningText = (text) => {
 
                 <div v-else class="calc-results-grouped">
                     <h3 style="color:var(--pri); font-weight:900; margin-bottom:0;">
-                        另一方候選：{{ calcKnownParentCardKey === 'Male' ? '母' : '公' }}
+                        推薦種{{ calcKnownParentCardKey === 'Male' ? '母' : '公' }}
                     </h3>
                     <div class="calc-res-card-grid">
                         <div
                             v-for="(match, idx) in calcReverseMatches"
                             :key="`reverse-${idx}`"
-                            class="calc-res-card">
-                            <div class="calc-prob-box">
-                                <div class="calc-prob-val">{{ Math.round(match.prob * 100) }}<small style="font-size:0.8rem">%</small></div>
-                                <div class="calc-prob-sub" style="font-size:0.75rem;color:#888;font-family:monospace;margin-top:0;" v-if="match.prob < 0.99">
+                            style="display: flex; align-items: center; justify-content: space-between; padding: 12px; border: 1px solid var(--bd); border-radius: 8px; background: var(--card-bg);">
+                            <div style="flex: 1;">
+                                <div style="font-size: 0.95rem; font-weight: 500; color: var(--txt); margin:0;">{{ match.label }}</div>
+                            </div>
+                            <div style="text-align: right; margin-left: 12px;">
+                                <div style="font-size: 1.4rem; font-weight: bold; color: var(--pri);">{{ Math.round(match.prob * 100) }}<small style="font-size:0.8rem">%</small></div>
+                                <div style="font-size:0.7rem; color:#888; font-family:monospace;" v-if="match.prob < 0.99">
                                     {{ getProbFraction(match.prob) }}
                                 </div>
-                            </div>
-                            <div class="calc-res-info">
-                                <div class="calc-res-name" style="margin:0; line-height:1.4;">{{ match.label }}</div>
                             </div>
                         </div>
                     </div>
