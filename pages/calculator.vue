@@ -693,9 +693,10 @@ const formatWarningText = (text) => {
                         <div
                             v-for="(match, idx) in calcReverseMatches"
                             :key="`reverse-${idx}`"
-                            style="display: flex; align-items: center; justify-content: space-between; padding: 12px; border: 1px solid var(--bd); border-radius: 8px; background: var(--card-bg);">
+                            class="calc-reverse-card">
                             <div style="flex: 1;">
                                 <div style="font-size: 0.95rem; font-weight: 500; color: var(--txt); margin:0;">{{ match.label }}</div>
+                                <div style="font-size: 0.85rem; color: #666; margin-top: 4px;">{{ Math.round(match.prob * 100) }}% 機率出現子代</div>
                             </div>
                             <div style="text-align: right; margin-left: 12px;">
                                 <div style="font-size: 1.4rem; font-weight: bold; color: var(--pri);">{{ Math.round(match.prob * 100) }}<small style="font-size:0.8rem">%</small></div>
@@ -892,7 +893,10 @@ const formatWarningText = (text) => {
     border-color: #ffc107; 
 }
 
-.calc-res-card { background: var(--card-bg); border: 1px solid var(--bd); border-top: 3px solid var(--pri); border-radius: 8px; margin-bottom: 0; display: flex; overflow: hidden; transition: 0.3s; }
+.calc-res-card { background: var(--card-bg); border: 1px solid var(--bd); border-radius: 8px; margin-bottom: 0; display: flex; overflow: visible; transition: 0.3s; position: relative; }
+.calc-res-card::after { content: ''; position: absolute; bottom: 0; right: 0; width: 0; height: 0; border-left: 15px solid transparent; border-top: 15px solid transparent; border-right: 15px solid var(--pri); border-bottom: 15px solid var(--pri); border-radius: 0 0 8px 0; }
+.calc-reverse-card { background: var(--card-bg); border: 1px solid var(--bd); border-radius: 8px; margin-bottom: 0; display: flex; overflow: visible; align-items: center; justify-content: space-between; padding: 12px; transition: 0.3s; position: relative; }
+.calc-reverse-card::after { content: ''; position: absolute; bottom: 0; right: 0; width: 0; height: 0; border-left: 15px solid transparent; border-top: 15px solid transparent; border-right: 15px solid var(--pri); border-bottom: 15px solid var(--pri); border-radius: 0 0 8px 0; }
 .calc-res-card:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(0,0,0,0.1); border-color: var(--pri); }
 .calc-res-card.lethal { border-top-color: #f44336; background: rgba(244,67,54,0.05); }
 .calc-prob-box { width: 90px; background: rgba(128,128,128,0.05); display: flex; flex-direction: column; align-items: center; justify-content: center; border-right: 1px solid var(--bd); flex-shrink: 0; padding: 8px; }
