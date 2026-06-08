@@ -522,8 +522,7 @@ const formatWarningText = (text) => {
     <div class="calc-container">
         
         <div class="calc-header">
-            <div class="seo-hint">Gencko 多物種基因配對計算工具</div>
-            <div class="calc-sub-desc">支援多物種基因配對與子代結果推算</div>
+            <div class="seo-hint">Gencko基因計算機</div>
 
             <div class="calc-species-selector">
                 <div class="calc-species-row">
