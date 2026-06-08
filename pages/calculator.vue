@@ -466,41 +466,37 @@ const calcReverseMatches = computed(() => {
 
             if (!result) return null
 
-            const relevantOutcomes = result.outcomes.filter((outcome) => {
+            const exactMatches = result.outcomes.filter((outcome) => {
                 return (outcome.rawGenotypes || []).some((rawGenes) =>
-                    calcDoesOutcomeMatchChild(rawGenes, childGenes) ||
-                    calcDoesOutcomeMatchCarrierChild(rawGenes, childGenes)
-                )
-            })
-
-            if (!relevantOutcomes.length) return null
-
-            const matchResults = []
-            relevantOutcomes.forEach((outcome) => {
-                const isExactMatch = (outcome.rawGenotypes || []).some((rawGenes) =>
                     calcDoesOutcomeMatchChild(rawGenes, childGenes)
                 )
-
-                matchResults.push({
-                    outcome,
-                    isExact: isExactMatch,
-                    prob: outcome.prob
-                })
             })
 
-            matchResults.sort((a, b) => (b.isExact ? 1 : 0) - (a.isExact ? 1 : 0) || b.prob - a.prob)
+            const carrierMatches = result.outcomes.filter((outcome) => {
+                return (outcome.rawGenotypes || []).some((rawGenes) =>
+                    calcDoesOutcomeMatchCarrierChild(rawGenes, childGenes) &&
+                    !calcDoesOutcomeMatchChild(rawGenes, childGenes)
+                )
+            })
 
-            const primaryMatch = matchResults[0]
-            const totalProb = matchResults.reduce((sum, m) => sum + m.prob, 0)
+            if (!exactMatches.length && !carrierMatches.length) return null
+
+            const allMatches = [...exactMatches, ...carrierMatches]
+
+            const primaryMatch = exactMatches.length > 0
+                ? exactMatches.reduce((max, m) => m.prob > max.prob ? m : max)
+                : carrierMatches[0]
+
+            const exactProb = exactMatches.reduce((sum, m) => sum + m.prob, 0)
 
             return {
                 genes: candidateGenes,
-                prob: totalProb,
+                prob: exactProb > 0 ? exactProb : carrierMatches.reduce((sum, m) => sum + m.prob, 0),
                 label: formatGeneListSummary(candidateGenes),
-                childLabel: primaryMatch.outcome.fullLabel,
+                childLabel: primaryMatch.fullLabel,
                 totalCombos: result.totalCombos,
-                isExactMatch: primaryMatch.isExact,
-                allMatches: matchResults
+                isExactMatch: exactMatches.length > 0,
+                allMatches
             }
         })
         .filter(Boolean)
