@@ -453,6 +453,8 @@ const calcReverseMatches = computed(() => {
 
     const matches = generatedParents
         .map((candidateGenes) => {
+            if (candidateGenes.length === 0) return null
+
             const knownParentIsMale = calcKnownParentCardKey.value === 'Male'
             const maleGenes = knownParentIsMale ? knownParentGenes : candidateGenes
             const femaleGenes = knownParentIsMale ? candidateGenes : knownParentGenes
@@ -464,75 +466,48 @@ const calcReverseMatches = computed(() => {
 
             if (!result) return null
 
-            const matchProbability = result.outcomes.reduce((sum, outcome) => {
-                const hasMatch = (outcome.rawGenotypes || []).some((rawGenes) => calcDoesOutcomeMatchChild(rawGenes, childGenes))
-                return hasMatch ? sum + outcome.prob : sum
-            }, 0)
-
-            const carrierProbability = result.outcomes.reduce((sum, outcome) => {
-                const hasCarrierMatch = (outcome.rawGenotypes || []).some((rawGenes) => (
-                    calcDoesOutcomeMatchCarrierChild(rawGenes, childGenes) && !calcDoesOutcomeMatchChild(rawGenes, childGenes)
-                ))
-                return hasCarrierMatch ? sum + outcome.prob : sum
-            }, 0)
-
-            if (matchProbability <= 0 && carrierProbability <= 0) return null
-
-            // Filter out results with no candidate genes (尚未選擇基因)
-            // The unknown parent must have at least some genes
-            if (candidateGenes.length === 0) {
-                return null
-            }
-
-            // Filter out impossible results
-            // If child requires a visible gene that known parent lacks, only carrier matches are valid
-            const childVisibleGenes = childGenes.filter(g => g.zygosity === ZYG.VIS)
-            for (const childGene of childVisibleGenes) {
-                const knownParentHasVis = knownParentGenes.some(g =>
-                    g.geneId === childGene.geneId && g.zygosity === ZYG.VIS
+            const relevantOutcomes = result.outcomes.filter((outcome) => {
+                return (outcome.rawGenotypes || []).some((rawGenes) =>
+                    calcDoesOutcomeMatchChild(rawGenes, childGenes) ||
+                    calcDoesOutcomeMatchCarrierChild(rawGenes, childGenes)
                 )
-                const candidateHasVis = candidateGenes.some(g =>
-                    g.geneId === childGene.geneId && g.zygosity === ZYG.VIS
+            })
+
+            if (!relevantOutcomes.length) return null
+
+            const matchResults = []
+            relevantOutcomes.forEach((outcome) => {
+                const isExactMatch = (outcome.rawGenotypes || []).some((rawGenes) =>
+                    calcDoesOutcomeMatchChild(rawGenes, childGenes)
                 )
 
-                // If both parents lack Vis form of a gene child needs visible, impossible
-                if (!knownParentHasVis && !candidateHasVis) {
-                    return null
-                }
-            }
+                matchResults.push({
+                    outcome,
+                    isExact: isExactMatch,
+                    prob: outcome.prob
+                })
+            })
 
-            const tier = matchProbability > 0
-                ? { key: 'exact', sort: 0, label: '' }
-                : calcResolveReverseTier(carrierProbability)
+            matchResults.sort((a, b) => (b.isExact ? 1 : 0) - (a.isExact ? 1 : 0) || b.prob - a.prob)
 
-            const recessiveHetStats = {}
-            if (tier.key !== 'exact') {
-                childGenes
-                    .filter((gene) => getGeneDef(gene.geneId)?.type === CALC_TYPES.REC && gene.zygosity === ZYG.VIS)
-                    .forEach((gene) => {
-                        recessiveHetStats[gene.geneId] = tier.label === 'Het'
-                            ? 'Het'
-                            : tier.label === '50% Het'
-                                ? '50% Poss Het'
-                                : tier.label === '66% Het'
-                                    ? '66% Poss Het'
-                                    : tier.label
-                    })
-            }
+            const primaryMatch = matchResults[0]
+            const totalProb = matchResults.reduce((sum, m) => sum + m.prob, 0)
 
             return {
                 genes: candidateGenes,
-                prob: matchProbability > 0 ? matchProbability : carrierProbability,
-                label: formatGeneListSummary(candidateGenes, recessiveHetStats),
-                childLabel: formatGeneListSummary(childGenes),
+                prob: totalProb,
+                label: formatGeneListSummary(candidateGenes),
+                childLabel: primaryMatch.outcome.fullLabel,
                 totalCombos: result.totalCombos,
-                tierKey: tier.key,
-                tierSort: tier.sort,
-                tierLabel: tier.label
+                isExactMatch: primaryMatch.isExact,
+                allMatches: matchResults
             }
         })
         .filter(Boolean)
-        .sort((a, b) => a.tierSort - b.tierSort || b.prob - a.prob || a.genes.length - b.genes.length)
+        .sort((a, b) => {
+            if (a.isExactMatch !== b.isExactMatch) return b.isExactMatch ? 1 : -1
+            return b.prob - a.prob || a.genes.length - b.genes.length
+        })
 
     const uniqueMatches = [ ]
     const seen = new Set()
