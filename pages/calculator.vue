@@ -648,10 +648,11 @@ const formatWarningText = (text) => {
                                             <div class="calc-dd-item-main">
                                                 <span>{{ gene.name }}</span>
                                             </div>
-                                            <div
-                                                v-if="calcIsGeneSelected(gene.id, parent.key) && (gene.type === CALC_TYPES.REC || gene.type === CALC_TYPES.CODOM) && calcIsGeneExpanded(gene.id)"
-                                                class="calc-dd-flags"
-                                                @click.stop>
+                                        </div>
+                                        <div
+                                            v-if="calcIsGeneSelected(gene.id, parent.key) && (gene.type === CALC_TYPES.REC || gene.type === CALC_TYPES.CODOM) && calcIsGeneExpanded(gene.id)"
+                                            class="calc-dd-flags"
+                                            @click.stop>
                                                 <button
                                                     v-if="gene.type === CALC_TYPES.REC"
                                                     type="button"
@@ -667,7 +668,6 @@ const formatWarningText = (text) => {
                                                     超級
                                                 </button>
                                             </div>
-                                        </div>
                                     </button>
                                 </div>
                                 <div v-else class="calc-inline-hint">目前此分類沒有可選基因</div>
@@ -849,7 +849,7 @@ const formatWarningText = (text) => {
 
 .calc-dd-sub { background: rgba(128, 128, 128, 0.05); border-bottom: 1px solid var(--bd); width: 100%; box-sizing: border-box; }
 .calc-dd-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
-.calc-dd-item { width: 100%; min-width: 0; padding: 10px; text-align: left; background: transparent; border: 1px solid var(--bd); border-radius: 10px; color: var(--txt); opacity: 0.95; font-size: 0.78rem; cursor: pointer; display: flex; box-sizing: border-box; line-height: 1.25; transition: 0.2s; }
+.calc-dd-item { width: 100%; min-width: 0; padding: 10px; text-align: left; background: transparent; border: 1px solid var(--bd); border-radius: 10px; color: var(--txt); opacity: 0.95; font-size: 0.78rem; cursor: pointer; display: flex; flex-direction: column; box-sizing: border-box; line-height: 1.25; transition: 0.2s; }
 @media (hover: hover) {
     .calc-dd-item:hover { color: var(--pri); opacity: 1; border-color: var(--pri); background: rgba(255, 69, 0, 0.05); }
 }
@@ -858,7 +858,7 @@ const formatWarningText = (text) => {
 .calc-dd-item-row { min-width: 0; width: 100%; display: flex; align-items: center; gap: 4px; }
 .calc-dd-item-main { min-width: 0; display: flex; flex: 1; overflow: hidden; }
 .calc-dd-item-main > span:first-child { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.calc-dd-flags { display: flex; justify-content: flex-end; margin-top: 0; }
+.calc-dd-flags { display: flex; justify-content: flex-end; margin-top: 8px; width: 100%; }
 .calc-dd-badge { padding: 4px 8px; border-radius: 999px; border: 1px solid var(--bd); font-size: 0.68rem; line-height: 1; color: var(--txt); background: var(--card-bg); cursor: pointer; font-family: inherit; transition: 0.2s; }
 .calc-dd-badge:hover { border-color: var(--pri); color: var(--pri); }
 .calc-dd-badge.active { border-color: var(--pri); color: var(--pri); background: rgba(255, 69, 0, 0.08); }
