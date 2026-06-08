@@ -351,10 +351,22 @@ const calcCycleGeneSelection = (sex, geneId) => {
 }
 
 
-const calcBuildUnknownStateOptions = (geneDef) => {
-    if (geneDef.type === CALC_TYPES.REC) return [null, ZYG.HET, ZYG.VIS]
-    if (geneDef.type === CALC_TYPES.CODOM) return [null, ZYG.SGL, ZYG.SUP]
-    return [null, ZYG.VIS]
+const calcBuildUnknownStateOptions = (geneDef, childGenes, knownParentGenes) => {
+    // Check if child has this gene's visible expression
+    const childHasGene = childGenes.some(g => g.geneId === geneDef.id && g.zygosity === ZYG.VIS)
+    // Check if known parent doesn't have this gene
+    const knownParentLacksGene = !knownParentGenes.some(g => g.geneId === geneDef.id)
+
+    // If child has visible expression but known parent doesn't, unknown parent must have it
+    const mustHaveGene = childHasGene && knownParentLacksGene
+
+    if (geneDef.type === CALC_TYPES.REC) {
+        return mustHaveGene ? [ZYG.HET, ZYG.VIS] : [null, ZYG.HET, ZYG.VIS]
+    }
+    if (geneDef.type === CALC_TYPES.CODOM) {
+        return mustHaveGene ? [ZYG.SGL, ZYG.SUP] : [null, ZYG.SGL, ZYG.SUP]
+    }
+    return mustHaveGene ? [ZYG.VIS] : [null, ZYG.VIS]
 }
 
 const calcDoesOutcomeMatchChild = (rawGenes, childGenes) => {
@@ -395,8 +407,8 @@ const calcDoesOutcomeMatchCarrierChild = (rawGenes, childGenes) => {
 
 const calcResolveReverseTier = (probability) => {
     if (probability >= 0.99) return { key: 'het', sort: 1, label: 'Het' }
-    if (probability >= 0.45 && probability < 0.60) return { key: 'het50', sort: 2, label: '50% Het' }
-    if (probability >= 0.60) return { key: 'het66', sort: 3, label: '66% Het' }
+    if (probability >= 0.60) return { key: 'het66', sort: 2, label: '66% Het' }
+    if (probability >= 0.45 && probability < 0.60) return { key: 'het50', sort: 3, label: '50% Het' }
     return { key: 'other', sort: 4, label: `${Math.round(probability * 100)}% Het` }
 }
 
@@ -416,7 +428,7 @@ const calcReverseMatches = computed(() => {
     const relevantGenes = calcCurrentDefs.value.filter((gene) => relevantGeneIds.has(gene.id))
     const stateGroups = relevantGenes.map((geneDef) => ({
         geneDef,
-        states: calcBuildUnknownStateOptions(geneDef)
+        states: calcBuildUnknownStateOptions(geneDef, childGenes, knownParentGenes)
     }))
     const generatedParents = [ ]
 
@@ -696,9 +708,9 @@ const formatWarningText = (text) => {
                             class="calc-reverse-card">
                             <div style="flex: 1;">
                                 <div style="font-size: 0.95rem; font-weight: 500; color: var(--txt); margin:0;">{{ match.label }}</div>
-                                <div style="font-size: 0.85rem; color: #666; margin-top: 4px;">{{ Math.round(match.prob * 100) }}% 機率出現子代</div>
                             </div>
                             <div style="text-align: right; margin-left: 12px;">
+                                <div style="font-size: 0.9rem; color: #666; margin-bottom: 4px;">出現 {{ match.label }}</div>
                                 <div style="font-size: 1.4rem; font-weight: bold; color: var(--pri);">{{ Math.round(match.prob * 100) }}<small style="font-size:0.8rem">%</small></div>
                                 <div style="font-size:0.7rem; color:#888; font-family:monospace;" v-if="match.prob < 0.99">
                                     {{ getProbFraction(match.prob) }}
