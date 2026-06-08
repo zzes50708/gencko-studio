@@ -352,12 +352,12 @@ const calcCycleGeneSelection = (sex, geneId) => {
 
 
 const calcBuildUnknownStateOptions = (geneDef, childGenes, knownParentGenes) => {
-    // Check if child has this gene's visible expression
-    const childHasGene = childGenes.some(g => g.geneId === geneDef.id && g.zygosity === ZYG.VIS)
+    // Check if child has this gene (any form: Het or Vis)
+    const childHasGene = childGenes.some(g => g.geneId === geneDef.id)
     // Check if known parent doesn't have this gene
     const knownParentLacksGene = !knownParentGenes.some(g => g.geneId === geneDef.id)
 
-    // If child has visible expression but known parent doesn't, unknown parent must have it
+    // If child has this gene but known parent doesn't, unknown parent must have it
     const mustHaveGene = childHasGene && knownParentLacksGene
 
     if (geneDef.type === CALC_TYPES.REC) {
@@ -501,6 +501,7 @@ const calcReverseMatches = computed(() => {
                 genes: candidateGenes,
                 prob: matchProbability > 0 ? matchProbability : carrierProbability,
                 label: formatGeneListSummary(candidateGenes, recessiveHetStats),
+                childLabel: formatGeneListSummary(childGenes),
                 totalCombos: result.totalCombos,
                 tierKey: tier.key,
                 tierSort: tier.sort,
@@ -710,7 +711,7 @@ const formatWarningText = (text) => {
                                 <div style="font-size: 0.95rem; font-weight: 500; color: var(--txt); margin:0;">{{ match.label }}</div>
                             </div>
                             <div style="text-align: right; margin-left: 12px;">
-                                <div style="font-size: 0.9rem; color: #666; margin-bottom: 4px;">出現 {{ match.label }}</div>
+                                <div style="font-size: 0.9rem; color: #666; margin-bottom: 4px;">出現 {{ match.childLabel }}</div>
                                 <div style="font-size: 1.4rem; font-weight: bold; color: var(--pri);">{{ Math.round(match.prob * 100) }}<small style="font-size:0.8rem">%</small></div>
                                 <div style="font-size:0.7rem; color:#888; font-family:monospace;" v-if="match.prob < 0.99">
                                     {{ getProbFraction(match.prob) }}
