@@ -686,7 +686,7 @@ const formatWarningText = (text) => {
                     目前沒有符合條件的另一方配對結果。</div>
 
                 <div v-else class="calc-results-grouped">
-                    <h3 style="color:var(--pri); font-weight:900; margin-bottom:15px;">
+                    <h3 style="color:var(--pri); font-weight:900; margin-bottom:0;">
                         另一方候選：{{ calcKnownParentCardKey === 'Male' ? '母' : '公' }}
                     </h3>
                     <div class="calc-res-card-grid">
@@ -696,7 +696,7 @@ const formatWarningText = (text) => {
                             class="calc-res-card">
                             <div class="calc-prob-box">
                                 <div class="calc-prob-val">{{ Math.round(match.prob * 100) }}<small style="font-size:0.8rem">%</small></div>
-                                <div class="calc-prob-sub" style="font-size:0.75rem;color:#888;font-family:monospace;margin-top:2px;" v-if="match.prob < 0.99">
+                                <div class="calc-prob-sub" style="font-size:0.75rem;color:#888;font-family:monospace;margin-top:0;" v-if="match.prob < 0.99">
                                     {{ getProbFraction(match.prob) }}
                                 </div>
                             </div>
@@ -729,7 +729,7 @@ const formatWarningText = (text) => {
                         :class="['calc-res-card', {lethal: o.description && o.description.includes('致死')}]">
                         <div class="calc-prob-box">
                             <div class="calc-prob-val">{{ Math.round(o.prob * 100) }}<small style="font-size:0.8rem">%</small></div>
-                            <div class="calc-prob-sub" style="font-size:0.75rem;color:#888;font-family:monospace;margin-top:2px;" v-if="o.prob < 0.99">
+                            <div class="calc-prob-sub" style="font-size:0.75rem;color:#888;font-family:monospace;margin-top:0;" v-if="o.prob < 0.99">
                                 {{ getProbFraction(o.prob) }}
                             </div>
                         </div>
@@ -746,27 +746,27 @@ const formatWarningText = (text) => {
         <div v-if="calcModalOpen" class="lightbox-overlay" @click="calcModalOpen = false" style="justify-content:center; padding:20px;">
             <div class="page-text-box" style="width:100%; max-width:600px; max-height:80vh; overflow-y:auto; position:relative;" @click.stop>
                 <div class="lightbox-close" @click="calcModalOpen = false" style="top:10px; right:10px; width:40px; height:40px; font-size:1.5rem;">✕</div>
-                <h2 style="color:var(--pri); margin-top:0;">
+                <h2 style="color:var(--pri); margin-top:0; margin-bottom:0;">
                     {{ calcActiveInfo === 'types' ? '基因觀念' : '多遺傳說明' }}
                 </h2>
                 
                 <div v-if="calcActiveInfo === 'types'">
                     <p style="color:#ff5252; font-weight:bold; border-left:4px solid #ff5252; padding-left:10px;">不同物種的基因規則不同，請依照對應物種資料判讀結果。</p>
-                    <h4 style="color:var(--txt); border-bottom:1px solid var(--bd); padding-bottom:5px; margin-top:20px;">顯性 (Dominant)</h4>
+                    <h4 style="color:var(--txt); border-bottom:1px solid var(--bd); padding-bottom:5px; margin-top:0;">顯性 (Dominant)</h4>
                     <p style="font-size:0.95rem; color:var(--txt); opacity:0.7;">只要帶有一份基因就會表現出來。</p>
-                    <h4 style="color:var(--txt); border-bottom:1px solid var(--bd); padding-bottom:5px; margin-top:20px;">共顯性 (Co-Dominant)</h4>
+                    <h4 style="color:var(--txt); border-bottom:1px solid var(--bd); padding-bottom:5px; margin-top:0;">共顯性 (Co-Dominant)</h4>
                     <p style="font-size:0.95rem; color:var(--txt); opacity:0.7;">單基因與超級型會有不同表現，超級型通常是兩份相同基因。</p>
-                    <h4 style="color:var(--txt); border-bottom:1px solid var(--bd); padding-bottom:5px; margin-top:20px;">隱性 (Recessive)</h4>
+                    <h4 style="color:var(--txt); border-bottom:1px solid var(--bd); padding-bottom:5px; margin-top:0;">隱性 (Recessive)</h4>
                     <p style="font-size:0.95rem; color:var(--txt); opacity:0.7;">隱性基因可分為表現型與 Het 攜帶型，需搭配親代組合判讀。</p>
                 </div>
 
                 <div v-if="calcActiveInfo === 'poly'">
                     <p style="border-left:4px solid var(--pri); padding-left:10px;">多遺傳特徵通常不是單一基因決定，而是多個條件共同影響。</p>
-                    <div style="margin-top:20px; background:rgba(255, 69, 0, 0.05); border: 1px solid rgba(255, 69, 0, 0.1); padding:10px; border-radius:8px;">
+                    <div style="margin-top:0; background:rgba(255, 69, 0, 0.05); border: 1px solid rgba(255, 69, 0, 0.1); padding:10px; border-radius:8px;">
                         <div style="color:var(--pri); font-weight:bold;">Tangerine</div>
                         <p style="font-size:0.9rem; margin:5px 0 0 0; color:var(--txt); opacity:0.8;">常見於橘色加深、覆蓋面積提升等趨勢表現。</p>
                     </div>
-                    <div style="margin-top:10px; background:rgba(255, 69, 0, 0.05); border: 1px solid rgba(255, 69, 0, 0.1); padding:10px; border-radius:8px;">
+                    <div style="margin-top:0; background:rgba(255, 69, 0, 0.05); border: 1px solid rgba(255, 69, 0, 0.1); padding:10px; border-radius:8px;">
                         <div style="color:var(--pri); font-weight:bold;">Bandit</div>
                         <p style="font-size:0.9rem; margin:5px 0 0 0; color:var(--txt); opacity:0.8;">常見於頭部與背部紋路表現改變的選育方向。</p>
                     </div>
@@ -783,9 +783,9 @@ const formatWarningText = (text) => {
 */
 .calc-container { max-width: 1100px; margin: 0 auto; position: relative; padding-top: 15px; }
 
-.calc-header { text-align: center; margin-bottom: 20px; }
-.calc-top-desc { text-align: center; color: var(--pri); font-weight: 700; margin-bottom: 4px; font-size: 0.95rem; letter-spacing: 1px; }
-.calc-sub-desc { text-align: center; color: var(--txt); opacity: 0.6; font-size: 0.85rem; margin-bottom: 15px; }
+.calc-header { text-align: center; margin-bottom: 0; }
+.calc-top-desc { text-align: center; color: var(--pri); font-weight: 700; margin-bottom: 0; font-size: 0.95rem; letter-spacing: 1px; }
+.calc-sub-desc { text-align: center; color: var(--txt); opacity: 0.6; font-size: 0.85rem; margin-bottom: 0; }
 
 .calc-species-selector { display: flex; flex-direction: column; gap: 12px; margin: 20px 0 16px; }
 .calc-species-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; align-items: start; }
@@ -803,11 +803,11 @@ const formatWarningText = (text) => {
 .calc-selector-menu-item:hover { border-color: var(--pri); color: var(--pri); background: rgba(255, 69, 0, 0.05); }
 .calc-selector-menu-item.active { border-color: var(--pri); color: var(--pri); background: rgba(255, 69, 0, 0.08); }
 
-.calc-helper-btns { display: flex; justify-content: center; gap: 8px; flex-wrap: wrap; margin-bottom: 15px; }
+.calc-helper-btns { display: flex; justify-content: center; gap: 8px; flex-wrap: wrap; margin-bottom: 0; }
 .calc-help-btn { display: flex; align-items: center; gap: 4px; padding: 5px 12px; border-radius: 20px; border: 1px dashed var(--bd); font-size: 0.85rem; color: var(--txt); opacity: 0.7; cursor: pointer; transition: 0.2s; background: var(--card-bg); font-family: inherit; line-height: 1.4; }
 .calc-help-btn:hover { border-color: var(--pri); color: var(--pri); opacity: 1; background: rgba(255, 69, 0, 0.05); }
 
-.calc-parent-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 15px; margin-bottom: 25px; }
+.calc-parent-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 15px; margin-bottom: 0; }
 .calc-parent-card { min-width: 0; max-width: 100%; background: var(--card-bg); border: 1px solid var(--bd); border-radius: 10px; display: flex; flex-direction: column; overflow: visible; border-top: 3px solid var(--pri); transition: 0.3s; box-shadow: 0 5px 20px rgba(0,0,0,0.1); }
 .calc-parent-card:hover { transform: translateY(-3px); }
 
@@ -839,7 +839,7 @@ const formatWarningText = (text) => {
     .calc-add-btn:hover { border-color: var(--pri); color: var(--pri); opacity: 1; box-shadow: 0 0 10px rgba(255,69,0,0.1); }
 }
 .calc-add-btn.open { border-color: var(--pri); color: var(--pri); opacity: 1; box-shadow: 0 0 10px rgba(255,69,0,0.1); }
-.calc-dropdown-menu { position: absolute; top: 100%; left: 0; width: 100%; box-sizing: border-box; background: var(--card-bg); border: 1px solid var(--bd); border-radius: 8px; box-shadow: 0 10px 40px rgba(0,0,0,0.2); z-index: 100; max-height: 250px; overflow-y: auto; overflow-x: hidden; margin-top: 5px; }
+.calc-dropdown-menu { position: absolute; top: 100%; left: 0; width: 100%; box-sizing: border-box; background: var(--card-bg); border: 1px solid var(--bd); border-radius: 8px; box-shadow: 0 10px 40px rgba(0,0,0,0.2); z-index: 100; max-height: 250px; overflow-y: auto; overflow-x: hidden; margin-top: 0; }
 .calc-dd-group-btn { width: 100%; padding: 10px 12px; text-align: left; background: transparent; border: none; border-bottom: 1px solid var(--bd); color: var(--txt); opacity: 0.9; font-weight: bold; font-size: 0.85rem; cursor: pointer; display: flex; justify-content: space-between; align-items: center; box-sizing: border-box; transition: 0.2s; }
 @media (hover: hover) {
     .calc-dd-group-btn:hover { background: rgba(255, 69, 0, 0.05); color: var(--pri); opacity: 1; }
@@ -867,7 +867,7 @@ const formatWarningText = (text) => {
 .calc-tag.super { background: rgba(156, 39, 176, 0.1); color: #ce93d8; border-color: rgba(156, 39, 176, 0.4); font-weight: bold; }
 .calc-tag.het { font-size: 0.75rem; }
 
-.calc-result-area { margin-top: 30px; animation: fadeUp 0.5s ease; padding-bottom: 40px; }
+.calc-result-area { margin-top: 0; animation: fadeUp 0.5s ease; padding-bottom: 40px; }
 /* 結果提示 */
 .calc-warn, .calc-notice {
     padding: 15px; 
@@ -892,32 +892,32 @@ const formatWarningText = (text) => {
     border-color: #ffc107; 
 }
 
-.calc-res-card { background: var(--card-bg); border: 1px solid var(--bd); border-top: 3px solid var(--pri); border-radius: 8px; margin-bottom: 12px; display: flex; overflow: hidden; transition: 0.3s; }
+.calc-res-card { background: var(--card-bg); border: 1px solid var(--bd); border-top: 3px solid var(--pri); border-radius: 8px; margin-bottom: 0; display: flex; overflow: hidden; transition: 0.3s; }
 .calc-res-card:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(0,0,0,0.1); border-color: var(--pri); }
 .calc-res-card.lethal { border-top-color: #f44336; background: rgba(244,67,54,0.05); }
 .calc-prob-box { width: 90px; background: rgba(128,128,128,0.05); display: flex; flex-direction: column; align-items: center; justify-content: center; border-right: 1px solid var(--bd); flex-shrink: 0; padding: 8px; }
 .calc-prob-val { font-size: 1.4rem; font-weight: 900; color: var(--pri); line-height: 1; }
 .calc-res-card.lethal .calc-prob-val { color: #f44336; }
 .calc-res-info { padding: 12px; flex: 1; }
-.calc-res-name { font-size: 1rem; font-weight: bold; margin-bottom: 6px; color: var(--txt); word-break: break-word; }
+.calc-res-name { font-size: 1rem; font-weight: bold; margin-bottom: 0; color: var(--txt); word-break: break-word; }
 .calc-reverse-tier { font-size: 0.8rem; color: var(--txt); opacity: 0.65; }
 
 /* Mobile View Overrides */
 @media (max-width: 768px) {
     .calc-container { padding-top: 0 !important; margin-top: -10px; }
-    .calc-header { margin-bottom: 5px !important; }
+    .calc-header { margin-bottom: 0 !important; }
     .calc-top-desc { font-size: 0.95rem; margin-bottom: 0; }
-    .calc-sub-desc { font-size: 0.75rem; margin-bottom: 5px; opacity: 0.8; line-height: 1.2; }
+    .calc-sub-desc { font-size: 0.75rem; margin-bottom: 0; opacity: 0.8; line-height: 1.2; }
     
     .calc-species-row { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
     .calc-selector-chip { font-size: 0.8rem; padding: 8px 12px; }
     .calc-selector-menu { padding: 6px; border-radius: 12px; }
     .calc-selector-menu-item { font-size: 0.8rem; padding: 8px 10px; }
     
-    .calc-helper-btns { display: flex; width: 100%; gap: 10px; margin-bottom: 15px; padding: 0 2px; }
+    .calc-helper-btns { display: flex; width: 100%; gap: 10px; margin-bottom: 0; padding: 0 2px; }
     .calc-help-btn { flex: 1; display: flex; align-items: center; justify-content: center; text-align: center; white-space: nowrap; font-size: 0.85rem; padding: 8px; border-radius: 6px; }
 
-    .calc-parent-grid { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; gap: 6px; margin-bottom: 15px; }
+    .calc-parent-grid { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; gap: 6px; margin-bottom: 0; }
     
     .calc-parent-card { 
         overflow: visible; 
@@ -944,7 +944,7 @@ const formatWarningText = (text) => {
     .calc-dd-item { padding: 8px; font-size: 0.74rem; flex-direction: column; }
     .calc-dd-item-row { gap: 3px; }
     .calc-dd-badge { font-size: 0.62rem; padding: 4px 6px; }
-    .calc-dd-flags { display: none !important; margin-top: 8px; }
+    .calc-dd-flags { display: none !important; margin-top: 0; }
     .calc-dd-item.mobile-expanded .calc-dd-flags { display: flex !important; }
 
     .calc-dropdown-container { position: static; } 
