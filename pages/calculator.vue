@@ -478,6 +478,12 @@ const calcReverseMatches = computed(() => {
 
             if (matchProbability <= 0 && carrierProbability <= 0) return null
 
+            // Filter out results with no candidate genes (尚未選擇基因)
+            // The unknown parent must have at least some genes
+            if (candidateGenes.length === 0) {
+                return null
+            }
+
             // Filter out impossible results
             // If child requires a visible gene that known parent lacks, only carrier matches are valid
             const childVisibleGenes = childGenes.filter(g => g.zygosity === ZYG.VIS)
