@@ -478,6 +478,18 @@ const calcReverseMatches = computed(() => {
 
             if (matchProbability <= 0 && carrierProbability <= 0) return null
 
+            // Filter out results where unknown parent has no genes but known parent has genes
+            // and child needs visible expression
+            const candidateHasAnyGene = candidateGenes.length > 0
+            const knownParentHasAnyGene = knownParentGenes.length > 0
+            const childNeedsVisibleGenes = childGenes.some(g => g.zygosity === ZYG.VIS)
+
+            // If candidate has no genes but known parent has, and child needs visible genes
+            // This is only valid for carrier probability, not exact match
+            if (!candidateHasAnyGene && knownParentHasAnyGene && childNeedsVisibleGenes && matchProbability > 0) {
+                return null
+            }
+
             const tier = matchProbability > 0
                 ? { key: 'exact', sort: 0, label: '' }
                 : calcResolveReverseTier(carrierProbability)
@@ -711,8 +723,8 @@ const formatWarningText = (text) => {
                                 <div style="font-size: 0.95rem; font-weight: 500; color: var(--txt); margin:0;">{{ match.label }}</div>
                             </div>
                             <div style="text-align: right; margin-left: 12px;">
-                                <div style="font-size: 0.9rem; color: #666; margin-bottom: 4px;">出現 {{ match.childLabel }}</div>
-                                <div style="font-size: 1.4rem; font-weight: bold; color: var(--pri);">{{ Math.round(match.prob * 100) }}<small style="font-size:0.8rem">%</small></div>
+                                <div style="font-size: 1.4rem; font-weight: bold; color: var(--pri); margin-bottom: 4px;">{{ Math.round(match.prob * 100) }}<small style="font-size:0.8rem">%</small></div>
+                                <div style="font-size: 0.9rem; color: #666;">出現 {{ match.childLabel }}</div>
                                 <div style="font-size:0.7rem; color:#888; font-family:monospace;" v-if="match.prob < 0.99">
                                     {{ getProbFraction(match.prob) }}
                                 </div>
