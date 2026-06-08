@@ -472,31 +472,18 @@ const calcReverseMatches = computed(() => {
                 )
             })
 
-            const carrierMatches = result.outcomes.filter((outcome) => {
-                return (outcome.rawGenotypes || []).some((rawGenes) =>
-                    calcDoesOutcomeMatchCarrierChild(rawGenes, childGenes) &&
-                    !calcDoesOutcomeMatchChild(rawGenes, childGenes)
-                )
-            })
-
-            if (!exactMatches.length && !carrierMatches.length) return null
-
-            const allMatches = [...exactMatches, ...carrierMatches]
-
-            const primaryMatch = exactMatches.length > 0
-                ? exactMatches.reduce((max, m) => m.prob > max.prob ? m : max)
-                : carrierMatches[0]
+            if (!exactMatches.length) return null
 
             const exactProb = exactMatches.reduce((sum, m) => sum + m.prob, 0)
+            const primaryMatch = exactMatches.reduce((max, m) => m.prob > max.prob ? m : max)
 
             return {
                 genes: candidateGenes,
-                prob: exactProb > 0 ? exactProb : carrierMatches.reduce((sum, m) => sum + m.prob, 0),
+                prob: exactProb,
                 label: formatGeneListSummary(candidateGenes),
                 childLabel: primaryMatch.fullLabel,
                 totalCombos: result.totalCombos,
-                isExactMatch: exactMatches.length > 0,
-                allMatches
+                isExactMatch: true
             }
         })
         .filter(Boolean)
