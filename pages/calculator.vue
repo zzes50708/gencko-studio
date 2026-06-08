@@ -849,7 +849,7 @@ const formatWarningText = (text) => {
 
 .calc-dd-sub { background: rgba(128, 128, 128, 0.05); border-bottom: 1px solid var(--bd); width: 100%; box-sizing: border-box; }
 .calc-dd-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
-.calc-dd-item { width: 100%; min-width: 0; padding: 10px; text-align: left; background: transparent; border: 1px solid var(--bd); border-radius: 10px; color: var(--txt); opacity: 0.95; font-size: 0.78rem; cursor: pointer; display: flex; flex-direction: column; box-sizing: border-box; line-height: 1.25; transition: 0.2s; }
+.calc-dd-item { width: 100%; min-width: 0; padding: 10px; text-align: left; background: transparent; border: 1px solid var(--bd); border-radius: 10px; color: var(--txt); opacity: 0.95; font-size: 0.78rem; cursor: pointer; display: flex; box-sizing: border-box; line-height: 1.25; transition: 0.2s; }
 @media (hover: hover) {
     .calc-dd-item:hover { color: var(--pri); opacity: 1; border-color: var(--pri); background: rgba(255, 69, 0, 0.05); }
 }
@@ -858,7 +858,7 @@ const formatWarningText = (text) => {
 .calc-dd-item-row { min-width: 0; width: 100%; display: flex; align-items: center; gap: 4px; }
 .calc-dd-item-main { min-width: 0; display: flex; flex: 1; overflow: hidden; }
 .calc-dd-item-main > span:first-child { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.calc-dd-flags { display: flex; justify-content: flex-end; margin-top: 8px; width: 100%; }
+.calc-dd-flags { display: flex; justify-content: flex-end; margin-top: 0; width: 100%; }
 .calc-dd-badge { padding: 4px 8px; border-radius: 999px; border: 1px solid var(--bd); font-size: 0.68rem; line-height: 1; color: var(--txt); background: var(--card-bg); cursor: pointer; font-family: inherit; transition: 0.2s; }
 .calc-dd-badge:hover { border-color: var(--pri); color: var(--pri); }
 .calc-dd-badge.active { border-color: var(--pri); color: var(--pri); background: rgba(255, 69, 0, 0.08); }
@@ -942,10 +942,10 @@ const formatWarningText = (text) => {
     .calc-category-chip { font-size: 0.68rem; padding: 7px 8px; }
     .calc-inline-hint { font-size: 0.75rem; padding: 7px 9px; }
     .calc-dd-grid { gap: 6px; }
-    .calc-dd-item { padding: 8px; font-size: 0.74rem; }
+    .calc-dd-item { padding: 8px; font-size: 0.74rem; flex-direction: column; }
     .calc-dd-item-row { gap: 3px; }
     .calc-dd-badge { font-size: 0.62rem; padding: 4px 6px; }
-    .calc-dd-flags { display: none !important; }
+    .calc-dd-flags { display: none !important; margin-top: 8px; }
     .calc-dd-item.mobile-expanded .calc-dd-flags { display: flex !important; }
 
     .calc-dropdown-container { position: static; } 
