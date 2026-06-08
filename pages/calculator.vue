@@ -712,6 +712,9 @@ const formatWarningText = (text) => {
                 <div v-if="!calcChildCardKey || getGeneListBySex(calcChildCardKey).length === 0" class="calc-inline-hint calc-inline-hint--warn">
                     請先在子代卡片中選擇至少一個基因。</div>
 
+                <div v-else-if="!calcKnownParentCardKey || getGeneListBySex(calcKnownParentCardKey).length === 0" class="calc-inline-hint calc-inline-hint--warn">
+                    請先在已知親代卡片中選擇至少一個基因。</div>
+
                 <div v-else-if="calcReverseMatches.length === 0" class="calc-inline-hint calc-inline-hint--warn">
                     目前沒有符合條件的另一方配對結果。</div>
 
