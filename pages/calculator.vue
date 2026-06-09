@@ -797,17 +797,17 @@ const formatWarningText = (text) => {
             <div class="page-text-box" style="width:100%; max-width:600px; max-height:80vh; overflow-y:auto; position:relative;" @click.stop>
                 <div class="lightbox-close" @click="calcModalOpen = false" style="top:10px; right:10px; width:40px; height:40px; font-size:1.5rem;">✕</div>
                 <h2 style="color:var(--pri); margin-top:0; margin-bottom:0;">
-                    {{ calcActiveInfo === 'types' ? '基因觀念' : '多遺傳說明' }}
+                    {{ calcActiveInfo === 'types' ? '基礎觀念' : '多遺傳說明' }}
                 </h2>
-                
+
                 <div v-if="calcActiveInfo === 'types'">
-                    <p style="color:#ff5252; font-weight:bold; border-left:4px solid #ff5252; padding-left:10px;">不同物種的基因規則不同，請依照對應物種資料判讀結果。</p>
-                    <h4 style="color:var(--txt); border-bottom:1px solid var(--bd); padding-bottom:5px; margin-top:0;">顯性 (Dominant)</h4>
-                    <p style="font-size:0.95rem; color:var(--txt); opacity:0.7;">只要帶有一份基因就會表現出來。</p>
-                    <h4 style="color:var(--txt); border-bottom:1px solid var(--bd); padding-bottom:5px; margin-top:0;">共顯性 (Co-Dominant)</h4>
-                    <p style="font-size:0.95rem; color:var(--txt); opacity:0.7;">單基因與超級型會有不同表現，超級型通常是兩份相同基因。</p>
-                    <h4 style="color:var(--txt); border-bottom:1px solid var(--bd); padding-bottom:5px; margin-top:0;">隱性 (Recessive)</h4>
-                    <p style="font-size:0.95rem; color:var(--txt); opacity:0.7;">隱性基因可分為表現型與 Het 攜帶型，需搭配親代組合判讀。</p>
+                    <p style="color:#ff5252; font-weight:bold; border-left:4px solid #ff5252; padding-left:10px;">⚠️ 提醒： 不同物種的遺傳法則與基因交互作用（如等位基因）可能存在差異，請依據對應物種的專屬基因庫進行判讀。</p>
+                    <h4 style="color:var(--txt); border-bottom:1px solid var(--bd); padding-bottom:5px; margin-top:0;">完全顯性</h4>
+                    <p style="font-size:0.95rem; color:var(--txt); opacity:0.7;">只要遺傳到一份基因，就會在視覺上表現出來。其最大特徵是：單基因與雙基因的外觀表現完全相同，不存在進階的超級型態。</p>
+                    <h4 style="color:var(--txt); border-bottom:1px solid var(--bd); padding-bottom:5px; margin-top:0;">不完全顯性 / 共顯性</h4>
+                    <p style="font-size:0.95rem; color:var(--txt); opacity:0.7;">只要帶有一份基因就會改變外觀。若同時遺傳到兩份相同的基因，則會疊加表現出更極端的「超級」型態。</p>
+                    <h4 style="color:var(--txt); border-bottom:1px solid var(--bd); padding-bottom:5px; margin-top:0;">隱性</h4>
+                    <p style="font-size:0.95rem; color:var(--txt); opacity:0.7;">必須同時具備兩份相同的基因，才能在視覺上表現出來。若體內只有一份隱性基因，外觀會與普通原色無異，這在繁育上被稱為「帶基因 (Het)」。</p>
                 </div>
 
                 <div v-if="calcActiveInfo === 'poly'">
