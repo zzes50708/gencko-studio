@@ -601,14 +601,11 @@ const formatWarningText = (text) => {
             </div>
 
             <div class="calc-helper-btns">
-                <div class="calc-help-btn-group">
+                <div class="calc-help-btn-wrapper">
                     <button type="button" class="calc-help-btn" @click="calcActiveInfo = 'types'; calcModalOpen = true">基因觀念</button>
-                    <span class="calc-help-hint">其中一張選擇子代時為反向匹配</span>
-                </div>
-                <div class="calc-help-btn-group">
                     <button type="button" class="calc-help-btn" @click="calcActiveInfo = 'poly'; calcModalOpen = true">多遺傳說明</button>
-                    <span class="calc-help-hint">預期子代所需要的親代為何</span>
                 </div>
+                <span class="calc-help-hint">其中一張選擇子代時為反向匹配，預期子代所需要的親代為何</span>
             </div>
         </div>
 
@@ -854,10 +851,10 @@ const formatWarningText = (text) => {
 .calc-selector-menu-item:hover { border-color: var(--pri); color: var(--pri); background: rgba(255, 69, 0, 0.05); }
 .calc-selector-menu-item.active { border-color: var(--pri); color: var(--pri); background: rgba(255, 69, 0, 0.08); }
 
-.calc-helper-btns { display: flex; justify-content: center; gap: 12px; flex-wrap: wrap; margin: 0; align-items: center; }
-.calc-help-btn-group { display: flex; align-items: center; gap: 6px; }
+.calc-helper-btns { display: flex; justify-content: space-between; gap: 20px; flex-wrap: wrap; margin: 0; align-items: center; }
+.calc-help-btn-wrapper { display: flex; gap: 8px; align-items: center; }
 .calc-help-btn { display: flex; align-items: center; gap: 4px; padding: 5px 12px; border-radius: 20px; border: 1px dashed var(--bd); font-size: 0.85rem; color: var(--txt); opacity: 0.7; cursor: pointer; transition: 0.2s; background: var(--card-bg); font-family: inherit; line-height: 1.4; margin: 0; white-space: nowrap; }
-.calc-help-hint { font-size: 0.75rem; color: var(--txt); opacity: 0.6; }
+.calc-help-hint { font-size: 0.85rem; color: var(--txt); opacity: 0.85; font-weight: 500; text-align: right; flex: 1; min-width: 200px; }
 .calc-help-btn:hover { border-color: var(--pri); color: var(--pri); opacity: 1; background: rgba(255, 69, 0, 0.05); }
 
 .calc-parent-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 15px; margin-bottom: 0; }
