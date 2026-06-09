@@ -60,6 +60,7 @@ const calcActiveInfo = ref(null)
 const calcExpandedCategories = ref({ Male: 'recessive', Female: 'recessive' })
 const calcCardRoles = ref({ Male: 'male', Female: 'female' })
 const calcExpandedGenes = ref({})
+const calcReverseMatchBackup = ref(null)
 const calcParentCards = [
     { key: 'Male', label: '公', defaultRole: 'male', icon: '♂', accent: 'm' },
     { key: 'Female', label: '母', defaultRole: 'female', icon: '♀', accent: 'f' }
@@ -507,6 +508,38 @@ const calcReverseMatches = computed(() => {
     return uniqueMatches
 })
 
+const calcApplyRecommendedParent = (genes) => {
+    if (!calcReverseMatchBackup.value) {
+        calcReverseMatchBackup.value = {
+            maleGenes: JSON.parse(JSON.stringify(calcMale.value)),
+            femaleGenes: JSON.parse(JSON.stringify(calcFemale.value)),
+            cardRoles: JSON.parse(JSON.stringify(calcCardRoles.value))
+        }
+    }
+
+    const unknownParentKey = calcKnownParentCardKey.value === 'Male' ? 'Female' : 'Male'
+
+    if (unknownParentKey === 'Male') {
+        calcMale.value = JSON.parse(JSON.stringify(genes))
+    } else {
+        calcFemale.value = JSON.parse(JSON.stringify(genes))
+    }
+
+    calcCardRoles.value[unknownParentKey] = unknownParentKey.toLowerCase() === 'male' ? 'male' : 'female'
+    calcCardRoles.value[calcChildCardKey.value] = calcChildCardKey.value === 'Male' ? 'male' : 'female'
+}
+
+const calcReturnToReverse = () => {
+    if (!calcReverseMatchBackup.value) return
+
+    calcMale.value = calcReverseMatchBackup.value.maleGenes
+    calcFemale.value = calcReverseMatchBackup.value.femaleGenes
+    calcCardRoles.value = calcReverseMatchBackup.value.cardRoles
+    calcReverseMatchBackup.value = null
+}
+
+const calcIsShowingRecommended = computed(() => Boolean(calcReverseMatchBackup.value))
+
 const formatResultText = (text) => text || ''
 
 const formatWarningText = (text) => {
@@ -693,7 +726,9 @@ const formatWarningText = (text) => {
                         <div
                             v-for="(match, idx) in calcReverseMatches"
                             :key="`reverse-${idx}`"
-                            class="calc-reverse-card">
+                            class="calc-reverse-card"
+                            style="cursor: pointer;"
+                            @click="calcApplyRecommendedParent(match.genes)">
                             <div style="flex: 1;">
                                 <div style="font-size: 0.95rem; font-weight: 500; color: var(--txt); margin:0;">{{ match.label }}</div>
                             </div>
@@ -710,6 +745,15 @@ const formatWarningText = (text) => {
             </template>
 
             <template v-else>
+            <div v-if="calcIsShowingRecommended" style="margin-bottom:20px;">
+                <button
+                    type="button"
+                    style="padding:10px 20px; background:var(--pri); color:white; border:none; border-radius:4px; cursor:pointer; font-weight:bold;"
+                    @click="calcReturnToReverse">
+                    ← 返回反向匹配
+                </button>
+            </div>
+
             <div v-if="calcResult.warning" class="calc-warn">
                 <div style="font-size:1.8rem; line-height:1;">⚠️</div>
                 <div style="white-space:pre-line">{{ formatWarningText(calcResult.warning) }}</div>
