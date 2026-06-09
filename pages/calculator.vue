@@ -605,7 +605,10 @@ const formatWarningText = (text) => {
                     <button type="button" class="calc-help-btn" @click="calcActiveInfo = 'types'; calcModalOpen = true">基因觀念</button>
                     <button type="button" class="calc-help-btn" @click="calcActiveInfo = 'poly'; calcModalOpen = true">多遺傳說明</button>
                 </div>
-                <span class="calc-help-hint">其中一張選擇子代時為反向匹配，預期子代所需要的親代為何</span>
+                <div class="calc-help-hint">
+                    <span class="calc-help-hint-line"><span class="calc-help-hint-text">其中一張選擇子代時為反向匹配</span></span>
+                    <span class="calc-help-hint-line"><span class="calc-help-hint-text">預期子代所需要的親代為何</span></span>
+                </div>
             </div>
         </div>
 
@@ -854,7 +857,9 @@ const formatWarningText = (text) => {
 .calc-helper-btns { display: flex; justify-content: space-between; gap: 20px; flex-wrap: wrap; margin: 0; align-items: center; }
 .calc-help-btn-wrapper { display: flex; gap: 8px; align-items: center; }
 .calc-help-btn { display: flex; align-items: center; gap: 4px; padding: 5px 12px; border-radius: 20px; border: 1px dashed var(--bd); font-size: 0.85rem; color: var(--txt); opacity: 0.7; cursor: pointer; transition: 0.2s; background: var(--card-bg); font-family: inherit; line-height: 1.4; margin: 0; white-space: nowrap; }
-.calc-help-hint { font-size: 0.85rem; color: var(--txt); opacity: 0.85; font-weight: 500; text-align: right; flex: 1; min-width: 200px; }
+.calc-help-hint { font-size: 0.85rem; color: var(--txt); opacity: 0.85; font-weight: 500; text-align: right; }
+.calc-help-hint-line { display: inline; }
+.calc-help-hint-line + .calc-help-hint-line::before { content: '，'; }
 .calc-help-btn:hover { border-color: var(--pri); color: var(--pri); opacity: 1; background: rgba(255, 69, 0, 0.05); }
 
 .calc-parent-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 15px; margin-bottom: 0; }
@@ -967,8 +972,12 @@ const formatWarningText = (text) => {
     .calc-selector-menu { padding: 6px; border-radius: 12px; }
     .calc-selector-menu-item { font-size: 0.8rem; padding: 8px 10px; }
     
-    .calc-helper-btns { display: flex; width: 100%; gap: 10px; margin-bottom: 0; padding: 0 2px; }
-    .calc-help-btn { flex: 1; display: flex; align-items: center; justify-content: center; text-align: center; white-space: nowrap; font-size: 0.85rem; padding: 8px; border-radius: 6px; }
+    .calc-helper-btns { display: flex; width: 100%; gap: 10px; margin-bottom: 0; padding: 0 2px; justify-content: space-between; align-items: center; flex-wrap: nowrap; }
+    .calc-help-btn-wrapper { display: flex; flex-direction: column; gap: 6px; flex-shrink: 0; }
+    .calc-help-btn { display: flex; align-items: center; justify-content: center; text-align: center; white-space: nowrap; font-size: 0.8rem; padding: 6px 10px; border-radius: 6px; }
+    .calc-help-hint { display: flex; flex-direction: column; align-items: flex-start; text-align: left; font-size: 0.75rem; line-height: 1.5; flex: 1; padding-left: 8px; }
+    .calc-help-hint-line { display: block; }
+    .calc-help-hint-line + .calc-help-hint-line::before { content: ''; }
 
     .calc-parent-grid { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; gap: 6px; margin-bottom: 0; }
     
