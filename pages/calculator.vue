@@ -797,7 +797,7 @@ const formatWarningText = (text) => {
             <div class="page-text-box" style="width:100%; max-width:600px; max-height:80vh; overflow-y:auto; position:relative;" @click.stop>
                 <div class="lightbox-close" @click="calcModalOpen = false" style="top:10px; right:10px; width:40px; height:40px; font-size:1.5rem;">✕</div>
                 <h2 style="color:var(--pri); margin-top:0; margin-bottom:0;">
-                    {{ calcActiveInfo === 'types' ? '基礎觀念' : '多遺傳說明' }}
+                    {{ calcActiveInfo === 'types' ? '基礎觀念' : '多遺傳基因與選育品系' }}
                 </h2>
 
                 <div v-if="calcActiveInfo === 'types'">
@@ -811,14 +811,16 @@ const formatWarningText = (text) => {
                 </div>
 
                 <div v-if="calcActiveInfo === 'poly'">
-                    <p style="border-left:4px solid var(--pri); padding-left:10px;">多遺傳特徵通常不是單一基因決定，而是多個條件共同影響。</p>
+                    <p style="border-left:4px solid var(--pri); padding-left:10px;">多基因特徵無法使用傳統的遺傳法則來精確計算機率。這類品系是由繁育者挑選具備特定優勢的個體，經過多代交配，將特徵「越洗越純」的結果。子代最終的表現優劣，高度取決於親代的視覺表現等級。</p>
                     <div style="margin-top:0; background:rgba(255, 69, 0, 0.05); border: 1px solid rgba(255, 69, 0, 0.1); padding:10px; border-radius:8px;">
-                        <div style="color:var(--pri); font-weight:bold;">Tangerine</div>
-                        <p style="font-size:0.9rem; margin:5px 0 0 0; color:var(--txt); opacity:0.8;">常見於橘色加深、覆蓋面積提升等趨勢表現。</p>
+                        <div style="color:var(--pri); font-weight:bold;">🟥 體色強化</div>
+                        <p style="font-size:0.9rem; margin:5px 0 0 0; color:var(--txt); opacity:0.8;">透過選育讓特定底色加深、提亮或擴大覆蓋面積。</p>
+                        <p style="font-size:0.9rem; margin:5px 0 0 0; color:var(--txt); opacity:0.8;">常見舉例：豹紋/肥尾守宮的橘化、黑夜；豬鼻蛇的極端紅、綠。</p>
                     </div>
                     <div style="margin-top:0; background:rgba(255, 69, 0, 0.05); border: 1px solid rgba(255, 69, 0, 0.1); padding:10px; border-radius:8px;">
-                        <div style="color:var(--pri); font-weight:bold;">Bandit</div>
-                        <p style="font-size:0.9rem; margin:5px 0 0 0; color:var(--txt); opacity:0.8;">常見於頭部與背部紋路表現改變的選育方向。</p>
+                        <div style="color:var(--pri); font-weight:bold;">🔲 紋路改造</div>
+                        <p style="font-size:0.9rem; margin:5px 0 0 0; color:var(--txt); opacity:0.8;">透過代代挑選，改變頭部、背部或尾部的斑塊排列與粗細。</p>
+                        <p style="font-size:0.9rem; margin:5px 0 0 0; color:var(--txt); opacity:0.8;">常見舉例：豹紋守宮的土匪、直線；豬鼻蛇的老虎、雙斑。</p>
                     </div>
                 </div>
             </div>
