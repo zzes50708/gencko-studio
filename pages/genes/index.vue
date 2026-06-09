@@ -174,26 +174,29 @@ useHead({
 
 .gene-btn-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-    gap: 12px;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 10px;
 }
 
 .gene-btn-item {
     background: var(--card-bg);
     border: 1px solid var(--bd);
     border-radius: 12px;
-    padding: 15px;
-    text-align: left;
+    padding: 12px 10px;
+    text-align: center;
     cursor: pointer;
     transition: 0.3s;
     display: flex;
-    justify-content: space-between;
+    flex-direction: column;
+    justify-content: center;
     align-items: center;
+    gap: 4px;
     color: var(--txt);
     font-weight: bold;
-    font-size: 1rem;
+    font-size: 0.92rem;
     box-shadow: 0 4px 10px rgba(0,0,0,0.1);
     text-decoration: none;
+    min-width: 0;
 }
 
 .gene-btn-item:hover {
@@ -203,10 +206,10 @@ useHead({
 }
 
 .g-name {
-    flex: 1;
+    width: 100%;
     white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    overflow: visible;
+    text-align: center;
 }
 
 
@@ -231,24 +234,25 @@ useHead({
     }
     
     .gene-btn-grid {
-        grid-template-columns: repeat(2, 1fr);
-        gap: 8px;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 6px;
     }
 
     .gene-btn-item {
-        padding: 10px 12px;
-        border-radius: 10px;
-        min-height: 54px;
-        align-items: center;
+        padding: 10px 4px;
+        border-radius: 8px;
+        min-height: 48px;
+        gap: 2px;
+        font-size: 0.78rem;
     }
     .g-cta { display: none; }
-    
+
     .g-name {
-        white-space: normal !important;
-        word-wrap: break-word !important;
-        word-break: break-word !important;
-        font-size: 0.9rem;
-        line-height: 1.3;
+        white-space: nowrap !important;
+        overflow: visible !important;
+        font-size: 0.78rem;
+        line-height: 1.2;
+        letter-spacing: -0.5px;
     }
 
     .g-arrow {
@@ -267,6 +271,40 @@ useHead({
     
     .gene-section {
         margin-bottom: 15px;
+    }
+}
+
+/* 🌟 更小手機螢幕適配（如 iPhone SE / 360px 以下） */
+@media (max-width: 400px) {
+    .gene-btn-grid {
+        gap: 5px;
+    }
+
+    .gene-btn-item {
+        padding: 8px 3px;
+        font-size: 0.7rem;
+    }
+
+    .g-name {
+        font-size: 0.7rem;
+        letter-spacing: -0.5px;
+    }
+}
+
+/* 🌟 極小螢幕（iPhone SE 320px） */
+@media (max-width: 340px) {
+    .gene-btn-grid {
+        gap: 4px;
+    }
+
+    .gene-btn-item {
+        padding: 7px 2px;
+        font-size: 0.62rem;
+    }
+
+    .g-name {
+        font-size: 0.62rem;
+        letter-spacing: -0.6px;
     }
 }
 </style>
