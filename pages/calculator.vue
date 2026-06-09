@@ -484,24 +484,41 @@ const calcReverseMatches = computed(() => {
             }
 
             const bestMatch = result.outcomes.reduce((best, outcome) => {
-                const hasAnyMatch = (outcome.rawGenotypes || []).some((rawGenes) => {
+                let maxScore = -1
+                (outcome.rawGenotypes || []).forEach((rawGenes) => {
                     const rawMap = new Map(rawGenes.map((gene) => [gene.geneId, gene.zygosity]))
-                    let matchCount = 0
+                    let score = 0
+                    let visCount = 0
+
                     for (const childGene of childGenes) {
                         if (rawMap.has(childGene.geneId)) {
+                            const rawZygosity = rawMap.get(childGene.geneId)
                             const def = getGeneDef(childGene.geneId)
                             if (def && def.type === CALC_TYPES.REC) {
-                                if (rawMap.get(childGene.geneId) === ZYG.VIS) matchCount += 2
-                                else if (rawMap.get(childGene.geneId) === ZYG.HET) matchCount += 1
+                                if (rawZygosity === ZYG.VIS) {
+                                    score += 2
+                                    visCount += 1
+                                } else if (rawZygosity === ZYG.HET) {
+                                    score += 1
+                                }
                             } else {
-                                matchCount += 2
+                                if (rawZygosity !== ZYG.HET) {
+                                    score += 2
+                                    visCount += 1
+                                } else {
+                                    score += 1
+                                }
                             }
                         }
                     }
-                    return matchCount > 0 ? matchCount : -1
+
+                    const finalScore = score * 100 + visCount
+                    if (finalScore > maxScore) {
+                        maxScore = finalScore
+                    }
                 })
-                const score = hasAnyMatch === true ? -1 : hasAnyMatch || -1
-                return score > (best.score || -1) ? { outcome, score } : best
+
+                return maxScore > (best.score || -1) ? { outcome, score: maxScore } : best
             }, {})
 
             if (!bestMatch.outcome) return null
@@ -516,10 +533,7 @@ const calcReverseMatches = computed(() => {
             }
         })
         .filter(Boolean)
-        .sort((a, b) => {
-            if (a.isExactMatch !== b.isExactMatch) return b.isExactMatch ? 1 : -1
-            return b.prob - a.prob || a.genes.length - b.genes.length
-        })
+        .sort((a, b) => b.matchScore - a.matchScore || b.prob - a.prob)
 
     const uniqueMatches = [ ]
     const seen = new Set()
