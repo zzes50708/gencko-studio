@@ -467,35 +467,24 @@ const calcReverseMatches = computed(() => {
 
         if (!calcResult) return
 
-        let exactMatch = null
-        let bestMatch = null
+        let bestOutcome = null
+        let bestProb = 0
 
         calcResult.outcomes.forEach((outcome) => {
             const isExactMatch = (outcome.rawGenotypes || []).some((rawGenes) =>
                 calcDoesOutcomeMatchChild(rawGenes, childGenes)
             )
-            const hasAnyMatch = (outcome.rawGenotypes || []).some((rawGenes) =>
-                calcDoesOutcomeMatchChild(rawGenes, childGenes) ||
-                calcDoesOutcomeMatchCarrierChild(rawGenes, childGenes)
-            )
 
-            if (isExactMatch) {
-                if (!exactMatch || outcome.prob > exactMatch.prob) {
-                    exactMatch = outcome
-                }
-            } else if (hasAnyMatch) {
-                if (!bestMatch || outcome.prob > bestMatch.prob) {
-                    bestMatch = outcome
-                }
+            if (isExactMatch && outcome.prob > bestProb) {
+                bestOutcome = outcome
+                bestProb = outcome.prob
             }
         })
-
-        const bestOutcome = exactMatch || bestMatch
 
         if (bestOutcome) {
             results.push({
                 genes: candidateGenes,
-                prob: bestOutcome.prob,
+                prob: bestProb,
                 label: formatGeneListSummary(candidateGenes),
                 childLabel: bestOutcome.fullLabel,
                 totalCombos: calcResult.totalCombos
