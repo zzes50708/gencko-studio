@@ -525,8 +525,7 @@ const calcApplyRecommendedParent = (genes) => {
         calcFemale.value = JSON.parse(JSON.stringify(genes))
     }
 
-    calcCardRoles.value[unknownParentKey] = unknownParentKey.toLowerCase() === 'male' ? 'male' : 'female'
-    calcCardRoles.value[calcChildCardKey.value] = calcChildCardKey.value === 'Male' ? 'male' : 'female'
+    calcCardRoles.value = { Male: 'male', Female: 'female' }
 }
 
 const calcReturnToReverse = () => {
