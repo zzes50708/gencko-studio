@@ -601,8 +601,14 @@ const formatWarningText = (text) => {
             </div>
 
             <div class="calc-helper-btns">
-                <button type="button" class="calc-help-btn" @click="calcActiveInfo = 'types'; calcModalOpen = true">基因觀念</button>
-                <button type="button" class="calc-help-btn" @click="calcActiveInfo = 'poly'; calcModalOpen = true">多遺傳說明</button>
+                <div class="calc-help-btn-group">
+                    <button type="button" class="calc-help-btn" @click="calcActiveInfo = 'types'; calcModalOpen = true">基因觀念</button>
+                    <span class="calc-help-hint">其中一張選擇子代時為反向匹配</span>
+                </div>
+                <div class="calc-help-btn-group">
+                    <button type="button" class="calc-help-btn" @click="calcActiveInfo = 'poly'; calcModalOpen = true">多遺傳說明</button>
+                    <span class="calc-help-hint">預期子代所需要的親代為何</span>
+                </div>
             </div>
         </div>
 
@@ -828,6 +834,7 @@ const formatWarningText = (text) => {
 .calc-container { max-width: 1100px; margin: 0 auto; position: relative; padding-top: 15px; }
 
 .calc-header { text-align: center; margin-bottom: 0; }
+.seo-hint { margin: 0; padding: 0; }
 .calc-top-desc { text-align: center; color: var(--pri); font-weight: 700; margin-bottom: 0; font-size: 0.95rem; letter-spacing: 1px; }
 .calc-sub-desc { text-align: center; color: var(--txt); opacity: 0.6; font-size: 0.85rem; margin-bottom: 0; }
 
@@ -836,7 +843,7 @@ const formatWarningText = (text) => {
 .calc-species-group-col,
 .calc-species-item-col { min-width: 0; display: flex; justify-content: flex-start; }
 .calc-selector-dropdown { position: relative; width: 100%; }
-.calc-selector-chip { padding: 10px 16px; border-radius: 999px; border: 1px solid var(--bd); background: var(--card-bg); color: var(--txt); font-weight: 700; font-size: 0.9rem; font-family: inherit; cursor: pointer; transition: 0.2s; }
+.calc-selector-chip { padding: 10px 16px; border-radius: 999px; border: 1px solid var(--bd); background: var(--card-bg); color: var(--txt); font-weight: 700; font-size: 0.9rem; font-family: inherit; cursor: pointer; transition: 0.2s; margin: 0; }
 .calc-selector-chip:hover { border-color: var(--pri); color: var(--pri); }
 .calc-selector-chip.active { background: var(--pri); border-color: var(--pri); color: #fff; box-shadow: 0 6px 16px rgba(255, 69, 0, 0.18); }
 .calc-selector-chip--species { min-width: 110px; }
@@ -847,8 +854,10 @@ const formatWarningText = (text) => {
 .calc-selector-menu-item:hover { border-color: var(--pri); color: var(--pri); background: rgba(255, 69, 0, 0.05); }
 .calc-selector-menu-item.active { border-color: var(--pri); color: var(--pri); background: rgba(255, 69, 0, 0.08); }
 
-.calc-helper-btns { display: flex; justify-content: center; gap: 8px; flex-wrap: wrap; margin-bottom: 0; }
-.calc-help-btn { display: flex; align-items: center; gap: 4px; padding: 5px 12px; border-radius: 20px; border: 1px dashed var(--bd); font-size: 0.85rem; color: var(--txt); opacity: 0.7; cursor: pointer; transition: 0.2s; background: var(--card-bg); font-family: inherit; line-height: 1.4; }
+.calc-helper-btns { display: flex; justify-content: center; gap: 12px; flex-wrap: wrap; margin: 0; align-items: center; }
+.calc-help-btn-group { display: flex; align-items: center; gap: 6px; }
+.calc-help-btn { display: flex; align-items: center; gap: 4px; padding: 5px 12px; border-radius: 20px; border: 1px dashed var(--bd); font-size: 0.85rem; color: var(--txt); opacity: 0.7; cursor: pointer; transition: 0.2s; background: var(--card-bg); font-family: inherit; line-height: 1.4; margin: 0; white-space: nowrap; }
+.calc-help-hint { font-size: 0.75rem; color: var(--txt); opacity: 0.6; }
 .calc-help-btn:hover { border-color: var(--pri); color: var(--pri); opacity: 1; background: rgba(255, 69, 0, 0.05); }
 
 .calc-parent-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 15px; margin-bottom: 0; }
