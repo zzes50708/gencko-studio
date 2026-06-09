@@ -129,13 +129,13 @@ useHead({
     box-shadow: 0 4px 10px rgba(255, 69, 0, 0.4);
 }
 
-/* 🌟 移除 sticky 定位，改回普通區塊 */
+/* 🌟 只保留標題，移除背景與邊框 */
 .section-header {
-    background: var(--card-bg);
-    padding: 10px 15px;
-    margin-bottom: 15px;
-    border-bottom: 1px solid var(--bd);
-    border-radius: 8px;
+    background: transparent;
+    padding: 0;
+    margin-bottom: 12px;
+    border-bottom: none;
+    border-radius: 0;
 }
 
 .gene-cat-title {
@@ -179,37 +179,64 @@ useHead({
 }
 
 .gene-btn-item {
-    background: var(--card-bg);
+    position: relative;
+    background: linear-gradient(135deg, var(--card-bg) 0%, rgba(255, 255, 255, 0.02) 100%);
     border: 1px solid var(--bd);
-    border-radius: 12px;
-    padding: 12px 10px;
+    border-radius: 14px;
+    padding: 8px 4px;
     text-align: center;
     cursor: pointer;
-    transition: 0.3s;
+    transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+                box-shadow 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+                border-color 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+                color 0.25s cubic-bezier(0.4, 0, 0.2, 1);
     display: flex;
     flex-direction: column;
     justify-content: center;
     align-items: center;
-    gap: 4px;
+    gap: 2px;
     color: var(--txt);
-    font-weight: bold;
-    font-size: 0.92rem;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    font-weight: 800;
+    font-size: 1.05rem;
+    letter-spacing: 0.5px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08), inset 0 1px 0 rgba(255,255,255,0.05);
     text-decoration: none;
     min-width: 0;
+    overflow: hidden;
+}
+
+.gene-btn-item::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(255, 69, 0, 0) 0%, rgba(255, 69, 0, 0) 100%);
+    border-radius: inherit;
+    transition: background 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    pointer-events: none;
 }
 
 .gene-btn-item:hover {
     border-color: var(--pri);
     transform: translateY(-3px);
-    box-shadow: 0 6px 15px rgba(255,69,0,0.2);
+    box-shadow: 0 10px 24px rgba(255,69,0,0.18), 0 2px 6px rgba(255,69,0,0.08);
+    color: var(--pri);
+}
+
+.gene-btn-item:hover::before {
+    background: linear-gradient(135deg, rgba(255, 69, 0, 0.08) 0%, rgba(255, 69, 0, 0) 100%);
+}
+
+.gene-btn-item:active {
+    transform: translateY(-1px) scale(0.98);
 }
 
 .g-name {
+    position: relative;
     width: 100%;
     white-space: nowrap;
     overflow: visible;
     text-align: center;
+    z-index: 1;
 }
 
 
@@ -239,55 +266,56 @@ useHead({
     }
 
     .gene-btn-item {
-        padding: 10px 4px;
-        border-radius: 8px;
+        padding: 10px 3px;
+        border-radius: 10px;
         min-height: 48px;
         gap: 2px;
-        font-size: 0.78rem;
+        font-size: 0.88rem;
+        letter-spacing: 0.2px;
     }
     .g-cta { display: none; }
 
     .g-name {
         white-space: nowrap !important;
         overflow: visible !important;
-        font-size: 0.78rem;
+        font-size: 0.88rem;
         line-height: 1.2;
-        letter-spacing: -0.5px;
+        letter-spacing: -0.2px;
     }
 
     .g-arrow {
         display: block !important;
         font-size: 0.85rem;
     }
-    
+
     .section-header {
-        padding: 8px 12px;
+        padding: 0;
         margin-bottom: 8px; /* 縮減與下方基因卡片的間距 */
     }
-    
+
     .gene-cat-title {
         font-size: 1.05rem;
     }
-    
+
     .gene-section {
         margin-bottom: 15px;
     }
 }
 
-/* 🌟 更小手機螢幕適配（如 iPhone SE / 360px 以下） */
+/* 🌟 更小手機螢幕適配（≤400px） */
 @media (max-width: 400px) {
     .gene-btn-grid {
         gap: 5px;
     }
 
     .gene-btn-item {
-        padding: 8px 3px;
-        font-size: 0.7rem;
+        padding: 9px 2px;
+        font-size: 0.8rem;
     }
 
     .g-name {
-        font-size: 0.7rem;
-        letter-spacing: -0.5px;
+        font-size: 0.8rem;
+        letter-spacing: -0.4px;
     }
 }
 
@@ -298,13 +326,13 @@ useHead({
     }
 
     .gene-btn-item {
-        padding: 7px 2px;
-        font-size: 0.62rem;
+        padding: 8px 2px;
+        font-size: 0.7rem;
     }
 
     .g-name {
-        font-size: 0.62rem;
-        letter-spacing: -0.6px;
+        font-size: 0.7rem;
+        letter-spacing: -0.5px;
     }
 }
 </style>
