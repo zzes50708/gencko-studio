@@ -451,97 +451,68 @@ const calcReverseMatches = computed(() => {
 
     buildParents(0, [ ])
 
-    const matches = generatedParents
-        .map((candidateGenes) => {
-            if (candidateGenes.length === 0) return null
+    const results = []
 
-            const knownParentIsMale = calcKnownParentCardKey.value === 'Male'
-            const maleGenes = knownParentIsMale ? knownParentGenes : candidateGenes
-            const femaleGenes = knownParentIsMale ? candidateGenes : knownParentGenes
-            const result = calculateGenetics(
-                calcSanitizedSpeciesConfig.value,
-                JSON.parse(JSON.stringify(maleGenes)),
-                JSON.parse(JSON.stringify(femaleGenes))
+    generatedParents.forEach((candidateGenes) => {
+        if (candidateGenes.length === 0) return
+
+        const knownParentIsMale = calcKnownParentCardKey.value === 'Male'
+        const maleGenes = knownParentIsMale ? knownParentGenes : candidateGenes
+        const femaleGenes = knownParentIsMale ? candidateGenes : knownParentGenes
+        const calcResult = calculateGenetics(
+            calcSanitizedSpeciesConfig.value,
+            JSON.parse(JSON.stringify(maleGenes)),
+            JSON.parse(JSON.stringify(femaleGenes))
+        )
+
+        if (!calcResult) return
+
+        let exactMatch = null
+        let bestMatch = null
+
+        calcResult.outcomes.forEach((outcome) => {
+            const isExactMatch = (outcome.rawGenotypes || []).some((rawGenes) =>
+                calcDoesOutcomeMatchChild(rawGenes, childGenes)
+            )
+            const hasAnyMatch = (outcome.rawGenotypes || []).some((rawGenes) =>
+                calcDoesOutcomeMatchChild(rawGenes, childGenes) ||
+                calcDoesOutcomeMatchCarrierChild(rawGenes, childGenes)
             )
 
-            if (!result) return null
-
-            const exactMatch = result.outcomes.find((outcome) => {
-                return (outcome.rawGenotypes || []).some((rawGenes) =>
-                    calcDoesOutcomeMatchChild(rawGenes, childGenes)
-                )
-            })
-
-            if (exactMatch) {
-                return {
-                    genes: candidateGenes,
-                    prob: exactMatch.prob,
-                    label: formatGeneListSummary(candidateGenes),
-                    childLabel: exactMatch.fullLabel,
-                    totalCombos: result.totalCombos,
-                    matchScore: 100
+            if (isExactMatch) {
+                if (!exactMatch || outcome.prob > exactMatch.prob) {
+                    exactMatch = outcome
+                }
+            } else if (hasAnyMatch) {
+                if (!bestMatch || outcome.prob > bestMatch.prob) {
+                    bestMatch = outcome
                 }
             }
-
-            const bestMatch = result.outcomes.reduce((best, outcome) => {
-                let maxScore = -1
-                (outcome.rawGenotypes || []).forEach((rawGenes) => {
-                    const rawMap = new Map(rawGenes.map((gene) => [gene.geneId, gene.zygosity]))
-                    let score = 0
-                    let visCount = 0
-
-                    for (const childGene of childGenes) {
-                        if (rawMap.has(childGene.geneId)) {
-                            const rawZygosity = rawMap.get(childGene.geneId)
-                            const def = getGeneDef(childGene.geneId)
-                            if (def && def.type === CALC_TYPES.REC) {
-                                if (rawZygosity === ZYG.VIS) {
-                                    score += 2
-                                    visCount += 1
-                                } else if (rawZygosity === ZYG.HET) {
-                                    score += 1
-                                }
-                            } else {
-                                if (rawZygosity !== ZYG.HET) {
-                                    score += 2
-                                    visCount += 1
-                                } else {
-                                    score += 1
-                                }
-                            }
-                        }
-                    }
-
-                    const finalScore = score * 100 + visCount
-                    if (finalScore > maxScore) {
-                        maxScore = finalScore
-                    }
-                })
-
-                return maxScore > (best.score || -1) ? { outcome, score: maxScore } : best
-            }, {})
-
-            if (!bestMatch.outcome) return null
-
-            return {
-                genes: candidateGenes,
-                prob: bestMatch.outcome.prob,
-                label: formatGeneListSummary(candidateGenes),
-                childLabel: bestMatch.outcome.fullLabel,
-                totalCombos: result.totalCombos,
-                matchScore: bestMatch.score || 0
-            }
         })
-        .filter(Boolean)
-        .sort((a, b) => b.matchScore - a.matchScore || b.prob - a.prob)
 
-    const uniqueMatches = [ ]
+        const bestOutcome = exactMatch || bestMatch
+
+        if (bestOutcome) {
+            results.push({
+                genes: candidateGenes,
+                prob: bestOutcome.prob,
+                label: formatGeneListSummary(candidateGenes),
+                childLabel: bestOutcome.fullLabel,
+                totalCombos: calcResult.totalCombos
+            })
+        }
+    })
+
+    const sorted = results.sort((a, b) => b.prob - a.prob)
+
+    const uniqueMatches = []
     const seen = new Set()
 
-    matches.forEach((match) => {
-        if (seen.has(match.label)) return
-        seen.add(match.label)
-        uniqueMatches.push(match)
+    sorted.forEach((match) => {
+        if (!seen.has(match.label)) {
+            seen.add(match.label)
+            uniqueMatches.push(match)
+        }
     })
 
     return uniqueMatches
