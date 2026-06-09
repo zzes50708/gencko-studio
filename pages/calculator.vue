@@ -466,24 +466,53 @@ const calcReverseMatches = computed(() => {
 
             if (!result) return null
 
-            const exactMatches = result.outcomes.filter((outcome) => {
+            const exactMatch = result.outcomes.find((outcome) => {
                 return (outcome.rawGenotypes || []).some((rawGenes) =>
                     calcDoesOutcomeMatchChild(rawGenes, childGenes)
                 )
             })
 
-            if (!exactMatches.length) return null
+            if (exactMatch) {
+                return {
+                    genes: candidateGenes,
+                    prob: exactMatch.prob,
+                    label: formatGeneListSummary(candidateGenes),
+                    childLabel: exactMatch.fullLabel,
+                    totalCombos: result.totalCombos,
+                    matchScore: 100
+                }
+            }
 
-            const exactProb = exactMatches.reduce((sum, m) => sum + m.prob, 0)
-            const primaryMatch = exactMatches.reduce((max, m) => m.prob > max.prob ? m : max)
+            const bestMatch = result.outcomes.reduce((best, outcome) => {
+                const hasAnyMatch = (outcome.rawGenotypes || []).some((rawGenes) => {
+                    const rawMap = new Map(rawGenes.map((gene) => [gene.geneId, gene.zygosity]))
+                    let matchCount = 0
+                    for (const childGene of childGenes) {
+                        if (rawMap.has(childGene.geneId)) {
+                            const def = getGeneDef(childGene.geneId)
+                            if (def && def.type === CALC_TYPES.REC) {
+                                if (rawMap.get(childGene.geneId) === ZYG.VIS) matchCount += 2
+                                else if (rawMap.get(childGene.geneId) === ZYG.HET) matchCount += 1
+                            } else {
+                                matchCount += 2
+                            }
+                        }
+                    }
+                    return matchCount > 0 ? matchCount : -1
+                })
+                const score = hasAnyMatch === true ? -1 : hasAnyMatch || -1
+                return score > (best.score || -1) ? { outcome, score } : best
+            }, {})
+
+            if (!bestMatch.outcome) return null
 
             return {
                 genes: candidateGenes,
-                prob: exactProb,
+                prob: bestMatch.outcome.prob,
                 label: formatGeneListSummary(candidateGenes),
-                childLabel: primaryMatch.fullLabel,
+                childLabel: bestMatch.outcome.fullLabel,
                 totalCombos: result.totalCombos,
-                isExactMatch: true
+                matchScore: bestMatch.score || 0
             }
         })
         .filter(Boolean)
