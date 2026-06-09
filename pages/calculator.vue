@@ -972,10 +972,10 @@ const formatWarningText = (text) => {
     .calc-selector-menu { padding: 6px; border-radius: 12px; }
     .calc-selector-menu-item { font-size: 0.8rem; padding: 8px 10px; }
     
-    .calc-helper-btns { display: flex; width: 100%; gap: 10px; margin-bottom: 0; padding: 0 2px; justify-content: space-between; align-items: center; flex-wrap: nowrap; }
+    .calc-helper-btns { display: flex; width: 100%; gap: 10px; margin-bottom: 0; padding: 0 2px; align-items: center; flex-wrap: nowrap; }
     .calc-help-btn-wrapper { display: flex; flex-direction: column; gap: 6px; flex-shrink: 0; }
     .calc-help-btn { display: flex; align-items: center; justify-content: center; text-align: center; white-space: nowrap; font-size: 0.8rem; padding: 6px 10px; border-radius: 6px; }
-    .calc-help-hint { display: flex; flex-direction: column; align-items: flex-start; text-align: left; font-size: 0.75rem; line-height: 1.5; flex: 1; padding-left: 8px; }
+    .calc-help-hint { display: block; text-align: left; font-size: 0.75rem; line-height: 1.5; margin-left: auto; }
     .calc-help-hint-line { display: block; }
     .calc-help-hint-line + .calc-help-hint-line::before { content: ''; }
 
