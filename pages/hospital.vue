@@ -8,6 +8,18 @@ const store = useMainStore()
 
 const hospCity = ref('all')
 const hospDistrict = ref('all')
+const hospExpanded = ref(new Set())
+
+const toggleHospExpand = (id) => {
+    if (hospExpanded.value.has(id)) {
+        hospExpanded.value.delete(id)
+    } else {
+        hospExpanded.value.add(id)
+    }
+    hospExpanded.value = new Set(hospExpanded.value)
+}
+
+const isHospExpanded = (id) => hospExpanded.value.has(id)
 
 const hospAvailableCities = computed(() => new Set(HOSPITAL_DATA.map(h => h.city)))
 
@@ -148,29 +160,28 @@ useHead({
                 沒有找到符合的醫院
             </div>
 
-            <article v-for="h in hospFiltered" :key="h.id" class="hosp-card">
-                <div class="hosp-content-row">
-                    <div class="hosp-info">
-                        <h3 class="hosp-name">{{ h.name }}</h3>
-                        
-                        <a :href="getMapLink(h)" target="_blank" class="hosp-detail-row hosp-link" rel="noopener noreferrer">
-                            <svg class="hosp-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
-                            <span>{{ h.address }}</span>
-                        </a>
+            <article v-for="h in hospFiltered" :key="h.id" class="hosp-card" :class="{expanded: isHospExpanded(h.id)}">
+                <div class="hosp-header" @click="toggleHospExpand(h.id)">
+                    <h3 class="hosp-name">{{ h.name }}</h3>
+                    <div class="hosp-header-right">
+                        <span class="hosp-tag">{{ h.city }} {{ h.district }}</span>
+                        <span class="fav-btn" :class="{active: hospWishlist.includes(h.id)}" @click.stop.prevent="toggleHospWishlist(h.id)" style="position: relative; top: auto; right: auto; z-index: 10; box-shadow: 0 2px 5px rgba(0,0,0,0.2);">❤</span>
+                        <span class="hosp-toggle-icon" :class="{expanded: isHospExpanded(h.id)}" aria-hidden="true">▼</span>
+                    </div>
+                </div>
 
-                        <div class="hosp-detail-row">
-                            <svg class="hosp-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
-                            <span style="font-family:monospace">{{ h.phone }}</span>
-                        </div>
+                <div v-show="isHospExpanded(h.id)" class="hosp-details">
+                    <a :href="getMapLink(h)" target="_blank" class="hosp-detail-row hosp-link" rel="noopener noreferrer">
+                        <svg class="hosp-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+                        <span>{{ h.address }}</span>
+                    </a>
+
+                    <div class="hosp-detail-row">
+                        <svg class="hosp-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
+                        <span style="font-family:monospace">{{ h.phone }}</span>
                     </div>
 
-                    <div class="hosp-actions">
-                        <div style="display: flex; align-items: center; gap: 8px;">
-                            <span class="hosp-tag">{{ h.city }} {{ h.district }}</span>
-                            <span class="fav-btn" :class="{active: hospWishlist.includes(h.id)}" @click.stop.prevent="toggleHospWishlist(h.id)" style="position: relative; top: auto; right: auto; z-index: 10; box-shadow: 0 2px 5px rgba(0,0,0,0.2);">❤</span>
-                        </div>
-                        <a :href="'tel:' + h.phone.replace(/[^\d]/g, '')" class="hosp-call-btn" style="width: 100%; text-align: center;">撥打電話</a>
-                    </div>
+                    <a :href="'tel:' + h.phone.replace(/[^\d]/g, '')" class="hosp-call-btn" @click.stop>撥打電話</a>
                 </div>
             </article>
         </div>
@@ -249,51 +260,106 @@ useHead({
     border-radius: 8px; 
 }
 
-.hosp-card { 
-    padding: 15px; 
-    border: 1px solid var(--bd); 
-    background: var(--card-bg); 
-    position: relative; 
-    transition: 0.3s; 
-    display: flex; 
-    flex-direction: column; 
-    border-radius: 10px; 
-    box-shadow: 0 4px 15px rgba(0,0,0,0.05); 
+.hosp-card {
+    padding: 0;
+    border: 1px solid var(--bd);
+    background: var(--card-bg);
+    position: relative;
+    transition: border-color 0.25s, box-shadow 0.25s;
+    display: flex;
+    flex-direction: column;
+    border-radius: 10px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+    overflow: hidden;
 }
-.hosp-card:hover { 
-    border-color: var(--pri); 
-    transform: translateY(-2px); 
-    box-shadow: 0 5px 15px rgba(0,0,0,0.1); 
+.hosp-card:hover {
+    border-color: var(--pri);
+    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+}
+.hosp-card.expanded {
+    border-color: var(--pri);
+    box-shadow: 0 6px 18px rgba(255,69,0,0.12);
 }
 
-.hosp-content-row { display: flex; justify-content: space-between; gap: 12px; }
-.hosp-info { flex: 1; }
-.hosp-name { font-size: 1.1rem; font-weight: bold; margin-bottom: 8px; color: var(--txt); }
-.hosp-detail-row { display: flex; align-items: flex-start; gap: 6px; font-size: 0.85rem; color: var(--txt); opacity: 0.7; margin-bottom: 6px; line-height: 1.4; }
+.hosp-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 16px;
+    cursor: pointer;
+    user-select: none;
+    transition: background 0.2s;
+}
+.hosp-header:hover {
+    background: rgba(255, 69, 0, 0.03);
+}
+.hosp-header-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+}
+.hosp-toggle-icon {
+    color: var(--pri);
+    font-size: 0.75rem;
+    transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: rgba(255, 69, 0, 0.08);
+}
+.hosp-toggle-icon.expanded {
+    transform: rotate(180deg);
+}
+
+.hosp-details {
+    padding: 0 16px 14px 16px;
+    border-top: 1px solid var(--bd);
+    padding-top: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    animation: hospDetailsFadeIn 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes hospDetailsFadeIn {
+    from { opacity: 0; transform: translateY(-4px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.hosp-name { font-size: 1.1rem; font-weight: bold; margin: 0; color: var(--txt); flex: 1; min-width: 0; }
+.hosp-detail-row { display: flex; align-items: flex-start; gap: 6px; font-size: 0.85rem; color: var(--txt); opacity: 0.7; line-height: 1.4; margin: 0; }
 .hosp-icon { width: 14px; height: 14px; flex-shrink: 0; margin-top: 2px; color: var(--pri); }
 .hosp-link { text-decoration: none; color: inherit; transition: 0.2s; display: flex; align-items: center; }
 .hosp-link:hover { color: var(--pri); }
 
-.hosp-actions { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; flex-shrink: 0; justify-content: center; }
-.hosp-tag { 
-    font-size: 0.75rem; 
-    font-weight: bold; 
-    padding: 4px 8px; 
-    border: 1px solid var(--bd); 
-    background: rgba(128,128,128,0.05); 
-    color: var(--pri); 
-    border-radius: 6px; 
+.hosp-tag {
+    font-size: 0.75rem;
+    font-weight: bold;
+    padding: 4px 8px;
+    border: 1px solid var(--bd);
+    background: rgba(128,128,128,0.05);
+    color: var(--pri);
+    border-radius: 6px;
+    white-space: nowrap;
 }
-.hosp-call-btn { 
-    padding: 8px 15px; 
-    font-size: 0.85rem; 
-    font-weight: bold; 
-    border: 1px solid var(--pri); 
-    color: var(--pri); 
-    text-decoration: none; 
-    transition: 0.2s; 
-    border-radius: 6px; 
-    background: transparent; 
+.hosp-call-btn {
+    padding: 10px 15px;
+    font-size: 0.9rem;
+    font-weight: bold;
+    border: 1px solid var(--pri);
+    color: var(--pri);
+    text-decoration: none;
+    transition: 0.2s;
+    border-radius: 8px;
+    background: transparent;
+    text-align: center;
+    margin-top: 6px;
+    display: block;
 }
 .hosp-call-btn:hover { background: var(--pri); color: #fff; }
 
@@ -321,22 +387,31 @@ useHead({
 
     .hosp-label { margin-bottom: 0px; }
     
-    /* #3: 卡片保留最低垂直內距，確保資訊與動作區有視覺分隔 */
     .hosp-card {
-        padding: 12px;
-        border-radius: 15px;
+        padding: 0;
+        border-radius: 12px;
     }
 
-    .hosp-content-row { flex-direction: column; gap: 0; }
+    .hosp-header {
+        padding: 12px 14px;
+        gap: 8px;
+    }
+
+    .hosp-header-right {
+        gap: 6px;
+    }
 
     .hosp-name {
-        font-size: 1rem;
-        margin-bottom: 2px; /* 縮減標題下邊距 */
+        font-size: 0.95rem;
+    }
+
+    .hosp-details {
+        padding: 10px 14px 12px 14px;
+        gap: 6px;
     }
 
     .hosp-detail-row {
         font-size: 0.8rem;
-        margin-bottom: 2px; /* 縮減文字行距 */
     }
 
     .hosp-icon {
@@ -345,27 +420,21 @@ useHead({
         margin-top: 1px;
     }
 
-    .hosp-actions { 
-        flex-direction: row; 
-        justify-content: space-between; 
-        align-items: center; 
-        width: 100%; 
-        margin-top: 8px;
-        border-top: 1px solid var(--bd);
-        padding-top: 10px;
-    }
-
     /* #2: 撥打電話按鈕 touch target ≥ 44px（WCAG 建議） */
     .hosp-call-btn {
-        width: auto !important;
+        width: 100%;
         padding: 10px 16px;
         min-height: 44px;
-        font-size: 0.82rem;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
+        font-size: 0.85rem;
+        margin-top: 4px;
     }
-    
+
     .hosp-tag { font-size: 0.7rem; padding: 2px 6px; }
+
+    .hosp-toggle-icon {
+        width: 20px;
+        height: 20px;
+        font-size: 0.7rem;
+    }
 }
 </style>
