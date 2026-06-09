@@ -124,23 +124,43 @@ const getImgSrc = (item) => {
     position: fixed;
     top: calc(12px + env(safe-area-inset-top, 0px));
     right: 12px;
-    width: 40px;
-    height: 40px;
-    border-radius: 999px;
-    border: 1px solid var(--bd);
-    background: rgba(0,0,0,0.25);
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    border: 1.5px solid rgba(255, 255, 255, 0.18);
+    background: rgba(255, 255, 255, 0.08);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
     color: var(--txt);
     cursor: pointer;
-    font-size: 22px;
+    font-size: 1.4rem;
+    font-weight: 300;
     line-height: 1;
     display: flex;
     align-items: center;
     justify-content: center;
     z-index: 1000002;
+    transition: background 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+                border-color 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+                color 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+                transform 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+                box-shadow 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
 }
 
 @media (hover: hover) and (pointer: fine) {
-    .lightbox-close-btn:hover { border-color: var(--bd-hover); color: var(--pri); }
+    .lightbox-close-btn:hover {
+        background: var(--pri);
+        border-color: var(--pri);
+        color: #fff;
+        transform: scale(1.08) rotate(90deg);
+        box-shadow: 0 8px 28px rgba(255, 69, 0, 0.4);
+    }
+}
+
+.lightbox-close-btn:active {
+    transform: scale(0.95) rotate(90deg);
+    box-shadow: 0 2px 10px rgba(255, 69, 0, 0.3);
 }
 
 .lightbox-content-wrapper {
