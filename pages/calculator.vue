@@ -1001,10 +1001,22 @@ const formatWarningText = (text) => {
     .calc-morph-list { gap: 4px; flex-wrap: nowrap; overflow-x: auto; justify-content: flex-start; scrollbar-width: none; }
     .calc-morph-list::-webkit-scrollbar { display: none; }
     .calc-morph-chip { font-size: 0.68rem; padding: 7px 8px; }
-    .calc-gene-category-list { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; }
-    .calc-category-chip { font-size: 0.68rem; padding: 7px 8px; }
+    .calc-gene-category-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px;
+    }
+    .calc-category-chip {
+        width: auto;
+        font-size: 0.68rem;
+        padding: 7px 10px;
+        white-space: nowrap;
+        overflow: visible;
+        text-overflow: clip;
+        flex: 0 0 auto;
+    }
     .calc-inline-hint { font-size: 0.75rem; padding: 7px 9px; }
-    .calc-dd-grid { gap: 6px; }
+    .calc-dd-grid { grid-template-columns: 1fr; gap: 6px; }
     .calc-dd-item { padding: 8px; font-size: 0.74rem; flex-direction: column; }
     .calc-dd-item-row { gap: 3px; }
     .calc-dd-badge { font-size: 0.62rem; padding: 4px 6px; }
