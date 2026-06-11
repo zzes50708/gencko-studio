@@ -22,8 +22,14 @@ const isAboutPage = computed(() => route.path === '/' || route.path.startsWith('
 
 const handleLenisScroll = ({ scroll }) => {
   const st = Math.max(0, scroll)
-  if (st > 100 && st > store.lastScrollY) store.navHidden = true
-  else store.navHidden = false
+  const delta = st - store.lastScrollY
+  if (st <= 100) {
+    store.navHidden = false
+  } else if (delta > 2) {
+    store.navHidden = true
+  } else if (delta < -2) {
+    store.navHidden = false
+  }
   if (st + window.innerHeight >= document.documentElement.scrollHeight - 300) {
     if (st > store.lastScrollY && store.displayLimit < 2000) store.displayLimit += 20
   }
