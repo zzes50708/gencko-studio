@@ -96,7 +96,11 @@ const isArticlesActive = computed(() => ['articles', 'care', 'faq'].includes(pro
         </div>
 
         <!-- Reading Progress Bar -->
-        <div v-if="curTab==='articles' && readingArticle" class="reading-progress-bar">
+        <div
+            v-if="curTab==='articles' && readingArticle"
+            class="reading-progress-bar"
+            :class="{ 'reading-progress-bar--nav-hidden': navHidden }"
+        >
             <div class="progress-fill" :style="{width: readingProgress + '%'}"></div>
         </div>
     </div>
@@ -166,7 +170,19 @@ const isArticlesActive = computed(() => ['articles', 'care', 'faq'].includes(pro
 .dt-only { display: block; }
 
 /* Reading Progress Bar */
-.reading-progress-bar { position: fixed; top: calc(40px + env(safe-area-inset-top, 0px) + 50px); left: 0; width: 100%; height: 2px; background: var(--bd); z-index: 999; }
+.reading-progress-bar {
+    position: fixed;
+    top: calc(40px + env(safe-area-inset-top, 0px) + 50px);
+    left: 0;
+    width: 100%;
+    height: 2px;
+    background: var(--bd);
+    z-index: 999;
+    transition: transform 0.3s ease;
+}
+.reading-progress-bar--nav-hidden {
+    transform: translateY(-50px);
+}
 .progress-fill { height: 100%; background: var(--pri); width: 0%; transition: width 0.1s linear; box-shadow: 0 0 10px var(--pri-glow); }
 
 /* Mobile Menu Overlay & Responsive */
@@ -179,4 +195,3 @@ const isArticlesActive = computed(() => ['articles', 'care', 'faq'].includes(pro
     .theme-toggle { margin-right: -10px; }
 }
 </style>
-

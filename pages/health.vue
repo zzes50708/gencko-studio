@@ -497,7 +497,7 @@ const copied = ref(false)
                         <span class="h-entry-tag h-tag--full">CHECKUP</span>
                     </div>
                     <div class="h-entry-title">完整健康檢查</div>
-                    <div class="h-entry-quote">20 題細查<br>完整盤點健康狀態</div>
+                    <div class="h-entry-quote">30 題細查<br>完整盤點健康狀態</div>
                     <div class="h-entry-meta">
                         <span class="h-entry-meta-num">{{ CHECKUP_QUESTIONS.length }}</span>
                         <span>題</span>
