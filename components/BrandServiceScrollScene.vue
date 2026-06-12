@@ -386,8 +386,9 @@ const geneTokens = computed(() => {
         >
           <div class="carousel-item__content">
             <span v-if="scene.kicker" class="scene-kicker">{{ scene.kicker }}</span>
+            <!-- SEO：全頁僅保留第一幕 hero 為 h1，輪播場景一律用 h2（樣式綁 .scene-title class，視覺不變） -->
             <!-- eslint-disable-next-line vue/no-v-html -->
-            <h1 class="scene-title" v-html="scene.title" />
+            <h2 class="scene-title" v-html="scene.title" />
             <!-- eslint-disable-next-line vue/no-v-html -->
             <p v-if="scene.desc" class="scene-desc" v-html="scene.desc" />
             <div v-if="scene.btn" class="scene-cta" style="pointer-events: auto;">
@@ -411,8 +412,14 @@ const geneTokens = computed(() => {
       >
         <!-- Hero ?湔 (0/5)嚗??圈＊蝷箏之璅? -->
         <span v-if="scene.hero && scene.kicker" class="scene-kicker">{{ scene.kicker }}</span>
+        <!-- SEO：只有第一幕（idx 0）是 h1，並附視覺隱藏的補述文字強化 H1 語意；結尾 hero（準備好了嗎）改 h2 -->
+        <h1 v-if="scene.hero && idx === 0" class="scene-title scene-title--hero">
+          <!-- eslint-disable-next-line vue/no-v-html -->
+          <span v-html="scene.title" />
+          <span class="sr-only">｜台灣豹紋守宮專業繁育工作室</span>
+        </h1>
         <!-- eslint-disable-next-line vue/no-v-html -->
-        <h1 v-if="scene.hero" class="scene-title scene-title--hero" v-html="scene.title" />
+        <h2 v-else-if="scene.hero" class="scene-title scene-title--hero" v-html="scene.title" />
         <p v-if="scene.hero && scene.subtitle" class="scene-subtitle">{{ scene.subtitle }}</p>
         <div
           v-if="idx === 0"

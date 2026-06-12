@@ -7,12 +7,36 @@ import { onBeforeUnmount, onMounted } from 'vue'
 definePageMeta({ pageTransition: false, layoutTransition: false })
 
 useHead({
-  title: 'Gencko Studio — 豹紋守宮繁育工作室',
+  title: 'Gencko 守宮工作室｜專業選育 × 新手飼養教學',
   meta: [
-    { name: 'description', content: 'Gencko Studio 豹紋守宮專業繁育工作室，提供基因知識、在售個體與飼養資訊。' },
-    { property: 'og:title', content: 'Gencko Studio — 豹紋守宮繁育工作室' },
-    { property: 'og:description', content: 'Gencko Studio 豹紋守宮專業繁育工作室，提供基因知識、在售個體與飼養資訊。' },
+    { name: 'description', content: 'Gencko Breeding Studio 台灣豹紋守宮專業繁育工作室，提供特殊基因品系個體選購、基因計算機、新手飼養教學、健康評估、特寵醫院查詢與線上競標。從基因到飼養的一站式服務。' },
+    { property: 'og:title', content: 'Gencko 守宮工作室｜專業選育 × 新手飼養教學' },
+    { property: 'og:description', content: '台灣豹紋守宮專業繁育工作室，特殊基因品系選購、基因計算機與新手飼養教學的一站式服務。' },
     { property: 'og:url', content: 'https://www.genckobreeding.com/' },
+    { property: 'og:image', content: 'https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/%E6%9C%AA%E5%91%BD%E5%90%8D%E8%A8%AD%E8%A8%88.png' },
+    { name: 'twitter:image', content: 'https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/%E6%9C%AA%E5%91%BD%E5%90%8D%E8%A8%AD%E8%A8%88.png' },
+  ],
+  link: [
+    { rel: 'canonical', href: 'https://www.genckobreeding.com/' },
+  ],
+  script: [
+    // WebSite + SearchAction：依 Google 規範必須放在網站根目錄 `/`
+    {
+      type: 'application/ld+json',
+      children: JSON.stringify({
+        "@context": "https://schema.org",
+        "@type": "WebSite",
+        "name": "Gencko Breeding Studio",
+        "alternateName": ["Gencko Studio", "捷客工作室"],
+        "url": "https://www.genckobreeding.com/",
+        "inLanguage": "zh-TW",
+        "potentialAction": {
+          "@type": "SearchAction",
+          "target": "https://www.genckobreeding.com/shop?kw={search_term_string}",
+          "query-input": "required name=search_term_string"
+        }
+      })
+    }
   ],
   // 維持 /about 的深色全螢幕背景與禁止捲動效果
   bodyAttrs: { style: 'background-color: #0D0B0A !important;' },
