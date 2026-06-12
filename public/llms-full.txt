@@ -1,0 +1,5 @@
+# Gencko Breeding Studio — 完整知識庫（llms-full.txt）
+
+> 本檔案提供 LLM 直接吃的完整純文字知識庫。後續將分頁逐步補入：FAQ、基因定義、飼養 SOP、健康評估指南等內容。
+
+請先參考精簡入口檔：https://www.genckobreeding.com/llms.txt
