@@ -9,42 +9,187 @@ import { expandMorphComponents, findMatchingMorph } from '~/utils/genetics/morph
 
 const store = useMainStore()
 
+const calcUrl = 'https://www.genckobreeding.com/calculator'
+const calcImg = 'https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/%E5%AE%98%E7%B6%B2%E8%83%8C%E6%99%AF.png'
+
+const calcPublisher = {
+    "@type": "Organization",
+    "name": "Gencko Breeding Studio",
+    "alternateName": ["Gencko Studio", "捷客工作室"],
+    "url": "https://www.genckobreeding.com",
+    "logo": { "@type": "ImageObject", "url": "https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/11.png", "width": 512, "height": 512 },
+    "sameAs": [
+        "https://www.instagram.com/gencko_breeding",
+        "https://www.facebook.com/profile.php?id=61579393505049",
+        "https://line.me/R/ti/p/@219abdzn"
+    ]
+}
+
+// WebApplication / SoftwareApplication（雙重型別讓 AI 更容易識別）
+const calcAppLd = {
+    "@type": ["WebApplication", "SoftwareApplication"],
+    "@id": `${calcUrl}#app`,
+    "name": "Gencko 基因計算機 (Gencko Morph Calculator)",
+    "alternateName": ["守宮基因計算機", "Morph Calculator", "Gene Calculator"],
+    "url": calcUrl,
+    "applicationCategory": "UtilityApplication",
+    "applicationSubCategory": "GeneticCalculator",
+    "operatingSystem": "All",
+    "browserRequirements": "Requires JavaScript. Requires HTML5.",
+    "inLanguage": "zh-TW",
+    "description": "Gencko 基因計算機：依孟德爾遺傳定律模擬豹紋守宮、肥尾守宮與豬鼻蛇的配對子代基因型機率，支援隱性、顯性、共顯性、多基因、Het 推算、反向匹配與致死基因偵測。",
+    "softwareVersion": "1.0",
+    "screenshot": calcImg,
+    "image": calcImg,
+    "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "TWD",
+        "availability": "https://schema.org/InStock"
+    },
+    "featureList": [
+        "孟德爾遺傳定律子代機率計算",
+        "Het（雜合）基因推算",
+        "共顯性與不完全顯性表現型機率",
+        "多基因（Polygenic）表現型分布",
+        "反向匹配（Reverse Match）：由子代反推親代",
+        "致死基因組合偵測（如肥尾立可白 Super White Out）",
+        "支援豹紋守宮 / 肥尾守宮 / 豬鼻蛇"
+    ],
+    "publisher": calcPublisher,
+    "author": calcPublisher,
+    "about": [
+        { "@type": "Taxon", "name": "Eublepharis macularius", "alternateName": "豹紋守宮", "sameAs": "https://www.wikidata.org/wiki/Q185061" },
+        { "@type": "Taxon", "name": "Hemitheconyx caudicinctus", "alternateName": "肥尾守宮", "sameAs": "https://www.wikidata.org/wiki/Q913571" },
+        { "@type": "Taxon", "name": "Heterodon nasicus", "alternateName": "豬鼻蛇", "sameAs": "https://www.wikidata.org/wiki/Q914251" }
+    ]
+}
+
+// HowTo：如何使用基因計算機
+const calcHowToLd = {
+    "@type": "HowTo",
+    "@id": `${calcUrl}#howto`,
+    "name": "如何使用 Gencko 基因計算機推算子代機率",
+    "description": "5 個步驟，從選擇物種到解讀子代基因型機率分布。",
+    "image": calcImg,
+    "totalTime": "PT3M",
+    "step": [
+        { "@type": "HowToStep", "position": 1, "name": "選擇物種類別",            "text": "在頁面上方先選擇物種類別（地棲守宮或蛇），再選擇物種（豹紋守宮、肥尾守宮或豬鼻蛇）。" },
+        { "@type": "HowToStep", "position": 2, "name": "設定公方基因",            "text": "點擊左側「公」卡片，由分類面板（隱性、顯性、共顯性、多遺傳、品系）勾選或調整對應基因為 Het / 顯性 / 純合。" },
+        { "@type": "HowToStep", "position": 3, "name": "設定母方基因",            "text": "點擊右側「母」卡片，依母方基因型同樣選擇。" },
+        { "@type": "HowToStep", "position": 4, "name": "（選用）使用反向匹配",   "text": "若想由「想要的子代」反推親代組合，將其中一張卡片切換為「子代」並選擇目標基因即可。" },
+        { "@type": "HowToStep", "position": 5, "name": "解讀計算結果",            "text": "結果區會列出所有可能的子代基因型與其發生機率（25% / 50% / 75%）；多基因表現型則以機率分布呈現；致死組合會被標示。" }
+    ]
+}
+
+// FAQPage：常見問題
+const calcFaqLd = {
+    "@type": "FAQPage",
+    "@id": `${calcUrl}#faq`,
+    "mainEntity": [
+        {
+            "@type": "Question",
+            "name": "基因計算機是怎麼算出子代機率的？",
+            "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "依據孟德爾遺傳定律（隱性、顯性、共顯性）計算等位基因組合機率。每一個子代基因型的機率為 25%、50% 或 75%，取決於親代為純合 (homo) 或雜合 (het)。多基因表現型（如高黃、橘化、土匪）由多個基因座共同決定，無法用單一比例預測，計算機會以機率分布形式呈現。"
+            }
+        },
+        {
+            "@type": "Question",
+            "name": "「Het」是什麼意思？",
+            "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Het 是 Heterozygous（雜合）的縮寫，表示個體攜帶一份等位基因但外觀未表現。例如「Het Tremper Albino」代表個體帶有一份隱性 Tremper 白化基因但外觀為正常型。將兩隻 Het 個體配對，理論上有 25% 機率產出純合白化子代。"
+            }
+        },
+        {
+            "@type": "Question",
+            "name": "基因計算機支援哪些物種？",
+            "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "目前支援豹紋守宮（Eublepharis macularius）、肥尾守宮（Hemitheconyx caudicinctus）與豬鼻蛇（Heterodon nasicus），未來會持續擴充。可在頁面上方切換物種類別與物種。"
+            }
+        },
+        {
+            "@type": "Question",
+            "name": "多基因（Polygenic）能用計算機算嗎？",
+            "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "多基因表現型（如橘化 Tangerine、高黃 High Yellow、土匪 Bandit）由多個基因座共同決定，無法以單一機率預測。計算機會顯示表現型機率分布，但實際個體變異會受血統選育與環境影響，建議搭配父母外觀與血統紀錄一併判斷。"
+            }
+        },
+        {
+            "@type": "Question",
+            "name": "反向匹配（Reverse Match）是什麼？",
+            "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "反向匹配讓你輸入想要的子代基因型，計算機會反推最有可能產出該子代的親代組合。在任一張卡片切換為「子代」即可啟動反向模式，適用於規劃育種計畫時尋找合適親代。"
+            }
+        },
+        {
+            "@type": "Question",
+            "name": "致死基因會被偵測嗎？",
+            "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "會。例如肥尾守宮的「立可白（White Out）」屬於共顯性致死基因，雙份等位基因組合（Super White Out）會在胚胎期致死。計算機會在結果中標示無效或致死組合，協助繁育者避免錯誤配對。"
+            }
+        }
+    ]
+}
+
+// BreadcrumbList
+const calcBreadcrumbLd = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+        { "@type": "ListItem", "position": 1, "name": "首頁", "item": "https://www.genckobreeding.com/" },
+        { "@type": "ListItem", "position": 2, "name": "基因計算機", "item": calcUrl }
+    ]
+}
+
+// WebPage 包覆
+const calcWebPageLd = {
+    "@context": "https://schema.org",
+    "@type": "WebPage",
+    "@id": calcUrl,
+    "url": calcUrl,
+    "name": "Gencko 基因計算機",
+    "inLanguage": "zh-TW",
+    "isPartOf": { "@type": "WebSite", "@id": "https://www.genckobreeding.com/#website" },
+    "primaryImageOfPage": { "@type": "ImageObject", "url": calcImg },
+    "speakable": {
+        "@type": "SpeakableSpecification",
+        "cssSelector": [".seo-hint", ".calc-help-hint-text"]
+    },
+    "mainEntity": calcAppLd,
+    "hasPart": [calcHowToLd, calcFaqLd]
+}
+
 useHead({
-    title: '基因計算機 | Gencko Studio',
+    title: '基因計算機｜守宮配對子代機率推算（孟德爾、Het、致死偵測）',
     meta:[
-        { name: 'description', content: '線上模擬多物種配對結果，支援基因組合、Het 與共顯性推算。' },
-        { name: 'keywords', content: '基因計算機, 豹紋守宮, 肥尾守宮, 豬鼻蛇, Morph Calculator' },
-        { property: 'og:title', content: '基因計算機 | Gencko Studio' },
-        { property: 'og:description', content: '線上模擬多物種配對結果，快速查看子代機率。' },
-        { property: 'og:image', content: 'https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/%E5%AE%98%E7%B6%B2%E8%83%8C%E6%99%AF.png' },
-        { property: 'og:url', content: 'https://www.genckobreeding.com/calculator' }
+        { name: 'description', content: 'Gencko 基因計算機：線上模擬豹紋守宮、肥尾守宮與豬鼻蛇的配對子代機率，依孟德爾遺傳定律計算隱性、顯性、共顯性、多基因（Polygenic）、Het 雜合推算與反向匹配，並偵測致死基因組合。' },
+        { name: 'keywords', content: '基因計算機, 守宮基因計算機, 豹紋守宮基因, 肥尾守宮基因, 豬鼻蛇基因, Morph Calculator, Het, 孟德爾遺傳, 子代機率, 反向匹配, 致死基因' },
+        // Open Graph
+        { property: 'og:title', content: '基因計算機｜守宮配對子代機率推算（孟德爾、Het、致死偵測）' },
+        { property: 'og:description', content: '線上模擬豹紋守宮、肥尾守宮、豬鼻蛇配對子代機率。支援 Het、共顯性、多基因與反向匹配。' },
+        { property: 'og:image', content: calcImg },
+        { property: 'og:image:alt', content: 'Gencko 基因計算機 - 守宮配對子代機率推算工具' },
+        { property: 'og:url', content: calcUrl },
+        { property: 'og:type', content: 'website' },
+        // Twitter Card
+        { name: 'twitter:card', content: 'summary_large_image' },
+        { name: 'twitter:title', content: '基因計算機｜守宮配對子代機率推算' },
+        { name: 'twitter:description', content: '線上模擬豹紋守宮、肥尾守宮、豬鼻蛇配對子代機率。支援 Het、共顯性、多基因與反向匹配。' },
+        { name: 'twitter:image', content: calcImg }
     ],
     link:[
-        { rel: 'canonical', href: 'https://www.genckobreeding.com/calculator' }
+        { rel: 'canonical', href: calcUrl }
     ],
     script:[
-        {
-            type: 'application/ld+json',
-            children: JSON.stringify({
-                '@context': 'https://schema.org',
-                '@type': 'WebApplication',
-                name: 'Gencko Morph Calculator',
-                url: 'https://www.genckobreeding.com/calculator',
-                applicationCategory: 'UtilityApplication',
-                operatingSystem: 'All',
-                description: 'A professional genetic calculator for Leopard Geckos and African Fat-Tailed Geckos.',
-                offers: {
-                    '@type': 'Offer',
-                    price: '0',
-                    priceCurrency: 'TWD'
-                },
-                featureList:[
-                    'Mendelian inheritance calculation',
-                    'Polygenic trait simulation',
-                    'Lethal gene detection'
-                ]
-            })
-        }
+        { type: 'application/ld+json', children: JSON.stringify(calcWebPageLd) },
+        { type: 'application/ld+json', children: JSON.stringify(calcBreadcrumbLd) }
     ]
 })
 
@@ -551,7 +696,7 @@ const formatWarningText = (text) => {
     <div class="calc-container">
         
         <div class="calc-header">
-            <div class="seo-hint">Gencko基因計算機</div>
+            <h1 class="seo-hint">Gencko基因計算機</h1>
 
             <div class="calc-species-selector">
                 <div class="calc-species-row">
@@ -836,7 +981,17 @@ const formatWarningText = (text) => {
 .calc-container { max-width: 1100px; margin: 0 auto; position: relative; padding-top: 15px; }
 
 .calc-header { text-align: center; margin-bottom: 0; }
-.seo-hint { margin: 0; padding: 0; }
+/* h1 重設：visually 與舊版 div 完全一致（無 margin、繼承字級顏色，由外層 .calc-top-desc 等決定樣式） */
+.seo-hint {
+    margin: 0;
+    padding: 0;
+    font-size: inherit;
+    font-weight: inherit;
+    line-height: inherit;
+    color: inherit;
+    text-align: inherit;
+    letter-spacing: inherit;
+}
 .calc-top-desc { text-align: center; color: var(--pri); font-weight: 700; margin-bottom: 0; font-size: 0.95rem; letter-spacing: 1px; }
 .calc-sub-desc { text-align: center; color: var(--txt); opacity: 0.6; font-size: 0.85rem; margin-bottom: 0; }
 
