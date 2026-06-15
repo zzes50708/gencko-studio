@@ -36,9 +36,20 @@ const { data: viewingGene, pending } = await useAsyncData(`gene-${geneName}`, as
         Warning: data.warning,
         Brief: data.brief,
         Detail: data.detail,
-        Source: data.source
+        Source: data.source,
+        // 🌟 新增欄位（後台未填則為 null，JSON-LD 會自動省略對應屬性）
+        EnglishName: data.english_name || null,
+        InheritanceMode: data.inheritance_mode || null,
+        DiscoveryYear: data.discovery_year || null,
+        OriginalBreeder: data.original_breeder || null
     }
 })
+
+// HTML/段落 → 純文字（給 articleBody / wordCount 用）
+const toPlainText = (s) => {
+    if (!s) return ''
+    return String(s).replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
+}
 
 // 若是在客戶端且已取得資料，同步回 Store
 if (viewingGene.value && import.meta.client) {
@@ -50,52 +61,112 @@ const siteData = computed(() => {
         const g = viewingGene.value
         const img = getCleanUrl(g.ImageURL)
         const url = `https://www.genckobreeding.com/genes/${encodeURIComponent(g.Name)}`
-        const desc = g.Brief || `Gencko Studio 收錄的 ${g.Name} 基因詳細介紹與特徵說明。`
+        const desc = `${g.Name} 守宮基因介紹｜遺傳模式、外觀特徵與繁育注意事項。${g.Brief || ''}`.trim()
+        const altNameArr = g.EnglishName ? [g.EnglishName] : []
+        const plainDetail = toPlainText(g.Detail)
+        const fullBody = [g.Brief, plainDetail].filter(Boolean).join(' ')
+        const articleBody = fullBody.length > 5000 ? fullBody.slice(0, 5000) + '…' : fullBody
+        const wordCount = fullBody ? fullBody.replace(/\s+/g, '').length : 0
 
-        // Article Schema（視為百科條目，加入實體消歧與科學名稱供 GEO 引用）
-        const jsonLd = {
-            "@context": "https://schema.org",
+        // 後台填了哪些屬性，就掛哪些 additionalProperty
+        const additionalProperty = []
+        if (g.InheritanceMode) additionalProperty.push({
+            "@type": "PropertyValue", "name": "遺傳模式", "value": g.InheritanceMode
+        })
+        if (g.DiscoveryYear) additionalProperty.push({
+            "@type": "PropertyValue", "name": "首次發現年份", "value": String(g.DiscoveryYear)
+        })
+        if (g.OriginalBreeder) additionalProperty.push({
+            "@type": "PropertyValue", "name": "原始繁殖者", "value": g.OriginalBreeder
+        })
+
+        // DefinedTerm 作為主要主體（基因 = 術語定義，是最精準的語意）
+        const definedTerm = {
+            "@type": "DefinedTerm",
+            "@id": `${url}#term`,
+            "name": g.Name,
+            ...(altNameArr.length ? { "alternateName": altNameArr } : {}),
+            ...(g.EnglishName ? { "termCode": g.EnglishName } : {}),
+            "description": g.Brief || `${g.Name} 守宮基因介紹`,
+            "url": url,
+            ...(img ? { "image": img } : {}),
+            "inLanguage": "zh-TW",
+            "inDefinedTermSet": {
+                "@type": "DefinedTermSet",
+                "name": "Gencko 守宮基因圖鑑",
+                "url": "https://www.genckobreeding.com/genes"
+            },
+            ...(additionalProperty.length ? { "additionalProperty": additionalProperty } : {}),
+            "subjectOf": { "@id": `${url}#article` }
+        }
+
+        // Article 作為輔助主體（百科條目，給 AI 引用內文用）
+        const article = {
             "@type": "Article",
-            "headline": `${g.Name} - 豹紋守宮（Eublepharis macularius）基因圖鑑`,
+            "@id": `${url}#article`,
+            "headline": `${g.Name}${g.EnglishName ? `（${g.EnglishName}）` : ''} - 豹紋守宮（Eublepharis macularius）基因圖鑑`,
             "image": [img],
             "author": {
                 "@type": "Organization",
-                "name": "Gencko Studio",
+                "name": "Gencko Breeding Studio",
+                "alternateName": ["Gencko Studio", "捷客工作室"],
                 "url": "https://www.genckobreeding.com"
             },
             "publisher": {
                 "@type": "Organization",
-                "name": "Gencko Studio",
-                "logo": { "@type": "ImageObject", "url": "https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/11.png" }
+                "name": "Gencko Breeding Studio",
+                "alternateName": ["Gencko Studio", "捷客工作室"],
+                "url": "https://www.genckobreeding.com",
+                "logo": {
+                    "@type": "ImageObject",
+                    "url": "https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/11.png",
+                    "width": 512,
+                    "height": 512
+                },
+                "sameAs": [
+                    "https://www.instagram.com/gencko_breeding",
+                    "https://www.facebook.com/profile.php?id=61579393505049",
+                    "https://line.me/R/ti/p/@219abdzn"
+                ]
             },
-            "description": desc,
-            "about": {
-                "@type": "Thing",
-                "name": g.Name,
-                "description": `豹紋守宮（Eublepharis macularius）的 ${g.Name} 基因型，影響體色、斑紋與外觀表現。`
-            },
+            "description": g.Brief || `${g.Name} 守宮基因介紹`,
+            "about": { "@id": `${url}#term` },
             "mentions": [
                 {
                     "@type": "Taxon",
                     "name": "Eublepharis macularius",
                     "alternateName": "豹紋守宮",
                     "sameAs": "https://www.wikidata.org/wiki/Q185061"
+                },
+                {
+                    "@type": "Taxon",
+                    "name": "Hemitheconyx caudicinctus",
+                    "alternateName": "肥尾守宮",
+                    "sameAs": "https://www.wikidata.org/wiki/Q913571"
                 }
             ],
-            "mainEntityOfPage": url
+            "inLanguage": "zh-TW",
+            ...(articleBody ? { "articleBody": articleBody } : {}),
+            ...(wordCount ? { "wordCount": wordCount } : {}),
+            "speakable": {
+                "@type": "SpeakableSpecification",
+                "cssSelector": ["h1", ".brief-txt", ".detail-txt"]
+            },
+            "mainEntityOfPage": { "@id": url }
         }
 
-        const definedTerm = {
+        // WebPage 包覆兩個主體（DefinedTerm 為主體）
+        const webPageLd = {
             "@context": "https://schema.org",
-            "@type": "DefinedTerm",
-            "name": g.Name,
-            "description": desc,
+            "@type": "WebPage",
+            "@id": url,
             "url": url,
-            "inDefinedTermSet": {
-                "@type": "DefinedTermSet",
-                "name": "守宮基因圖鑑",
-                "url": "https://www.genckobreeding.com/genes"
-            }
+            "name": g.Name,
+            "inLanguage": "zh-TW",
+            "isPartOf": { "@type": "WebSite", "@id": "https://www.genckobreeding.com/#website" },
+            "primaryImageOfPage": img ? { "@type": "ImageObject", "url": img } : undefined,
+            "mainEntity": definedTerm,
+            "hasPart": article
         }
 
         const breadcrumb = {
@@ -110,13 +181,12 @@ const siteData = computed(() => {
 
         return {
             title: g.Name,
-            desc: desc,
-            img: img,
-            url: url,
+            desc,
+            img,
+            url,
             type: 'article',
             script:[
-                { type: 'application/ld+json', children: JSON.stringify(jsonLd) },
-                { type: 'application/ld+json', children: JSON.stringify(definedTerm) },
+                { type: 'application/ld+json', children: JSON.stringify(webPageLd) },
                 { type: 'application/ld+json', children: JSON.stringify(breadcrumb) }
             ]
         }
@@ -136,11 +206,17 @@ useHead({
     title: computed(() => siteData.value.title),
     meta:[
         { name: 'description', content: computed(() => siteData.value.desc) },
-        { property: 'og:title', content: computed(() => `${siteData.value.title} | Gencko Studio`) },
+        // Open Graph
+        { property: 'og:title', content: computed(() => siteData.value.title) },
         { property: 'og:description', content: computed(() => siteData.value.desc) },
         { property: 'og:image', content: computed(() => siteData.value.img) },
         { property: 'og:url', content: computed(() => siteData.value.url) },
-        { property: 'og:type', content: computed(() => siteData.value.type) }
+        { property: 'og:type', content: computed(() => siteData.value.type) },
+        // Twitter Card
+        { name: 'twitter:card', content: 'summary_large_image' },
+        { name: 'twitter:title', content: computed(() => siteData.value.title) },
+        { name: 'twitter:description', content: computed(() => siteData.value.desc) },
+        { name: 'twitter:image', content: computed(() => siteData.value.img) }
     ],
     link:[
         { rel: 'canonical', href: computed(() => siteData.value.url) }
@@ -177,21 +253,21 @@ useHead({
                 
                 <div class="gene-layout">
                     <!-- 🌟 核心修正：將 NuxtImg 替換為原生 img -->
-                    <img 
-                        v-if="viewingGene.ImageURL" 
-                        :src="getCleanUrl(viewingGene.ImageURL)" 
-                        :alt="viewingGene.Name + ' 基因特徵'" 
+                    <img
+                        v-if="viewingGene.ImageURL"
+                        :src="getCleanUrl(viewingGene.ImageURL)"
+                        :alt="`${viewingGene.Name} 守宮基因外觀範例｜豹紋守宮 Eublepharis macularius`"
                         class="gene-img"
                         loading="eager"
                         decoding="async"
                     />
                     
                     <div class="gene-text-content">
-                        <h3>📖 基因簡介</h3>
+                        <h2 class="gene-section-title">📖 基因簡介</h2>
                         <p class="brief-txt">{{ viewingGene.Brief }}</p>
-                        
+
                         <div v-if="viewingGene.Detail" class="detail-section">
-                            <h3>🔍 詳細敘述</h3>
+                            <h2 class="gene-section-title">🔍 詳細敘述</h2>
                             <p class="detail-txt">{{ viewingGene.Detail }}</p>
                         </div>
                         
@@ -265,10 +341,13 @@ useHead({
     width: 100%;
 }
 
-h3 {
+h3,
+.gene-section-title {
     color: var(--pri);
     font-size: 1.25rem;
     margin: 0 0 10px 0;
+    font-weight: bold;
+    line-height: 1.4;
 }
 
 p {
