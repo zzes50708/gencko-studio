@@ -57,12 +57,29 @@ const fmtDate = (d) => {
     try { return new Date(d).toISOString().split('T')[0] } catch(e) { return '' }
 }
 
+// HTML → 純文字（給 articleBody / wordCount 用，AI 可直接吃）
+const htmlToText = (html) => {
+    if (!html) return ''
+    return String(html)
+        .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+        .replace(/<script[\s\S]*?<\/script>/gi, ' ')
+        .replace(/<[^>]+>/g, ' ')
+        .replace(/&nbsp;/g, ' ')
+        .replace(/&amp;/g, '&')
+        .replace(/&lt;/g, '<')
+        .replace(/&gt;/g, '>')
+        .replace(/&quot;/g, '"')
+        .replace(/&#39;/g, "'")
+        .replace(/\s+/g, ' ')
+        .trim()
+}
+
 const siteData = computed(() => {
     if (readingArticle.value) {
         const art = readingArticle.value
         const imgUrl = getCleanUrl(art.ImageURL)
         const artUrl = `https://www.genckobreeding.com/articles/${art.ID}`
-        
+
         // 🌟 修正 SSR 崩潰 Bug：加入 try-catch 保護日期解析
         let isoDate = ''
         try {
@@ -71,33 +88,52 @@ const siteData = computed(() => {
             isoDate = new Date().toISOString() // 若日期格式錯誤，使用當下時間作為預設值
         }
 
-        const jsonLd = {
-            "@context": "https://schema.org",
+        // 純文字內文 + 字數（截 5000 字避免 schema.org payload 過大）
+        const plainBody = htmlToText(art.Content)
+        const wordCount = plainBody ? plainBody.replace(/\s+/g, '').length : 0
+        const articleBodyTrimmed = plainBody.length > 5000 ? plainBody.slice(0, 5000) + '…' : plainBody
+
+        // 關鍵字陣列化（schema.org 推薦陣列形式）
+        const kwArray = (art.Keywords || '')
+            .split(/[,，、\s]+/)
+            .map(k => k.trim())
+            .filter(Boolean)
+
+        const blogPosting = {
             "@type": "BlogPosting",
+            "@id": `${artUrl}#article`,
             "headline": art.Title,
             "image": [imgUrl],
             "datePublished": isoDate,
             "dateModified": isoDate,
             "author": [{
                 "@type": "Person",
-                "name": art.Author || "Gencko Studio",
+                "name": art.Author || "Gencko Breeding Studio",
                 "url": "https://www.genckobreeding.com/about",
                 "worksFor": {
                     "@type": "Organization",
-                    "name": "Gencko Studio"
+                    "name": "Gencko Breeding Studio",
+                    "alternateName": ["Gencko Studio", "捷客工作室"]
                 }
             }],
             "publisher": {
                 "@type": "Organization",
-                "name": "Gencko Studio",
+                "name": "Gencko Breeding Studio",
+                "alternateName": ["Gencko Studio", "捷客工作室"],
                 "url": "https://www.genckobreeding.com",
-                "logo": { "@type": "ImageObject", "url": "https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/11.png" },
+                "logo": {
+                    "@type": "ImageObject",
+                    "url": "https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/11.png",
+                    "width": 512,
+                    "height": 512
+                },
                 "sameAs": [
                     "https://www.instagram.com/gencko_breeding",
-                    "https://www.facebook.com/profile.php?id=61579393505049"
+                    "https://www.facebook.com/profile.php?id=61579393505049",
+                    "https://line.me/R/ti/p/@219abdzn"
                 ]
             },
-            "mainEntityOfPage": artUrl,
+            "mainEntityOfPage": { "@type": "WebPage", "@id": artUrl },
             "inLanguage": "zh-TW",
             "about": {
                 "@type": "Taxon",
@@ -106,7 +142,29 @@ const siteData = computed(() => {
                 "sameAs": "https://www.wikidata.org/wiki/Q185061"
             },
             "description": art.Summary,
-            "keywords": art.Keywords || "" // 🌟 新增：注入 JSON-LD
+            "articleSection": art.Category || undefined,
+            "articleBody": articleBodyTrimmed || undefined,
+            "wordCount": wordCount || undefined,
+            "keywords": kwArray.length ? kwArray : undefined,
+            "speakable": {
+                "@type": "SpeakableSpecification",
+                "cssSelector": ["h1", ".reader-content"]
+            }
+        }
+
+        // WebPage 包 BlogPosting 為 mainEntity（明確主體訊號）
+        const webPageLd = {
+            "@context": "https://schema.org",
+            "@type": "WebPage",
+            "@id": artUrl,
+            "url": artUrl,
+            "name": art.Title,
+            "inLanguage": "zh-TW",
+            "isPartOf": { "@type": "WebSite", "@id": "https://www.genckobreeding.com/#website" },
+            "primaryImageOfPage": { "@type": "ImageObject", "url": imgUrl },
+            "datePublished": isoDate,
+            "dateModified": isoDate,
+            "mainEntity": blogPosting
         }
 
         const breadcrumb = {
@@ -121,17 +179,21 @@ const siteData = computed(() => {
 
         return {
             title: art.Title,
-            desc: art.Summary || 'Gencko Studio 專業爬蟲與守宮飼養專欄。',
-            keywords: art.Keywords || 'Gencko Studio, 豹紋守宮, 肥尾守宮, 爬蟲, 飼養教學',
+            desc: art.Summary || 'Gencko Breeding Studio 專業爬蟲與守宮飼養專欄。',
+            keywords: art.Keywords || 'Gencko, 豹紋守宮, 肥尾守宮, 守宮品系, 守宮新手飼養',
             img: imgUrl,
             url: artUrl,
+            section: art.Category || '',
+            isoDate,
+            authorName: art.Author || 'Gencko Breeding Studio',
+            tags: kwArray,
             script:[
-                { type: 'application/ld+json', children: JSON.stringify(jsonLd) },
+                { type: 'application/ld+json', children: JSON.stringify(webPageLd) },
                 { type: 'application/ld+json', children: JSON.stringify(breadcrumb) }
             ]
         }
     }
-    
+
     // Fallback if not found
     return {
         title: '文章不存在',
@@ -139,6 +201,10 @@ const siteData = computed(() => {
         keywords: '',
         img: 'https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/%E6%9C%AA%E5%91%BD%E5%90%8D%E8%A8%AD%E8%A8%88.png',
         url: `https://www.genckobreeding.com/articles/${articleId}`,
+        section: '',
+        isoDate: '',
+        authorName: '',
+        tags: [],
         script:[]
     }
 })
@@ -147,12 +213,24 @@ useHead({
     title: computed(() => siteData.value.title),
     meta:[
         { name: 'description', content: computed(() => siteData.value.desc) },
-        { name: 'keywords', content: computed(() => siteData.value.keywords) }, // 🌟 新增：Meta Keywords
-        { property: 'og:title', content: computed(() => `${siteData.value.title} | Gencko Studio`) },
+        { name: 'keywords', content: computed(() => siteData.value.keywords) },
+        // Open Graph
+        { property: 'og:title', content: computed(() => siteData.value.title) }, // 全域 titleTemplate 會處理品牌後綴，這裡不再手動加
         { property: 'og:description', content: computed(() => siteData.value.desc) },
         { property: 'og:image', content: computed(() => siteData.value.img) },
         { property: 'og:url', content: computed(() => siteData.value.url) },
-        { property: 'og:type', content: 'article' }
+        { property: 'og:type', content: 'article' },
+        // Article-specific OG（FB / LinkedIn 爬蟲使用）
+        { property: 'article:published_time', content: computed(() => siteData.value.isoDate) },
+        { property: 'article:modified_time', content: computed(() => siteData.value.isoDate) },
+        { property: 'article:author', content: computed(() => siteData.value.authorName) },
+        { property: 'article:section', content: computed(() => siteData.value.section) },
+        { property: 'article:tag', content: computed(() => siteData.value.tags.join(', ')) },
+        // Twitter Card
+        { name: 'twitter:card', content: 'summary_large_image' },
+        { name: 'twitter:title', content: computed(() => siteData.value.title) },
+        { name: 'twitter:description', content: computed(() => siteData.value.desc) },
+        { name: 'twitter:image', content: computed(() => siteData.value.img) }
     ],
     link:[
         { rel: 'canonical', href: computed(() => siteData.value.url) }
