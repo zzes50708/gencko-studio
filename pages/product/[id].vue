@@ -83,32 +83,122 @@ const productModules = computed(() => {
     }
 })
 
+// 將 status 對應到 schema.org 標準 ItemAvailability
+const statusToAvailability = (status) => {
+    switch (status) {
+        case 'ForSale':  return 'https://schema.org/InStock'
+        case 'Auction':  return 'https://schema.org/LimitedAvailability'
+        case 'Reserved': return 'https://schema.org/PreOrder'
+        case 'Sold':     return 'https://schema.org/SoldOut'
+        case 'SelfKeep': return 'https://schema.org/Discontinued'
+        default:         return 'https://schema.org/SoldOut'
+    }
+}
+
+// 物種對應 productCategory（Google product taxonomy 沒有「守宮」分類，用通用爬蟲分類）
+const speciesToCategory = (species) => {
+    if (!species) return '寵物 > 爬蟲 > 守宮'
+    return `寵物 > 爬蟲 > 守宮 > ${species}`
+}
+
 const siteData = computed(() => {
     if (currentProduct.value) {
         const p = currentProduct.value
-        const title = `${p.Morph} ${p.GenderType === '公' ? '♂' : p.GenderType === '母' ? '♀' : ''}`
-        const desc = `${p.Morph} (${p.GenderType}) 售價 NT$${p.ListingPrice}\nGencko Studio 專業繁育，100% 健康保證。`
+        const sexSym = p.GenderType === '公' ? '♂' : p.GenderType === '母' ? '♀' : ''
+        const title = `${p.Morph} ${sexSym}`.trim()
+        const geneStr = (p.Genes || []).join('、')
+        const desc = `${p.Morph}（${p.GenderType || '性別未定'}）${geneStr ? ' 基因：' + geneStr + '。' : ''}${p.Birthday ? p.Birthday + ' 出生。' : ''}售價 NT$${p.ListingPrice}。Gencko Breeding Studio 專業繁育，100% 健康保證、基因正確、運輸賠償。`
         const img = getCleanUrl(p.ImageURL)
         const url = `https://www.genckobreeding.com/product/${p.ID}`
-        
-        const jsonLd = {
-            "@context": "https://schema.org/",
+        const identityUrl = `https://www.genckobreeding.com/identity/${p.ID}`
+
+        // 動態組裝 additionalProperty
+        const addProp = []
+        if (geneStr) addProp.push({ "@type": "PropertyValue", "name": "基因組合", "value": geneStr })
+        if (p.GenderType) addProp.push({ "@type": "PropertyValue", "name": "性別", "value": p.GenderType + (p.GenderType === '溫控' && p.GenderValue ? ` (${p.GenderValue}°C)` : '') })
+        if (p.Birthday) addProp.push({ "@type": "PropertyValue", "name": "孵化日", "value": p.Birthday })
+        if (p.Species) addProp.push({ "@type": "PropertyValue", "name": "物種", "value": p.Species })
+
+        // priceValidUntil：個體商品給 1 年後（schema.org Offer 建議欄位）
+        const validUntil = new Date()
+        validUntil.setFullYear(validUntil.getFullYear() + 1)
+        const priceValidUntil = validUntil.toISOString().split('T')[0]
+
+        const product = {
             "@type": "Product",
-            "name": p.Morph,
-            "image": img ? [img] : [ ],
+            "@id": `${url}#product`,
+            "name": `${p.Morph}${geneStr ? `（${geneStr}）` : ''} ${sexSym} - ${p.ID}`.trim(),
+            "image": img ? [img] : [],
             "description": desc,
             "sku": p.ID,
+            "productID": p.ID,
+            "mpn": p.ID,
+            "category": speciesToCategory(p.Species),
             "brand": {
                 "@type": "Brand",
-                "name": "Gencko Studio"
+                "name": "Gencko Breeding Studio",
+                "alternateName": ["Gencko Studio", "捷客工作室"]
             },
+            "manufacturer": {
+                "@type": "Organization",
+                "name": "Gencko Breeding Studio",
+                "url": "https://www.genckobreeding.com"
+            },
+            ...(addProp.length ? { "additionalProperty": addProp } : {}),
+            "subjectOf": { "@type": "WebPage", "@id": identityUrl, "name": "電子身分證" },
             "offers": {
                 "@type": "Offer",
+                "@id": `${url}#offer`,
                 "url": url,
                 "priceCurrency": "TWD",
                 "price": p.ListingPrice,
-                "availability": p.Status === 'ForSale' ? "https://schema.org/InStock" : "https://schema.org/SoldOut",
-                "itemCondition": "https://schema.org/NewCondition"
+                "priceValidUntil": priceValidUntil,
+                "availability": statusToAvailability(p.Status),
+                "itemCondition": "https://schema.org/NewCondition",
+                "businessFunction": "http://purl.org/goodrelations/v1#Sell",
+                "areaServed": { "@type": "Country", "name": "Taiwan" },
+                "seller": {
+                    "@type": "Organization",
+                    "name": "Gencko Breeding Studio",
+                    "alternateName": ["Gencko Studio", "捷客工作室"],
+                    "url": "https://www.genckobreeding.com",
+                    "logo": "https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/11.png"
+                },
+                "hasMerchantReturnPolicy": {
+                    "@type": "MerchantReturnPolicy",
+                    "applicableCountry": "TW",
+                    "returnPolicyCategory": "https://schema.org/MerchantReturnFiniteReturnWindow",
+                    "merchantReturnDays": 2,
+                    "returnMethod": "https://schema.org/ReturnByMail",
+                    "returnFees": "https://schema.org/FreeReturn"
+                },
+                "shippingDetails": {
+                    "@type": "OfferShippingDetails",
+                    "shippingDestination": { "@type": "DefinedRegion", "addressCountry": "TW" },
+                    "shippingRate": { "@type": "MonetaryAmount", "currency": "TWD", "value": 0 },
+                    "deliveryTime": {
+                        "@type": "ShippingDeliveryTime",
+                        "handlingTime": { "@type": "QuantitativeValue", "minValue": 0, "maxValue": 2, "unitCode": "DAY" },
+                        "transitTime":  { "@type": "QuantitativeValue", "minValue": 1, "maxValue": 3, "unitCode": "DAY" }
+                    }
+                }
+            }
+        }
+
+        // WebPage 包覆，並聲明 SpeakableSpecification
+        const webPageLd = {
+            "@context": "https://schema.org",
+            "@type": "WebPage",
+            "@id": url,
+            "url": url,
+            "name": title,
+            "inLanguage": "zh-TW",
+            "isPartOf": { "@type": "WebSite", "@id": "https://www.genckobreeding.com/#website" },
+            "primaryImageOfPage": img ? { "@type": "ImageObject", "url": img } : undefined,
+            "mainEntity": product,
+            "speakable": {
+                "@type": "SpeakableSpecification",
+                "cssSelector": [".prod-title", ".prod-guarantee"]
             }
         }
 
@@ -123,11 +213,11 @@ const siteData = computed(() => {
         }
 
         return { title, desc, img, url, script:[
-            { type: 'application/ld+json', children: JSON.stringify(jsonLd) },
+            { type: 'application/ld+json', children: JSON.stringify(webPageLd) },
             { type: 'application/ld+json', children: JSON.stringify(breadcrumb) }
         ] }
     }
-    
+
     return {
         title: '找不到此商品',
         desc: '該商品可能已下架或不存在。',
@@ -141,11 +231,31 @@ useHead({
     title: computed(() => siteData.value.title),
     meta:[
         { name: 'description', content: computed(() => siteData.value.desc) },
-        { property: 'og:title', content: computed(() => `${siteData.value.title} | Gencko Studio`) },
+        // Open Graph（FB 用 og:type=product 才會把商品資訊獨立解析）
+        { property: 'og:title', content: computed(() => siteData.value.title) },
         { property: 'og:description', content: computed(() => siteData.value.desc) },
         { property: 'og:image', content: computed(() => siteData.value.img) },
+        { property: 'og:image:alt', content: computed(() => `${siteData.value.title} - 守宮個體照片`) },
         { property: 'og:url', content: computed(() => siteData.value.url) },
-        { name: 'twitter:card', content: 'summary_large_image' }
+        { property: 'og:type', content: 'product' },
+        // Product-specific OG（Facebook Catalog / Pinterest Rich Pin）
+        { property: 'product:price:amount', content: computed(() => String(currentProduct.value?.ListingPrice || '')) },
+        { property: 'product:price:currency', content: 'TWD' },
+        { property: 'product:availability', content: computed(() => currentProduct.value?.Status === 'ForSale' ? 'in stock' : 'out of stock') },
+        { property: 'product:condition', content: 'new' },
+        { property: 'product:brand', content: 'Gencko Breeding Studio' },
+        // Twitter Card
+        { name: 'twitter:card', content: 'summary_large_image' },
+        { name: 'twitter:title', content: computed(() => siteData.value.title) },
+        { name: 'twitter:description', content: computed(() => siteData.value.desc) },
+        { name: 'twitter:image', content: computed(() => siteData.value.img) },
+        { name: 'twitter:label1', content: '價格' },
+        { name: 'twitter:data1', content: computed(() => currentProduct.value?.ListingPrice ? `NT$ ${currentProduct.value.ListingPrice}` : '') },
+        { name: 'twitter:label2', content: '狀態' },
+        { name: 'twitter:data2', content: computed(() => {
+            const s = currentProduct.value?.Status
+            return s === 'ForSale' ? '在售' : s === 'Auction' ? '競標中' : s === 'Reserved' ? '已預訂' : s === 'Sold' ? '已售出' : ''
+        })}
     ],
     link:[
         { rel: 'canonical', href: computed(() => siteData.value.url) }

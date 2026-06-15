@@ -1,0 +1,142 @@
+============================================================
+Gencko SEO/GEO/AEO 後台資料填寫指南
+============================================================
+
+本檔案說明：哪些欄位填了會自動產生結構化資料（讓 Google / ChatGPT
+/ Perplexity 等 AI 引擎能更精準回答關於 Gencko 的問題）。
+
+每一節都對應一張資料表，依「在哪裡填」「填什麼」「填了之後會怎樣」
+的順序說明。
+
+
+============================================================
+一、genetic_pages（守宮基因圖鑑）
+============================================================
+
+【在哪裡填】
+  Supabase Studio → Table Editor → genetic_pages
+  （或你目前用的後台介面，找到「基因圖鑑」管理頁）
+
+【欄位說明】
+
+  欄位名               | 型別     | 是否必填 | 填寫範例
+  --------------------+---------+---------+----------------
+  english_name        | TEXT    | 建議    | Tremper Albino
+  inheritance_mode    | TEXT    | 建議    | 隱性
+  discovery_year      | INT     | 選填    | 1996
+  original_breeder    | TEXT    | 選填    | Ron Tremper
+
+  inheritance_mode 允許值（由 DB CHECK 約束）：
+    顯性 / 隱性 / 共顯性 / 多基因 / 未知
+
+【填了之後會自動發生什麼】
+
+  以「川普白化」為例，當你把下列資料填入 DB：
+    english_name     = Tremper Albino
+    inheritance_mode = 隱性
+    discovery_year   = 1996
+    original_breeder = Ron Tremper
+
+  下次有人（或 AI 爬蟲）打開 /genes/川普白化 時，網頁原始碼會
+  自動產生以下 JSON-LD（不需要改任何程式）：
+
+    {
+      "@type": "DefinedTerm",
+      "name": "川普白化",
+      "alternateName": ["Tremper Albino"],
+      "termCode": "Tremper Albino",
+      "additionalProperty": [
+        { "@type": "PropertyValue", "name": "遺傳模式",
+          "value": "隱性" },
+        { "@type": "PropertyValue", "name": "首次發現年份",
+          "value": "1996" },
+        { "@type": "PropertyValue", "name": "原始繁殖者",
+          "value": "Ron Tremper" }
+      ]
+    }
+
+  欄位留空時：對應的 alternateName / termCode / additionalProperty
+  條目會自動省略，不會輸出空值。
+
+【驗證方法】
+
+  填完資料後，等 Vercel 重新部署（或本地 dev 模式立即生效）：
+
+  1) 用 Chrome 打開 https://www.genckobreeding.com/genes/川普白化
+  2) 按 Ctrl+U 看原始碼
+  3) 搜尋 "additionalProperty"，應看到你填的值
+
+  或丟去 Google Rich Results Test：
+    https://search.google.com/test/rich-results
+    輸入該基因頁網址，點「TEST URL」，看「DefinedTerm」區塊。
+
+
+============================================================
+二、articles（飼養知識專欄）
+============================================================
+
+【在哪裡填】
+  Supabase Studio → Table Editor → articles → 編輯該筆 → faq 欄位
+
+【欄位說明】
+
+  欄位名 | 型別  | 是否必填 | 填寫格式
+  ------+------+---------+--------------------------------
+  faq   | JSONB | 選填    | 陣列形式：[{"q":"問題","a":"答案"}, ...]
+
+【填寫範例】
+
+  在 faq 欄位填入：
+
+  [
+    {
+      "q": "豹紋守宮多久餵食一次？",
+      "a": "幼體每天餵食；亞成體每 2 天一次；成體每 3-4 天一次。"
+    },
+    {
+      "q": "需要 UVB 燈嗎？",
+      "a": "豹紋守宮為夜行性，UVB 非必要但建議低劑量 2-5% 提供日常健康。"
+    },
+    {
+      "q": "適合溫度範圍？",
+      "a": "熱點 30-32°C，冷區 24-26°C，夜間可降至 20°C 以上。"
+    }
+  ]
+
+  Supabase Table Editor 在 faq 欄位直接貼上整段 JSON 即可。
+  Trailing comma 不可有（標準 JSON 規則）。
+
+【填了之後會自動發生什麼】
+
+  ⚠️ 注意：此功能尚未開發完成，等本指南更新後才會生效。
+  目前你可以先把 faq 資料填入 DB 累積內容；之後文章頁的程式
+  會被更新成讀取 faq 欄位並自動生成 FAQPage JSON-LD。
+
+  屆時 Google AI Overview / Featured Snippet 會優先引用 Q&A 結構。
+
+
+============================================================
+三、animals（在售個體）— 商品個體頁
+============================================================
+
+【目前狀態】
+  /product/[id] 頁面已自動依以下欄位產生 Product schema：
+    morph, genes, gender_type, gender_value, birthday,
+    listing_price, status, image_url, species, id
+
+  你只要照常在後台維護這些欄位就會自動生效，不需要額外動作。
+
+【未來可能加的欄位（如要做譜系結構化）】
+  - father_id    (TEXT, 對應 animals.id)
+  - mother_id    (TEXT, 對應 animals.id)
+  - hatch_temp   (NUMERIC, 孵化溫度)
+
+  填了之後 schema 會多出 "isBasedOn" 串到父母個體頁，讓 AI 能
+  回答「OOO 的血統來源」這類問題。要做時再告訴我，會給對應 SQL。
+
+
+============================================================
+變更歷史
+============================================================
+- 2026-06-15  v1  初版（genetic_pages / articles.faq）
+============================================================
