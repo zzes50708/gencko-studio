@@ -10,15 +10,145 @@ import {
 
 const store = useMainStore()
 
-useHead({
-    title: '健康評估系統',
-    meta:[
-        { name: 'description', content: '透過分情境的引導式問卷快速判斷您的守宮是否需要就醫，三種情境覆蓋簡易緊急快篩、完整健康檢查與購入評估。' },
-        { property: 'og:title', content: '健康評估系統 | Gencko Studio' },
-        { property: 'og:description', content: '簡易緊急快篩 / 完整健康檢查 / 購入評估 三種情境，幫您判讀守宮狀態。' },
-        { property: 'og:url', content: 'https://www.genckobreeding.com/health' }
+const hUrl = 'https://www.genckobreeding.com/health'
+const hImg = 'https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/%E5%AE%98%E7%B6%B2%E8%83%8C%E6%99%AF.png'
+const hPublisher = {
+    "@type": "Organization",
+    "name": "Gencko Breeding Studio",
+    "alternateName": ["Gencko Studio", "捷客工作室"],
+    "url": "https://www.genckobreeding.com",
+    "logo": { "@type": "ImageObject", "url": "https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/11.png", "width": 512, "height": 512 },
+    "sameAs": [
+        "https://www.instagram.com/gencko_breeding",
+        "https://www.facebook.com/profile.php?id=61579393505049",
+        "https://line.me/R/ti/p/@219abdzn"
+    ]
+}
+
+// MedicalCondition：將 DISEASES 物件轉為陣列
+const hMedicalConditions = Object.entries(DISEASES).map(([id, d]) => ({
+    "@type": "MedicalCondition",
+    "@id": `${hUrl}#disease-${id}`,
+    "name": d.name,
+    "signOrSymptom": (d.signs || []).map(s => ({ "@type": "MedicalSymptom", "name": s })),
+    "associatedAnatomy": { "@type": "AnatomicalStructure", "name": "守宮（爬蟲類）" },
+    ...(d.note ? { "description": d.note } : {})
+}))
+
+// HowTo：如何使用健康評估
+const hHowToLd = {
+    "@type": "HowTo",
+    "@id": `${hUrl}#howto`,
+    "name": "如何使用 Gencko 守宮健康評估系統",
+    "description": "三種情境：緊急快篩、完整健康檢查、購入評估。依當下狀況選擇對應模式即可。",
+    "image": hImg,
+    "totalTime": "PT3M",
+    "step": [
+        { "@type": "HowToStep", "position": 1, "name": "選擇情境", "text": "從入口頁三張卡片選擇：① 緊急快篩（飼主察覺異常需快速判斷是否就醫）② 完整健康檢查（定期健康紀錄）③ 購入評估（購買前/取貨時檢查個體狀況）。" },
+        { "@type": "HowToStep", "position": 2, "name": "依序回答問題", "text": "依問卷引導逐題作答，題目依當下情境動態調整。所有作答僅儲存在本機 sessionStorage，不上傳。" },
+        { "@type": "HowToStep", "position": 3, "name": "查看判讀結果", "text": "完成後系統顯示綜合判讀：是否觸發立即就醫警訊、可能的正常變異解釋、可能狀況（疾病比對）、各項目逐題判讀，並依嚴重度標示顏色。" },
+        { "@type": "HowToStep", "position": 4, "name": "前往特寵醫院或截圖給獸醫", "text": "若觸發就醫警訊，可一鍵跳到 /hospital 查詢附近特寵醫院；或截圖「給獸醫看的報告」區，掛號時直接給醫師參考。" }
+    ]
+}
+
+// FAQPage：健康相關常見問題
+const hFaqLd = {
+    "@type": "FAQPage",
+    "@id": `${hUrl}#faq`,
+    "mainEntity": [
+        {
+            "@type": "Question",
+            "name": "Gencko 健康評估可以取代獸醫診斷嗎？",
+            "acceptedAnswer": { "@type": "Answer", "text": "不行。本評估系統僅供初步判斷與飼主自我檢視，無法取代專業獸醫的臨床診斷、影像檢查或實驗室檢驗。當系統觸發「立即就醫警訊」時，請盡快帶守宮到專業的特寵醫院（可使用 /hospital 查詢）。" }
+        },
+        {
+            "@type": "Question",
+            "name": "我的守宮拒食幾天該帶去醫院？",
+            "acceptedAnswer": { "@type": "Answer", "text": "依個體狀況不同。一般原則：成體守宮拒食 14 天且體重明顯下降、或合併其他症狀（嘔吐、消瘦、糞便異常、神經症狀）就應就醫；幼體拒食超過 5–7 天應提早就醫。完整評估請使用本頁「緊急快篩」模式。" }
+        },
+        {
+            "@type": "Question",
+            "name": "守宮常見的致命疾病有哪些？",
+            "acceptedAnswer": { "@type": "Answer", "text": "本系統涵蓋的常見疾病包含：隱孢子蟲感染（最致命腸道寄生蟲）、球蟲感染、呼吸道感染、代謝性骨病（MBD）、口炎、腸阻塞、脫水、低溫燙傷等。每項都有對應的症狀清單與獸醫處置說明，可於評估結果或 DISEASES 知識庫查看。" }
+        },
+        {
+            "@type": "Question",
+            "name": "「給獸醫看的報告」是什麼？怎麼用？",
+            "acceptedAnswer": { "@type": "Answer", "text": "完整健康檢查模式完成後，會產生一份結構化的報告區塊，包含飼主觀察、各項目判讀與可能疾病比對。掛號特寵醫院前截圖此區直接給獸醫，可大幅縮短問診時間並減少資訊遺漏。" }
+        },
+        {
+            "@type": "Question",
+            "name": "評估結果會上傳到伺服器嗎？",
+            "acceptedAnswer": { "@type": "Answer", "text": "不會。所有作答進度與結果僅儲存在你瀏覽器的 sessionStorage（本機），關閉分頁或瀏覽器後即清除。Gencko Breeding Studio 不會收集任何健康相關資料。" }
+        }
+    ]
+}
+
+const hBreadcrumbLd = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+        { "@type": "ListItem", "position": 1, "name": "首頁", "item": "https://www.genckobreeding.com/" },
+        { "@type": "ListItem", "position": 2, "name": "健康評估", "item": hUrl }
+    ]
+}
+
+// MedicalWebPage 作為主體（醫療權威性訊號），lastReviewed = 部署當日
+const hReviewDate = new Date().toISOString().split('T')[0]
+
+const hWebPageLd = {
+    "@context": "https://schema.org",
+    "@type": "MedicalWebPage",
+    "@id": hUrl,
+    "url": hUrl,
+    "name": "守宮健康評估系統｜緊急快篩、完整檢查、購入評估",
+    "inLanguage": "zh-TW",
+    "isPartOf": { "@type": "WebSite", "@id": "https://www.genckobreeding.com/#website" },
+    "primaryImageOfPage": { "@type": "ImageObject", "url": hImg },
+    "speakable": {
+        "@type": "SpeakableSpecification",
+        "cssSelector": [".page-title", ".h-section-title"]
+    },
+    "publisher": hPublisher,
+    "about": [
+        { "@type": "Taxon", "name": "Eublepharis macularius", "alternateName": "豹紋守宮", "sameAs": "https://www.wikidata.org/wiki/Q185061" },
+        { "@type": "Taxon", "name": "Hemitheconyx caudicinctus", "alternateName": "肥尾守宮", "sameAs": "https://www.wikidata.org/wiki/Q913571" }
     ],
-    link:[ { rel: 'canonical', href: 'https://www.genckobreeding.com/health' } ]
+    "audience": { "@type": "Audience", "audienceType": "守宮飼主" },
+    "lastReviewed": hReviewDate,
+    "specialty": { "@type": "MedicalSpecialty", "name": "Veterinary" },
+    "medicalAudience": [
+        { "@type": "MedicalAudience", "audienceType": "Patient" },
+        { "@type": "MedicalAudience", "audienceType": "Caregiver" }
+    ],
+    "mentions": hMedicalConditions,
+    "hasPart": [hHowToLd, hFaqLd]
+}
+
+useHead({
+    title: '守宮健康評估系統｜緊急快篩、完整檢查、購入評估',
+    meta:[
+        { name: 'description', content: '守宮健康評估系統：透過引導式問卷快速判讀守宮狀態。三種情境涵蓋緊急快篩（拒食、嘔吐、神經症狀等異常）、完整健康檢查、與購入前評估，並比對隱孢子蟲、球蟲、MBD、呼吸道感染等常見疾病症狀。本評估不取代專業獸醫診斷。' },
+        { name: 'keywords', content: '守宮健康評估, 守宮拒食, 豹紋守宮生病, 守宮就醫指南, 隱孢子蟲, MBD, 守宮急診, 守宮症狀' },
+        // Open Graph
+        { property: 'og:title', content: '守宮健康評估系統｜緊急快篩、完整檢查、購入評估' },
+        { property: 'og:description', content: '三種情境快速判讀守宮健康狀況。本評估僅供飼主自我檢視，不取代獸醫診斷。' },
+        { property: 'og:image', content: hImg },
+        { property: 'og:image:alt', content: '守宮健康評估系統 - Gencko Breeding Studio' },
+        { property: 'og:url', content: hUrl },
+        { property: 'og:type', content: 'article' },
+        { property: 'article:section', content: '健康評估' },
+        // Twitter Card
+        { name: 'twitter:card', content: 'summary_large_image' },
+        { name: 'twitter:title', content: '守宮健康評估系統｜緊急快篩、完整檢查、購入評估' },
+        { name: 'twitter:description', content: '三種情境快速判讀守宮健康狀況。本評估僅供飼主自我檢視，不取代獸醫診斷。' },
+        { name: 'twitter:image', content: hImg }
+    ],
+    link:[ { rel: 'canonical', href: hUrl } ],
+    script:[
+        { type: 'application/ld+json', children: JSON.stringify(hWebPageLd) },
+        { type: 'application/ld+json', children: JSON.stringify(hBreadcrumbLd) }
+    ]
 })
 
 // ============ 主要狀態 ============
