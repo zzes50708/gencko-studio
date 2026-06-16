@@ -3,17 +3,133 @@ import { ref, computed, onMounted, onBeforeUnmount, nextTick, watch } from 'vue'
 import { useHead } from '#imports'
 import { QUIZ_DATA, QUIZ_DIMENSIONS, QUIZ_TRACKS } from '~/utils/quiz.js'
 
+const qsUrl = 'https://www.genckobreeding.com/qs'
+const qsImg = 'https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/%E5%AE%98%E7%B6%B2%E8%83%8C%E6%99%AF.png'
+
+const qsPublisher = {
+    "@type": "Organization",
+    "name": "Gencko Breeding Studio",
+    "alternateName": ["Gencko Studio", "捷客工作室"],
+    "url": "https://www.genckobreeding.com",
+    "logo": { "@type": "ImageObject", "url": "https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/11.png", "width": 512, "height": 512 },
+    "sameAs": [
+        "https://www.instagram.com/gencko_breeding",
+        "https://www.facebook.com/profile.php?id=61579393505049",
+        "https://line.me/R/ti/p/@219abdzn"
+    ]
+}
+
+// HowTo：如何完成飼養前評估
+const qsHowToLd = {
+    "@type": "HowTo",
+    "@id": `${qsUrl}#howto`,
+    "name": "如何完成 Gencko 守宮飼養前自我評估",
+    "description": "4 步驟完成 6 維度 18 題評估，看清自己是否準備好飼養守宮。",
+    "image": qsImg,
+    "totalTime": "PT5M",
+    "step": [
+        { "@type": "HowToStep", "position": 1, "name": "進入評估",        "text": "點擊「開始評估」進入問卷流程。本評估完全免費、不需註冊。" },
+        { "@type": "HowToStep", "position": 2, "name": "回答 18 題",      "text": "依序回答時間承諾、心理接受、環境設備、知識儲備、預算資源、飼養目標 6 大維度共 18 題。每題請依當下實際狀況誠實作答，不需想像理想狀態。" },
+        { "@type": "HowToStep", "position": 3, "name": "查看雷達圖與分析", "text": "完成後系統會顯示 6 維度雷達圖與總分，並列出需要特別注意的面向（如環境設備不足、預算偏緊等風險點）。" },
+        { "@type": "HowToStep", "position": 4, "name": "依推薦路線補課",  "text": "依「飼養目標」維度推薦的學習路線（觀賞型 / 繁殖型 / 收藏型 / 嘗鮮型）連到對應的品系圖鑑、基因計算機或飼養教學文章。" }
+    ]
+}
+
+// FAQPage：常見問題
+const qsFaqLd = {
+    "@type": "FAQPage",
+    "@id": `${qsUrl}#faq`,
+    "mainEntity": [
+        {
+            "@type": "Question",
+            "name": "什麼樣的人適合養守宮？",
+            "acceptedAnswer": { "@type": "Answer", "text": "適合長期穩定的飼主：① 能持續 10–15 年負責照顧（豹紋守宮平均壽命）② 可接受餵食活餌或冷凍餌料 ③ 能維持穩定的溫濕度環境 ④ 有基本預算購買設備（約 3,000–8,000 元起跳）⑤ 願意持續學習飼養與健康知識。若以上任一項目猶豫，建議先完成本評估找出風險點再決定。" }
+        },
+        {
+            "@type": "Question",
+            "name": "評估完發現總分不高怎麼辦？",
+            "acceptedAnswer": { "@type": "Answer", "text": "分數不高並不代表「不能養」，而是顯示哪些面向需要先補強。建議：① 看「需要特別注意的面向」逐項改善 ② 依推薦學習路線補課 ③ 若是知識儲備不足，先讀 /care 與 /articles 累積知識 ④ 若是預算或環境不足，先準備好硬體再迎接個體 ⑤ 補強後再重新評估。" }
+        },
+        {
+            "@type": "Question",
+            "name": "本評估會儲存資料嗎？",
+            "acceptedAnswer": { "@type": "Answer", "text": "不會上傳到伺服器。所有作答進度與結果僅儲存在你瀏覽器的 localStorage（本機），清除瀏覽器資料或更換裝置時會消失。Gencko Breeding Studio 不會看到任何個人作答內容。" }
+        },
+        {
+            "@type": "Question",
+            "name": "為什麼有「時間承諾」與「心理接受」這兩個維度？",
+            "acceptedAnswer": { "@type": "Answer", "text": "因為這兩項是新手最常低估、也最常導致棄養的核心因素。「時間承諾」指長達 10–15 年的日常餵食、清理、健康觀察；「心理接受」則涵蓋對活餌（蟋蟀、杜比亞）的接受度，以及面對個體生病、斷尾、死亡的心理準備。設備可以買、知識可以學，但這兩項若無法承擔，後續其他面向再強也撐不起穩定的飼養關係。" }
+        }
+    ]
+}
+
+// BreadcrumbList
+const qsBreadcrumbLd = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+        { "@type": "ListItem", "position": 1, "name": "首頁", "item": "https://www.genckobreeding.com/" },
+        { "@type": "ListItem", "position": 2, "name": "飼養前自我評估", "item": qsUrl }
+    ]
+}
+
+// WebPage 包覆，mainEntity = Quiz，hasPart = [HowTo, FAQPage]
+const qsWebPageLd = {
+    "@context": "https://schema.org",
+    "@type": "WebPage",
+    "@id": qsUrl,
+    "url": qsUrl,
+    "name": "守宮飼養前自我評估",
+    "inLanguage": "zh-TW",
+    "isPartOf": { "@type": "WebSite", "@id": "https://www.genckobreeding.com/#website" },
+    "primaryImageOfPage": { "@type": "ImageObject", "url": qsImg },
+    "speakable": {
+        "@type": "SpeakableSpecification",
+        "cssSelector": [".page-title", ".qs-section-title"]
+    },
+    "publisher": qsPublisher,
+    "about": [
+        { "@type": "Taxon", "name": "Eublepharis macularius", "alternateName": "豹紋守宮", "sameAs": "https://www.wikidata.org/wiki/Q185061" },
+        { "@type": "Taxon", "name": "Hemitheconyx caudicinctus", "alternateName": "肥尾守宮", "sameAs": "https://www.wikidata.org/wiki/Q913571" }
+    ],
+    "mainEntity": {
+        "@type": "Quiz",
+        "@id": `${qsUrl}#quiz`,
+        "name": "Gencko 守宮飼養前自我評估",
+        "description": "6 維度（時間承諾、心理接受、環境設備、知識儲備、預算資源、飼養目標）共 18 題，含風險分析、雷達圖與推薦學習路線。",
+        "educationalLevel": "Beginner",
+        "learningResourceType": "Self-Assessment",
+        "inLanguage": "zh-TW",
+        "publisher": qsPublisher,
+        "numberOfQuestions": 18
+    },
+    "hasPart": [qsHowToLd, qsFaqLd]
+}
+
 useHead({
-    title: '飼養前自我評估',
+    title: '飼養前自我評估｜6 維度 18 題守宮準備度測驗',
     meta:[
-        { name: 'description', content: '飼養守宮前的自我評估問卷。涵蓋時間、心理、環境、知識、預算、目標 6 大維度，幫您看清自己是否準備好。' },
-        { property: 'og:title', content: '飼養前自我評估 | Gencko Studio' },
-        { property: 'og:description', content: '6 維度 18 題守宮飼養準備度評估，含風險分析與個人化建議。' },
-        { property: 'og:image', content: 'https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/%E5%AE%98%E7%B6%B2%E8%83%8C%E6%99%AF.png' },
-        { property: 'og:url', content: 'https://www.genckobreeding.com/qs' }
+        { name: 'description', content: '飼養守宮前的自我評估問卷：時間承諾、心理接受、環境設備、知識儲備、預算資源、飼養目標 6 大維度共 18 題，含風險分析、雷達圖與個人化推薦學習路線。免費、不需註冊、不上傳資料。' },
+        { name: 'keywords', content: '守宮飼養評估, 豹紋守宮新手, 守宮準備度, 守宮自我評估, 守宮入門測驗, 飼養前評估' },
+        // Open Graph
+        { property: 'og:title', content: '飼養前自我評估｜6 維度 18 題守宮準備度測驗' },
+        { property: 'og:description', content: '6 維度 18 題守宮飼養準備度評估，含風險分析、雷達圖與個人化推薦學習路線。' },
+        { property: 'og:image', content: qsImg },
+        { property: 'og:image:alt', content: '守宮飼養前自我評估 - Gencko Breeding Studio' },
+        { property: 'og:url', content: qsUrl },
+        { property: 'og:type', content: 'article' },
+        // Twitter Card
+        { name: 'twitter:card', content: 'summary_large_image' },
+        { name: 'twitter:title', content: '飼養前自我評估｜6 維度 18 題守宮準備度測驗' },
+        { name: 'twitter:description', content: '6 維度 18 題守宮飼養準備度評估，含風險分析、雷達圖與個人化推薦學習路線。' },
+        { name: 'twitter:image', content: qsImg }
     ],
     link:[
-        { rel: 'canonical', href: 'https://www.genckobreeding.com/qs' }
+        { rel: 'canonical', href: qsUrl }
+    ],
+    script:[
+        { type: 'application/ld+json', children: JSON.stringify(qsWebPageLd) },
+        { type: 'application/ld+json', children: JSON.stringify(qsBreadcrumbLd) }
     ]
 })
 
