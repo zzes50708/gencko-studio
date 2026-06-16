@@ -60,36 +60,162 @@ const getMapLink = (h) => {
     return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(h.name + ' ' + h.address)}`
 }
 
+const hospUrl = 'https://www.genckobreeding.com/hospital'
+const hospImg = 'https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/%E5%AE%98%E7%B6%B2%E8%83%8C%E6%99%AF.png'
+
+const hospPublisher = {
+    "@type": "Organization",
+    "name": "Gencko Breeding Studio",
+    "alternateName": ["Gencko Studio", "捷客工作室"],
+    "url": "https://www.genckobreeding.com",
+    "logo": { "@type": "ImageObject", "url": "https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/11.png", "width": 512, "height": 512 },
+    "sameAs": [
+        "https://www.instagram.com/gencko_breeding",
+        "https://www.facebook.com/profile.php?id=61579393505049",
+        "https://line.me/R/ti/p/@219abdzn"
+    ]
+}
+
+// 國碼正規化：02-2599-3907 → +886225993907
+const toE164 = (phone) => {
+    if (!phone) return null
+    const digits = String(phone).replace(/[^\d]/g, '')
+    if (!digits) return null
+    if (digits.startsWith('0')) return '+886' + digits.slice(1)
+    return '+886' + digits
+}
+
+const hospRegionOf = (city) => {
+    for (const [region, cities] of Object.entries(HOSPITAL_REGIONS)) {
+        if (cities.includes(city)) return region
+    }
+    return ''
+}
+
+const hospMapUrlOf = (h) => h.mapUrl || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(h.name + ' ' + h.address)}`
+
+// FAQ：5 題（草稿已與使用者確認）
+const hospFaqLd = {
+    "@type": "FAQPage",
+    "@id": `${hospUrl}#faq`,
+    "mainEntity": [
+        {
+            "@type": "Question",
+            "name": "找不到我附近的特寵醫院怎麼辦？",
+            "acceptedAnswer": { "@type": "Answer", "text": "本頁名單為持續更新的版本，若你的縣市或行政區未列入，可能是該地區尚無收治爬蟲、守宮、兩棲類等特殊寵物的專業獸醫。建議先以「所有縣市」搜尋鄰近區域的醫院，並提前以電話確認該院是否診療你的物種；若知道遺漏的醫院，歡迎透過 LINE @219abdzn 回報，我們會更新清單。" }
+        },
+        {
+            "@type": "Question",
+            "name": "守宮急診時要怎麼判斷該不該帶去醫院？",
+            "acceptedAnswer": { "@type": "Answer", "text": "建議出現下列任一情況就立即就醫：超過 14 天完全拒食且體重明顯下降、斷尾流血止不住、嘔吐或腹瀉持續超過 24 小時、無法正常翻身或站立、神經症狀（轉圈、頭傾斜、抽搐）、明顯外傷或紅腫。其他輕微狀況可先參考 /health 健康評估，但若不確定請以就醫為優先。" }
+        },
+        {
+            "@type": "Question",
+            "name": "特寵醫院和一般動物醫院有什麼差異？",
+            "acceptedAnswer": { "@type": "Answer", "text": "一般動物醫院多以犬貓為主，對爬蟲、兩棲、鳥類的解剖學、麻醉劑量、常見疾病的處置經驗有限。特寵醫院（或稱特殊寵物專科醫院）有專門的設備（保溫箱、爬蟲適用 X 光與超音波）、知道守宮 / 蛇 / 龜等動物的劑量計算，能更精準診斷與用藥。" }
+        },
+        {
+            "@type": "Question",
+            "name": "掛號前要準備什麼？",
+            "acceptedAnswer": { "@type": "Answer", "text": "建議準備：① 個體基本資訊（物種、年齡、性別、體重）② 飼養環境照片或數值（溫度、濕度、底材、燈具）③ 近期飲食與排便狀況紀錄 ④ 症狀出現的時間軸 ⑤ 若有可疑食物或藥品請一併帶去 ⑥ 用通風的保溫盒運送（冬天加暖暖包但隔絕直接接觸）。" }
+        },
+        {
+            "@type": "Question",
+            "name": "夜間或假日守宮突發狀況怎麼辦？",
+            "acceptedAnswer": { "@type": "Answer", "text": "請先撥打名單中標示有夜間或 24 小時的醫院確認當天有醫師值班；多數特寵醫院門診時段固定，無夜間急診。緊急情況下可先進行基礎穩定：保持環境溫度 28–30°C、避免進一步刺激、止血（如有外傷）、並盡快聯絡有經驗的飼主或醫院。建議平時就記下 1–2 間最近的特寵醫院電話。" }
+        }
+    ]
+}
+
+// BreadcrumbList
+const hospBreadcrumbLd = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+        { "@type": "ListItem", "position": 1, "name": "首頁", "item": "https://www.genckobreeding.com/" },
+        { "@type": "ListItem", "position": 2, "name": "特寵醫院查詢", "item": hospUrl }
+    ]
+}
+
 // [SEO] 動態地圖 Meta 與結構化資料
 const siteData = computed(() => {
     const city = hospCity.value === 'all' ? '' : hospCity.value
     const dist = hospDistrict.value === 'all' ? '' : hospDistrict.value
     const locationStr = city ? `${city}${dist}` : '全台'
-    
-    const title = `${locationStr} 特寵醫院地圖`
-    const desc = `Gencko Studio 整理之${locationStr}爬蟲、守宮、特寵動物醫院名單 (${hospFiltered.value.length}間)。提供電話、地址與導航資訊，讓您的寵物獲得最即時的醫療協助。`
 
-    // ItemList Schema (針對 Local SEO 優化)
-    const jsonLd = {
+    const title = `${locationStr} 特寵醫院查詢｜爬蟲、守宮、兩棲動物獸醫地圖`
+    const desc = `${locationStr}爬蟲、守宮、兩棲動物等特殊寵物醫院名單（共 ${hospFiltered.value.length} 間），提供電話、地址與 Google Maps 導航。Gencko Breeding Studio 整理之全台特寵獸醫資源，協助飼主在第一時間找到專業醫療協助。`
+
+    // ItemList of VeterinaryCare：列出全部（不再 slice 20）
+    const itemListLd = {
         "@context": "https://schema.org",
         "@type": "ItemList",
-        "itemListElement": hospFiltered.value.slice(0, 20).map((h, index) => ({
-            "@type": "ListItem",
-            "position": index + 1,
-            "item": {
-                "@type": "VeterinaryCare",
-                "name": h.name,
-                "telephone": h.phone,
-                "address": h.address,
-                "image": "https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/hospital-icon.png"
+        "@id": `${hospUrl}#hospitals`,
+        "name": `${locationStr}特寵醫院清單`,
+        "numberOfItems": hospFiltered.value.length,
+        "itemListElement": hospFiltered.value.map((h, index) => {
+            const e164 = toE164(h.phone)
+            const mapUrl = hospMapUrlOf(h)
+            const region = hospRegionOf(h.city)
+            return {
+                "@type": "ListItem",
+                "position": index + 1,
+                "item": {
+                    "@type": "VeterinaryCare",
+                    "@id": `${hospUrl}#hospital-${h.id}`,
+                    "name": h.name,
+                    ...(e164 ? { "telephone": e164 } : {}),
+                    "address": {
+                        "@type": "PostalAddress",
+                        "streetAddress": h.address,
+                        "addressLocality": h.district,
+                        "addressRegion": h.city,
+                        "addressCountry": "TW"
+                    },
+                    "areaServed": [
+                        { "@type": "City", "name": h.city },
+                        ...(region ? [{ "@type": "AdministrativeArea", "name": region }] : [])
+                    ],
+                    "medicalSpecialty": "ExoticPet",
+                    "hasMap": mapUrl,
+                    "url": mapUrl,
+                    "image": hospImg
+                }
             }
-        }))
+        })
+    }
+
+    // WebPage 包覆
+    const webPageLd = {
+        "@context": "https://schema.org",
+        "@type": "WebPage",
+        "@id": hospUrl,
+        "url": hospUrl,
+        "name": title,
+        "inLanguage": "zh-TW",
+        "isPartOf": { "@type": "WebSite", "@id": "https://www.genckobreeding.com/#website" },
+        "primaryImageOfPage": { "@type": "ImageObject", "url": hospImg },
+        "speakable": {
+            "@type": "SpeakableSpecification",
+            "cssSelector": [".page-title", ".hosp-name", ".hosp-alert-box"]
+        },
+        "publisher": hospPublisher,
+        "about": [
+            { "@type": "Thing", "name": "爬蟲特寵醫療" },
+            { "@type": "Taxon", "name": "Eublepharis macularius", "alternateName": "豹紋守宮" },
+            { "@type": "Taxon", "name": "Hemitheconyx caudicinctus", "alternateName": "肥尾守宮" }
+        ],
+        "mainEntity": itemListLd,
+        "hasPart": [hospFaqLd]
     }
 
     return {
         title,
         desc,
-        script:[{ type: 'application/ld+json', children: JSON.stringify(jsonLd) }]
+        script:[
+            { type: 'application/ld+json', children: JSON.stringify(webPageLd) },
+            { type: 'application/ld+json', children: JSON.stringify(hospBreadcrumbLd) }
+        ]
     }
 })
 
@@ -97,13 +223,22 @@ useHead({
     title: computed(() => siteData.value.title),
     meta:[
         { name: 'description', content: computed(() => siteData.value.desc) },
-        { property: 'og:title', content: computed(() => `${siteData.value.title} | Gencko Studio`) },
+        { name: 'keywords', content: '特寵醫院, 特殊寵物醫院, 爬蟲獸醫, 守宮獸醫, 兩棲動物醫院, 豹紋守宮醫院, 肥尾守宮醫院, 守宮急診' },
+        // Open Graph
+        { property: 'og:title', content: computed(() => siteData.value.title) },
         { property: 'og:description', content: computed(() => siteData.value.desc) },
-        { property: 'og:image', content: 'https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/%E5%AE%98%E7%B6%B2%E8%83%8C%E6%99%AF.png' },
-        { property: 'og:url', content: 'https://www.genckobreeding.com/hospital' }
+        { property: 'og:image', content: hospImg },
+        { property: 'og:image:alt', content: '全台特寵醫院查詢 - Gencko Breeding Studio' },
+        { property: 'og:url', content: hospUrl },
+        { property: 'og:type', content: 'website' },
+        // Twitter Card
+        { name: 'twitter:card', content: 'summary_large_image' },
+        { name: 'twitter:title', content: computed(() => siteData.value.title) },
+        { name: 'twitter:description', content: computed(() => siteData.value.desc) },
+        { name: 'twitter:image', content: hospImg }
     ],
     link:[
-        { rel: 'canonical', href: 'https://www.genckobreeding.com/hospital' }
+        { rel: 'canonical', href: hospUrl }
     ],
     script: computed(() => siteData.value.script)
 })
@@ -111,7 +246,7 @@ useHead({
 
 <template>
     <div class="hosp-page-wrapper">
-        <h1 class="page-title dt-only">特寵醫院搜尋地圖</h1>
+        <h1 class="sr-only">全台特寵醫院查詢｜爬蟲、守宮、兩棲動物獸醫地圖</h1>
         
         <div class="hosp-alert-box">
             <span class="icon">💡</span> 
