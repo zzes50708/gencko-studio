@@ -9,7 +9,126 @@ const store = useMainStore()
 const route = useRoute()
 const router = useRouter()
 
-useHead({ title: '個體比較' })
+const cmpUrl = 'https://www.genckobreeding.com/compare'
+const cmpImg = 'https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/%E5%AE%98%E7%B6%B2%E8%83%8C%E6%99%AF.png'
+const cmpPublisher = {
+    "@type": "Organization",
+    "name": "Gencko Breeding Studio",
+    "alternateName": ["Gencko Studio", "捷客工作室"],
+    "url": "https://www.genckobreeding.com",
+    "logo": "https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/11.png",
+    "sameAs": [
+        "https://www.instagram.com/gencko_breeding",
+        "https://www.facebook.com/profile.php?id=61579393505049",
+        "https://line.me/R/ti/p/@219abdzn"
+    ]
+}
+
+const cmpHowToLd = {
+    "@type": "HowTo",
+    "@id": `${cmpUrl}#howto`,
+    "name": "如何使用 Gencko 個體比較工具",
+    "description": "3 步驟並排比較多隻在售守宮的基因、性別、價格與其他細節，幫助你快速做出選購決策。",
+    "image": cmpImg,
+    "totalTime": "PT2M",
+    "step": [
+        { "@type": "HowToStep", "position": 1, "name": "在商城選擇個體", "text": "到 /shop 商城瀏覽守宮，點擊每張卡片右上角的「加入比較」按鈕，最多可選擇 3 隻。" },
+        { "@type": "HowToStep", "position": 2, "name": "進入比較頁",     "text": "選擇完成後點擊浮動按鈕進入 /compare，系統會以並排表格列出所有屬性。" },
+        { "@type": "HowToStep", "position": 3, "name": "比對基因與價格", "text": "頁面會自動標示「共有基因」與「獨有基因」，並列出性別、孵化日、狀態與價格，協助快速判讀差異。" }
+    ]
+}
+
+const cmpFaqLd = {
+    "@type": "FAQPage",
+    "@id": `${cmpUrl}#faq`,
+    "mainEntity": [
+        {
+            "@type": "Question",
+            "name": "可以同時比較幾隻守宮？",
+            "acceptedAnswer": { "@type": "Answer", "text": "目前最多支援 3 隻並排比較，避免行動裝置上欄位過窄造成可讀性下降。若想比較更多隻，建議先用基因條件在 /shop 商城篩選。" }
+        },
+        {
+            "@type": "Question",
+            "name": "比較清單會儲存嗎？",
+            "acceptedAnswer": { "@type": "Answer", "text": "會。比較清單儲存在瀏覽器本機（localStorage），清除瀏覽器資料或更換裝置時會消失。也可以將比較結果以 URL（含 ?ids= 參數）分享給朋友。" }
+        },
+        {
+            "@type": "Question",
+            "name": "「共有基因」與「獨有基因」是怎麼判斷的？",
+            "acceptedAnswer": { "@type": "Answer", "text": "系統比對所選個體的基因陣列（animals.genes 欄位）：所有個體都包含的基因會標為「共有」，僅部分個體擁有的標為「獨有」，並依擁有者數量排序。" }
+        }
+    ]
+}
+
+const cmpBreadcrumbLd = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+        { "@type": "ListItem", "position": 1, "name": "首頁", "item": "https://www.genckobreeding.com/" },
+        { "@type": "ListItem", "position": 2, "name": "線上選購", "item": "https://www.genckobreeding.com/shop" },
+        { "@type": "ListItem", "position": 3, "name": "個體比較", "item": cmpUrl }
+    ]
+}
+
+const cmpWebPageLd = {
+    "@context": "https://schema.org",
+    "@type": "WebPage",
+    "@id": cmpUrl,
+    "url": cmpUrl,
+    "name": "守宮個體並排比較工具",
+    "inLanguage": "zh-TW",
+    "isPartOf": { "@type": "WebSite", "@id": "https://www.genckobreeding.com/#website" },
+    "primaryImageOfPage": { "@type": "ImageObject", "url": cmpImg },
+    "speakable": {
+        "@type": "SpeakableSpecification",
+        "cssSelector": [".page-title"]
+    },
+    "publisher": cmpPublisher,
+    "mainEntity": {
+        "@type": ["WebApplication", "SoftwareApplication"],
+        "@id": `${cmpUrl}#app`,
+        "name": "Gencko 守宮個體比較工具",
+        "url": cmpUrl,
+        "applicationCategory": "UtilityApplication",
+        "operatingSystem": "All",
+        "browserRequirements": "Requires JavaScript",
+        "inLanguage": "zh-TW",
+        "description": "並排比較多隻守宮個體的基因、性別、孵化日、狀態與價格，最多 3 隻同時對照。",
+        "offers": { "@type": "Offer", "price": "0", "priceCurrency": "TWD" },
+        "featureList": [
+            "最多 3 隻並排比較",
+            "共有 / 獨有基因自動標示",
+            "可分享比較結果 URL（含 ?ids= 參數）",
+            "本地儲存比較清單"
+        ]
+    },
+    "hasPart": [cmpHowToLd, cmpFaqLd]
+}
+
+useHead({
+    title: '守宮個體並排比較｜基因 × 性別 × 價格 一次看',
+    meta:[
+        { name: 'description', content: 'Gencko 線上個體比較工具：最多 3 隻守宮並排對照，自動標示共有與獨有基因、性別、孵化日、狀態與價格，幫助你快速判讀差異做出選購決策。' },
+        { name: 'keywords', content: '守宮比較, 豹紋守宮比較, 基因比對, 守宮選購, 個體並排' },
+        // Open Graph
+        { property: 'og:title', content: '守宮個體並排比較｜基因 × 性別 × 價格 一次看' },
+        { property: 'og:description', content: '最多 3 隻守宮並排對照，自動標示共有與獨有基因，幫助快速判讀差異。' },
+        { property: 'og:image', content: cmpImg },
+        { property: 'og:image:alt', content: '守宮個體比較工具 - Gencko Breeding Studio' },
+        { property: 'og:url', content: cmpUrl },
+        { property: 'og:type', content: 'website' },
+        // Twitter Card
+        { name: 'twitter:card', content: 'summary_large_image' },
+        { name: 'twitter:title', content: '守宮個體並排比較｜基因 × 性別 × 價格 一次看' },
+        { name: 'twitter:description', content: '最多 3 隻守宮並排對照，自動標示共有與獨有基因。' },
+        { name: 'twitter:image', content: cmpImg }
+    ],
+    link:[ { rel: 'canonical', href: cmpUrl } ],
+    script:[
+        { type: 'application/ld+json', children: JSON.stringify(cmpWebPageLd) },
+        { type: 'application/ld+json', children: JSON.stringify(cmpBreadcrumbLd) }
+    ]
+})
 
 // 🌟 加入 (store.compareList || []) 保護
 const ids = computed(() => {
