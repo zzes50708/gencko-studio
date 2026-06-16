@@ -148,14 +148,106 @@ const formatTime = (isoString) => {
     return `${d.getMonth() + 1}/${d.getDate()} ${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}:${d.getSeconds().toString().padStart(2, '0')}`
 }
 
+const auctionPublisher = {
+    "@type": "Organization",
+    "name": "Gencko Breeding Studio",
+    "alternateName": ["Gencko Studio", "捷客工作室"],
+    "url": "https://www.genckobreeding.com",
+    "logo": "https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/11.png",
+    "sameAs": [
+        "https://www.instagram.com/gencko_breeding",
+        "https://www.facebook.com/profile.php?id=61579393505049",
+        "https://line.me/R/ti/p/@219abdzn"
+    ]
+}
+
 // 動態生成 SEO 與社群分享卡片 (Open Graph) 資料
 const siteData = computed(() => {
     if (currentAuction.value) {
         const a = currentAuction.value
-        const title = `限時競標：${a.morph} ${a.gender && a.gender !== '未定' ? '('+a.gender+')' : ''}`
-        const desc = `目前最高出價 NT$${highestBidAmount.value}。${a.note ? a.note.substring(0, 40) + '...' : 'Gencko Studio 嚴選守宮，點擊參與競標！'}`
+        const status = getAuctionStatus(a)
+        const isEnded = status.status === 'ended'
+        const sexSym = a.gender === '公' ? '♂' : a.gender === '母' ? '♀' : ''
+        const baseTitle = `${a.morph}${sexSym ? ' ' + sexSym : ''}`
+        const title = isEnded
+            ? `${baseTitle}（已結標）`
+            : `限時競標：${baseTitle}｜目前最高 NT$${highestBidAmount.value}`
+        const desc = isEnded
+            ? `${baseTitle} 競標已結束。${a.note ? a.note.substring(0, 60) : ''} Gencko Breeding Studio 守宮競標場。`
+            : `${baseTitle} 線上競標進行中，目前最高出價 NT$${highestBidAmount.value}，起標 NT$${a.start_price || 0}、最小加價 NT$${a.min_increment}${a.buy_now_price ? `、直購價 NT$${a.buy_now_price}` : ''}。${a.note ? a.note.substring(0, 50) : ''}`
         const img = a.images && a.images.length ? getCleanUrl(a.images[0]) : 'https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/%E6%AD%A3%E9%9D%A2.png'
         const url = `https://www.genckobreeding.com/auction/${a.id}`
+        const endIso = a.end_time ? new Date(a.end_time).toISOString() : null
+
+        // Product + Offer schema
+        const product = {
+            "@type": "Product",
+            "@id": `${url}#product`,
+            "name": `${a.morph}${sexSym ? ' ' + sexSym : ''} - ${a.id}`,
+            "image": [img],
+            "description": desc,
+            "sku": a.id,
+            "productID": a.id,
+            "category": "寵物 > 爬蟲 > 守宮",
+            "brand": { "@type": "Brand", "name": "Gencko Breeding Studio" },
+            "additionalProperty": [
+                ...(a.gender ? [{ "@type": "PropertyValue", "name": "性別", "value": a.gender }] : []),
+                ...(a.birth_year ? [{ "@type": "PropertyValue", "name": "孵化日", "value": a.birth_year }] : []),
+                ...(a.diet ? [{ "@type": "PropertyValue", "name": "飲食", "value": a.diet }] : []),
+                ...(a.feeding_freq ? [{ "@type": "PropertyValue", "name": "餵食頻率", "value": a.feeding_freq }] : []),
+                ...(a.tongs_fed ? [{ "@type": "PropertyValue", "name": "夾食訓練", "value": a.tongs_fed }] : [])
+            ],
+            "offers": {
+                "@type": "Offer",
+                "@id": `${url}#offer`,
+                "url": url,
+                "priceCurrency": "TWD",
+                "price": highestBidAmount.value || a.start_price || 0,
+                ...(endIso ? { "priceValidUntil": endIso.split('T')[0] } : {}),
+                "availability": isEnded
+                    ? "https://schema.org/SoldOut"
+                    : "https://schema.org/LimitedAvailability",
+                "itemCondition": "https://schema.org/NewCondition",
+                "businessFunction": "http://purl.org/goodrelations/v1#Sell",
+                "areaServed": { "@type": "Country", "name": "Taiwan" },
+                "seller": auctionPublisher,
+                ...(a.buy_now_price ? {
+                    "priceSpecification": [
+                        {
+                            "@type": "PriceSpecification",
+                            "name": "目前出價",
+                            "price": highestBidAmount.value || a.start_price || 0,
+                            "priceCurrency": "TWD",
+                            ...(endIso ? { "validThrough": endIso } : {})
+                        },
+                        {
+                            "@type": "PriceSpecification",
+                            "name": "直購價（Buy Now）",
+                            "price": a.buy_now_price,
+                            "priceCurrency": "TWD",
+                            ...(endIso ? { "validThrough": endIso } : {})
+                        }
+                    ]
+                } : {})
+            }
+        }
+
+        // WebPage 包覆
+        const webPageLd = {
+            "@context": "https://schema.org",
+            "@type": "WebPage",
+            "@id": url,
+            "url": url,
+            "name": title,
+            "inLanguage": "zh-TW",
+            "isPartOf": { "@type": "WebSite", "@id": "https://www.genckobreeding.com/#website" },
+            "primaryImageOfPage": { "@type": "ImageObject", "url": img },
+            "speakable": {
+                "@type": "SpeakableSpecification",
+                "cssSelector": [".m-gender", ".bid-amount"]
+            },
+            "mainEntity": product
+        }
 
         const breadcrumb = {
             "@context": "https://schema.org",
@@ -163,17 +255,30 @@ const siteData = computed(() => {
             "itemListElement": [
                 { "@type": "ListItem", "position": 1, "name": "首頁", "item": "https://www.genckobreeding.com/" },
                 { "@type": "ListItem", "position": 2, "name": "守宮競標", "item": "https://www.genckobreeding.com/auction" },
-                { "@type": "ListItem", "position": 3, "name": title, "item": url }
+                { "@type": "ListItem", "position": 3, "name": baseTitle, "item": url }
             ]
         }
 
-        return { title, desc, img, url, script:[{ type: 'application/ld+json', children: JSON.stringify(breadcrumb) }] }
+        return {
+            title, desc, img, url, isEnded,
+            currentPrice: highestBidAmount.value,
+            buyNowPrice: a.buy_now_price || null,
+            endIso,
+            script:[
+                { type: 'application/ld+json', children: JSON.stringify(webPageLd) },
+                { type: 'application/ld+json', children: JSON.stringify(breadcrumb) }
+            ]
+        }
     }
     return {
         title: '找不到此競標商品',
         desc: '該商品可能已下架或不存在。',
         img: 'https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/%E6%AD%A3%E9%9D%A2.png',
         url: `https://www.genckobreeding.com/auction/${auctionId}`,
+        isEnded: false,
+        currentPrice: 0,
+        buyNowPrice: null,
+        endIso: null,
         script: []
     }
 })
@@ -182,12 +287,32 @@ useHead({
     title: computed(() => siteData.value.title),
     meta:[
         { name: 'description', content: computed(() => siteData.value.desc) },
-        { property: 'og:title', content: computed(() => `${siteData.value.title} | Gencko Studio`) },
+        // 已結標的競標 → noindex（避免過期內容污染索引）
+        { name: 'robots', content: computed(() => siteData.value.isEnded ? 'noindex, follow' : 'index, follow, max-image-preview:large') },
+        // Open Graph
+        { property: 'og:title', content: computed(() => siteData.value.title) },
         { property: 'og:description', content: computed(() => siteData.value.desc) },
         { property: 'og:image', content: computed(() => siteData.value.img) },
+        { property: 'og:image:alt', content: computed(() => `${siteData.value.title} - 守宮競標` ) },
         { property: 'og:url', content: computed(() => siteData.value.url) },
-        { property: 'og:type', content: 'website' },
-        { name: 'twitter:card', content: 'summary_large_image' }
+        { property: 'og:type', content: 'product' },
+        { property: 'product:price:amount', content: computed(() => String(siteData.value.currentPrice || '')) },
+        { property: 'product:price:currency', content: 'TWD' },
+        { property: 'product:availability', content: computed(() => siteData.value.isEnded ? 'out of stock' : 'in stock') },
+        { property: 'product:condition', content: 'new' },
+        { property: 'product:brand', content: 'Gencko Breeding Studio' },
+        // Twitter Card
+        { name: 'twitter:card', content: 'summary_large_image' },
+        { name: 'twitter:title', content: computed(() => siteData.value.title) },
+        { name: 'twitter:description', content: computed(() => siteData.value.desc) },
+        { name: 'twitter:image', content: computed(() => siteData.value.img) },
+        { name: 'twitter:label1', content: '目前出價' },
+        { name: 'twitter:data1', content: computed(() => siteData.value.currentPrice ? `NT$ ${siteData.value.currentPrice}` : '尚無出價') },
+        { name: 'twitter:label2', content: computed(() => siteData.value.isEnded ? '狀態' : '結標時間') },
+        { name: 'twitter:data2', content: computed(() => siteData.value.isEnded ? '已結標' : (siteData.value.endIso ? new Date(siteData.value.endIso).toLocaleString('zh-TW', { hour12: false }) : '')) }
+    ],
+    link:[
+        { rel: 'canonical', href: computed(() => siteData.value.url) }
     ],
     script: computed(() => siteData.value.script || [])
 })
@@ -383,6 +508,12 @@ const generatePromo = async () => {
 
 <template>
     <div class="auction-page-wrapper">
+        <!-- SEO：sr-only h1（爬蟲可讀、視覺隱藏；視覺主標題用 h2 維持原版面） -->
+        <h1 v-if="currentAuction" class="sr-only">
+            {{ currentAuction.morph }}
+            <template v-if="currentAuction.gender && currentAuction.gender !== '未定'">（{{ currentAuction.gender }}）</template>
+            守宮競標｜Gencko Breeding Studio
+        </h1>
         <TheBackButton fallback="/auction" text="返回列表" />
 
         <div v-if="pending" class="loading-state" style="text-align:center; padding:100px 0; color:var(--txt); opacity:0.6;">
