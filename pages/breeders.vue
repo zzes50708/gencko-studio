@@ -1,10 +1,35 @@
 <script setup>
 import { computed, ref } from 'vue'
-import { useHead } from '#imports'
+import { useHead, useAsyncData, useSupabaseClient } from '#imports'
 import { useMainStore } from '~/stores/useMainStore'
 import { getCleanUrl } from '~/utils/image.js'
 
 const store = useMainStore()
+const supabase = useSupabaseClient()
+
+// SSR：抓取自留種群（給 schema 用）
+const { data: ssrBreeders } = await useAsyncData('breeders-list-seo-v1', async () => {
+    try {
+        const { data, error } = await supabase
+            .from('animals')
+            .select('id, species, morph, genes, gender_type, gender_value, birthday, image_url, status')
+            .eq('status', 'SelfKeep')
+        if (error || !data) return []
+        return data.map(a => ({
+            ID: a.id,
+            Species: a.species,
+            Morph: a.morph,
+            Genes: Array.isArray(a.genes) ? a.genes : [],
+            GenderType: a.gender_type,
+            GenderValue: a.gender_value,
+            Birthday: a.birthday,
+            ImageURL: a.image_url
+        }))
+    } catch (e) {
+        console.error('[breeders SSR] fetch failed:', e?.message)
+        return []
+    }
+})
 
 // 物種切換（使用本地 ref，store 中未定義 breeder_sp，直接寫入 store 不具響應性）
 const breederSp = ref('豹紋守宮')
@@ -40,22 +65,115 @@ const genderCount = computed(() => {
     return { all: all.length, male, female }
 })
 
-useHead({
-    title: '種群展示',
-    meta:[
-        { name: 'description', content: 'Gencko Studio 種群展示。看看我們培育出的優質豹紋守宮與肥尾守宮種公種母。' },
-        { property: 'og:title', content: '種群展示 | Gencko Studio' },
-        { property: 'og:description', content: 'Gencko Studio 種群展示。看看我們培育出的優質守宮種公種母。' },
-        { property: 'og:image', content: 'https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/%E6%AD%A3%E9%9D%A2.png' },
-        { property: 'og:url', content: 'https://www.genckobreeding.com/breeders' }
+const breedersUrl = 'https://www.genckobreeding.com/breeders'
+const breedersImg = 'https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/%E6%AD%A3%E9%9D%A2.png'
+const breedersPublisher = {
+    "@type": "Organization",
+    "name": "Gencko Breeding Studio",
+    "alternateName": ["Gencko Studio", "捷客工作室"],
+    "url": "https://www.genckobreeding.com",
+    "logo": "https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/11.png",
+    "sameAs": [
+        "https://www.instagram.com/gencko_breeding",
+        "https://www.facebook.com/profile.php?id=61579393505049",
+        "https://line.me/R/ti/p/@219abdzn"
     ]
+}
+
+const breedersListLd = computed(() => {
+    const list = ssrBreeders.value || []
+    if (!list.length) return null
+    return {
+        "@type": "ItemList",
+        "@id": `${breedersUrl}#list`,
+        "name": "Gencko Breeding Studio 自留種群",
+        "numberOfItems": list.length,
+        "itemListElement": list.map((a, idx) => {
+            const geneStr = (a.Genes || []).join('、')
+            return {
+                "@type": "ListItem",
+                "position": idx + 1,
+                "item": {
+                    "@type": "Thing",
+                    "@id": `${breedersUrl}#breeder-${a.ID}`,
+                    "name": a.Morph,
+                    "description": `${a.Species} ${a.Morph}${a.GenderType ? '（' + a.GenderType + '）' : ''}${geneStr ? '，基因：' + geneStr : ''}`,
+                    ...(a.ImageURL ? { "image": getCleanUrl(a.ImageURL) } : {}),
+                    "additionalProperty": [
+                        { "@type": "PropertyValue", "name": "物種", "value": a.Species },
+                        ...(a.GenderType ? [{ "@type": "PropertyValue", "name": "性別", "value": a.GenderType }] : []),
+                        ...(geneStr ? [{ "@type": "PropertyValue", "name": "基因組合", "value": geneStr }] : []),
+                        ...(a.Birthday ? [{ "@type": "PropertyValue", "name": "出生日", "value": a.Birthday }] : [])
+                    ]
+                }
+            }
+        })
+    }
+})
+
+const breedersBreadcrumbLd = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+        { "@type": "ListItem", "position": 1, "name": "首頁", "item": "https://www.genckobreeding.com/" },
+        { "@type": "ListItem", "position": 2, "name": "種群展示", "item": breedersUrl }
+    ]
+}
+
+const breedersWebPageLd = computed(() => ({
+    "@context": "https://schema.org",
+    "@type": "CollectionPage",
+    "@id": breedersUrl,
+    "url": breedersUrl,
+    "name": "Gencko 種群展示｜豹紋守宮與肥尾守宮繁育種公種母",
+    "inLanguage": "zh-TW",
+    "isPartOf": { "@type": "WebSite", "@id": "https://www.genckobreeding.com/#website" },
+    "primaryImageOfPage": { "@type": "ImageObject", "url": breedersImg },
+    "speakable": {
+        "@type": "SpeakableSpecification",
+        "cssSelector": [".page-title", ".morph-title"]
+    },
+    "publisher": breedersPublisher,
+    "about": breedersPublisher,
+    "mentions": [
+        { "@type": "Taxon", "name": "Eublepharis macularius", "alternateName": "豹紋守宮", "sameAs": "https://www.wikidata.org/wiki/Q185061" },
+        { "@type": "Taxon", "name": "Hemitheconyx caudicinctus", "alternateName": "肥尾守宮", "sameAs": "https://www.wikidata.org/wiki/Q913571" }
+    ],
+    ...(breedersListLd.value ? { "mainEntity": breedersListLd.value } : {})
+}))
+
+useHead({
+    title: 'Gencko 種群展示｜豹紋守宮與肥尾守宮繁育種公種母',
+    meta:[
+        { name: 'description', content: 'Gencko Breeding Studio 自留種群展示。完整收錄正在使用中的豹紋守宮與肥尾守宮繁育種公與種母，含基因組合、性別與孵化日，是了解 Gencko 選育血統與未來子代規劃的窗口。' },
+        { name: 'keywords', content: '守宮種群, 豹紋守宮種公, 豹紋守宮種母, 肥尾守宮種公, 守宮繁育血統, Gencko 選育' },
+        // Open Graph
+        { property: 'og:title', content: 'Gencko 種群展示｜豹紋守宮與肥尾守宮繁育種公種母' },
+        { property: 'og:description', content: 'Gencko Breeding Studio 自留種群展示，含基因組合、性別與孵化日。' },
+        { property: 'og:image', content: breedersImg },
+        { property: 'og:image:alt', content: 'Gencko 種群展示 - 豹紋守宮與肥尾守宮繁育種公種母' },
+        { property: 'og:url', content: breedersUrl },
+        { property: 'og:type', content: 'website' },
+        // Twitter Card
+        { name: 'twitter:card', content: 'summary_large_image' },
+        { name: 'twitter:title', content: 'Gencko 種群展示｜豹紋守宮與肥尾守宮繁育種公種母' },
+        { name: 'twitter:description', content: 'Gencko Breeding Studio 自留種群展示，含基因組合、性別與孵化日。' },
+        { name: 'twitter:image', content: breedersImg }
+    ],
+    link:[ { rel: 'canonical', href: breedersUrl } ],
+    script: computed(() => [
+        { type: 'application/ld+json', children: JSON.stringify(breedersWebPageLd.value) },
+        { type: 'application/ld+json', children: JSON.stringify(breedersBreadcrumbLd) }
+    ])
 })
 </script>
 
 <template>
     <div class="breeders-page-wrapper">
-        <!-- 🌟 桌機版顯示標題，手機版隱藏 -->
-        <h1 class="page-title dt-only">種群展示</h1>
+        <!-- SEO：頁面唯一 h1（sr-only 含完整關鍵字） -->
+        <h1 class="sr-only">Gencko 種群展示｜豹紋守宮與肥尾守宮繁育種公種母</h1>
+        <!-- 視覺主標保留為 div（桌機可見、手機隱藏） -->
+        <div class="page-title dt-only" aria-hidden="true">種群展示</div>
         
         <div class="tabs">
             <button type="button" class="tab" :class="{active: breederSp === '豹紋守宮'}" @click="breederSp = '豹紋守宮'; breederGender = '全部'">豹紋守宮</button>
