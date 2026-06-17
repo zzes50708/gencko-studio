@@ -49,7 +49,7 @@ export default defineEventHandler(async (event) => {
   // 2. 抓取文章 (Articles)
   const { data: articles, error: err2 } = await supabase
     .from('articles')
-    .select('id, publish_date, created_at, status')
+    .select('id, publish_date, status')
     .ilike('status', 'published')
 
   if (err2) console.error('Sitemap 抓取 articles 失敗:', err2)
@@ -59,7 +59,7 @@ export default defineEventHandler(async (event) => {
         loc: `/articles/${a.id}`,
         changefreq: 'monthly',
         priority: 0.7,
-        lastmod: a.publish_date || a.created_at
+        lastmod: a.publish_date
       })
     })
   }

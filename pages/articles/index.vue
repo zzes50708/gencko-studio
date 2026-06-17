@@ -1,10 +1,41 @@
 <script setup>
 import { ref, computed } from 'vue'
-import { useHead } from '#imports'
+import { useHead, useAsyncData, useSupabaseClient } from '#imports'
 import { useMainStore } from '~/stores/useMainStore'
 import { getCleanUrl } from '~/utils/image.js'
 
 const store = useMainStore()
+const supabase = useSupabaseClient()
+
+// SSR：抓取全部已發布文章（為了讓 Blog + ItemList schema 在伺服器端就有完整資料）
+const { data: ssrArticles } = await useAsyncData('articles-list-seo-v5', async () => {
+    try {
+        const { data, error } = await supabase
+            .from('articles')
+            .select('id, title, summary, category, image_url, publish_date, author, keywords, status')
+            .ilike('status', 'published')
+        if (error || !data) return []
+        return data.map(a => ({
+            ID: a.id,
+            Title: a.title,
+            Summary: a.summary,
+            Category: a.category,
+            ImageURL: a.image_url,
+            Author: a.author || 'Gencko Breeding Studio',
+            PublishDate: a.publish_date || '',
+            Keywords: a.keywords || ''
+        }))
+    } catch (e) {
+        console.error('[articles-index SSR] fetch failed:', e?.message)
+        return []
+    }
+})
+// 用於 schema 的全文章來源：優先 SSR 資料，其次 store
+const seoArticles = computed(() => (ssrArticles.value && ssrArticles.value.length ? ssrArticles.value : (store.articlesList || [])))
+// Debug: 將筆數注入 description 以驗證
+if (import.meta.server) {
+    console.log('[articles-index SSR] ssrArticles count:', ssrArticles.value?.length, 'store count:', store.articlesList?.length)
+}
 const artCat = ref('All')
 const searchQuery = ref('')
 
@@ -92,36 +123,121 @@ const toggleQuickTag = (tag) => {
     }
 }
 
-const blogSchema = computed(() => ({
-    '@context': 'https://schema.org',
-    '@type': 'Blog',
-    name: '守宮文章知識庫',
-    description: '豹紋守宮完整知識庫：飼養教學、健康照護、行為互動、環境佈置與新手必看指南。',
-    url: 'https://www.genckobreeding.com/articles',
-    publisher: {
-        '@type': 'Organization',
-        name: 'Gencko Studio',
-        url: 'https://www.genckobreeding.com'
+const artsUrl = 'https://www.genckobreeding.com/articles'
+const artsImg = 'https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/%E6%9C%AA%E5%91%BD%E5%90%8D%E8%A8%AD%E8%A8%88.png'
+const artsPublisher = {
+    "@type": "Organization",
+    "name": "Gencko Breeding Studio",
+    "alternateName": ["Gencko Studio", "捷客工作室"],
+    "url": "https://www.genckobreeding.com",
+    "logo": { "@type": "ImageObject", "url": "https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/11.png", "width": 512, "height": 512 },
+    "sameAs": [
+        "https://www.instagram.com/gencko_breeding",
+        "https://www.facebook.com/profile.php?id=61579393505049",
+        "https://line.me/R/ti/p/@219abdzn"
+    ]
+}
+
+// Blog + ItemList of BlogPosting（列出所有文章）
+const blogSchema = computed(() => {
+    const list = seoArticles.value
+    return {
+        "@type": "Blog",
+        "@id": `${artsUrl}#blog`,
+        "name": "Gencko 守宮文章知識庫",
+        "description": "豹紋守宮與肥尾守宮完整知識庫：新手必看、環境佈置、健康照護、行為互動、餵食與營養。",
+        "url": artsUrl,
+        "inLanguage": "zh-TW",
+        "publisher": artsPublisher,
+        "blogPost": list.map((a) => ({
+            "@type": "BlogPosting",
+            "@id": `https://www.genckobreeding.com/articles/${a.ID}#article`,
+            "headline": a.Title,
+            "url": `https://www.genckobreeding.com/articles/${a.ID}`,
+            "image": a.ImageURL ? getCleanUrl(a.ImageURL) : artsImg,
+            "datePublished": a.PublishDate || '',
+            "dateModified": a.PublishDate || '',
+            "articleSection": a.Category || '',
+            "description": a.Summary || '',
+            "author": {
+                "@type": a.Author && a.Author !== 'Gencko Studio' ? "Person" : "Organization",
+                "name": a.Author || "Gencko Breeding Studio"
+            },
+            "publisher": artsPublisher
+        }))
+    }
+})
+
+const itemListSchema = computed(() => {
+    const list = seoArticles.value
+    return {
+        "@type": "ItemList",
+        "@id": `${artsUrl}#list`,
+        "name": "Gencko 守宮飼養知識文章列表",
+        "numberOfItems": list.length,
+        "itemListElement": list.map((a, idx) => ({
+            "@type": "ListItem",
+            "position": idx + 1,
+            "url": `https://www.genckobreeding.com/articles/${a.ID}`,
+            "name": a.Title
+        }))
+    }
+})
+
+const artsBreadcrumbLd = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+        { "@type": "ListItem", "position": 1, "name": "首頁", "item": "https://www.genckobreeding.com/" },
+        { "@type": "ListItem", "position": 2, "name": "飼養知識專欄", "item": artsUrl }
+    ]
+}
+
+const artsWebPageLd = computed(() => ({
+    "@context": "https://schema.org",
+    "@type": "CollectionPage",
+    "@id": artsUrl,
+    "url": artsUrl,
+    "name": "守宮飼養知識文章列表｜Gencko 知識庫",
+    "inLanguage": "zh-TW",
+    "isPartOf": { "@type": "WebSite", "@id": "https://www.genckobreeding.com/#website" },
+    "primaryImageOfPage": { "@type": "ImageObject", "url": artsImg },
+    "speakable": {
+        "@type": "SpeakableSpecification",
+        "cssSelector": [".page-title", ".search-input"]
     },
-    blogPost: store.articlesList.slice(0, 10).map((a) => ({
-        '@type': 'BlogPosting',
-        headline: a.Title,
-        url: `https://www.genckobreeding.com/articles/${a.ID}`,
-        datePublished: a.PublishDate || '',
-        description: a.Summary || ''
-    }))
+    "publisher": artsPublisher,
+    "about": [
+        { "@type": "Taxon", "name": "Eublepharis macularius", "alternateName": "豹紋守宮", "sameAs": "https://www.wikidata.org/wiki/Q185061" },
+        { "@type": "Taxon", "name": "Hemitheconyx caudicinctus", "alternateName": "肥尾守宮", "sameAs": "https://www.wikidata.org/wiki/Q913571" }
+    ],
+    "mainEntity": blogSchema.value,
+    "hasPart": [itemListSchema.value]
 }))
 
 useHead({
-    title: '守宮文章知識庫',
+    title: '守宮文章知識庫｜新手必看、健康、環境、餵食完整指南',
     meta: [
-        { name: 'description', content: '豹紋守宮完整知識庫：飼養教學、健康照護、行為互動、環境佈置與新手必看指南。' },
-        { property: 'og:title', content: '守宮文章知識庫 | Gencko Studio' },
-        { property: 'og:description', content: '新手必看、健康照護、環境佈置、餵食與營養等完整整理。' },
-        { property: 'og:url', content: 'https://www.genckobreeding.com/articles' }
+        { name: 'description', content: '豹紋守宮與肥尾守宮完整知識庫：新手必看、環境佈置、健康照護、行為互動、餵食與營養指南。Gencko Breeding Studio 飼養教學文章一站收錄。' },
+        { name: 'keywords', content: '豹紋守宮飼養, 肥尾守宮飼養, 守宮新手, 守宮文章, 守宮知識庫, 守宮健康, 守宮環境' },
+        // Open Graph
+        { property: 'og:title', content: '守宮文章知識庫｜新手必看、健康、環境、餵食完整指南' },
+        { property: 'og:description', content: '豹紋守宮與肥尾守宮完整知識庫：新手必看、環境佈置、健康照護、行為互動、餵食與營養。' },
+        { property: 'og:image', content: artsImg },
+        { property: 'og:image:alt', content: 'Gencko 守宮文章知識庫' },
+        { property: 'og:url', content: artsUrl },
+        { property: 'og:type', content: 'website' },
+        // Twitter Card
+        { name: 'twitter:card', content: 'summary_large_image' },
+        { name: 'twitter:title', content: '守宮文章知識庫｜新手必看、健康、環境、餵食完整指南' },
+        { name: 'twitter:description', content: '豹紋守宮完整知識庫，飼養教學文章一站收錄。' },
+        { name: 'twitter:image', content: artsImg }
     ],
-    link: [{ rel: 'canonical', href: 'https://www.genckobreeding.com/articles' }],
-    script: computed(() => [{ type: 'application/ld+json', children: JSON.stringify(blogSchema.value) }])
+    link: [{ rel: 'canonical', href: artsUrl }],
+    script: computed(() => [
+        { type: 'application/ld+json', children: JSON.stringify(artsWebPageLd.value) },
+        { type: 'application/ld+json', children: JSON.stringify(artsBreadcrumbLd) }
+    ])
 })
 
 const fmtDate = (d) => {
@@ -135,7 +251,9 @@ const fmtDate = (d) => {
 
 <template>
     <div class="articles-page-wrapper">
-        <h1 class="page-title dt-only">文章知識庫</h1>
+        <!-- SEO：頁面唯一 h1 為 sr-only 含關鍵字版本（mobile+desktop 一致）；視覺主標保留為 div 不影響爬蟲 H1 階層 -->
+        <h1 class="sr-only">守宮文章知識庫｜新手必看、健康、環境、餵食完整指南</h1>
+        <div class="page-title dt-only" aria-hidden="true">文章知識庫</div>
 
         <div class="search-bar-wrap">
             <span class="search-icon">🔎</span>
