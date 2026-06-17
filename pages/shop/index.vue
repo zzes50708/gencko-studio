@@ -1,7 +1,7 @@
 ﻿<script setup>
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { useHead } from '#imports'
+import { useHead, useAsyncData, useSupabaseClient } from '#imports'
 import { useMainStore } from '~/stores/useMainStore'
 import { GENES_DB } from '~/utils/genes-db.js'
 import { getCleanUrl } from '~/utils/image.js'
@@ -10,6 +10,30 @@ import ShopFlipCard from '~/components/ShopFlipCard.vue'
 const store = useMainStore()
 const route = useRoute()
 const router = useRouter()
+const supabase = useSupabaseClient()
+
+// SSR：抓取在售個體（給 schema 用，UI 仍使用 store.inv）
+const { data: ssrForSale } = await useAsyncData('shop-forsale-seo-v1', async () => {
+    try {
+        const { data, error } = await supabase
+            .from('animals')
+            .select('id, species, morph, genes, gender_type, listing_price, image_url, status')
+            .eq('status', 'ForSale')
+        if (error || !data) return []
+        return data.map(a => ({
+            ID: a.id,
+            Species: a.species,
+            Morph: a.morph,
+            Genes: Array.isArray(a.genes) ? a.genes : [],
+            GenderType: a.gender_type,
+            ListingPrice: a.listing_price,
+            ImageURL: a.image_url
+        }))
+    } catch (e) {
+        console.error('[shop SSR] fetch failed:', e?.message)
+        return []
+    }
+})
 
 const sp = ref('豹紋守宮')
 const kw = ref('')
@@ -20,54 +44,128 @@ const sortOrder = ref('default')
 const showOnlyFav = ref(false)
 const showOnlyHistory = ref(false)
 
+const shopUrl = 'https://www.genckobreeding.com/shop'
+const shopImg = 'https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/%E6%AD%A3%E9%9D%A2.png'
+const shopSeller = {
+    "@type": "Organization",
+    "name": "Gencko Breeding Studio",
+    "alternateName": ["Gencko Studio", "捷客工作室"],
+    "url": "https://www.genckobreeding.com",
+    "logo": "https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/11.png",
+    "sameAs": [
+        "https://www.instagram.com/gencko_breeding",
+        "https://www.facebook.com/profile.php?id=61579393505049",
+        "https://line.me/R/ti/p/@219abdzn"
+    ]
+}
+
 const itemListSchema = computed(() => {
-    const forSaleItems = (store.inv || [])
-        .filter(i => i.Status === 'ForSale' && i.Species === sp.value)
-        .slice(0, 12)
+    // SSR 優先用 supabase 直撈結果，CSR/水合後 store.inv 可能更完整
+    const ssrList = (ssrForSale.value || []).filter(i => i.Species === sp.value)
+    const csrList = (store.inv || []).filter(i => i.Status === 'ForSale' && i.Species === sp.value)
+    const forSaleItems = csrList.length ? csrList : ssrList
     if (!forSaleItems.length) return null
     return {
-        "@context": "https://schema.org",
         "@type": "ItemList",
-        "name": sp.value + " 商品列表",
-        "description": "Gencko Studio " + sp.value + " 商品列表",
-        "url": "https://www.genckobreeding.com/shop",
+        "@id": `${shopUrl}#list`,
+        "name": `${sp.value} 在售個體列表`,
+        "description": `Gencko Breeding Studio 目前在售的 ${sp.value} 個體（${forSaleItems.length} 隻）`,
+        "url": shopUrl,
         "numberOfItems": forSaleItems.length,
-        "itemListElement": forSaleItems.map((item, idx) => ({
-            "@type": "ListItem",
-            "position": idx + 1,
+        "itemListElement": forSaleItems.map((item, idx) => {
+            const productUrl = `https://www.genckobreeding.com/product/${item.ID}`
+            const geneStr = (item.Genes || []).join('、')
+            return {
+                "@type": "ListItem",
+                "position": idx + 1,
+                "url": productUrl,
                 "item": {
                     "@type": "Product",
+                    "@id": `${productUrl}#product`,
                     "name": item.Morph,
-                    "url": "https://www.genckobreeding.com/product/" + item.ID,
-                    "image": item.ImageURL || '',
-                    "description": (item.Species || '') + ' ' + (item.Morph || '') + '，性別：' + (item.GenderType || '') + '，基因：' + (((item.Genes || []).join('、')) || '無'),
+                    "url": productUrl,
+                    "image": item.ImageURL ? getCleanUrl(item.ImageURL) : shopImg,
+                    "sku": item.ID,
+                    "category": `寵物 > 爬蟲 > 守宮 > ${item.Species}`,
+                    "description": `${item.Species || ''} ${item.Morph || ''}（${item.GenderType || ''}）${geneStr ? '，基因：' + geneStr : ''}`,
+                    "brand": { "@type": "Brand", "name": "Gencko Breeding Studio", "alternateName": ["Gencko Studio", "捷客工作室"] },
+                    "additionalProperty": [
+                        ...(geneStr ? [{ "@type": "PropertyValue", "name": "基因組合", "value": geneStr }] : []),
+                        ...(item.GenderType ? [{ "@type": "PropertyValue", "name": "性別", "value": item.GenderType }] : []),
+                        ...(item.Species ? [{ "@type": "PropertyValue", "name": "物種", "value": item.Species }] : [])
+                    ],
                     "offers": {
                         "@type": "Offer",
+                        "url": productUrl,
                         "price": item.ListingPrice,
                         "priceCurrency": "TWD",
-                    "availability": "https://schema.org/InStock",
-                    "seller": { "@type": "Organization", "name": "Gencko Studio" }
+                        "availability": "https://schema.org/InStock",
+                        "itemCondition": "https://schema.org/NewCondition",
+                        "areaServed": { "@type": "Country", "name": "Taiwan" },
+                        "seller": shopSeller
+                    }
                 }
             }
-        }))
+        })
     }
-});
+})
+
+const shopBreadcrumbLd = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+        { "@type": "ListItem", "position": 1, "name": "首頁", "item": "https://www.genckobreeding.com/" },
+        { "@type": "ListItem", "position": 2, "name": "線上選購", "item": shopUrl }
+    ]
+}
+
+const shopWebPageLd = computed(() => ({
+    "@context": "https://schema.org",
+    "@type": "CollectionPage",
+    "@id": shopUrl,
+    "url": shopUrl,
+    "name": `Gencko 守宮選購｜${sp.value} 在售個體`,
+    "inLanguage": "zh-TW",
+    "isPartOf": { "@type": "WebSite", "@id": "https://www.genckobreeding.com/#website" },
+    "primaryImageOfPage": { "@type": "ImageObject", "url": shopImg },
+    "speakable": {
+        "@type": "SpeakableSpecification",
+        "cssSelector": [".page-title"]
+    },
+    "publisher": shopSeller,
+    "about": [
+        { "@type": "Taxon", "name": "Eublepharis macularius", "alternateName": "豹紋守宮", "sameAs": "https://www.wikidata.org/wiki/Q185061" },
+        { "@type": "Taxon", "name": "Hemitheconyx caudicinctus", "alternateName": "肥尾守宮", "sameAs": "https://www.wikidata.org/wiki/Q913571" }
+    ],
+    ...(itemListSchema.value ? { "mainEntity": itemListSchema.value } : {})
+}))
 
 useHead({
-    title: '選購｜Gencko Studio',
+    title: '線上選購守宮｜豹紋與肥尾守宮個體 - Gencko Breeding Studio',
     meta:[
-        { name: 'description', content: 'Gencko Studio 選購頁，提供在售商品與篩選搜尋。' },
-        { property: 'og:title', content: '選購｜Gencko Studio' },
-        { property: 'og:description', content: 'Gencko Studio 選購頁，提供在售商品與篩選搜尋。' },
-        { property: 'og:image', content: 'https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/%E6%AD%A3%E9%9D%A2.png' },
-        { property: 'og:url', content: 'https://www.genckobreeding.com/shop' },
-        { name: 'twitter:card', content: 'summary_large_image' }
+        { name: 'description', content: 'Gencko Breeding Studio 線上選購頁，提供豹紋守宮與肥尾守宮在售個體，可依基因品系、性別、價格篩選。每隻個體均有完整基因紀錄與健康保證，支援私訊購買與配送。' },
+        { name: 'keywords', content: '豹紋守宮選購, 肥尾守宮選購, 守宮販售, 守宮價格, 特殊基因品系, Gencko Studio' },
+        // Open Graph
+        { property: 'og:title', content: '線上選購守宮｜豹紋與肥尾守宮個體 - Gencko Breeding Studio' },
+        { property: 'og:description', content: '線上選購豹紋守宮與肥尾守宮在售個體，可依基因品系、性別、價格篩選，每隻附完整基因紀錄與健康保證。' },
+        { property: 'og:image', content: shopImg },
+        { property: 'og:image:alt', content: 'Gencko 守宮線上選購 - 豹紋守宮與肥尾守宮在售個體' },
+        { property: 'og:url', content: shopUrl },
+        { property: 'og:type', content: 'website' },
+        // Twitter Card
+        { name: 'twitter:card', content: 'summary_large_image' },
+        { name: 'twitter:title', content: '線上選購守宮｜豹紋與肥尾守宮個體' },
+        { name: 'twitter:description', content: '線上選購豹紋守宮與肥尾守宮在售個體，可依基因品系、性別、價格篩選。' },
+        { name: 'twitter:image', content: shopImg }
     ],
     link:[
-        { rel: 'canonical', href: 'https://www.genckobreeding.com/shop' }
+        { rel: 'canonical', href: shopUrl }
     ],
-    script: computed(() => itemListSchema.value ? [{ type: 'application/ld+json', children: JSON.stringify(itemListSchema.value) }] : [])
-});
+    script: computed(() => [
+        { type: 'application/ld+json', children: JSON.stringify(shopWebPageLd.value) },
+        { type: 'application/ld+json', children: JSON.stringify(shopBreadcrumbLd) }
+    ])
+})
 
 const tags = {}
 
@@ -256,7 +354,10 @@ const activeFilterCount = computed(() => {
 <template>
     <div class="shop-root-container">
         <div class="shop-page-wrapper">
-            <h1 class="page-title dt-only">選購守宮</h1>
+            <!-- SEO：頁面唯一 h1（sr-only 含完整關鍵字，全裝置都讓爬蟲讀到） -->
+            <h1 class="sr-only">線上選購守宮｜豹紋與肥尾守宮在售個體 - Gencko Breeding Studio</h1>
+            <!-- 視覺主標保留為 div（桌機可見、手機隱藏） -->
+            <div class="page-title dt-only" aria-hidden="true">選購守宮</div>
 
             <div class="shop-layout">
                 <!-- 手機篩選遮罩 -->
