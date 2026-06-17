@@ -3,46 +3,92 @@ import { ref, computed } from 'vue'
 import { useHead } from '#imports'
 import { FAQ_CATEGORIES, FAQ_DATA } from '~/utils/faq.js'
 
+const faqUrl = 'https://www.genckobreeding.com/faq'
+const faqImg = 'https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/%E6%AD%A3%E9%9D%A2.png'
+const faqPublisher = {
+    "@type": "Organization",
+    "name": "Gencko Breeding Studio",
+    "alternateName": ["Gencko Studio", "捷客工作室"],
+    "url": "https://www.genckobreeding.com",
+    "logo": { "@type": "ImageObject", "url": "https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/11.png", "width": 512, "height": 512 },
+    "sameAs": [
+        "https://www.instagram.com/gencko_breeding",
+        "https://www.facebook.com/profile.php?id=61579393505049",
+        "https://line.me/R/ti/p/@219abdzn"
+    ]
+}
+
+// FAQ 答案：去 HTML 標籤、合併換行
+const stripFaq = (s) => String(s || '').replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim()
+
+const faqPageLd = {
+    "@type": "FAQPage",
+    "@id": `${faqUrl}#faq`,
+    "mainEntity": FAQ_DATA.map(q => ({
+        "@type": "Question",
+        "name": q.title.replace(/（必讀）|\(必讀\)/g, '').trim(),
+        "acceptedAnswer": {
+            "@type": "Answer",
+            "text": stripFaq(q.ans)
+        }
+    }))
+}
+
+const faqBreadcrumbLd = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+        { "@type": "ListItem", "position": 1, "name": "首頁", "item": "https://www.genckobreeding.com/" },
+        { "@type": "ListItem", "position": 2, "name": "常見問題 FAQ", "item": faqUrl }
+    ]
+}
+
+const faqWebPageLd = {
+    "@context": "https://schema.org",
+    "@type": "WebPage",
+    "@id": faqUrl,
+    "url": faqUrl,
+    "name": "常見問題 FAQ｜Gencko 守宮飼養與購買解答",
+    "inLanguage": "zh-TW",
+    "isPartOf": { "@type": "WebSite", "@id": "https://www.genckobreeding.com/#website" },
+    "primaryImageOfPage": { "@type": "ImageObject", "url": faqImg },
+    "speakable": {
+        "@type": "SpeakableSpecification",
+        "cssSelector": [".faq-q", ".faq-answer", ".q-text"]
+    },
+    "publisher": faqPublisher,
+    "about": [
+        { "@type": "Taxon", "name": "Eublepharis macularius", "alternateName": "豹紋守宮", "sameAs": "https://www.wikidata.org/wiki/Q185061" },
+        { "@type": "Taxon", "name": "Hemitheconyx caudicinctus", "alternateName": "肥尾守宮", "sameAs": "https://www.wikidata.org/wiki/Q913571" }
+    ],
+    "mainEntity": faqPageLd
+}
+
 useHead({
-    title: '常見問題 FAQ',
+    title: '常見問題 FAQ｜Gencko 守宮飼養、健康、購買完整解答',
     meta:[
-        { name: 'description', content: 'Gencko Studio 常見問題整理：守宮飼養知識、官網功能使用說明、購買流程與售後保障，新手入手前必讀。' },
-        { property: 'og:title', content: '常見問題 FAQ | Gencko Studio' },
-        { property: 'og:description', content: '守宮飼養知識、官網使用說明、購買與售後保障完整解答。' },
-        { property: 'og:url', content: 'https://www.genckobreeding.com/faq' }
+        { name: 'description', content: 'Gencko Breeding Studio 常見問題整理：豹紋守宮與肥尾守宮飼養知識、健康判讀、基因與品系說明、官網功能使用、購買流程與售後保障，新手入手前必讀。' },
+        { name: 'keywords', content: '守宮 FAQ, 豹紋守宮新手, 守宮飼養問題, 守宮健康, 守宮購買流程, Gencko 常見問題' },
+        // Open Graph
+        { property: 'og:title', content: '常見問題 FAQ｜Gencko 守宮飼養、健康、購買完整解答' },
+        { property: 'og:description', content: '守宮飼養知識、健康判讀、基因品系說明、購買與售後保障完整解答。' },
+        { property: 'og:image', content: faqImg },
+        { property: 'og:image:alt', content: 'Gencko 守宮常見問題 FAQ' },
+        { property: 'og:url', content: faqUrl },
+        { property: 'og:type', content: 'website' },
+        // Twitter Card
+        { name: 'twitter:card', content: 'summary_large_image' },
+        { name: 'twitter:title', content: '常見問題 FAQ｜Gencko 守宮飼養、健康、購買完整解答' },
+        { name: 'twitter:description', content: '守宮飼養知識、健康判讀、基因品系說明、購買與售後保障完整解答。' },
+        { name: 'twitter:image', content: faqImg }
     ],
     link:[
-        { rel: 'canonical', href: 'https://www.genckobreeding.com/faq' }
+        { rel: 'canonical', href: faqUrl }
     ],
     script:[
-    {
-        type: 'application/ld+json',
-        children: JSON.stringify({
-            "@context": "https://schema.org",
-            "@type": "WebPage",
-            "name": "常見問題 FAQ",
-            "url": "https://www.genckobreeding.com/faq",
-            "speakable": {
-                "@type": "SpeakableSpecification",
-                "cssSelector": [".faq-item", ".faq-answer"]
-            }
-        })
-    },
-    {
-        type: 'application/ld+json',
-        children: JSON.stringify({
-            "@context": "https://schema.org",
-            "@type": "FAQPage",
-            "mainEntity": FAQ_DATA.map(q => ({
-                "@type": "Question",
-                "name": q.title.replace(/（必讀）|\(必讀\)/g, '').trim(),
-                "acceptedAnswer": {
-                    "@type": "Answer",
-                    "text": (q.ans || '').replace(/\n/g, ' ').trim()
-                }
-            }))
-        })
-    }]
+        { type: 'application/ld+json', children: JSON.stringify(faqWebPageLd) },
+        { type: 'application/ld+json', children: JSON.stringify(faqBreadcrumbLd) }
+    ]
 })
 
 const activeCategory = ref('gecko')
@@ -67,7 +113,10 @@ const toggleQ = (key) => {
         <TheBackButton wrapper-class="m-only" fallback="/" />
 
         <div class="content-card">
-            <h1 class="page-title dt-only">常見問題 FAQ</h1>
+            <!-- SEO：頁面唯一 h1（sr-only 含完整關鍵字） -->
+            <h1 class="sr-only">常見問題 FAQ｜Gencko 守宮飼養、健康、購買完整解答</h1>
+            <!-- 視覺主標保留為 div（桌機可見、手機隱藏） -->
+            <div class="page-title dt-only" aria-hidden="true">常見問題 FAQ</div>
 
             <!-- 分類 Tab -->
             <div class="cat-tabs">
