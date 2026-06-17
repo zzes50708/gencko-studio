@@ -22,45 +22,130 @@ const allGeneNames = computed(() => {
     return [...new Set(names)]
 })
 
-const collectionSchema = computed(() => ({
-    "@context": "https://schema.org",
-    "@type": "CollectionPage",
-    "name": "守宮基因圖鑑",
-    "description": "收錄完整豹紋守宮與肥尾守宮基因資料庫，提供基因簡介、選育特徵與遺傳法則說明。",
-    "url": "https://www.genckobreeding.com/genes",
-    "about": {
-        "@type": "Taxon",
-        "name": "Eublepharis macularius",
-        "alternateName": "豹紋守宮"
-    },
-    "hasPart": allGeneNames.value.map(name => ({
+const genesUrl = 'https://www.genckobreeding.com/genes'
+const genesImg = 'https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/%E6%AD%A3%E9%9D%A2.png'
+const genesPublisher = {
+    "@type": "Organization",
+    "name": "Gencko Breeding Studio",
+    "alternateName": ["Gencko Studio", "捷客工作室"],
+    "url": "https://www.genckobreeding.com",
+    "logo": { "@type": "ImageObject", "url": "https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/11.png", "width": 512, "height": 512 },
+    "sameAs": [
+        "https://www.instagram.com/gencko_breeding",
+        "https://www.facebook.com/profile.php?id=61579393505049",
+        "https://line.me/R/ti/p/@219abdzn"
+    ]
+}
+
+// DefinedTermSet：守宮基因辭典（GEO 核心 — 讓 LLM 把本站當作「守宮基因」的權威定義來源）
+const definedTermSetLd = computed(() => ({
+    "@type": "DefinedTermSet",
+    "@id": `${genesUrl}#termset`,
+    "name": "Gencko 守宮基因辭典",
+    "description": "完整收錄豹紋守宮（Eublepharis macularius）與肥尾守宮（Hemitheconyx caudicinctus）的色彩、花紋、體型與血統基因詞條，依遺傳模式分類。",
+    "url": genesUrl,
+    "inLanguage": "zh-TW",
+    "publisher": genesPublisher,
+    "hasDefinedTerm": allGeneNames.value.map(name => ({
         "@type": "DefinedTerm",
+        "@id": `https://www.genckobreeding.com/genes/${encodeURIComponent(name)}#term`,
         "name": name,
-        "url": `https://www.genckobreeding.com/genes/${encodeURIComponent(name)}`
+        "url": `https://www.genckobreeding.com/genes/${encodeURIComponent(name)}`,
+        "inDefinedTermSet": { "@id": `${genesUrl}#termset` }
     }))
 }))
 
+// ItemList of DefinedTerm（依分類依序列出，提供順序語意）
+const itemListLd = computed(() => {
+    const all = []
+    let pos = 0
+    for (const species of Object.keys(GENES_DB)) {
+        for (const [mode, list] of Object.entries(GENES_DB[species])) {
+            for (const name of list) {
+                pos += 1
+                all.push({
+                    "@type": "ListItem",
+                    "position": pos,
+                    "url": `https://www.genckobreeding.com/genes/${encodeURIComponent(name)}`,
+                    "name": `${name}（${species} - ${mode}）`
+                })
+            }
+        }
+    }
+    return {
+        "@type": "ItemList",
+        "@id": `${genesUrl}#list`,
+        "name": "Gencko 守宮基因詞條列表",
+        "numberOfItems": all.length,
+        "itemListElement": all
+    }
+})
+
+const genesBreadcrumbLd = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+        { "@type": "ListItem", "position": 1, "name": "首頁", "item": "https://www.genckobreeding.com/" },
+        { "@type": "ListItem", "position": 2, "name": "守宮基因圖鑑", "item": genesUrl }
+    ]
+}
+
+const genesWebPageLd = computed(() => ({
+    "@context": "https://schema.org",
+    "@type": "CollectionPage",
+    "@id": genesUrl,
+    "url": genesUrl,
+    "name": "守宮基因圖鑑｜豹紋守宮與肥尾守宮完整基因辭典",
+    "inLanguage": "zh-TW",
+    "isPartOf": { "@type": "WebSite", "@id": "https://www.genckobreeding.com/#website" },
+    "primaryImageOfPage": { "@type": "ImageObject", "url": genesImg },
+    "speakable": {
+        "@type": "SpeakableSpecification",
+        "cssSelector": [".page-title", ".gene-cat-title"]
+    },
+    "publisher": genesPublisher,
+    "about": [
+        { "@type": "Taxon", "name": "Eublepharis macularius", "alternateName": "豹紋守宮", "sameAs": "https://www.wikidata.org/wiki/Q185061" },
+        { "@type": "Taxon", "name": "Hemitheconyx caudicinctus", "alternateName": "肥尾守宮", "sameAs": "https://www.wikidata.org/wiki/Q913571" }
+    ],
+    "mainEntity": definedTermSetLd.value,
+    "hasPart": [itemListLd.value]
+}))
+
 useHead({
-    title: '守宮基因圖鑑',
+    title: '守宮基因圖鑑｜豹紋守宮與肥尾守宮完整基因辭典',
     meta:[
-        { name: 'description', content: '收錄完整豹紋守宮與肥尾守宮基因資料庫。提供基因簡介、選育特徵與遺傳法則說明，是玩家必備的查詢工具。' },
-        { property: 'og:title', content: '守宮基因圖鑑 | Gencko Studio' },
-        { property: 'og:description', content: '收錄完整豹紋守宮與肥尾守宮基因資料庫。提供基因簡介、選育特徵與遺傳法則說明，是玩家必備的查詢工具。' },
-        { property: 'og:image', content: 'https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/%E6%AD%A3%E9%9D%A2.png' },
-        { property: 'og:url', content: 'https://www.genckobreeding.com/genes' },
-        { property: 'og:type', content: 'website' }
+        { name: 'description', content: '完整收錄豹紋守宮（Eublepharis macularius）與肥尾守宮（Hemitheconyx caudicinctus）的色彩、花紋、體型與血統基因詞條，依顯性、隱性、共顯性、多遺傳分類。每筆基因附遺傳模式、特徵說明與選育注意事項。' },
+        { name: 'keywords', content: '守宮基因圖鑑, 豹紋守宮基因, 肥尾守宮基因, 守宮品系, morph, 白化, 雪花, 共顯性, 隱性遺傳' },
+        // Open Graph
+        { property: 'og:title', content: '守宮基因圖鑑｜豹紋守宮與肥尾守宮完整基因辭典' },
+        { property: 'og:description', content: '完整收錄豹紋守宮與肥尾守宮的基因詞條，依顯性、隱性、共顯性、多遺傳分類，每筆附特徵說明與選育注意事項。' },
+        { property: 'og:image', content: genesImg },
+        { property: 'og:image:alt', content: 'Gencko 守宮基因圖鑑' },
+        { property: 'og:url', content: genesUrl },
+        { property: 'og:type', content: 'website' },
+        // Twitter Card
+        { name: 'twitter:card', content: 'summary_large_image' },
+        { name: 'twitter:title', content: '守宮基因圖鑑｜豹紋守宮與肥尾守宮完整基因辭典' },
+        { name: 'twitter:description', content: '完整收錄豹紋守宮與肥尾守宮的基因詞條，依顯性、隱性、共顯性、多遺傳分類。' },
+        { name: 'twitter:image', content: genesImg }
     ],
     link:[
-        { rel: 'canonical', href: 'https://www.genckobreeding.com/genes' }
+        { rel: 'canonical', href: genesUrl }
     ],
-    script: computed(() => [{ type: 'application/ld+json', children: JSON.stringify(collectionSchema.value) }])
+    script: computed(() => [
+        { type: 'application/ld+json', children: JSON.stringify(genesWebPageLd.value) },
+        { type: 'application/ld+json', children: JSON.stringify(genesBreadcrumbLd) }
+    ])
 })
 </script>
 
 <template>
     <div class="genes-page-wrapper">
-        <!-- 桌機版顯示標題，手機版隱藏以節省空間 -->
-        <h1 class="page-title dt-only">守宮基因圖鑑</h1>
+        <!-- SEO：頁面唯一 h1（sr-only 含完整關鍵字，全裝置都讓爬蟲讀到） -->
+        <h1 class="sr-only">守宮基因圖鑑｜豹紋守宮與肥尾守宮完整基因辭典</h1>
+        <!-- 視覺主標保留為 div（桌機可見、手機隱藏） -->
+        <div class="page-title dt-only" aria-hidden="true">守宮基因圖鑑</div>
         
         <!-- 🌟 App-like 分段切換器 -->
         <div class="segmented-control">
