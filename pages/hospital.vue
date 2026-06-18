@@ -1,10 +1,52 @@
 <script setup>
 import { ref, computed } from 'vue'
-import { useHead } from '#imports'
+import { useHead, useAsyncData, useSupabaseClient } from '#imports'
 import { useMainStore } from '~/stores/useMainStore'
-import { HOSPITAL_REGIONS, HOSPITAL_DATA } from '~/utils/hospitals.js'
+// HOSPITAL_REGIONS 仍從 js 讀（縣市區域分組是固定常數）；HOSPITAL_DATA 已搬到 Supabase
+import { HOSPITAL_REGIONS } from '~/utils/hospitals.js'
 
 const store = useMainStore()
+const supabase = useSupabaseClient()
+
+// SSR：從 Supabase 抓特寵醫院清單
+const { data: hospitalsData } = await useAsyncData('hospitals-v1', async () => {
+    try {
+        const { data, error } = await supabase
+            .from('hospitals')
+            .select('id, name, address, city, district, phone, map_url, region, hours, has_emergency, accept_species, verified_at')
+            .eq('status', 'active')
+            .order('id', { ascending: true })
+        if (error || !data) return []
+        return data.map(h => ({
+            id: String(h.id),
+            name: h.name,
+            address: h.address,
+            city: h.city,
+            district: h.district,
+            phone: h.phone,
+            mapUrl: h.map_url || null,
+            region: h.region,
+            hours: h.hours,
+            hasEmergency: h.has_emergency,
+            acceptSpecies: h.accept_species || [],
+            verifiedAt: h.verified_at
+        }))
+    } catch (e) {
+        console.error('[hospitals SSR] fetch failed:', e?.message)
+        return []
+    }
+})
+
+// 對外暴露給原本邏輯用
+const HOSPITAL_DATA = computed(() => hospitalsData.value || [])
+
+// 取最新驗證日（前台顯示「資料更新：YYYY-MM-DD」）
+const hospitalsVerifiedDate = computed(() => {
+    const list = HOSPITAL_DATA.value
+    if (!list.length) return null
+    const dates = list.map(h => h.verifiedAt).filter(Boolean).sort()
+    return dates[dates.length - 1] || null
+})
 
 const hospCity = ref('all')
 const hospDistrict = ref('all')
@@ -21,16 +63,16 @@ const toggleHospExpand = (id) => {
 
 const isHospExpanded = (id) => hospExpanded.value.has(id)
 
-const hospAvailableCities = computed(() => new Set(HOSPITAL_DATA.map(h => h.city)))
+const hospAvailableCities = computed(() => new Set(HOSPITAL_DATA.value.map(h => h.city)))
 
 const hospDistricts = computed(() => {
     if (hospCity.value === 'all') return[]
-    const set = new Set(HOSPITAL_DATA.filter(h => h.city === hospCity.value).map(h => h.district))
+    const set = new Set(HOSPITAL_DATA.value.filter(h => h.city === hospCity.value).map(h => h.district))
     return Array.from(set).sort()
 })
 
 const hospFiltered = computed(() => {
-    return HOSPITAL_DATA.filter(h => {
+    return HOSPITAL_DATA.value.filter(h => {
         const cityMatch = hospCity.value === 'all' || h.city === hospCity.value
         const districtMatch = hospDistrict.value === 'all' || h.district === hospDistrict.value
         return cityMatch && districtMatch
@@ -284,6 +326,7 @@ useHead({
         <div class="hosp-count-row">
             <span class="hosp-count">搜尋結果: {{ hospFiltered.length }} 間</span>
             <div class="hosp-divider"></div>
+            <span v-if="hospitalsVerifiedDate" class="hosp-verified" :title="`本清單最後驗證日`">資料更新：{{ hospitalsVerifiedDate }}</span>
         </div>
 
         <!-- Hospital List -->
@@ -378,7 +421,8 @@ useHead({
 .hosp-select-icon { position: absolute; right: 12px; bottom: 12px; pointer-events: none; opacity: 0.4; color: var(--txt); font-size: 0.8rem; }
 
 /* Results Info */
-.hosp-count-row { display: flex; align-items: center; margin-bottom: 12px; padding: 0 5px; }
+.hosp-count-row { display: flex; align-items: center; margin-bottom: 12px; padding: 0 5px; gap: 0; }
+.hosp-verified { font-size: 0.72rem; color: var(--txt); opacity: 0.55; white-space: nowrap; }
 .hosp-count { font-size: 0.85rem; font-weight: bold; color: var(--pri); white-space: nowrap; }
 .hosp-divider { height: 1px; flex: 1; background: var(--bd); margin: 0 15px; opacity: 0.3; }
 

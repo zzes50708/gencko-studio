@@ -136,7 +136,72 @@ Gencko SEO/GEO/AEO 後台資料填寫指南
 
 
 ============================================================
+四、hospitals（特寵醫院清單）
+============================================================
+
+【在哪裡填】
+  Supabase Studio → Table Editor → hospitals
+
+【欄位說明】
+
+  欄位名             | 型別        | 是否必填 | 填寫範例
+  ------------------+------------+---------+----------------
+  id                | TEXT       | 必填    | "79"（接續舊 ID）
+  name              | TEXT       | 必填    | 不萊梅特殊寵物專科醫院
+  address           | TEXT       | 必填    | 台北市大同區民權西路227號
+  city              | TEXT       | 必填    | 台北市
+  district          | TEXT       | 必填    | 大同區
+  phone             | TEXT       | 建議    | 02-2599-3907
+  map_url           | TEXT       | 選填    | https://maps.app.goo.gl/xxxxx
+  region            | TEXT       | 建議    | 北部區域
+  hours             | TEXT       | 選填    | 週一至週六 10:00-21:00
+  has_emergency     | BOOLEAN    | 選填    | true/false（夜間或急診）
+  accept_species    | TEXT[]     | 選填    | {"爬蟲","兩棲","鳥類"}
+  status            | TEXT       | 必填    | active / closed
+  verified_at       | DATE       | 建議    | 2026-06-17
+
+【常見操作情境】
+
+  情境 A：新增一間醫院
+    → Table Editor → hospitals → Insert row → 填入欄位 → Save
+    → 立即在 /hospital 頁面顯示（前台已 SSR 串接 Supabase）
+
+  情境 B：某間醫院倒閉了
+    → 該筆 status 改為 "closed"
+    → 不要 DELETE，保留歷史
+    → 前台會自動隱藏（程式只撈 status='active'）
+
+  情境 C：手動驗證過某筆資料正確
+    → 更新該筆 verified_at = 今天日期
+    → 前台「資料更新：YYYY-MM-DD」會顯示「全清單最新驗證日」
+
+  情境 D：補完 map_url（Google Maps 短網址）
+    → 從 Google Maps 找到該院 → 「分享」→ 「複製連結」
+    → 貼進 map_url 欄位
+    → 前台「地址」會直連該短網址（取代自動拼搜尋）
+
+【填了之後會自動發生什麼】
+
+  /hospital 頁面 SSR 即時抓取 status='active' 的所有醫院。
+  schema.org VeterinaryCare 結構化資料會自動更新，含完整
+  PostalAddress、City、AdministrativeArea(region)、telephone
+  (E.164 +886 格式)、medicalSpecialty: ExoticPet。
+
+  Cloudflare CDN 對 / 頁面有快取，最快 5–10 分鐘後生效；
+  急用時可在 Cloudflare Dashboard → Purge Cache → 指定 URL
+  → https://www.genckobreeding.com/hospital
+
+【驗證方法】
+
+  1) 開啟 https://www.genckobreeding.com/hospital
+  2) 確認新增的醫院出現在清單中
+  3) 確認頂部「資料更新：YYYY-MM-DD」是該醫院的 verified_at
+
+
+============================================================
 變更歷史
 ============================================================
 - 2026-06-15  v1  初版（genetic_pages / articles.faq）
+- 2026-06-17  v2  新增 hospitals（特寵醫院清單，已從 utils/hospitals.js
+              搬到 Supabase，支援後台直接維護）
 ============================================================
