@@ -14,6 +14,9 @@ useHead({
     { property: 'og:description', content: '台灣豹紋守宮專業繁育工作室，特殊基因品系選購、基因計算機與新手飼養教學的一站式服務。' },
     { property: 'og:url', content: 'https://www.genckobreeding.com/' },
     { property: 'og:image', content: 'https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/%E6%9C%AA%E5%91%BD%E5%90%8D%E8%A8%AD%E8%A8%88.png' },
+    { property: 'og:image:alt', content: 'Gencko Breeding Studio - 台灣豹紋守宮專業繁育工作室' },
+    { name: 'twitter:title', content: 'Gencko 守宮工作室｜專業選育 × 新手飼養教學' },
+    { name: 'twitter:description', content: '台灣豹紋守宮專業繁育工作室，特殊基因品系選購、基因計算機與新手飼養教學的一站式服務。' },
     { name: 'twitter:image', content: 'https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/%E6%9C%AA%E5%91%BD%E5%90%8D%E8%A8%AD%E8%A8%88.png' },
   ],
   link: [
