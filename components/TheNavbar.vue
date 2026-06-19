@@ -1,5 +1,6 @@
 ﻿<script setup>
 import { ref, computed, watch } from 'vue'
+import { getCleanUrl } from '~/utils/image.js'
 import { useMainStore } from '~/stores/useMainStore' // ?? 撘 store
 
 const props = defineProps({
@@ -17,6 +18,10 @@ const isShopActive = computed(() => ['shop', 'auction', 'breeders', 'merch'].inc
 const isToolActive = computed(() => ['calculator', 'genes', 'health', 'qs', 'hospital'].includes(props.curTab))
 const isArticlesActive = computed(() => ['articles', 'care', 'faq'].includes(props.curTab))
 
+// LCP 優化：logo 原圖 4.4MB（1856×1865），實際只顯示 36×36
+// 透過 wsrv.nl 壓縮至 72px webp（≈ 3KB），縮減 99.9%
+const navLogoUrl = computed(() => store.logoUrl ? getCleanUrl(store.logoUrl, 72) : '')
+
 </script>
 
 <template>
@@ -26,7 +31,7 @@ const isArticlesActive = computed(() => ['articles', 'care', 'faq'].includes(pro
             <div class="nav-container">
                 <!-- Logo -->
                 <NuxtLink to="/" class="nav-left" @click="$emit('scroll-top')" style="cursor:pointer; display:flex; align-items:center; gap:8px; text-decoration:none;">
-                    <img v-if="store.logoUrl" :src="store.logoUrl" class="nav-logo-img" alt="Gencko Studio Logo" />
+                    <img v-if="navLogoUrl" :src="navLogoUrl" class="nav-logo-img" alt="Gencko Studio Logo" width="36" height="36" loading="eager" fetchpriority="high" />
                     <div style="font-weight:900; font-size:1.2rem; color:var(--pri); letter-spacing:1px; line-height:1;">GENCKO</div>
                 </NuxtLink>
 
