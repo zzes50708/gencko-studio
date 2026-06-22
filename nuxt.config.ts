@@ -52,7 +52,8 @@ export default defineNuxtConfig({
 
   // 🌟 PWA 模組設定
   pwa: {
-    registerType: 'prompt',
+    // 'autoUpdate'：新版本上線時 Service Worker 自動背景更新，不再顯示「立即更新」提示
+    registerType: 'autoUpdate',
     manifest: {
       id: '/',
       start_url: '/',

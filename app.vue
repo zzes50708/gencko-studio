@@ -76,26 +76,9 @@ watch(isAboutPage, (isAbout) => {
 const lastRuntimeError = ref(null)
 const clearRuntimeError = () => { lastRuntimeError.value = null }
 
-// PWA ?湔??恣??
-const isUpdating = ref(false)
+// PWA：registerType 改為 'autoUpdate'，Service Worker 背景靜默更新，無提示
+// isUpdating ref 與 handlePwaUpdate 已移除
 
-// ?? 靽格迤?⊥香 Bug嚗???await嚗??亦?撠蝺撥?園???
-const handlePwaUpdate = () => {
-  if (!$pwa) return
-  isUpdating.value = true 
-  
-  // 1. ??唳?隞支?蝯?Service Worker (銝蝙??await 蝑?)
-  try {
-    $pwa.updateServiceWorker(true) 
-  } catch (err) {
-    console.error('PWA ?湔?誘?潮仃??', err)
-  }
-  
-  // 2. 蝯??脩?嚗策鈭?300 瘥怎?霈?Service Worker ?交?誘嚗????啜璇辣?撥?園??唳??
-  setTimeout(() => {
-    window.location.reload()
-  }, 300)
-}
 
 // 靽格迤 FOUC ????
 useHead({
@@ -223,19 +206,6 @@ onBeforeUnmount(() => {
       </div>
     </div>
 
-    <!-- ?? ? Transition ?嚗? PWA ?湔瘞?部?脤?湔皛? -->
-    <Transition name="pwa-toast-anim">
-      <div v-if="$pwa?.needRefresh" class="pwa-update-toast">
-        <span style="font-weight: bold;">偵測到新版本，可立即更新</span>
-        <div class="pwa-update-actions">
-          <button class="pwa-btn-update" :disabled="isUpdating" @click="handlePwaUpdate">
-            {{ isUpdating ? '更新中...' : '立即更新' }}
-          </button>
-          <button class="pwa-btn-cancel" :disabled="isUpdating" @click="$pwa?.cancelPrompt()">稍後</button>
-        </div>
-      </div>
-    </Transition>
-
     <!-- iOS 銝?摰??飛敶? -->
     <div v-if="store.showIOSGuide" class="ios-install-guide-overlay" @click="store.showIOSGuide = false">
       <div class="ios-guide-box" @click.stop>
@@ -309,29 +279,6 @@ onBeforeUnmount(() => {
 </template>
 
 <style scoped>
-/* ?? ?啣???PWA ?內瘞?部皛??脤?游???*/
-.pwa-toast-anim-enter-active,
-.pwa-toast-anim-leave-active {
-  transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
-}
-.pwa-toast-anim-enter-from,
-.pwa-toast-anim-leave-to {
-  opacity: 0;
-  transform: translate(-50%, 20px) !important;
-}
-
-.pwa-update-toast {
-  position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
-  background: var(--card-bg); backdrop-filter: blur(10px); border: 1px solid var(--pri);
-  color: var(--txt); padding: 15px 20px; border-radius: 12px; z-index: 100000;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5); display: flex; flex-direction: column;
-  align-items: center; gap: 12px; width: 90%; max-width: 350px; text-align: center;
-}
-.pwa-update-actions { display: flex; gap: 10px; width: 100%; }
-.pwa-btn-update { flex: 1; background: var(--pri); color: #fff; border: none; padding: 10px; border-radius: 8px; font-weight: bold; cursor: pointer; box-shadow: 0 4px 10px var(--pri-glow); transition: 0.2s; }
-.pwa-btn-update:disabled { opacity: 0.7; cursor: not-allowed; transform: none; box-shadow: none; }
-.pwa-btn-cancel { flex: 1; background: transparent; color: var(--txt); opacity: 0.8; border: 1px solid var(--bd); padding: 10px; border-radius: 8px; cursor: pointer; transition: 0.2s; }
-.pwa-btn-cancel:disabled { opacity: 0.5; cursor: not-allowed; }
 
 /* iOS ?飛敶?璅??靽?銝? */
 .ios-install-guide-overlay {
@@ -363,7 +310,6 @@ onBeforeUnmount(() => {
 
 @media (max-width: 768px) {
   .floating-inquire-btn { bottom: calc(85px + env(safe-area-inset-bottom, 0px)) !important; }
-  .pwa-update-toast { bottom: calc(85px + env(safe-area-inset-bottom, 0px)) !important; }
 }
 </style>
 
