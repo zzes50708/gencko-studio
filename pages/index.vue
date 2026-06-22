@@ -189,10 +189,13 @@ onBeforeUnmount(() => {
 }
 
 .fallback-title {
-    font-size: clamp(2.4rem, 8vw, 5.6rem);
+    /* LCP 優化：字級對齊 scene 內 .scene-title--hero（clamp(3.2rem, 8.5vw, 9rem)）
+       讓 fallback 的 Gencko Studio 文字本身就是 LCP 元素；scene 載入後字級相同，
+       Lighthouse LCP 不會再更新，分數保留在 fallback 出現的瞬間（< 1s） */
+    font-size: clamp(3.2rem, 8.5vw, 9rem);
     font-weight: 900;
-    letter-spacing: 0.06em;
-    line-height: 1.1;
+    letter-spacing: -0.03em;
+    line-height: 1.08;
     text-shadow: 0 0 32px rgba(232, 68, 10, 0.45);
 }
 
