@@ -126,23 +126,25 @@ onBeforeUnmount(() => {
 
 <template>
     <div class="about-anim-page full-bleed">
-        <!-- ── Fallback：輕量 LCP 元素（CSS-only，無 JS），瀏覽器幾百毫秒內就能繪製 ── -->
-        <!-- 只在 scene 載入前存在，避免與 scene 內 h1 重複 -->
-        <div v-if="!sceneReady" class="anim-fallback">
-            <!-- SEO：fallback 階段的唯一 h1（scene 載入後 unmount，由 scene 內自己的 h1 接手） -->
-            <h1 class="sr-only">Gencko Studio｜台灣豹紋守宮專業繁育工作室</h1>
-            <div class="fallback-glow" aria-hidden="true"></div>
-            <div class="fallback-content">
-                <div class="fallback-title" aria-hidden="true">Gencko Studio</div>
-                <div class="fallback-subtitle" aria-hidden="true">品牌服務</div>
-                <NuxtLink to="/home" class="fallback-skip" aria-label="不看介紹，直接進入官網">
-                    不看介紹，直接進入官網
-                </NuxtLink>
+        <!-- ── Fallback：輕量 LCP 元素，淡出時 cross-fade 至 3D 場景 ── -->
+        <Transition name="fade-fallback">
+            <div v-if="!sceneReady" class="anim-fallback">
+                <!-- SEO：fallback 階段的唯一 h1（scene 載入後 unmount，由 scene 內自己的 h1 接手） -->
+                <h1 class="sr-only">Gencko Studio｜台灣豹紋守宮專業繁育工作室</h1>
+                <div class="fallback-content">
+                    <div class="fallback-title" aria-hidden="true">Gencko Studio</div>
+                    <div class="fallback-subtitle" aria-hidden="true">品牌服務</div>
+                    <NuxtLink to="/home" class="fallback-skip" aria-label="不看介紹，直接進入官網">
+                        不看介紹，直接進入官網
+                    </NuxtLink>
+                </div>
             </div>
-        </div>
+        </Transition>
 
-        <!-- ── 真正的 3D 場景：idle / 任何互動後才掛載 ── -->
-        <BrandServiceScrollScene v-if="sceneReady" />
+        <!-- ── 真正的 3D 場景：idle / 任何互動後才掛載，淡入呈現 ── -->
+        <Transition name="fade-scene" appear>
+            <BrandServiceScrollScene v-if="sceneReady" />
+        </Transition>
     </div>
 </template>
 
@@ -159,26 +161,17 @@ onBeforeUnmount(() => {
     margin-right: calc(50% - 50vw);
 }
 
-/* ── Fallback：模擬 3D 場景第一幕（暗色背景 + 橘色光暈 + 品牌字） ── */
+/* ── Fallback：視覺對齊 3D 場景第一幕（純黑底，文字陰影與 scene h1 一致） ── */
+/* 移除橘色 radial glow 與橘色 text-shadow，避免「亮 → 暗」閃爍 */
 .anim-fallback {
     position: fixed;
     inset: 0;
     display: flex;
     align-items: center;
     justify-content: center;
-    background: radial-gradient(ellipse at center, #2a1408 0%, #0D0B0A 70%);
-    z-index: 1;
+    background: #0D0B0A;
+    z-index: 2;
     overflow: hidden;
-}
-
-.fallback-glow {
-    position: absolute;
-    width: min(80vw, 600px);
-    height: min(80vw, 600px);
-    background: radial-gradient(circle, rgba(232, 68, 10, 0.32) 0%, rgba(232, 68, 10, 0) 60%);
-    border-radius: 50%;
-    filter: blur(40px);
-    animation: fallbackGlow 4s ease-in-out infinite;
 }
 
 .fallback-content {
@@ -186,17 +179,18 @@ onBeforeUnmount(() => {
     text-align: center;
     color: #fff;
     padding: 0 24px;
+    /* 內容自身淡入，給使用者「品牌字慢慢浮現」感覺，不會突兀 */
+    animation: fallbackContentIn 0.6s ease-out both;
 }
 
 .fallback-title {
-    /* LCP 優化：字級對齊 scene 內 .scene-title--hero（clamp(3.2rem, 8.5vw, 9rem)）
-       讓 fallback 的 Gencko Studio 文字本身就是 LCP 元素；scene 載入後字級相同，
-       Lighthouse LCP 不會再更新，分數保留在 fallback 出現的瞬間（< 1s） */
+    /* LCP 優化：字級對齊 scene 內 .scene-title--hero（clamp(3.2rem, 8.5vw, 9rem)） */
     font-size: clamp(3.2rem, 8.5vw, 9rem);
     font-weight: 900;
     letter-spacing: -0.03em;
     line-height: 1.08;
-    text-shadow: 0 0 32px rgba(232, 68, 10, 0.45);
+    /* 對齊 scene h1 text-shadow（黑色而非橘色），避免明亮閃爍 */
+    text-shadow: 0 6px 34px rgba(0, 0, 0, 0.55);
 }
 
 .fallback-subtitle {
@@ -228,26 +222,42 @@ onBeforeUnmount(() => {
     color: #fff;
 }
 
-@keyframes fallbackGlow {
-    0%, 100% { transform: scale(1); opacity: 0.85; }
-    50% { transform: scale(1.08); opacity: 1; }
+/* ── Cross-fade 入場動畫：fallback 與 scene 重疊淡出/淡入 ── */
+/* fallback 淡出（500ms） */
+.fade-fallback-leave-active {
+    transition: opacity 0.5s ease-out;
+}
+.fade-fallback-leave-to {
+    opacity: 0;
 }
 
-/* 行動裝置：縮小光暈避免占用主執行緒繪製 */
+/* scene 淡入（700ms，比 fallback 慢 200ms，營造「自然浮現」感） */
+.fade-scene-enter-active {
+    transition: opacity 0.7s ease-in;
+}
+.fade-scene-enter-from {
+    opacity: 0;
+}
+
+/* fallback 內容浮現（避免 SSR 第一幀就是滿亮文字） */
+@keyframes fallbackContentIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* 尊重 prefers-reduced-motion */
+@media (prefers-reduced-motion: reduce) {
+    .fallback-content { animation: none; }
+    .fade-fallback-leave-active,
+    .fade-scene-enter-active { transition: none; }
+}
+
+/* 行動裝置：縮小邊距 */
 @media (max-width: 768px) {
-    .fallback-glow {
-        animation-duration: 5s;
-        filter: blur(30px);
-    }
     .fallback-skip {
         margin-top: 24px;
         padding: 8px 20px;
         font-size: 0.82rem;
     }
-}
-
-/* 尊重 prefers-reduced-motion */
-@media (prefers-reduced-motion: reduce) {
-    .fallback-glow { animation: none; }
 }
 </style>
