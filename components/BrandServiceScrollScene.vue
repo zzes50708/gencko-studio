@@ -143,12 +143,14 @@ const isDayMode = computed(() => false)
 const bgColor   = computed(() => '#0D0B0A')   // canvas clearColor = 同 stage 背景色
 
 // ── 載入動畫 ──────────────────────────────────────────────────────────────────
-const isLoading = ref(true)
+// LCP 優化：本場景採延遲載入（由 index.vue 控制），掛載時 fallback 已在使用者眼前
+// 因此 in-scene loader 設為預設關閉，避免 loader 內「GENCKO」字成為 LCP 元素（拖到 11.7s）
+// 若需保留 loader 視覺供 /home /about 直接訪問時使用，可改 ref(true) 並由 onSceneReady 收起
+const isLoading = ref(false)
 function onSceneReady() {
-  // GeckoScene3D 第一幀後再延遲一點，讓粒子先出現再收起 loader
-  setTimeout(() => { isLoading.value = false }, 600)
+  // GeckoScene3D 第一幀後不需收起 loader（已預設關閉）
+  isLoading.value = false
 }
-// 安全閥：避免 WebGL ready 事件未觸發時卡在載入畫面
 let loaderFailSafeTimer = null
 
 const activeDot = computed(() => Math.min(5, Math.max(0, Math.round(animScene.value))))
