@@ -135,7 +135,9 @@ onMounted(() => {
   store.initTheme()
   store.loadDataFromAPI()
   store.loadAuctions()
-  store.initLiff()
+  // LINE SDK 延遲載入：只在「正在 OAuth callback 流程中」時才預先 init
+  // 平常使用者進站不載入，等點「LINE 登入」按鈕才會載
+  if (store.hasPendingLineAuth()) store.initLiff()
   store.initPWAInstallPrompt()
 
   // ?? Vue / JS runtime error嚗?蝡撅??⊥??斗?孵?

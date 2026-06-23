@@ -227,41 +227,66 @@ export const useMainStore = defineStore('main', () => {
     }
   }
 
-  function initLiff() {
-    if (!import.meta.client || isLiffInitialized.value) return
+  // LIFF SDK 載入採延遲策略：預設不載入，只在以下兩種情境才會載入：
+  //   1. 使用者剛從 LINE OAuth callback 回來（localStorage 有 gencko_line_redirect）
+  //   2. 使用者主動點「LINE 登入」按鈕（loginWithLine 會先 await initLiff）
+  // 平時不載入可省 30 KB sdk.js + 9 KB extension + api.line.me 連線
+  let liffReadyPromise = null
 
-    // 本機開發（localhost / 非正式網域）時，LIFF 會因 endpoint 不符合而噴 warning：
-    // 「liff.init() was called with a current URL that is not related to the endpoint URL」
-    // 這不影響一般頁面瀏覽，但會洗版 console；因此在非正式網域直接略過初始化。
+  function initLiff() {
+    // 改為回傳 Promise，呼叫方可 await SDK 載入完成
+    if (!import.meta.client) return Promise.resolve(false)
+    if (isLiffInitialized.value) return Promise.resolve(true)
+    if (liffReadyPromise) return liffReadyPromise
+
+    // 本機開發（localhost / 非正式網域）時，LIFF 會因 endpoint 不符合而噴 warning，故略過
     try {
       const endpointOrigin = 'https://www.genckobreeding.com'
-      if (!window.location.origin.startsWith(endpointOrigin)) return
+      if (!window.location.origin.startsWith(endpointOrigin)) {
+        return Promise.resolve(false)
+      }
     } catch (e) {
-      return
+      return Promise.resolve(false)
     }
 
-    const script = document.createElement('script')
-    script.src = 'https://static.line-scdn.net/liff/edge/2/sdk.js'
-    script.onload = async () => {
-      try {
-        await window.liff.init({ liffId: '2009804483-8KRouTSr' })
-        isLiffInitialized.value = true
-        checkAuthStatus()
-        if (window.liff.isLoggedIn()) {
-          const redirectUrl = localStorage.getItem('gencko_line_redirect')
-          if (redirectUrl) {
-            localStorage.removeItem('gencko_line_redirect')
-            const urlObj = new URL(redirectUrl)
-            if (urlObj.pathname !== window.location.pathname) {
-              router.push(urlObj.pathname + urlObj.search + urlObj.hash)
+    liffReadyPromise = new Promise((resolve) => {
+      const script = document.createElement('script')
+      script.src = 'https://static.line-scdn.net/liff/edge/2/sdk.js'
+      script.async = true
+      script.onload = async () => {
+        try {
+          await window.liff.init({ liffId: '2009804483-8KRouTSr' })
+          isLiffInitialized.value = true
+          checkAuthStatus()
+          if (window.liff.isLoggedIn()) {
+            const redirectUrl = localStorage.getItem('gencko_line_redirect')
+            if (redirectUrl) {
+              localStorage.removeItem('gencko_line_redirect')
+              const urlObj = new URL(redirectUrl)
+              if (urlObj.pathname !== window.location.pathname) {
+                router.push(urlObj.pathname + urlObj.search + urlObj.hash)
+              }
             }
           }
+          resolve(true)
+        } catch (err) {
+          console.error('LIFF 初始化失敗', err)
+          resolve(false)
         }
-      } catch (err) {
-        console.error('LIFF 初始化失敗', err)
       }
-    }
-    document.head.appendChild(script)
+      script.onerror = () => {
+        console.error('LIFF SDK 載入失敗')
+        resolve(false)
+      }
+      document.head.appendChild(script)
+    })
+    return liffReadyPromise
+  }
+
+  // 偵測是否正在 LINE OAuth callback 流程中（reload-on-resume 需要 SDK 完成 init）
+  function hasPendingLineAuth() {
+    if (!import.meta.client) return false
+    try { return !!localStorage.getItem('gencko_line_redirect') } catch (e) { return false }
   }
 
   async function checkAuthStatus() {
@@ -302,10 +327,19 @@ export const useMainStore = defineStore('main', () => {
     })
   }
 
-  const loginWithLine = () => {
+  const loginWithLine = async () => {
+    // SDK 延遲載入：點按鈕時才下載 sdk.js，避免進站時就拖累首屏
+    if (!isLiffInitialized.value) {
+      const ok = await initLiff()
+      if (!ok) {
+        // 載入失敗 fallback：直接連到 LINE 加好友頁
+        try { window.location.href = lineLink.value } catch (e) {}
+        return
+      }
+    }
     if (window.liff && !window.liff.isLoggedIn()) {
-        localStorage.setItem('gencko_line_redirect', window.location.href)
-        window.liff.login({ redirectUri: window.location.href })
+      localStorage.setItem('gencko_line_redirect', window.location.href)
+      window.liff.login({ redirectUri: window.location.href })
     }
   }
 
@@ -426,7 +460,7 @@ export const useMainStore = defineStore('main', () => {
     displayLimit, readingArticle, readingProgress, viewingGene, geneSpecies, careImg, aboutImg, logoUrl, lineLink,
     canInstall, showIOSGuide,
     compareList, toggleCompare, clearCompare,
-    loadDataFromAPI, loadAuctions, initLiff, checkAuthStatus, loginWithLine, loginWithGoogle, logout,
+    loadDataFromAPI, loadAuctions, initLiff, hasPendingLineAuth, checkAuthStatus, loginWithLine, loginWithGoogle, logout,
     initTheme, toggleTheme, initPWAInstallPrompt, installApp,
     openLightbox, closeLightbox, triggerToast
   }
