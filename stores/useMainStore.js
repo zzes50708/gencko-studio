@@ -64,7 +64,7 @@ export const useMainStore = defineStore('main', () => {
   // --- 資源連結 ---
   const careImg = ref('https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/%E7%92%B0%E5%A2%83.png')
   const aboutImg = ref('https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/324500%20(1).png')
-  const logoUrl = ref('https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/%E6%9C%AA%E5%91%BD%E5%90%8D%E8%A8%AD%E8%A8%88.png')
+  const logoUrl = ref('https://wsrv.nl/?url=raw.githubusercontent.com%2Fzzes50708%2Fgencko-assets%2Fmain%2Fimg%2F11.png&w=1200&h=630&fit=contain&bg=e6e3e3&output=webp&q=85')
   const lineLink = ref('https://line.me/R/ti/p/@219abdzn')
 
   // --- Actions (Data Loading) ---

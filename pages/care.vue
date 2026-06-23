@@ -63,7 +63,7 @@ const howToEnvLd = {
     "@id": "https://www.genckobreeding.com/care#howto-env",
     "name": "如何為守宮設置安全的飼養環境（新手 3 步驟）",
     "description": "從飼養箱、底材到躲避處，依序設置出符合豹紋與肥尾守宮生理需求的環境。",
-    "image": ["https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/%E6%9C%AA%E5%91%BD%E5%90%8D%E8%A8%AD%E8%A8%88.png"],
+    "image": ["https://wsrv.nl/?url=raw.githubusercontent.com%2Fzzes50708%2Fgencko-assets%2Fmain%2Fimg%2F11.png&w=1200&h=630&fit=contain&bg=e6e3e3&output=webp&q=85"],
     "totalTime": "PT30M",
     "estimatedCost": { "@type": "MonetaryAmount", "currency": "TWD", "value": 2000 },
     "supply": ENV_ITEMS.map(e => ({ "@type": "HowToSupply", "name": e.title })),
@@ -83,7 +83,7 @@ const howToFeedLd = {
     "@id": "https://www.genckobreeding.com/care#howto-feed",
     "name": "豹紋守宮餵食頻率指南：依年齡階段調整",
     "description": "幼體、亞成體、成體與孕母守宮各有不同的餵食頻率與份量需求。",
-    "image": ["https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/%E6%9C%AA%E5%91%BD%E5%90%8D%E8%A8%AD%E8%A8%88.png"],
+    "image": ["https://wsrv.nl/?url=raw.githubusercontent.com%2Fzzes50708%2Fgencko-assets%2Fmain%2Fimg%2F11.png&w=1200&h=630&fit=contain&bg=e6e3e3&output=webp&q=85"],
     "step": FEED_FREQ.map((row, idx) => ({
         "@type": "HowToStep",
         "position": idx + 1,
@@ -131,14 +131,14 @@ const webPageLd = computed(() => {
         },
         "primaryImageOfPage": {
             "@type": "ImageObject",
-            "url": "https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/%E6%9C%AA%E5%91%BD%E5%90%8D%E8%A8%AD%E8%A8%88.png"
+            "url": "https://wsrv.nl/?url=raw.githubusercontent.com%2Fzzes50708%2Fgencko-assets%2Fmain%2Fimg%2F11.png&w=1200&h=630&fit=contain&bg=e6e3e3&output=webp&q=85"
         },
         "mainEntity": {
             "@type": "Article",
             "@id": "https://www.genckobreeding.com/care#article",
             "headline": "豹紋與肥尾守宮飼養指南：環境、溫濕度、餵食、補充品、地雷、FAQ 全收錄",
             "description": "豹紋守宮（Eublepharis macularius）與肥尾守宮（Hemitheconyx caudicinctus）完整新手飼養教學：飼養箱、底材、溫度梯度、濕度、餵食頻率、餌料對照、補充品劑量、致命地雷與新手常見問題。",
-            "image": ["https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/%E6%9C%AA%E5%91%BD%E5%90%8D%E8%A8%AD%E8%A8%88.png"],
+            "image": ["https://wsrv.nl/?url=raw.githubusercontent.com%2Fzzes50708%2Fgencko-assets%2Fmain%2Fimg%2F11.png&w=1200&h=630&fit=contain&bg=e6e3e3&output=webp&q=85"],
             "articleSection": "新手飼養教學",
             "articleBody": articleBodyText,
             "wordCount": articleBodyText.replace(/\s+/g, '').length,
@@ -177,7 +177,7 @@ useHead({
         // Open Graph
         { property: 'og:title', content: '豹紋與肥尾守宮飼養指南｜環境、溫濕度、餵食、地雷一次看' },
         { property: 'og:description', content: '環境、溫濕度、餌料對照、補充品、致命地雷、FAQ 全收錄。新手飼養豹紋守宮與肥尾守宮的一站式指南。' },
-        { property: 'og:image', content: 'https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/%E6%9C%AA%E5%91%BD%E5%90%8D%E8%A8%AD%E8%A8%88.png' },
+        { property: 'og:image', content: 'https://wsrv.nl/?url=raw.githubusercontent.com%2Fzzes50708%2Fgencko-assets%2Fmain%2Fimg%2F11.png&w=1200&h=630&fit=contain&bg=e6e3e3&output=webp&q=85' },
         { property: 'og:image:alt', content: '守宮飼養指南 - Gencko Breeding Studio' },
         { property: 'og:url', content: 'https://www.genckobreeding.com/care' },
         { property: 'og:type', content: 'article' },
@@ -187,7 +187,7 @@ useHead({
         { name: 'twitter:card', content: 'summary_large_image' },
         { name: 'twitter:title', content: '豹紋與肥尾守宮飼養指南｜環境、溫濕度、餵食、地雷一次看' },
         { name: 'twitter:description', content: '環境、溫濕度、餌料對照、補充品、致命地雷、FAQ 全收錄。' },
-        { name: 'twitter:image', content: 'https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/%E6%9C%AA%E5%91%BD%E5%90%8D%E8%A8%AD%E8%A8%88.png' }
+        { name: 'twitter:image', content: 'https://wsrv.nl/?url=raw.githubusercontent.com%2Fzzes50708%2Fgencko-assets%2Fmain%2Fimg%2F11.png&w=1200&h=630&fit=contain&bg=e6e3e3&output=webp&q=85' }
     ],
     link: [{ rel: 'canonical', href: 'https://www.genckobreeding.com/care' }],
     script: [

@@ -103,7 +103,7 @@ const getMapLink = (h) => {
 }
 
 const hospUrl = 'https://www.genckobreeding.com/hospital'
-const hospImg = 'https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/%E5%AE%98%E7%B6%B2%E8%83%8C%E6%99%AF.png'
+const hospImg = 'https://wsrv.nl/?url=raw.githubusercontent.com%2Fzzes50708%2Fgencko-assets%2Fmain%2Fimg%2F11.png&w=1200&h=630&fit=contain&bg=e6e3e3&output=webp&q=85'
 
 const hospPublisher = {
     "@type": "Organization",

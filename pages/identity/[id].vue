@@ -66,14 +66,14 @@ const siteData = computed(() => {
         const i = item.value
         const title = `${i.Morph} - 專屬電子身分證`
         const desc = `Gencko Studio 嚴選繁育個體。ID: ${i.ID}，性別: ${fmtSex.value}，出生日: ${i.Birthday || '未登錄'}。點擊查看完整身分證資訊。`
-        const img = displayImg.value || 'https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/%E6%AD%A3%E9%9D%A2.png'
+        const img = displayImg.value || 'https://wsrv.nl/?url=raw.githubusercontent.com%2Fzzes50708%2Fgencko-assets%2Fmain%2Fimg%2F11.png&w=1200&h=630&fit=contain&bg=e6e3e3&output=webp&q=85'
         const url = `https://www.genckobreeding.com/identity/${i.ID}`
         return { title, desc, img, url }
     }
     return {
         title: '專屬電子身分證',
         desc: 'Gencko Studio 專屬電子身分證查詢系統',
-        img: 'https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/%E6%AD%A3%E9%9D%A2.png',
+        img: 'https://wsrv.nl/?url=raw.githubusercontent.com%2Fzzes50708%2Fgencko-assets%2Fmain%2Fimg%2F11.png&w=1200&h=630&fit=contain&bg=e6e3e3&output=webp&q=85',
         url: `https://www.genckobreeding.com/identity/${identityId}`
     }
 })

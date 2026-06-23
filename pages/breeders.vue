@@ -66,7 +66,7 @@ const genderCount = computed(() => {
 })
 
 const breedersUrl = 'https://www.genckobreeding.com/breeders'
-const breedersImg = 'https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/%E6%AD%A3%E9%9D%A2.png'
+const breedersImg = 'https://wsrv.nl/?url=raw.githubusercontent.com%2Fzzes50708%2Fgencko-assets%2Fmain%2Fimg%2F11.png&w=1200&h=630&fit=contain&bg=e6e3e3&output=webp&q=85'
 const breedersPublisher = {
     "@type": "Organization",
     "name": "Gencko Breeding Studio",

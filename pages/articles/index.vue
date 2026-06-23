@@ -124,7 +124,7 @@ const toggleQuickTag = (tag) => {
 }
 
 const artsUrl = 'https://www.genckobreeding.com/articles'
-const artsImg = 'https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/%E6%9C%AA%E5%91%BD%E5%90%8D%E8%A8%AD%E8%A8%88.png'
+const artsImg = 'https://wsrv.nl/?url=raw.githubusercontent.com%2Fzzes50708%2Fgencko-assets%2Fmain%2Fimg%2F11.png&w=1200&h=630&fit=contain&bg=e6e3e3&output=webp&q=85'
 const artsPublisher = {
     "@type": "Organization",
     "name": "Gencko Breeding Studio",

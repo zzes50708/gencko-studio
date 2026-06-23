@@ -42,7 +42,7 @@ const parsePrice = (val) => {
 }
 
 const merchUrl = 'https://www.genckobreeding.com/merch'
-const merchImg = 'https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/%E6%AD%A3%E9%9D%A2.png'
+const merchImg = 'https://wsrv.nl/?url=raw.githubusercontent.com%2Fzzes50708%2Fgencko-assets%2Fmain%2Fimg%2F11.png&w=1200&h=630&fit=contain&bg=e6e3e3&output=webp&q=85'
 const merchSeller = {
     "@type": "Organization",
     "name": "Gencko Breeding Studio",

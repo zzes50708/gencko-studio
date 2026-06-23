@@ -7,7 +7,7 @@ import { onBeforeUnmount, onMounted } from 'vue'
 definePageMeta({ pageTransition: false, layoutTransition: false })
 
 const aboutUrl = 'https://www.genckobreeding.com/about'
-const aboutImg = 'https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/%E6%9C%AA%E5%91%BD%E5%90%8D%E8%A8%AD%E8%A8%88.png'
+const aboutImg = 'https://wsrv.nl/?url=raw.githubusercontent.com%2Fzzes50708%2Fgencko-assets%2Fmain%2Fimg%2F11.png&w=1200&h=630&fit=contain&bg=e6e3e3&output=webp&q=85'
 
 // Organization 完整定義（與全站 nuxt.config.ts 一致，AboutPage 為其主要描述頁）
 const aboutOrganization = {

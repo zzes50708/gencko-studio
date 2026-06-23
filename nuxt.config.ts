@@ -234,9 +234,11 @@ export default defineNuxtConfig({
         { name: 'keywords', content: '豹紋守宮,守宮,基因計算機,守宮品系,守宮飼養,新手飼養,Eublepharis macularius,Gencko,捷客工作室,守宮繁育,守宮選購,特寵醫院' },
         { property: 'og:type', content: 'website' },
         { property: 'og:site_name', content: 'Gencko Studio' },
-        { property: 'og:image', content: 'https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/11.png' },
+        // 全站預設社群分享卡：wsrv.nl 即時合成 1200×630（淺灰 #E6E3E3 底 + 中央 logo）
+        { property: 'og:image', content: 'https://wsrv.nl/?url=raw.githubusercontent.com%2Fzzes50708%2Fgencko-assets%2Fmain%2Fimg%2F11.png&w=1200&h=630&fit=contain&bg=e6e3e3&output=webp&q=85' },
         { property: 'og:image:width', content: '1200' },
         { property: 'og:image:height', content: '630' },
+        { property: 'og:image:type', content: 'image/webp' },
         { property: 'og:locale', content: 'zh_TW' },
         { name: 'twitter:card', content: 'summary_large_image' },
         { name: 'twitter:site', content: '@gencko_breeding' },

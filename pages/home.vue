@@ -17,7 +17,7 @@ useHead({
         },
         { property: 'og:title', content: '專業豹紋守宮繁育與爬蟲知識 | Gencko Studio' },
         { property: 'og:description', content: '提供專業守宮選育、基因計算工具與特寵醫療地圖。' },
-        { property: 'og:image', content: 'https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/%E6%9C%AA%E5%91%BD%E5%90%8D%E8%A8%AD%E8%A8%88.png' }
+        { property: 'og:image', content: 'https://wsrv.nl/?url=raw.githubusercontent.com%2Fzzes50708%2Fgencko-assets%2Fmain%2Fimg%2F11.png&w=1200&h=630&fit=contain&bg=e6e3e3&output=webp&q=85' }
     ],
     script:[
         {

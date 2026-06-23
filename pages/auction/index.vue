@@ -37,7 +37,7 @@ const { data: ssrAuctions } = await useAsyncData('auction-list-seo-v1', async ()
 })
 
 const auctionUrl = 'https://www.genckobreeding.com/auction'
-const auctionImg = 'https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/%E6%AD%A3%E9%9D%A2.png'
+const auctionImg = 'https://wsrv.nl/?url=raw.githubusercontent.com%2Fzzes50708%2Fgencko-assets%2Fmain%2Fimg%2F11.png&w=1200&h=630&fit=contain&bg=e6e3e3&output=webp&q=85'
 const auctionSeller = {
     "@type": "Organization",
     "name": "Gencko Breeding Studio",

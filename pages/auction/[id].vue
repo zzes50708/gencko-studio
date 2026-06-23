@@ -175,7 +175,7 @@ const siteData = computed(() => {
         const desc = isEnded
             ? `${baseTitle} 競標已結束。${a.note ? a.note.substring(0, 60) : ''} Gencko Breeding Studio 守宮競標場。`
             : `${baseTitle} 線上競標進行中，目前最高出價 NT$${highestBidAmount.value}，起標 NT$${a.start_price || 0}、最小加價 NT$${a.min_increment}${a.buy_now_price ? `、直購價 NT$${a.buy_now_price}` : ''}。${a.note ? a.note.substring(0, 50) : ''}`
-        const img = a.images && a.images.length ? getCleanUrl(a.images[0]) : 'https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/%E6%AD%A3%E9%9D%A2.png'
+        const img = a.images && a.images.length ? getCleanUrl(a.images[0]) : 'https://wsrv.nl/?url=raw.githubusercontent.com%2Fzzes50708%2Fgencko-assets%2Fmain%2Fimg%2F11.png&w=1200&h=630&fit=contain&bg=e6e3e3&output=webp&q=85'
         const url = `https://www.genckobreeding.com/auction/${a.id}`
         const endIso = a.end_time ? new Date(a.end_time).toISOString() : null
 
@@ -273,7 +273,7 @@ const siteData = computed(() => {
     return {
         title: '找不到此競標商品',
         desc: '該商品可能已下架或不存在。',
-        img: 'https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/%E6%AD%A3%E9%9D%A2.png',
+        img: 'https://wsrv.nl/?url=raw.githubusercontent.com%2Fzzes50708%2Fgencko-assets%2Fmain%2Fimg%2F11.png&w=1200&h=630&fit=contain&bg=e6e3e3&output=webp&q=85',
         url: `https://www.genckobreeding.com/auction/${auctionId}`,
         isEnded: false,
         currentPrice: 0,

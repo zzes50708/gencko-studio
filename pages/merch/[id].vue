@@ -44,7 +44,7 @@ const siteData = computed(() => {
     if (currentMerch.value) {
         const m = currentMerch.value
         
-        const imgUrl = m.ImageURL ? getCleanUrl(m.ImageURL) : 'https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/%E6%AD%A3%E9%9D%A2.png'
+        const imgUrl = m.ImageURL ? getCleanUrl(m.ImageURL) : 'https://wsrv.nl/?url=raw.githubusercontent.com%2Fzzes50708%2Fgencko-assets%2Fmain%2Fimg%2F11.png&w=1200&h=630&fit=contain&bg=e6e3e3&output=webp&q=85'
         const itemUrl = 'https://www.genckobreeding.com/merch/' + m.ItemID
         const title = m.Name + ' - NT$' + m.Price
         const desc = m.Description ? (m.Description.slice(0, 150) + '...') : ('Gencko 周邊商品：' + m.Name + '，價格 NT$' + m.Price)
@@ -155,7 +155,7 @@ const siteData = computed(() => {
     return {
         title: '找不到該商品',
         desc: '請確認網址是否正確，或稍後再試一次。',
-        img: 'https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/%E6%AD%A3%E9%9D%A2.png',
+        img: 'https://wsrv.nl/?url=raw.githubusercontent.com%2Fzzes50708%2Fgencko-assets%2Fmain%2Fimg%2F11.png&w=1200&h=630&fit=contain&bg=e6e3e3&output=webp&q=85',
         url: 'https://www.genckobreeding.com/merch/' + merchId,
         isAvailable: false,
         priceNumber: '',

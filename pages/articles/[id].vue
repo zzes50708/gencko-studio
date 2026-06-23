@@ -199,7 +199,7 @@ const siteData = computed(() => {
         title: '文章不存在',
         desc: '找不到此文章',
         keywords: '',
-        img: 'https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/%E6%9C%AA%E5%91%BD%E5%90%8D%E8%A8%AD%E8%A8%88.png',
+        img: 'https://wsrv.nl/?url=raw.githubusercontent.com%2Fzzes50708%2Fgencko-assets%2Fmain%2Fimg%2F11.png&w=1200&h=630&fit=contain&bg=e6e3e3&output=webp&q=85',
         url: `https://www.genckobreeding.com/articles/${articleId}`,
         section: '',
         isoDate: '',
