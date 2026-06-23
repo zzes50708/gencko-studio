@@ -324,7 +324,7 @@
 ## ✅ 完成進度
 
 ### Phase 1
-- [ ] #1 GTM/GA 延遲
+- [x] #1 GTM/GA 延遲 ✅ 2026-06-22（commit 593dfd4）
 - [ ] #2 LINE SDK 延遲
 - [ ] #3 CF beacon 延遲
 - [ ] #4 Inter weight 精簡
