@@ -325,7 +325,7 @@
 
 ### Phase 1
 - [x] #1 GTM/GA 延遲 ✅ 2026-06-22（commit 593dfd4）
-- [ ] #2 LINE SDK 延遲
+- [x] #2 LINE SDK 延遲 ✅ 2026-06-22（commit 11fb11d）
 - [ ] #3 CF beacon 延遲
 - [ ] #4 Inter weight 精簡
 - [ ] #5 Noto Sans TC weight 精簡
