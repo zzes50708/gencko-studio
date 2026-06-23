@@ -202,6 +202,14 @@ export default defineNuxtConfig({
     ]
   },
 
+  // 暴露 GA 設定給 plugins/ga-deferred.client.ts 使用
+  runtimeConfig: {
+    public: {
+      gaId,
+      enableGa
+    }
+  },
+
   supabase: {
     url: 'https://sfndneptcwhblvrxykcy.supabase.co',
     key: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNmbmRuZXB0Y3doYmx2cnh5a2N5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk3MjYxMTcsImV4cCI6MjA4NTMwMjExN30.dN4MHhwjEM26coS9eZAW_eIQJplF8j9YHT9WyFypK3I',
@@ -251,18 +259,8 @@ export default defineNuxtConfig({
         { rel: 'stylesheet', href: 'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+TC:wght@300;400;500;700;900&family=Black+Ops+One&display=swap', media: 'print', onload: "this.media='all'" }
       ],
       script:[
-        ...(enableGa ? [
-          // ⚠️ GA4：script src 與 config ID 統一為 G-93T0C2KMEZ（原 G-Q97CS08YRH 不一致已修正）
-          { src: `https://www.googletagmanager.com/gtag/js?id=${gaId}`, async: true },
-          {
-            children: `
-              window.dataLayer = window.dataLayer || [];
-              function gtag(){dataLayer.push(arguments);}
-              gtag('js', new Date());
-              gtag('config', '${gaId}');
-            `
-          }
-        ] : []),
+        // GA4 已移到 plugins/ga-deferred.client.ts 延遲到 requestIdleCallback 後載入
+        // 不再阻擋首屏渲染（原本 156 KB 同步 script + 269ms 主執行緒）
         // Organization 結構化資料（品牌身份，GEO / Knowledge Panel 基礎）
         {
           type: 'application/ld+json',
