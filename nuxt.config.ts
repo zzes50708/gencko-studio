@@ -259,8 +259,9 @@ export default defineNuxtConfig({
         // 大幅縮減 render-blocking 時間（原本 5.2s）；字型載入完前用系統 fallback
         // #4 LCP 優化：移除 Inter 字型（全站零實際 font-family 使用，全靠 Noto Sans TC 渲染）
         // 省約 5 個 woff2 + ~25 KB CSS
-        { rel: 'preload', as: 'style', href: 'https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700;900&family=Black+Ops+One&display=swap' },
-        { rel: 'stylesheet', href: 'https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700;900&family=Black+Ops+One&display=swap', media: 'print', onload: "this.media='all'" }
+        // #5 字型精簡：移除 Noto Sans TC weight 300（全站僅 6 處使用，瀏覽器從 400 合成肉眼無感）
+        { rel: 'preload', as: 'style', href: 'https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&family=Black+Ops+One&display=swap' },
+        { rel: 'stylesheet', href: 'https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&family=Black+Ops+One&display=swap', media: 'print', onload: "this.media='all'" }
       ],
       script:[
         // GA4 已移到 plugins/ga-deferred.client.ts 延遲到 requestIdleCallback 後載入
