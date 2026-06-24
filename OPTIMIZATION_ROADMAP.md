@@ -19,7 +19,8 @@
 | **Phase 5** | UX / Accessibility | 5 | 5h | 無障礙 + 體感速度 |
 | **Phase 6** | 開發品質 | 5 | 8h | 防退步 / 防 bug |
 | **Phase 7** | 商業擴展 | 1 | 8h+ | 後台維護效率 |
-| **合計** | — | **34** | **51h+** | — |
+| **Phase 8** | 特寵醫院強化 | 5 | 10h | 對齊/超越「小獸所」競品 |
+| **合計** | — | **39** | **61h+** | — |
 
 ---
 
@@ -288,6 +289,81 @@
 
 ---
 
+## 🏥 Phase 8：特寵醫院強化（總計 10h）
+
+> **觸發指令**：使用者會說「**換特寵醫院**」（不在 Phase 1-7 既定順序內，獨立執行）
+>
+> **背景**：分析競品 `crittermap.snyr.tw`（小獸所）後的借鑑改進
+> 對方優勢：146 間醫院 / Google 評分 / 收治物種 / 公告系統 / 多源驗證
+> 對方劣勢：沒 VeterinaryCare schema / 沒詳情頁 / 資料改了要 redeploy
+> 我方優勢：Supabase Studio 直接編輯（已完成）/ schema 已完整 / E.164 電話
+
+### #A hospitals 加 `pets text[]` 收治物種陣列
+- **檔案**：Supabase SQL（先給 ALTER TABLE）+ `pages/hospital.vue` schema 注入
+- **做法**：
+  1. SQL `ALTER TABLE hospitals ADD COLUMN pets TEXT[] DEFAULT '{}'`
+  2. 後台填值範例：`{"犬","貓","兔","鼠","守宮","蛇"}` 等
+  3. UI 加篩選器（已篩 city/district，再加 pet 篩選）
+  4. JSON-LD VeterinaryCare 多 `medicalSpecialty.knowsAbout` 標
+- **效益**：使用者「我要找會看守宮的醫院」一鍵搞定 → 比競品篩選更精準
+- **預估**：2h
+- **依賴**：無
+
+### #B hospitals 加 `google_rating` + `google_review_count`
+- **檔案**：Supabase + hospital.vue 與 schema 注入
+- **做法**：
+  1. SQL `ALTER TABLE hospitals ADD COLUMN google_rating NUMERIC(2,1), ADD COLUMN google_review_count INT`
+  2. 後台手動填（從 Google Maps 抄）或之後接 Google Places API
+  3. UI 顯示星等 + 評論數
+  4. VeterinaryCare schema 加 `aggregateRating`（Google rich result 加分）
+- **效益**：信任感大幅提升；Google AggregateRating rich snippet → SERP 顯示星等
+- **預估**：1.5h
+- **依賴**：無
+- **注意**：手動填 78 筆約需 1.5h 額外人工
+
+### #C 公告系統（停診/特診/活動）
+- **檔案**：新增 `hospital_announcements` 表 + UI 顯示
+- **做法**：
+  1. SQL 新表：`hospital_announcements (id, hospital_id, type, title, summary, source_label, source_url, valid_from, valid_to, created_at)`
+  2. type enum: `closed`, `special_clinic`, `event`, `other`
+  3. UI：醫院卡片右上角加紅點，點開展開公告
+  4. 列表頁加「最新公告」區
+- **效益**：比競品還有更細的差異化點；資料新鮮度感受強
+- **預估**：3h
+- **依賴**：#A 完成更好（一起 review 結構）
+
+### #D 多源驗證 `source_label` + `source_url`
+- **檔案**：Supabase + UI
+- **做法**：
+  1. SQL `ALTER TABLE hospitals ADD COLUMN source_label TEXT, ADD COLUMN source_url TEXT`
+  2. 例：`source_label = "Google Maps、官方 Facebook"`、`source_url = "https://www.facebook.com/xxxx"`
+  3. UI 醫院詳情底部顯示「資料來源：X、Y、Z」
+  4. JSON-LD VeterinaryCare 加 `citation`
+- **效益**：E-E-A-T 信任分大幅提升；AI 引用時容易標來源
+- **預估**：1.5h
+- **依賴**：無
+
+### #E 擴充醫院清單（78 → 150+ 但維持精選原則）
+- **檔案**：Supabase Studio 直接編輯
+- **做法**：
+  1. 新增「分類」標籤 `category enum`：`exotic_specialty`（特寵專科）/ `general_with_exotic`（綜合含特寵）
+  2. 主清單預設只顯示 `exotic_specialty`（保留現有 78 間品質）
+  3. 篩選器加「也顯示綜合動物醫院」勾選
+  4. 從小獸所、其他社群、Google Maps 補 70+ 間綜合動物醫院
+- **效益**：覆蓋率追平/超越競品；同時保留「精選」可信度
+- **預估**：2h（程式）+ 多次人工填入時間
+- **依賴**：#A 完成（pets 欄位）+ #D 完成（source_url）
+
+### 📝 為什麼小獸所有 146 而我們現在只有 78？
+
+**不是 Gencko 少蒐，是定義不同**：
+- **小獸所**：寬鬆 — 包含「兼診犬貓 + 偶爾看特寵」的綜合動物醫院
+- **Gencko 現況**：嚴格 — 只列主打非犬貓（爬蟲 / 守宮 / 鳥 / 小哺乳）
+
+#E 完成後可達 150+ 並保留 78 精選的可信度。
+
+---
+
 ## 💼 Phase 7：商業擴展（總計 8h+）
 
 ### #40 後台管理介面
@@ -370,6 +446,13 @@
 
 ### Phase 7
 - [ ] #40 後台管理介面
+
+### Phase 8（特寵醫院強化 — 觸發詞「換特寵醫院」）
+- [ ] #A pets 收治物種陣列
+- [ ] #B google_rating / review_count
+- [ ] #C 公告系統
+- [ ] #D 多源驗證 source_label / source_url
+- [ ] #E 擴充醫院清單 78 → 150+
 
 ---
 
