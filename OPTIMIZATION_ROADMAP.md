@@ -326,8 +326,8 @@
 ### Phase 1
 - [x] #1 GTM/GA 延遲 ✅ 2026-06-22（commit 593dfd4）
 - [x] #2 LINE SDK 延遲 ✅ 2026-06-22（commit 11fb11d）
-- [ ] #3 CF beacon 延遲
-- [ ] #4 Inter weight 精簡
+- [x] #3 CF beacon 延遲 ✅ 2026-06-24（使用者於 Cloudflare Dashboard Web Analytics 關閉 RUM）
+- [x] #4 Inter 字型 ✅ 2026-06-24（commit b0be313，完全移除，全站零使用 — 比預期更大幅省 50KB）
 - [ ] #5 Noto Sans TC weight 精簡
 - [ ] #6 /calculator TresJS 動態 import
 - [ ] #7 圖片 lazy loading 審查
