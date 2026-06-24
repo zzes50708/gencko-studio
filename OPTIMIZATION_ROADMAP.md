@@ -404,7 +404,7 @@
 - [x] #2 LINE SDK 延遲 ✅ 2026-06-22（commit 11fb11d）
 - [x] #3 CF beacon 延遲 ✅ 2026-06-24（使用者於 Cloudflare Dashboard Web Analytics 關閉 RUM）
 - [x] #4 Inter 字型 ✅ 2026-06-24（commit b0be313，完全移除，全站零使用 — 比預期更大幅省 50KB）
-- [ ] #5 Noto Sans TC weight 精簡
+- [x] #5 Noto Sans TC 5→4（保守版） ✅ 2026-06-24（commit 7131229，省 ~30KB；激進的 5→3 視覺風險中等暫不執行）
 - [ ] #6 /calculator TresJS 動態 import
 - [ ] #7 圖片 lazy loading 審查
 
