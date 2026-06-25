@@ -423,7 +423,7 @@
 - [ ] #15 Sitemap image:image
 - [ ] #16 RSS feed
 - [ ] #17 靜態預渲染
-- [ ] #18 articles.faq FAQPage
+- [x] #18 articles.faq FAQPage ✅ 2026-06-24（commit 6ec03da，後台填了 faq 立即自動生效）
 - [ ] #20 BreadcrumbList middleware
 
 ### Phase 4
