@@ -9,20 +9,18 @@ import { Observer } from 'gsap/Observer'
 const store = useMainStore()
 
 // ?? Virtual Triggered Navigation ?????????????????????????????????????????????
-// ?嗆?嚗蜓?孛?潸??湛??蔣??嚗??◤??scrub
-// 頛詨嚗SAP Observer嚗遝頛?/ 閫豢嚗? ?萇
-// ??嚗sTransitioning ??頧銝凋?璉??撓?伐??脤?歲嚗?
+
 // ?嚗sap.to ?箏? 1.8s expo.inOut ??????皜??蝯脫?????
 // ?????????????????????????????????????????????????????????????????????????????
-const stageEl           = ref(null)    // Observer ???格?嚗撅?stage嚗?
+const stageEl           = ref(null)    
 const isMounted         = ref(false)
 const canUseMotion      = useMediaQuery('(prefers-reduced-motion: no-preference)')
 const isDesktop         = useMediaQuery('(hover: hover) and (pointer: fine)')
 
-const currentSceneIndex = ref(0)     // ?湔 0??嚗璅??
+const currentSceneIndex = ref(0)     
 const isTransitioning   = ref(false) // 頧??true ??璉??撓??
-const snapTrigger       = ref(0)     // GeckoScene3D 摰?靽∟?嚗?甈∟??游???憓?
-const transitionInfo    = ref({ from: -1, to: -1, ts: 0 })  // 頧??靽∟?嚗?孵?嚗?
+const snapTrigger       = ref(0)     
+const transitionInfo    = ref({ from: -1, to: -1, ts: 0 })  
 
 // animScene 撽?????恬?瘚桅? 0~5嚗?
 const animScene = ref(0)
@@ -34,15 +32,15 @@ let keydownHandler = null   // ?萇???剁?onBeforeUnmount ?宏?歹?
 
 // ?? ?詨?嚗蜓???迎?4 撅日霅瘀?????????????????????????????????????????????????
 const navigateTo = (next) => {
-  if (isTransitioning.value) return            // Layer 1嚗??湧?嚗?乩?璉?
-  if (next === currentSceneIndex.value) return  // Layer 2嚗??格?嚗??瑁?
+  if (isTransitioning.value) return            
+  if (next === currentSceneIndex.value) return  
   if (next < 0 || next > 5) return             // Layer 3嚗???銵?
 
   const from = currentSceneIndex.value          // 閮??箇暺?transitionInfo 雿輻
   currentSceneIndex.value = next
   isTransitioning.value   = true
 
-  // 頧???喳誨?剜??GeckoScene3D ?其?瘙箏??臬?郊?迤嚗?
+  
   transitionInfo.value = { from, to: next, ts: Date.now() }
 
   if (sceneTween) sceneTween.kill()
@@ -55,9 +53,9 @@ const navigateTo = (next) => {
     overwrite: true,
     onUpdate   () { animScene.value = _proxy.v },
     onComplete () {
-      animScene.value       = next   // 撘瑕?湔撠?嚗??斗筑暺炊撌?
+      animScene.value       = next   
       _proxy.v              = next
-      isTransitioning.value = false  // 閫??嚗?閮曹?銝甈∟撓??
+      isTransitioning.value = false  
       snapTrigger.value++            // 頧摰??
     },
   })
@@ -71,7 +69,7 @@ const destroyObserver = () => {
     window.removeEventListener('keydown', keydownHandler)
     keydownHandler = null
   }
-  // 蝣箔????Observer 撖虫??質◤皜嚗?瘙⊥??嗡??
+  
   try { Observer.getAll().forEach(o => o.kill()) } catch (e) {}
 }
 
@@ -117,7 +115,7 @@ onMounted(async () => {
 })
 
 onBeforeUnmount(() => {
-  destroyObserver()   // ?脣?靽 2嚗??湧瘥嚗??遙雿?頝?
+  destroyObserver()   
   isMounted.value = false
   if (loaderFailSafeTimer) {
     try { clearTimeout(loaderFailSafeTimer) } catch (e) {}
@@ -132,7 +130,6 @@ if (import.meta.hot) {
   })
 }
 
-// ?喟策摮?隞嗥??湔瘚桅??潘?SSR / reduced-motion 靽風嚗?
 const scene = computed(() => {
   if (!isMounted.value) return 0
   // prefers-reduced-motion 時：停用長轉場，但仍允許場景切換，避免內容被鎖死在 scene 5
@@ -165,7 +162,7 @@ watch(activeDot, (v) => {
 })
 
 // Per-scene alpha嚗?蝺改??臭?蝺拙???GSAP tween ??expo.inOut嚗?
-const ss = x => x * x * (3 - 2 * x)   // 靽?靘隞?嫣蝙??
+const ss = x => x * x * (3 - 2 * x)   
 const ALPHA_FADE = 0.65
 const centerAlpha = (s, n) => {
   const dist = Math.abs(s - n)
@@ -327,8 +324,7 @@ const geneTokens = computed(() => {
       :tokens="geneTokens"
     />
 
-
-    <!-- ?? z-index 20: ?典?蝡??蔣?∠?嚗TML DOM嚗Ⅱ靽?摮?撠??堆??? -->
+    
     <div class="holo-layer" aria-hidden="true">
       <div
         v-for="(card, idx) in HOLO_CARDS"
@@ -337,7 +333,7 @@ const geneTokens = computed(() => {
         :class="{ 'holo-card--visible': cardShowing }"
         :style="holoCardStyle(card)"
       >
-        <!-- ?∠?銝駁? -->
+        
         <div class="holo-card__header">
           <span class="holo-card__dot" />
           <span class="holo-card__label">{{ card.label }}</span>
@@ -355,7 +351,7 @@ const geneTokens = computed(() => {
           <div class="holo-card__connector-line" />
           <div class="holo-card__connector-dot" />
         </div>
-        <!-- ??蝺?憌?-->
+        
         <div class="holo-card__scanline" />
       </div>
     </div>
@@ -435,7 +431,7 @@ const geneTokens = computed(() => {
             不看介紹，直接進入官網
           </NuxtLink>
         </div>
-        <!-- ?脣?靽 3嚗cene 5 蝯偏撠嚗?蝙?刻?典???-->
+        
         <div
           v-if="idx === 5"
           class="scene-end-nav"
@@ -504,7 +500,7 @@ const geneTokens = computed(() => {
   background-size: 70px 120px;
   background-repeat: repeat;
 
-  /* about ??摮??莎??箏??嚗?*/
+  
   --txt: rgba(255,255,255,0.92);
   --pri: #ff6622;
 }
@@ -577,7 +573,7 @@ const geneTokens = computed(() => {
   pointer-events: none;
   /* opacity ??sceneAlpha ?湔撽?嚗宏??CSS transition ?踹???蝺拙? */
   transform-style: preserve-3d;
-  /* 隞亙椰??DNA嚗?6vw嚗頠詨? */
+  
   transform-origin: 26vw 50%;
 }
 
@@ -746,7 +742,6 @@ const geneTokens = computed(() => {
   z-index: 4;
 }
 
-
 /* ?? Progress dots (right side) ?? */
 .dots-nav {
   position: fixed;
@@ -899,7 +894,7 @@ const geneTokens = computed(() => {
    ?????????????????????????????????????????????????????????????????????? */
 @media (max-width: 768px) {
 
-  /* ?? 獢?????嚗?璈?憿舐內嚗?? */
+  
   /* 手機版：holo-layer 顯示，與桌機相同分布，卡片縮小 */
   .holo-layer { display: block; }
   .holo-card {
@@ -919,23 +914,23 @@ const geneTokens = computed(() => {
      3D 頧嚗?璈??摰?嚗誑?Ｗ?銝剖亢?箄遘敹?
      ??????????????????????????????????????????????????????????????????? */
 
-  /* 撅?1嚗?敶望? ??銝剖亢 perspective */
+  
   .carousel-camera {
     perspective-origin: 50% 50%;
     overflow: hidden;    /* 鋆?頞?Ｗ???ａ???*/
   }
 
-  /* 撅?2嚗??方遘敹宏?啗撟偌撟喃葉憭?*/
+  
   .carousel-reel {
     left: 50%;
   }
 
-  /* 撅?3嚗?憿摰對?撖?88vw 蝵桐葉撅? */
+  
   .carousel-item__content {
     width: 88vw;
     max-width: 420px;
     padding-left: 0;
-    align-items: center;   /* ??瘞游像蝵桐葉 */
+    align-items: center;   
     text-align: center;
   }
 
@@ -963,7 +958,7 @@ const geneTokens = computed(() => {
     gap: 0.65rem;
   }
 
-  /* Hero ?湔嚗?/5嚗?靽??Ｘ?憭批?閮剛? */
+  
   .scene-block {
     max-width: 100%;
     align-items: center;
@@ -1012,8 +1007,6 @@ const geneTokens = computed(() => {
    3D 璅?頧
    ?????????????????????????????????????????????????????????????????????? */
 
-/* 撅?1嚗?敶望?摰孵嚗erspective 瘛勗漲嚗?
-   perspective-origin 敺?喟宏嚗?憿葉敹 33vw嚗?                       */
 .carousel-camera {
   position: absolute;
   inset: 0;
@@ -1038,7 +1031,6 @@ const geneTokens = computed(() => {
   /* transform 銝身 transition嚗 lerpedProgress 撽? */
 }
 
-/* 撅?3嚗?憿隞?*/
 .carousel-item {
   position: absolute;
   left: 0;
@@ -1067,7 +1059,6 @@ const geneTokens = computed(() => {
   overflow: hidden;
 }
 
-/* 頧?抒?璅?摮?蝮桀?嚗??曉之鋆?嚗?*/
 .carousel-item .scene-title {
   font-size: clamp(2rem, 4.8vw, 4.4rem);
   line-height: 1.1;
@@ -1104,7 +1095,7 @@ const geneTokens = computed(() => {
     0 0 36px rgba(0, 210, 255, 0.07),
     inset 0 0 20px rgba(0, 200, 255, 0.04);
   overflow: visible;         /* 撘?蝺撓?箏????*/
-  /* ?梯???*/
+  
   opacity: 0;
   will-change: transform, opacity;
   /* ??湛????????鋡怎洵鈭?.holo-card 閬??箸迤撘潘? */
@@ -1117,7 +1108,7 @@ const geneTokens = computed(() => {
       ?脣 transition嚗pring cubic-bezier ?堆?敺桀?                  ?? */
 .holo-card--visible {
   opacity: 1;
-  /* ?脣嚗?蝪抒楨??撠銝血凝敶?*/
+  
   transition:
     transform 0.72s cubic-bezier(0.175, 0.885, 0.32, 1.275),
     opacity   0.28s ease;
@@ -1158,7 +1149,6 @@ const geneTokens = computed(() => {
   text-shadow: 0 0 8px rgba(0, 220, 255, 0.55);
 }
 
-/* ?? ?曉?瘥之摮??? */
 .holo-card__pct {
   font-family: 'Courier New', Courier, monospace;
   font-size: 2.4rem;
@@ -1208,7 +1198,6 @@ const geneTokens = computed(() => {
   text-shadow: 0 0 6px rgba(0, 255, 180, 0.45);
 }
 
-/* ?? 閬死?券?撘?蝺??梁?箏?嚗?? */
 .holo-card__connector {
   position: absolute;
   display: flex;
@@ -1216,7 +1205,6 @@ const geneTokens = computed(() => {
   pointer-events: none;
 }
 
-/* ?喳撘?蝺?default嚗?*/
 .holo-card__connector--right {
   right: 0;
   top: 50%;
@@ -1224,26 +1212,23 @@ const geneTokens = computed(() => {
   transform-origin: 0% 50%;
 }
 
-/* 撌血撘?蝺?瘞游像蝧餉?嚗?敺椰蝺??憭辣隡賂??孵????脣?頧?*/
 .holo-card__connector--left {
   left: 0;
   top: 50%;
   transform: translateY(-50%) translateX(-100%) rotate(var(--conn-angle, 0deg));
   transform-origin: 100% 50%;
-  flex-direction: row-reverse;  /* dot ?典椰蝡荔?摰悅?湛?嚗ine 敺?∠??孵?瘛∪ */
+  flex-direction: row-reverse;  
 }
 
-/* ?撘?蝺?敺?蝺??銝?line ?嚗ot ?冽?銝 */
 .holo-card__connector--top {
   left: 50%;
   top: 0;
   transform: translateX(-50%) translateY(-100%) rotate(var(--conn-angle, 0deg));
   transform-origin: 50% 100%;
-  flex-direction: column-reverse;  /* dot ?其?嚗?摰桀嚗?line 敺銝楚??*/
+  flex-direction: column-reverse;  
   align-items: center;
 }
 
-/* 撘?蝺?畾?*/
 .holo-card__connector-line {
   width: 72px;
   height: 1px;
@@ -1266,7 +1251,6 @@ const geneTokens = computed(() => {
   );
 }
 
-/* ?嚗?畾菔?? */
 .holo-card__connector--top .holo-card__connector-line {
   width: 1px;
   height: 60px;
@@ -1290,7 +1274,6 @@ const geneTokens = computed(() => {
   animation: holo-pulse 2.2s ease-in-out infinite;
 }
 
-/* ?∠???湛?????摨西?閬?頝?頝臬?嚗?隞亙??蝺??暺?*/
 .holo-card {
   transition:
     transform 0.56s cubic-bezier(0.60, 0, 0.98, 0.50),
@@ -1337,7 +1320,6 @@ const geneTokens = computed(() => {
   100% { top: 100%; }
 }
 
-/* Scene 5 蝯偏撠嚗????3嚗?*/
 .scene-end-nav {
   display: flex;
   gap: 1rem;
@@ -1348,6 +1330,4 @@ const geneTokens = computed(() => {
 }
 
 </style>
-
-
 

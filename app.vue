@@ -79,7 +79,6 @@ const clearRuntimeError = () => { lastRuntimeError.value = null }
 // PWA：registerType 改為 'autoUpdate'，Service Worker 背景靜默更新，無提示
 // isUpdating ref 與 handlePwaUpdate 已移除
 
-
 // 靽格迤 FOUC ????
 useHead({
   script:[
@@ -101,7 +100,7 @@ useHead({
 })
 
 watch(() => route.path, (newPath) => {
-  // ?ａ????折???甇賊?脣漲璇??血?銝活?脣隞???Navbar ?脣漲璇??銝活霈?啁?雿蔭嚗?
+  
   if (!newPath.startsWith('/articles/')) {
     store.readingProgress = 0
     store.readingArticle = null
@@ -282,7 +281,6 @@ onBeforeUnmount(() => {
 
 <style scoped>
 
-/* iOS ?飛敶?璅??靽?銝? */
 .ios-install-guide-overlay {
   position: fixed; top: 0; left: 0; width: 100%; height: 100vh;
   background: rgba(0,0,0,0.6); backdrop-filter: blur(5px);
@@ -322,5 +320,4 @@ onBeforeUnmount(() => {
 .page-leave-to { opacity: 0; transform: translateY(-15px) scale(0.98); filter: blur(2px); }
 
 </style>
-
 

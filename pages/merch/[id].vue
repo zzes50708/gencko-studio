@@ -10,7 +10,6 @@ const store = useMainStore()
 const supabase = useSupabaseClient()
 const merchId = route.params.id
 
-//[SEO] ?箔??其撩?蝡舀葡??(SSR) ??撠梯?踹閰脣????誑?Ｙ?甇?Ⅱ??Meta
 const { data: currentMerch, pending } = await useAsyncData('merch-' + merchId, async () => {
     // ??Store 銝剖歇蝬??券????”嚗?閰西?敺ㄐ?Ｘ
     if (store.merchList && store.merchList.length > 0) {
@@ -229,7 +228,7 @@ const copyCurrentLink = async () => {
 
             <div class="prod-layout">
                 <div class="prod-img-box">
-                    <!-- ?? ?詨?靽格迤嚗? NuxtImg ?寧?? img嚗蒂閮剔 eager ?芸?頛 -->
+                    
                     <img 
                         v-if="currentMerch.ImageURL"
                         :src="getCleanUrl(currentMerch.ImageURL)" 
@@ -427,7 +426,7 @@ const copyCurrentLink = async () => {
         max-height: none; 
     }
     
-    .prod-hint { display: none; } /* ???蒂???梯???隞亦?蝛粹? */
+    .prod-hint { display: none; } 
     
     .prod-info-box { 
         padding: 10px; 
@@ -458,6 +457,4 @@ const copyCurrentLink = async () => {
     .btn-share { width: 100%; flex: auto; padding: 8px; font-size: 0.85rem; }
 }
 </style>
-
-
 

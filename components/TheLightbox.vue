@@ -41,19 +41,19 @@ const onTouchEnd = () => {
     if (!isDragging.value) return
     isDragging.value = false
     
-    // 憒?銝?皛?頞? 100px嚗?閫貊??閬?
+    
     if (Math.abs(touchDeltaY.value) > 100) {
         emit('close')
     }
     
-    // ?Ｗ儔??嚗瘝?鋡恍????拍 CSS transition 敶?
+    
     touchDeltaY.value = 0
 }
 
 // ?? 摰????蝬脣??摩嚗Ⅱ靽?GitHub ???雯???湔憿舐內
 const getImgSrc = (item) => {
     if (!item) return ''
-    // ??瑼Ｘ憭批神??撖急?雿?
+    
     const rawUrl = item.ImageURL || item.image_url || ''
     return getCleanUrl(rawUrl)
 }
