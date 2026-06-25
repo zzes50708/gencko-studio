@@ -406,7 +406,7 @@
 - [x] #4 Inter 字型 ✅ 2026-06-24（commit b0be313，完全移除，全站零使用 — 比預期更大幅省 50KB）
 - [x] #5 Noto Sans TC 5→4（保守版） ✅ 2026-06-24（commit 7131229，省 ~30KB；激進的 5→3 視覺風險中等暫不執行）
 - [~] #6 /calculator TresJS 動態 import ⏭️ 跳過（2026-06-24 確認 calculator 完全不用 TresJS/Three.js，原路線圖前提誤判；動態 import 物種 config 收益 < 12KB 且 async 介面風險大）
-- [ ] #7 圖片 lazy loading 審查
+- [x] #7 圖片 lazy loading 審查 ✅ 2026-06-24（commit 4fba5f6，9 個 img 加 lazy + identity 主圖修為 eager）
 
 ### Phase 2
 - [ ] #8 抽 seo-schemas.js
