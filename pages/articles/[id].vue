@@ -44,7 +44,10 @@ const { data: readingArticle, pending } = await useAsyncData(`article-${articleI
         ImageURL: data.image_url,
         Author: data.author || 'Gencko Studio',
         PublishDate: data.publish_date || data.created_at,
-        Keywords: data.keywords || ''
+        Keywords: data.keywords || '',
+        // 後台填 faq JSONB 後自動產生 FAQPage JSON-LD（AEO snippet 命中關鍵）
+        // 格式：[{"q":"問題","a":"答案"}, ...]
+        Faq: Array.isArray(data.faq) ? data.faq : []
     }
 })
 
@@ -152,7 +155,23 @@ const siteData = computed(() => {
             }
         }
 
-        // WebPage 包 BlogPosting 為 mainEntity（明確主體訊號）
+        // FAQPage：後台 articles.faq 填了內容才會產生（AEO snippet 命中關鍵）
+        // 條件：faq 為非空陣列，且每筆都有 q 與 a
+        const faqValid = (art.Faq || []).filter(x => x && typeof x.q === 'string' && typeof x.a === 'string' && x.q.trim() && x.a.trim())
+        const faqPageLd = faqValid.length ? {
+            "@type": "FAQPage",
+            "@id": `${artUrl}#faq`,
+            "mainEntity": faqValid.map(x => ({
+                "@type": "Question",
+                "name": x.q.trim(),
+                "acceptedAnswer": {
+                    "@type": "Answer",
+                    "text": x.a.trim()
+                }
+            }))
+        } : null
+
+        // WebPage 包 BlogPosting 為 mainEntity；有 FAQ 時加入 hasPart
         const webPageLd = {
             "@context": "https://schema.org",
             "@type": "WebPage",
@@ -164,7 +183,8 @@ const siteData = computed(() => {
             "primaryImageOfPage": { "@type": "ImageObject", "url": imgUrl },
             "datePublished": isoDate,
             "dateModified": isoDate,
-            "mainEntity": blogPosting
+            "mainEntity": blogPosting,
+            ...(faqPageLd ? { "hasPart": [faqPageLd] } : {})
         }
 
         const breadcrumb = {

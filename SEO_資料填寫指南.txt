@@ -108,11 +108,34 @@ Gencko SEO/GEO/AEO 後台資料填寫指南
 
 【填了之後會自動發生什麼】
 
-  ⚠️ 注意：此功能尚未開發完成，等本指南更新後才會生效。
-  目前你可以先把 faq 資料填入 DB 累積內容；之後文章頁的程式
-  會被更新成讀取 faq 欄位並自動生成 FAQPage JSON-LD。
+  ✅ 已開發完成（2026-06-24）。填入 faq JSONB 後立即自動生效。
 
-  屆時 Google AI Overview / Featured Snippet 會優先引用 Q&A 結構。
+  程式行為：
+  1. 文章 SSR 撈出 faq 欄位（若為 null 或空陣列，不產生額外 schema）
+  2. 過濾掉 q 或 a 為空字串的不完整項目
+  3. 自動產生 FAQPage JSON-LD，掛在 WebPage 的 hasPart 下
+  4. 結構：FAQPage > Question[] > acceptedAnswer.Answer
+
+  Google AI Overview / Featured Snippet 會優先引用 Q&A 結構。
+  可在 Google Rich Results Test 驗證：
+    https://search.google.com/test/rich-results?url=https://www.genckobreeding.com/articles/{id}
+  填了 faq 的文章應出現「FAQ」項目。
+
+【建議填寫策略】
+
+  優先順序：
+  1. 高流量文章先填（看 GA 找最常瀏覽的 5-10 篇）
+  2. 從文章內容直接抽 3-5 題（不要新編）
+  3. 答案精簡：1-2 句直接回答，不要長篇大論
+     （AI 引用偏好「簡短精確答案」）
+
+  好的 Q 範例：
+  - 「豹紋守宮多久餵食一次？」（明確問題）
+  - 「為什麼我的守宮不吃東西？」（直接、問句）
+
+  不好的 Q 範例：
+  - 「飼養注意事項」（不是問句，不被 FAQPage 接受）
+  - 「拒食原因深入探討」（過於抽象）
 
 
 ============================================================
