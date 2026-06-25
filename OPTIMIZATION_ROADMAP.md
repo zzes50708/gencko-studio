@@ -409,8 +409,10 @@
 - [x] #7 圖片 lazy loading 審查 ✅ 2026-06-24（commit 4fba5f6，9 個 img 加 lazy + identity 主圖修為 eager）
 
 ### Phase 2
-- [ ] #8 抽 seo-schemas.js
-- [ ] #9 抽 site-constants.js
+- [x] #8 抽 seo-schemas.js ✅ 2026-06-24（commit 0d25230，含 getPublisher / getBreadcrumb / getWebPage / GECKO_TAXONS / getSocialMeta）
+- [x] #9 抽 site-constants.js ✅ 2026-06-24（commit 0d25230，含 SITE_URL / DEFAULT_OG_IMAGE / SOCIAL_LINKS / absUrl）
+- 示範重構：pages/faq.vue（95→56 行 -41%，SSR 完全等價）
+- 其餘 16 個頁面遷移工作量：每頁約 10 分鐘，建議自然遷移（修 SEO 時順手換）
 - [ ] #10 useMainStore 拆分
 - [ ] #11 UTF-8 亂碼修復
 - [ ] #12 TypeScript 漸進導入
