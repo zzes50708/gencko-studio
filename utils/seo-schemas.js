@@ -75,6 +75,75 @@ export const getBrand = () => ({
 // ─────────────────────────────────────────────────────────────────
 
 /**
+ * 路徑 → 顯示標籤（用於 getBreadcrumbForPath 自動產生麵包屑）
+ * 想替全站新頁面標準化麵包屑，只要在這加路徑即可。
+ */
+export const ROUTE_LABELS = {
+    '/': '首頁',
+    '/about': '關於我們',
+    '/articles': '飼養知識專欄',
+    '/genes': '守宮基因圖鑑',
+    '/shop': '線上選購',
+    '/product': '商品個體',
+    '/calculator': '基因計算機',
+    '/care': '新手飼養教學',
+    '/health': '健康評估',
+    '/qs': '飼養前評估',
+    '/hospital': '特寵醫院查詢',
+    '/auction': '守宮競標',
+    '/merch': '周邊商品',
+    '/breeders': '種群展示',
+    '/compare': '個體比較',
+    '/faq': '常見問題 FAQ',
+    '/home': '首頁',
+}
+
+/**
+ * 依目前 route path 自動生成麵包屑項目陣列
+ *
+ * 處理規則：
+ *   - 根據 path 切片逐層往下展開
+ *   - 每層查 ROUTE_LABELS 拿可讀標籤，沒有時：
+ *     1. 若是最後一段且有傳 lastLabel（如文章標題、商品 morph）→ 用 lastLabel
+ *     2. 否則用 segment 原文（URL decode）
+ *
+ * @param {string} path - 路由 path（如 '/articles/ART-002'）
+ * @param {string} [lastLabel] - 末段標籤覆寫（動態頁用，如文章標題）
+ * @returns {Array<{name: string, url: string}>}
+ *
+ * @example
+ *   getBreadcrumbForPath('/articles')
+ *   // → [{name:'首頁',url:'/'}, {name:'飼養知識專欄',url:'/articles'}]
+ *
+ *   getBreadcrumbForPath('/articles/ART-002', '為什麼我的守宮突然不吃東西了？')
+ *   // → [
+ *   //   {name:'首頁',url:'/'},
+ *   //   {name:'飼養知識專欄',url:'/articles'},
+ *   //   {name:'為什麼我的守宮突然不吃東西了？',url:'/articles/ART-002'}
+ *   // ]
+ */
+export const getBreadcrumbForPath = (path, lastLabel) => {
+    if (!path || path === '/') return [{ name: ROUTE_LABELS['/'], url: '/' }]
+
+    const segs = path.split('?')[0].split('#')[0].split('/').filter(Boolean)
+    const items = [{ name: ROUTE_LABELS['/'], url: '/' }]
+    let cur = ''
+    for (let i = 0; i < segs.length; i++) {
+        cur += '/' + segs[i]
+        const isLast = i === segs.length - 1
+        const known = ROUTE_LABELS[cur]
+        let label
+        if (known) label = known
+        else if (isLast && lastLabel) label = lastLabel
+        else {
+            try { label = decodeURIComponent(segs[i]) } catch (e) { label = segs[i] }
+        }
+        items.push({ name: label, url: cur })
+    }
+    return items
+}
+
+/**
  * BreadcrumbList helper
  * @param {Array<{name: string, url: string}>} items - 麵包屑項目
  * @example
@@ -82,6 +151,9 @@ export const getBrand = () => ({
  *     { name: '首頁', url: '/' },
  *     { name: '文章', url: '/articles' },
  *   ])
+ *
+ * @example 結合 getBreadcrumbForPath（推薦）
+ *   getBreadcrumb(getBreadcrumbForPath(route.path, article.Title))
  */
 export const getBreadcrumb = (items) => ({
     "@context": "https://schema.org",

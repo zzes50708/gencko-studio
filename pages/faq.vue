@@ -3,7 +3,7 @@ import { ref, computed } from 'vue'
 import { useHead } from '#imports'
 import { FAQ_CATEGORIES, FAQ_DATA } from '~/utils/faq.js'
 import { absUrl, DEFAULT_OG_IMAGE } from '~/utils/site-constants.js'
-import { getWebPage, getBreadcrumb, getSocialMeta, GECKO_TAXONS } from '~/utils/seo-schemas.js'
+import { getWebPage, getBreadcrumb, getBreadcrumbForPath, getSocialMeta, GECKO_TAXONS } from '~/utils/seo-schemas.js'
 
 const faqUrl = absUrl('/faq')
 const faqTitle = '常見問題 FAQ｜Gencko 守宮飼養、健康、購買完整解答'
@@ -25,10 +25,7 @@ const faqPageLd = {
     }))
 }
 
-const faqBreadcrumbLd = getBreadcrumb([
-    { name: '首頁', url: '/' },
-    { name: '常見問題 FAQ', url: '/faq' },
-])
+const faqBreadcrumbLd = getBreadcrumb(getBreadcrumbForPath('/faq'))
 
 const faqWebPageLd = getWebPage({
     url: faqUrl,
