@@ -121,7 +121,7 @@ const triggerPrint = () => {
                 
                 <!-- Left: Photo -->
                 <div class="card-photo-box">
-                    <img v-if="displayImg" :src="displayImg" alt="ID Photo">
+                    <img v-if="displayImg" :src="displayImg" alt="ID Photo" loading="eager" fetchpriority="high" decoding="async" >
                     <div v-else class="no-img">No Image</div>
                 </div>
 

@@ -525,7 +525,7 @@ const generatePromo = async () => {
                     <button class="btn-close-promo" @click="generatedImage = null">✕</button>
                     <h3 style="color: var(--txt); margin-top: 10px;">📸 宣傳圖卡已生成</h3>
                     <p style="color: var(--txt); opacity: 0.8; font-size: 0.9rem;">請長按圖片儲存（或點擊右鍵另存），<br>即可完美分享至 IG 限時動態！</p>
-                    <img :src="generatedImage" alt="Promo Result" class="promo-result-img" />
+                    <img :src="generatedImage" alt="Promo Result" class="promo-result-img" loading="lazy" decoding="async" />
                 </div>
             </div>
             <section v-if="relatedProducts.length > 0" class="related-section">

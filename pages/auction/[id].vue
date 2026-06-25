@@ -643,7 +643,7 @@ const generatePromo = async () => {
                             <div class="login-prompt">
                                 <p>⚠️ 為遏止惡意棄標，請先登入</p>
                                 <button @click="store.loginWithLine" class="btn-login-line">
-                                    <img src="https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/line.png" alt="LINE" />
+                                    <img src="https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/line.png" alt="LINE" loading="lazy" decoding="async" />
                                     LINE 登入
                                 </button>
                                 <button @click="store.loginWithGoogle" class="btn-login-google">
@@ -685,7 +685,7 @@ const generatePromo = async () => {
                 <button class="btn-close-promo" @click="generatedImage = null">✕</button>
                 <h3 style="color: var(--txt); margin-top: 10px;">📸 宣傳圖卡已生成</h3>
                 <p style="color: var(--txt); opacity: 0.8; font-size: 0.9rem;">請長按圖片儲存（或點擊右鍵另存），<br>即可完美分享至 IG 限時動態！</p>
-                <img :src="generatedImage" alt="Promo Result" class="promo-result-img" />
+                <img :src="generatedImage" alt="Promo Result" class="promo-result-img" loading="lazy" decoding="async" />
             </div>
         </div>
     </div>

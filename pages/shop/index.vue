@@ -505,7 +505,7 @@ const activeFilterCount = computed(() => {
                 <div v-if="(store.compareList || []).length > 0" class="compare-bar">
                     <div class="cmp-bar-items">
                         <div v-for="item in compareItems" :key="item.ID" class="cmp-bar-item">
-                            <img v-if="item.ImageURL" :src="getCleanUrl(item.ImageURL, 80)" :alt="item.Morph" />
+                            <img v-if="item.ImageURL" :src="getCleanUrl(item.ImageURL, 80)" :alt="item.Morph" loading="lazy" decoding="async" />
                             <div v-else class="cmp-bar-placeholder">＋</div>
                             <span class="cmp-bar-name">{{ item.Morph }}</span>
                             <button class="cmp-bar-remove" @click="store.toggleCompare(item.ID)"></button>

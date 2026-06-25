@@ -214,7 +214,7 @@ const removeItem = (id) => {
                 <div v-for="item in items" :key="item.ID" class="col-cell img-cell">
                     <button class="remove-btn" @click="removeItem(item.ID)" title="移除">✕</button>
                     <NuxtLink :to="`/product/${item.ID}`" style="display:block; text-decoration:none;">
-                        <img v-if="item.ImageURL" :src="getCleanUrl(item.ImageURL, 400)" :alt="item.Morph" class="compare-img" />
+                        <img v-if="item.ImageURL" :src="getCleanUrl(item.ImageURL, 400)" :alt="item.Morph" class="compare-img" loading="lazy" decoding="async" />
                         <div v-else class="compare-img-placeholder">🦎</div>
                         <div class="item-morph">{{ item.Morph }}</div>
                         <div class="item-id">ID: {{ item.ID }}</div>
