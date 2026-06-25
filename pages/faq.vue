@@ -2,21 +2,12 @@
 import { ref, computed } from 'vue'
 import { useHead } from '#imports'
 import { FAQ_CATEGORIES, FAQ_DATA } from '~/utils/faq.js'
+import { absUrl, DEFAULT_OG_IMAGE } from '~/utils/site-constants.js'
+import { getWebPage, getBreadcrumb, getSocialMeta, GECKO_TAXONS } from '~/utils/seo-schemas.js'
 
-const faqUrl = 'https://www.genckobreeding.com/faq'
-const faqImg = 'https://wsrv.nl/?url=raw.githubusercontent.com%2Fzzes50708%2Fgencko-assets%2Fmain%2Fimg%2F11.png&w=1200&h=630&fit=contain&bg=e6e3e3&output=webp&q=85'
-const faqPublisher = {
-    "@type": "Organization",
-    "name": "Gencko Breeding Studio",
-    "alternateName": ["Gencko Studio", "捷客工作室"],
-    "url": "https://www.genckobreeding.com",
-    "logo": { "@type": "ImageObject", "url": "https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/11.png", "width": 512, "height": 512 },
-    "sameAs": [
-        "https://www.instagram.com/gencko_breeding",
-        "https://www.facebook.com/profile.php?id=61579393505049",
-        "https://line.me/R/ti/p/@219abdzn"
-    ]
-}
+const faqUrl = absUrl('/faq')
+const faqTitle = '常見問題 FAQ｜Gencko 守宮飼養、健康、購買完整解答'
+const faqDesc = 'Gencko Breeding Studio 常見問題整理：豹紋守宮與肥尾守宮飼養知識、健康判讀、基因與品系說明、官網功能使用、購買流程與售後保障，新手入手前必讀。'
 
 // FAQ 答案：去 HTML 標籤、合併換行
 const stripFaq = (s) => String(s || '').replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim()
@@ -34,53 +25,32 @@ const faqPageLd = {
     }))
 }
 
-const faqBreadcrumbLd = {
-    "@context": "https://schema.org",
-    "@type": "BreadcrumbList",
-    "itemListElement": [
-        { "@type": "ListItem", "position": 1, "name": "首頁", "item": "https://www.genckobreeding.com/" },
-        { "@type": "ListItem", "position": 2, "name": "常見問題 FAQ", "item": faqUrl }
-    ]
-}
+const faqBreadcrumbLd = getBreadcrumb([
+    { name: '首頁', url: '/' },
+    { name: '常見問題 FAQ', url: '/faq' },
+])
 
-const faqWebPageLd = {
-    "@context": "https://schema.org",
-    "@type": "WebPage",
-    "@id": faqUrl,
-    "url": faqUrl,
-    "name": "常見問題 FAQ｜Gencko 守宮飼養與購買解答",
-    "inLanguage": "zh-TW",
-    "isPartOf": { "@type": "WebSite", "@id": "https://www.genckobreeding.com/#website" },
-    "primaryImageOfPage": { "@type": "ImageObject", "url": faqImg },
-    "speakable": {
-        "@type": "SpeakableSpecification",
-        "cssSelector": [".faq-q", ".faq-answer", ".q-text"]
-    },
-    "publisher": faqPublisher,
-    "about": [
-        { "@type": "Taxon", "name": "Eublepharis macularius", "alternateName": "豹紋守宮", "sameAs": "https://www.wikidata.org/wiki/Q185061" },
-        { "@type": "Taxon", "name": "Hemitheconyx caudicinctus", "alternateName": "肥尾守宮", "sameAs": "https://www.wikidata.org/wiki/Q913571" }
-    ],
-    "mainEntity": faqPageLd
-}
+const faqWebPageLd = getWebPage({
+    url: faqUrl,
+    name: faqTitle,
+    image: DEFAULT_OG_IMAGE,
+    speakable: ['.faq-q', '.faq-answer', '.q-text'],
+    about: GECKO_TAXONS,
+    mainEntity: faqPageLd,
+})
 
 useHead({
-    title: '常見問題 FAQ｜Gencko 守宮飼養、健康、購買完整解答',
+    title: faqTitle,
     meta:[
-        { name: 'description', content: 'Gencko Breeding Studio 常見問題整理：豹紋守宮與肥尾守宮飼養知識、健康判讀、基因與品系說明、官網功能使用、購買流程與售後保障，新手入手前必讀。' },
+        { name: 'description', content: faqDesc },
         { name: 'keywords', content: '守宮 FAQ, 豹紋守宮新手, 守宮飼養問題, 守宮健康, 守宮購買流程, Gencko 常見問題' },
-        // Open Graph
-        { property: 'og:title', content: '常見問題 FAQ｜Gencko 守宮飼養、健康、購買完整解答' },
-        { property: 'og:description', content: '守宮飼養知識、健康判讀、基因品系說明、購買與售後保障完整解答。' },
-        { property: 'og:image', content: faqImg },
-        { property: 'og:image:alt', content: 'Gencko 守宮常見問題 FAQ' },
-        { property: 'og:url', content: faqUrl },
-        { property: 'og:type', content: 'website' },
-        // Twitter Card
-        { name: 'twitter:card', content: 'summary_large_image' },
-        { name: 'twitter:title', content: '常見問題 FAQ｜Gencko 守宮飼養、健康、購買完整解答' },
-        { name: 'twitter:description', content: '守宮飼養知識、健康判讀、基因品系說明、購買與售後保障完整解答。' },
-        { name: 'twitter:image', content: faqImg }
+        ...getSocialMeta({
+            title: faqTitle,
+            description: '守宮飼養知識、健康判讀、基因品系說明、購買與售後保障完整解答。',
+            imageAlt: 'Gencko 守宮常見問題 FAQ',
+            url: faqUrl,
+            type: 'website',
+        }),
     ],
     link:[
         { rel: 'canonical', href: faqUrl }
