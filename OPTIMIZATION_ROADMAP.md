@@ -424,7 +424,7 @@
 - [ ] #16 RSS feed
 - [ ] #17 靜態預渲染
 - [x] #18 articles.faq FAQPage ✅ 2026-06-24（commit 6ec03da，後台填了 faq 立即自動生效）
-- [ ] #20 BreadcrumbList middleware
+- [x] #20 BreadcrumbList helper ✅ 2026-06-24（commit 39dce02，改為 helper-only 做法避免與既有 breadcrumb 衝突；ROUTE_LABELS + getBreadcrumbForPath()）
 
 ### Phase 4
 - [ ] #21 RLS 稽核
