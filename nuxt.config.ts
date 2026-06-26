@@ -210,6 +210,21 @@ export default defineNuxtConfig({
     }
   },
 
+  // #17 靜態預渲染穩定頁面：build time 產生 HTML，TTFB 從 ~600ms 降到 < 50ms
+  // 只選內容變動極少的頁（utils/ 內 hardcoded data 為主）
+  // 若日後改成動態內容需從這移除以避免 stale
+  nitro: {
+    prerender: {
+      routes: [
+        '/about',
+        '/faq',
+        '/qs',
+        '/compare',
+        '/calculator',
+      ]
+    }
+  },
+
   supabase: {
     url: 'https://sfndneptcwhblvrxykcy.supabase.co',
     key: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNmbmRuZXB0Y3doYmx2cnh5a2N5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk3MjYxMTcsImV4cCI6MjA4NTMwMjExN30.dN4MHhwjEM26coS9eZAW_eIQJplF8j9YHT9WyFypK3I',
