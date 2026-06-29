@@ -87,6 +87,22 @@ const clearRuntimeError = () => {
   lastRuntimeError.value = null
 }
 
+// 關閉錯誤提示並回首頁（合併為單一方法，避免行內 @click 多語句被 prettier 拆掉分號而解析失敗）
+const goHomeFromError = () => {
+  clearRuntimeError()
+  router.push('/home')
+}
+
+// NuxtErrorBoundary slot 內的 clearError 為 slot-scoped，透過 helper 接收後再導頁（同樣避免行內多語句問題）
+const clearAndGoHome = (clearErr) => {
+  clearErr()
+  router.push('/home')
+}
+const clearAndReload = (clearErr) => {
+  clearErr()
+  router.go(0)
+}
+
 // PWA：registerType 改為 'autoUpdate'，Service Worker 背景靜默更新，無提示
 // isUpdating ref 與 handlePwaUpdate 已移除
 
@@ -256,10 +272,7 @@ onBeforeUnmount(() => {
             <button
               class="btn-hero"
               style="padding: 6px 10px; font-size: 0.85rem; opacity: 0.9"
-              @click="
-                clearRuntimeError()
-                router.push('/home')
-              "
+              @click="goHomeFromError()"
             >
               回到首頁
             </button>
@@ -357,23 +370,13 @@ onBeforeUnmount(() => {
               >{{ error?.message || String(error) }}</pre
             >
             <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap">
-              <button
-                class="btn-hero"
-                style="min-width: 140px"
-                @click="
-                  clearError()
-                  router.push('/home')
-                "
-              >
+              <button class="btn-hero" style="min-width: 140px" @click="clearAndGoHome(clearError)">
                 回到首頁
               </button>
               <button
                 class="btn-hero"
                 style="min-width: 140px; opacity: 0.85"
-                @click="
-                  clearError()
-                  router.go(0)
-                "
+                @click="clearAndReload(clearError)"
               >
                 重新整理
               </button>

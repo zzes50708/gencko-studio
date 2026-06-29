@@ -62,6 +62,12 @@ const setCategory = (catValue) => {
   searchQuery.value = ''
 }
 
+// 清除篩選（合併為方法，避免行內 @click 多語句被 prettier 拆掉分號而解析失敗）
+const resetFilters = () => {
+  searchQuery.value = ''
+  artCat.value = 'All'
+}
+
 const popularTags = computed(() => {
   if (!store.articlesList.length) return []
   const counts = {}
@@ -367,10 +373,7 @@ const fmtDate = (d) => {
           v-if="searchQuery || artCat !== 'All'"
           class="btn-app btn-app--primary btn-app--sm btn-app--pill"
           style="margin-top: 12px"
-          @click="
-            searchQuery = ''
-            artCat = 'All'
-          "
+          @click="resetFilters()"
         >
           清除篩選
         </button>
