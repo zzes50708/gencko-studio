@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { useSupabaseClient } from '#imports'
 import { useRouter } from 'vue-router'
+import { withRetry } from '~/utils/supabase-retry'
 
 export const useMainStore = defineStore('main', () => {
   const supabase = useSupabaseClient()
@@ -26,7 +27,7 @@ export const useMainStore = defineStore('main', () => {
   const wishlist = ref([])
   const hospWishlist = ref([])
   const history = ref([])
-  
+
   const isLiffInitialized = ref(false)
   const isAuctionSubscribed = ref(false)
 
@@ -59,12 +60,20 @@ export const useMainStore = defineStore('main', () => {
       compareList.value.push(id)
     }
   }
-  const clearCompare = () => { compareList.value = [] }
+  const clearCompare = () => {
+    compareList.value = []
+  }
 
   // --- 資源連結 ---
-  const careImg = ref('https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/%E7%92%B0%E5%A2%83.png')
-  const aboutImg = ref('https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/324500%20(1).png')
-  const logoUrl = ref('https://wsrv.nl/?url=raw.githubusercontent.com%2Fzzes50708%2Fgencko-assets%2Fmain%2Fimg%2F11.png&w=1200&h=630&fit=contain&bg=e6e3e3&output=webp&q=85')
+  const careImg = ref(
+    'https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/%E7%92%B0%E5%A2%83.png'
+  )
+  const aboutImg = ref(
+    'https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/324500%20(1).png'
+  )
+  const logoUrl = ref(
+    'https://wsrv.nl/?url=raw.githubusercontent.com%2Fzzes50708%2Fgencko-assets%2Fmain%2Fimg%2F11.png&w=1200&h=630&fit=contain&bg=e6e3e3&output=webp&q=85'
+  )
   const lineLink = ref('https://line.me/R/ti/p/@219abdzn')
 
   // --- Actions (Data Loading) ---
@@ -74,13 +83,19 @@ export const useMainStore = defineStore('main', () => {
     // 1. animals（核心資料，獨立處理，控制 loading 狀態）
     try {
       // 只選官網所需欄位，省略後台專用的 cost_price
-      const { data: invData, error: invErr } = await supabase
-        .from('animals')
-        .select('id, source, species, morph, genes, gender_type, gender_value, birthday, listing_price, sold_price, status, note, image_url, is_hot, created_at')
-        .order('created_at', { ascending: false })
+      const { data: invData, error: invErr } = await withRetry(
+        () =>
+          supabase
+            .from('animals')
+            .select(
+              'id, source, species, morph, genes, gender_type, gender_value, birthday, listing_price, sold_price, status, note, image_url, is_hot, created_at'
+            )
+            .order('created_at', { ascending: false }),
+        { label: 'animals' }
+      )
       if (invErr) throw invErr
 
-      inv.value = invData.map(i => ({
+      inv.value = invData.map((i) => ({
         ID: String(i.id || '').trim(),
         Source: i.source,
         Species: i.species,
@@ -100,7 +115,7 @@ export const useMainStore = defineStore('main', () => {
         CreatedDate: i.created_at || new Date().toISOString()
       }))
 
-      hotList.value = inv.value.filter(i => i.IsHot === true)
+      hotList.value = inv.value.filter((i) => i.IsHot === true)
     } catch (e) {
       console.error('讀取個體資料失敗:', e)
     } finally {
@@ -109,14 +124,14 @@ export const useMainStore = defineStore('main', () => {
 
     // 2. 次要資料表：平行獨立載入，互不影響
     const [merchResult, artResult, geneResult, configResult] = await Promise.allSettled([
-      supabase.from('merchandise').select('*'),
-      supabase.from('articles').select('*'),
-      supabase.from('genetic_pages').select('*'),
-      supabase.from('config').select('*')
+      withRetry(() => supabase.from('merchandise').select('*'), { label: 'merchandise' }),
+      withRetry(() => supabase.from('articles').select('*'), { label: 'articles' }),
+      withRetry(() => supabase.from('genetic_pages').select('*'), { label: 'genetic_pages' }),
+      withRetry(() => supabase.from('config').select('*'), { label: 'config' })
     ])
 
     if (merchResult.status === 'fulfilled' && !merchResult.value.error && merchResult.value.data) {
-      merchList.value = merchResult.value.data.map(m => ({
+      merchList.value = merchResult.value.data.map((m) => ({
         ItemID: m.item_id,
         Name: m.name,
         Description: m.description,
@@ -132,8 +147,8 @@ export const useMainStore = defineStore('main', () => {
 
     if (artResult.status === 'fulfilled' && !artResult.value.error && artResult.value.data) {
       articlesList.value = artResult.value.data
-        .filter(a => (a.status || '').toLowerCase() === 'published')
-        .map(a => ({
+        .filter((a) => (a.status || '').toLowerCase() === 'published')
+        .map((a) => ({
           ID: a.id,
           Title: a.title,
           Category: a.category,
@@ -151,7 +166,7 @@ export const useMainStore = defineStore('main', () => {
     }
 
     if (geneResult.status === 'fulfilled' && !geneResult.value.error && geneResult.value.data) {
-      genePages.value = geneResult.value.data.map(g => ({
+      genePages.value = geneResult.value.data.map((g) => ({
         Name: g.name,
         ImageURL: g.image_url,
         Warning: g.warning,
@@ -163,8 +178,12 @@ export const useMainStore = defineStore('main', () => {
       console.error('讀取基因圖鑑失敗:', geneResult.reason || geneResult.value?.error)
     }
 
-    if (configResult.status === 'fulfilled' && !configResult.value.error && configResult.value.data) {
-      marqueeList.value = configResult.value.data.map(c => ({ text: c.text, url: c.url }))
+    if (
+      configResult.status === 'fulfilled' &&
+      !configResult.value.error &&
+      configResult.value.data
+    ) {
+      marqueeList.value = configResult.value.data.map((c) => ({ text: c.text, url: c.url }))
     } else if (configResult.status === 'rejected' || configResult.value?.error) {
       console.error('讀取跑馬燈設定失敗:', configResult.reason || configResult.value?.error)
     }
@@ -173,51 +192,69 @@ export const useMainStore = defineStore('main', () => {
   async function loadAuctions() {
     try {
       const now = new Date().toISOString()
-      const { data: auctionsData, error } = await supabase
-        .from('auctions')
-        .select('*')
-        .eq('status', 'active')
-        .gt('end_time', now)
-        .order('end_time', { ascending: true })
-        
+      const { data: auctionsData, error } = await withRetry(
+        () =>
+          supabase
+            .from('auctions')
+            .select('*')
+            .eq('status', 'active')
+            .gt('end_time', now)
+            .order('end_time', { ascending: true }),
+        { label: 'auctions' }
+      )
+
       if (error) throw error
 
       // 診斷：確認 animal_id 欄位是否存在（若 DB SQL 已執行，此值不為 undefined）
       if (auctionsData?.length > 0 && import.meta.client) {
         const sample = auctionsData[0]
         if (!('animal_id' in sample)) {
-          console.warn('[Gencko] auctions 表缺少 animal_id 欄位，請確認 Supabase SQL 是否已執行：\nALTER TABLE auctions ADD COLUMN IF NOT EXISTS animal_id text REFERENCES animals(id) ON DELETE SET NULL;')
+          console.warn(
+            '[Gencko] auctions 表缺少 animal_id 欄位，請確認 Supabase SQL 是否已執行：\nALTER TABLE auctions ADD COLUMN IF NOT EXISTS animal_id text REFERENCES animals(id) ON DELETE SET NULL;'
+          )
         }
       }
 
       auctionList.value = auctionsData
 
       if (import.meta.client && !isAuctionSubscribed.value) {
-        supabase.channel('public:auctions')
-          .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'auctions' }, payload => {
-            const updatedAuction = payload.new
-            const idx = auctionList.value.findIndex(a => a.id === updatedAuction.id)
-            const isValid = updatedAuction.status === 'active' && updatedAuction.end_time > new Date().toISOString()
-            if (idx !== -1) {
-              if (isValid) {
-                // 更新現有場次資料
-                auctionList.value[idx] = { ...auctionList.value[idx], ...updatedAuction }
-              } else {
-                // 場次已結束或停用，從列表移除
-                auctionList.value.splice(idx, 1)
+        supabase
+          .channel('public:auctions')
+          .on(
+            'postgres_changes',
+            { event: 'UPDATE', schema: 'public', table: 'auctions' },
+            (payload) => {
+              const updatedAuction = payload.new
+              const idx = auctionList.value.findIndex((a) => a.id === updatedAuction.id)
+              const isValid =
+                updatedAuction.status === 'active' &&
+                updatedAuction.end_time > new Date().toISOString()
+              if (idx !== -1) {
+                if (isValid) {
+                  // 更新現有場次資料
+                  auctionList.value[idx] = { ...auctionList.value[idx], ...updatedAuction }
+                } else {
+                  // 場次已結束或停用，從列表移除
+                  auctionList.value.splice(idx, 1)
+                }
+              } else if (isValid) {
+                // 原本不在列表（如剛啟用的場次），加入尾端
+                auctionList.value.push(updatedAuction)
               }
-            } else if (isValid) {
-              // 原本不在列表（如剛啟用的場次），加入尾端
-              auctionList.value.push(updatedAuction)
             }
-          })
-          .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'auctions' }, payload => {
-            const newAuction = payload.new
-            const isValid = newAuction.status === 'active' && newAuction.end_time > new Date().toISOString()
-            if (isValid) {
-              auctionList.value.unshift(newAuction)
+          )
+          .on(
+            'postgres_changes',
+            { event: 'INSERT', schema: 'public', table: 'auctions' },
+            (payload) => {
+              const newAuction = payload.new
+              const isValid =
+                newAuction.status === 'active' && newAuction.end_time > new Date().toISOString()
+              if (isValid) {
+                auctionList.value.unshift(newAuction)
+              }
             }
-          })
+          )
           .subscribe()
 
         isAuctionSubscribed.value = true
@@ -286,27 +323,31 @@ export const useMainStore = defineStore('main', () => {
   // 偵測是否正在 LINE OAuth callback 流程中（reload-on-resume 需要 SDK 完成 init）
   function hasPendingLineAuth() {
     if (!import.meta.client) return false
-    try { return !!localStorage.getItem('gencko_line_redirect') } catch (e) { return false }
+    try {
+      return !!localStorage.getItem('gencko_line_redirect')
+    } catch (e) {
+      return false
+    }
   }
 
   async function checkAuthStatus() {
     if (!import.meta.client) return
     const { data } = await supabase.auth.getSession()
     if (data.session?.user) {
-      currentUser.value = { 
-        type: 'google', 
-        email: data.session.user.email, 
-        name: data.session.user.email.split('@')[0] 
+      currentUser.value = {
+        type: 'google',
+        email: data.session.user.email,
+        name: data.session.user.email.split('@')[0]
       }
       return
     }
     if (window.liff && window.liff.isLoggedIn()) {
       const profile = await window.liff.getProfile()
       const idToken = window.liff.getDecodedIDToken()
-      const emailOrId = (idToken && idToken.email) ? idToken.email : profile.userId
-      currentUser.value = { 
-        type: 'line', 
-        name: profile.displayName, 
+      const emailOrId = idToken && idToken.email ? idToken.email : profile.userId
+      currentUser.value = {
+        type: 'line',
+        name: profile.displayName,
         email: emailOrId,
         picture: profile.pictureUrl
       }
@@ -316,8 +357,8 @@ export const useMainStore = defineStore('main', () => {
   if (import.meta.client) {
     supabase.auth.onAuthStateChange((_, session) => {
       if (session?.user) {
-        currentUser.value = { 
-          type: 'google', 
+        currentUser.value = {
+          type: 'google',
           email: session.user.email,
           name: session.user.email.split('@')[0]
         }
@@ -333,7 +374,9 @@ export const useMainStore = defineStore('main', () => {
       const ok = await initLiff()
       if (!ok) {
         // 載入失敗 fallback：直接連到 LINE 加好友頁
-        try { window.location.href = lineLink.value } catch (e) {}
+        try {
+          window.location.href = lineLink.value
+        } catch (e) {}
         return
       }
     }
@@ -345,14 +388,14 @@ export const useMainStore = defineStore('main', () => {
 
   const loginWithGoogle = async () => {
     try {
-        const { error } = await supabase.auth.signInWithOAuth({ 
-            provider: 'google', 
-            options: { redirectTo: window.location.href } 
-        })
-        if (error) throw error
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: { redirectTo: window.location.href }
+      })
+      if (error) throw error
     } catch (err) {
-        console.error('Google 登入失敗:', err)
-        alert('登入失敗，請稍後再試！')
+      console.error('Google 登入失敗:', err)
+      alert('登入失敗，請稍後再試！')
     }
   }
 
@@ -390,7 +433,8 @@ export const useMainStore = defineStore('main', () => {
   function initPWAInstallPrompt() {
     if (!import.meta.client) return
 
-    isStandalone.value = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone
+    isStandalone.value =
+      window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone
     const ua = window.navigator.userAgent.toLowerCase()
     isIOS.value = /iphone|ipad|ipod/.test(ua)
 
@@ -417,11 +461,13 @@ export const useMainStore = defineStore('main', () => {
       deferredPrompt.value.prompt()
       const { outcome } = await deferredPrompt.value.userChoice
       if (outcome === 'accepted') {
-        canInstall.value = false 
+        canInstall.value = false
       }
       deferredPrompt.value = null
     } else {
-      alert('您的瀏覽器目前不支援快捷安裝，請嘗試從瀏覽器選單中選擇「加到主畫面」或「安裝應用程式」。')
+      alert(
+        '您的瀏覽器目前不支援快捷安裝，請嘗試從瀏覽器選單中選擇「加到主畫面」或「安裝應用程式」。'
+      )
     }
   }
 
@@ -451,17 +497,56 @@ export const useMainStore = defineStore('main', () => {
 
   function triggerToast() {
     showToast.value = true
-    setTimeout(() => showToast.value = false, 2000)
+    setTimeout(() => (showToast.value = false), 2000)
   }
 
   return {
-    loading, isDayMode, curTab, inv, merchList, articlesList, genePages, marqueeList, hotList, auctionList,
-    currentUser, wishlist, hospWishlist, history, showToast, lightboxItem, navHidden, lastScrollY,
-    displayLimit, readingArticle, readingProgress, viewingGene, geneSpecies, careImg, aboutImg, logoUrl, lineLink,
-    canInstall, showIOSGuide,
-    compareList, toggleCompare, clearCompare,
-    loadDataFromAPI, loadAuctions, initLiff, hasPendingLineAuth, checkAuthStatus, loginWithLine, loginWithGoogle, logout,
-    initTheme, toggleTheme, initPWAInstallPrompt, installApp,
-    openLightbox, closeLightbox, triggerToast
+    loading,
+    isDayMode,
+    curTab,
+    inv,
+    merchList,
+    articlesList,
+    genePages,
+    marqueeList,
+    hotList,
+    auctionList,
+    currentUser,
+    wishlist,
+    hospWishlist,
+    history,
+    showToast,
+    lightboxItem,
+    navHidden,
+    lastScrollY,
+    displayLimit,
+    readingArticle,
+    readingProgress,
+    viewingGene,
+    geneSpecies,
+    careImg,
+    aboutImg,
+    logoUrl,
+    lineLink,
+    canInstall,
+    showIOSGuide,
+    compareList,
+    toggleCompare,
+    clearCompare,
+    loadDataFromAPI,
+    loadAuctions,
+    initLiff,
+    hasPendingLineAuth,
+    checkAuthStatus,
+    loginWithLine,
+    loginWithGoogle,
+    logout,
+    initTheme,
+    toggleTheme,
+    initPWAInstallPrompt,
+    installApp,
+    openLightbox,
+    closeLightbox,
+    triggerToast
   }
 })
