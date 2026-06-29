@@ -1,0 +1,14 @@
+node_modules
+.nuxt
+.output
+.vercel
+dist
+public
+.tmp
+*.min.js
+*.min.css
+package-lock.json
+pnpm-lock.yaml
+yarn.lock
+supabase
+scripts

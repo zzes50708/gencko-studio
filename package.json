@@ -7,7 +7,20 @@
     "dev": "nuxt dev",
     "generate": "nuxt generate",
     "preview": "nuxt preview",
-    "postinstall": "nuxt prepare && node scripts/patch-pinia.mjs"
+    "postinstall": "nuxt prepare && node scripts/patch-pinia.mjs",
+    "prepare": "husky",
+    "db:start": "npx supabase start",
+    "db:stop": "npx supabase stop",
+    "db:status": "npx supabase status",
+    "db:pull": "npx supabase db pull",
+    "db:push": "npx supabase db push",
+    "db:reset": "npx supabase db reset",
+    "db:diff": "npx supabase db diff",
+    "db:new": "npx supabase migration new",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui"
   },
   "dependencies": {
     "@nuxt/image": "^2.0.0",
@@ -28,5 +41,15 @@
     "nuxt": "^3.15.0",
     "pinia": "^2.3.0",
     "vue-chartjs": "^5.3.3"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.61.1",
+    "husky": "^9.1.7",
+    "lint-staged": "^17.0.8",
+    "prettier": "^3.8.4",
+    "vitest": "^4.1.9"
+  },
+  "lint-staged": {
+    "*.{js,ts,vue,json,css,md}": "prettier --write"
   }
 }

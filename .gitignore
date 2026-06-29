@@ -30,3 +30,9 @@ pnpm-debug.log*
 out/
 dev.nitro.error.log
 *.nitro.error.log
+dev-robots.log
+dev-robots.err.log
+
+# Supabase CLI 本機暫存
+supabase/.branches
+supabase/.temp
