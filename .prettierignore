@@ -12,3 +12,4 @@ pnpm-lock.yaml
 yarn.lock
 supabase
 scripts
+types/supabase.ts
