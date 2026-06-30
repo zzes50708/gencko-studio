@@ -510,13 +510,13 @@ const fmtDate = (d) => {
 }
 
 .nav-chip.beginner {
-  border-color: #4caf50;
-  color: #4caf50;
+  border-color: var(--ok-text);
+  color: var(--ok-text);
 }
 
 .nav-chip.beginner.active {
-  background: #4caf50;
-  border-color: #4caf50;
+  background: var(--ok-fill);
+  border-color: var(--ok-fill);
   color: #fff;
 }
 
