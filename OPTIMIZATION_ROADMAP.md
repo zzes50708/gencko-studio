@@ -127,6 +127,7 @@
 
 ## #U4 商品/個體卡狀態與價格強化
 
+- **狀態**：`[x]` 完成（2026-06-30）。查證現況已做：已售/競標/自留隱藏價格並顯示對比合格的 status badge（#27 已驗）、收藏即時回饋已有。本次補上**核心缺口**：已售/自留卡新增「找相似 →」按鈕（`ShopFlipCard.vue`，`@click.stop.prevent` + `router.push('/shop?kw=<Morph>')`，避免巢狀 a），解除死路。預覽驗證 `/shop?sold=true` 6 張已售卡各有按鈕、點擊正確導向同品系在售搜尋、色彩 AA。
 - **痛點/背景**：評分「轉換與信任 8.0」指出在售/已售狀態與價格在卡片上不夠醒目；已售個體是死路（無後續引導）。
 - **影響面與收益**：提高在售個體點擊率、已售個體導流到相似品系、減少跳出。
 - **牽涉檔案**：`components/ShopFlipCard.vue`、`pages/shop/index.vue`、`assets/css/style.css`（status-badge / price）、`pages/product/[id].vue`。
