@@ -481,7 +481,7 @@
 
 ### Phase 5
 
-- [ ] #27 WCAG 對比度
+- [x] #27 WCAG 對比度 ✅ 2026-06-30（以實際渲染頁面跑對比掃描＝Lighthouse 等效；新增主題感知 token：day-mode --pri #CC3B08、--pri-btn、--txt-muted、--ok-text/--ok-fill；修品牌橘文字/按鈕/灰字/綠 chip/跑馬燈 #FF4500/收藏愛心/頁尾深底隱形；/shop /articles /calculator /hospital / 首頁掃描 0 失敗，disabled select 屬 WCAG 豁免）
 - [x] #28 Skip to content ✅ 2026-06-26（app.vue 加 .skip-to-content + main#main-content；Tab 首站可見、聚焦時下滑至 12px）
 - [x] #29 客製 404 ✅ 2026-06-26（新增 error.vue，守宮主題、回首頁/找個體/讀文章/玩計算機四 CTA + LINE 直連；含 noindex meta）
 - [x] #30 PWA Offline ✅ 2026-06-26（public/offline.html 守宮主題 + navigator.onLine 動態狀態 + 重試按鈕；workbox navigateFallback 指向，denylist 排除 api/sitemap/feed/robots） 頁
