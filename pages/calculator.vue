@@ -10,676 +10,762 @@ import { expandMorphComponents, findMatchingMorph } from '~/utils/genetics/morph
 const store = useMainStore()
 
 const calcUrl = 'https://www.genckobreeding.com/calculator'
-const calcImg = 'https://wsrv.nl/?url=raw.githubusercontent.com%2Fzzes50708%2Fgencko-assets%2Fmain%2Fimg%2F11.png&w=1200&h=630&fit=contain&bg=e6e3e3&output=webp&q=85'
+const calcImg =
+  'https://wsrv.nl/?url=raw.githubusercontent.com%2Fzzes50708%2Fgencko-assets%2Fmain%2Fimg%2F11.png&w=1200&h=630&fit=contain&bg=e6e3e3&output=webp&q=85'
 
 const calcPublisher = {
-    "@type": "Organization",
-    "name": "Gencko Breeding Studio",
-    "alternateName": ["Gencko Studio", "捷客工作室"],
-    "url": "https://www.genckobreeding.com",
-    "logo": { "@type": "ImageObject", "url": "https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/11.png", "width": 512, "height": 512 },
-    "sameAs": [
-        "https://www.instagram.com/gencko_breeding",
-        "https://www.facebook.com/profile.php?id=61579393505049",
-        "https://line.me/R/ti/p/@219abdzn"
-    ]
+  '@type': 'Organization',
+  name: 'Gencko Breeding Studio',
+  alternateName: ['Gencko Studio', '捷客工作室'],
+  url: 'https://www.genckobreeding.com',
+  logo: {
+    '@type': 'ImageObject',
+    url: 'https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/11.png',
+    width: 512,
+    height: 512
+  },
+  sameAs: [
+    'https://www.instagram.com/gencko_breeding',
+    'https://www.facebook.com/profile.php?id=61579393505049',
+    'https://line.me/R/ti/p/@219abdzn'
+  ]
 }
 
 // WebApplication / SoftwareApplication（雙重型別讓 AI 更容易識別）
 const calcAppLd = {
-    "@type": ["WebApplication", "SoftwareApplication"],
-    "@id": `${calcUrl}#app`,
-    "name": "Gencko 基因計算機 (Gencko Morph Calculator)",
-    "alternateName": ["守宮基因計算機", "Morph Calculator", "Gene Calculator"],
-    "url": calcUrl,
-    "applicationCategory": "UtilityApplication",
-    "applicationSubCategory": "GeneticCalculator",
-    "operatingSystem": "All",
-    "browserRequirements": "Requires JavaScript. Requires HTML5.",
-    "inLanguage": "zh-TW",
-    "description": "Gencko 基因計算機：依孟德爾遺傳定律模擬豹紋守宮、肥尾守宮與豬鼻蛇的配對子代基因型機率，支援隱性、顯性、共顯性、多基因、Het 推算、反向匹配與致死基因偵測。",
-    "softwareVersion": "1.0",
-    "screenshot": calcImg,
-    "image": calcImg,
-    "offers": {
-        "@type": "Offer",
-        "price": "0",
-        "priceCurrency": "TWD",
-        "availability": "https://schema.org/InStock"
+  '@type': ['WebApplication', 'SoftwareApplication'],
+  '@id': `${calcUrl}#app`,
+  name: 'Gencko 基因計算機 (Gencko Morph Calculator)',
+  alternateName: ['守宮基因計算機', 'Morph Calculator', 'Gene Calculator'],
+  url: calcUrl,
+  applicationCategory: 'UtilityApplication',
+  applicationSubCategory: 'GeneticCalculator',
+  operatingSystem: 'All',
+  browserRequirements: 'Requires JavaScript. Requires HTML5.',
+  inLanguage: 'zh-TW',
+  description:
+    'Gencko 基因計算機：依孟德爾遺傳定律模擬豹紋守宮、肥尾守宮與豬鼻蛇的配對子代基因型機率，支援隱性、顯性、共顯性、多基因、Het 推算、反向匹配與致死基因偵測。',
+  softwareVersion: '1.0',
+  screenshot: calcImg,
+  image: calcImg,
+  offers: {
+    '@type': 'Offer',
+    price: '0',
+    priceCurrency: 'TWD',
+    availability: 'https://schema.org/InStock'
+  },
+  featureList: [
+    '孟德爾遺傳定律子代機率計算',
+    'Het（雜合）基因推算',
+    '共顯性與不完全顯性表現型機率',
+    '多基因（Polygenic）表現型分布',
+    '反向匹配（Reverse Match）：由子代反推親代',
+    '致死基因組合偵測（如肥尾立可白 Super White Out）',
+    '支援豹紋守宮 / 肥尾守宮 / 豬鼻蛇'
+  ],
+  publisher: calcPublisher,
+  author: calcPublisher,
+  about: [
+    {
+      '@type': 'Taxon',
+      name: 'Eublepharis macularius',
+      alternateName: '豹紋守宮',
+      sameAs: 'https://www.wikidata.org/wiki/Q185061'
     },
-    "featureList": [
-        "孟德爾遺傳定律子代機率計算",
-        "Het（雜合）基因推算",
-        "共顯性與不完全顯性表現型機率",
-        "多基因（Polygenic）表現型分布",
-        "反向匹配（Reverse Match）：由子代反推親代",
-        "致死基因組合偵測（如肥尾立可白 Super White Out）",
-        "支援豹紋守宮 / 肥尾守宮 / 豬鼻蛇"
-    ],
-    "publisher": calcPublisher,
-    "author": calcPublisher,
-    "about": [
-        { "@type": "Taxon", "name": "Eublepharis macularius", "alternateName": "豹紋守宮", "sameAs": "https://www.wikidata.org/wiki/Q185061" },
-        { "@type": "Taxon", "name": "Hemitheconyx caudicinctus", "alternateName": "肥尾守宮", "sameAs": "https://www.wikidata.org/wiki/Q913571" },
-        { "@type": "Taxon", "name": "Heterodon nasicus", "alternateName": "豬鼻蛇", "sameAs": "https://www.wikidata.org/wiki/Q914251" }
-    ]
+    {
+      '@type': 'Taxon',
+      name: 'Hemitheconyx caudicinctus',
+      alternateName: '肥尾守宮',
+      sameAs: 'https://www.wikidata.org/wiki/Q913571'
+    },
+    {
+      '@type': 'Taxon',
+      name: 'Heterodon nasicus',
+      alternateName: '豬鼻蛇',
+      sameAs: 'https://www.wikidata.org/wiki/Q914251'
+    }
+  ]
 }
 
 // HowTo：如何使用基因計算機
 const calcHowToLd = {
-    "@type": "HowTo",
-    "@id": `${calcUrl}#howto`,
-    "name": "如何使用 Gencko 基因計算機推算子代機率",
-    "description": "5 個步驟，從選擇物種到解讀子代基因型機率分布。",
-    "image": calcImg,
-    "totalTime": "PT3M",
-    "step": [
-        { "@type": "HowToStep", "position": 1, "name": "選擇物種類別",            "text": "在頁面上方先選擇物種類別（地棲守宮或蛇），再選擇物種（豹紋守宮、肥尾守宮或豬鼻蛇）。" },
-        { "@type": "HowToStep", "position": 2, "name": "設定公方基因",            "text": "點擊左側「公」卡片，由分類面板（隱性、顯性、共顯性、多遺傳、品系）勾選或調整對應基因為 Het / 顯性 / 純合。" },
-        { "@type": "HowToStep", "position": 3, "name": "設定母方基因",            "text": "點擊右側「母」卡片，依母方基因型同樣選擇。" },
-        { "@type": "HowToStep", "position": 4, "name": "（選用）使用反向匹配",   "text": "若想由「想要的子代」反推親代組合，將其中一張卡片切換為「子代」並選擇目標基因即可。" },
-        { "@type": "HowToStep", "position": 5, "name": "解讀計算結果",            "text": "結果區會列出所有可能的子代基因型與其發生機率（25% / 50% / 75%）；多基因表現型則以機率分布呈現；致死組合會被標示。" }
-    ]
+  '@type': 'HowTo',
+  '@id': `${calcUrl}#howto`,
+  name: '如何使用 Gencko 基因計算機推算子代機率',
+  description: '5 個步驟，從選擇物種到解讀子代基因型機率分布。',
+  image: calcImg,
+  totalTime: 'PT3M',
+  step: [
+    {
+      '@type': 'HowToStep',
+      position: 1,
+      name: '選擇物種類別',
+      text: '在頁面上方先選擇物種類別（地棲守宮或蛇），再選擇物種（豹紋守宮、肥尾守宮或豬鼻蛇）。'
+    },
+    {
+      '@type': 'HowToStep',
+      position: 2,
+      name: '設定公方基因',
+      text: '點擊左側「公」卡片，由分類面板（隱性、顯性、共顯性、多遺傳、品系）勾選或調整對應基因為 Het / 顯性 / 純合。'
+    },
+    {
+      '@type': 'HowToStep',
+      position: 3,
+      name: '設定母方基因',
+      text: '點擊右側「母」卡片，依母方基因型同樣選擇。'
+    },
+    {
+      '@type': 'HowToStep',
+      position: 4,
+      name: '（選用）使用反向匹配',
+      text: '若想由「想要的子代」反推親代組合，將其中一張卡片切換為「子代」並選擇目標基因即可。'
+    },
+    {
+      '@type': 'HowToStep',
+      position: 5,
+      name: '解讀計算結果',
+      text: '結果區會列出所有可能的子代基因型與其發生機率（25% / 50% / 75%）；多基因表現型則以機率分布呈現；致死組合會被標示。'
+    }
+  ]
 }
 
 // FAQPage：常見問題
 const calcFaqLd = {
-    "@type": "FAQPage",
-    "@id": `${calcUrl}#faq`,
-    "mainEntity": [
-        {
-            "@type": "Question",
-            "name": "基因計算機是怎麼算出子代機率的？",
-            "acceptedAnswer": {
-                "@type": "Answer",
-                "text": "依據孟德爾遺傳定律（隱性、顯性、共顯性）計算等位基因組合機率。每一個子代基因型的機率為 25%、50% 或 75%，取決於親代為純合 (homo) 或雜合 (het)。多基因表現型（如高黃、橘化、土匪）由多個基因座共同決定，無法用單一比例預測，計算機會以機率分布形式呈現。"
-            }
-        },
-        {
-            "@type": "Question",
-            "name": "「Het」是什麼意思？",
-            "acceptedAnswer": {
-                "@type": "Answer",
-                "text": "Het 是 Heterozygous（雜合）的縮寫，表示個體攜帶一份等位基因但外觀未表現。例如「Het Tremper Albino」代表個體帶有一份隱性 Tremper 白化基因但外觀為正常型。將兩隻 Het 個體配對，理論上有 25% 機率產出純合白化子代。"
-            }
-        },
-        {
-            "@type": "Question",
-            "name": "基因計算機支援哪些物種？",
-            "acceptedAnswer": {
-                "@type": "Answer",
-                "text": "目前支援豹紋守宮（Eublepharis macularius）、肥尾守宮（Hemitheconyx caudicinctus）與豬鼻蛇（Heterodon nasicus），未來會持續擴充。可在頁面上方切換物種類別與物種。"
-            }
-        },
-        {
-            "@type": "Question",
-            "name": "多基因（Polygenic）能用計算機算嗎？",
-            "acceptedAnswer": {
-                "@type": "Answer",
-                "text": "多基因表現型（如橘化 Tangerine、高黃 High Yellow、土匪 Bandit）由多個基因座共同決定，無法以單一機率預測。計算機會顯示表現型機率分布，但實際個體變異會受血統選育與環境影響，建議搭配父母外觀與血統紀錄一併判斷。"
-            }
-        },
-        {
-            "@type": "Question",
-            "name": "反向匹配（Reverse Match）是什麼？",
-            "acceptedAnswer": {
-                "@type": "Answer",
-                "text": "反向匹配讓你輸入想要的子代基因型，計算機會反推最有可能產出該子代的親代組合。在任一張卡片切換為「子代」即可啟動反向模式，適用於規劃育種計畫時尋找合適親代。"
-            }
-        },
-        {
-            "@type": "Question",
-            "name": "致死基因會被偵測嗎？",
-            "acceptedAnswer": {
-                "@type": "Answer",
-                "text": "會。例如肥尾守宮的「立可白（White Out）」屬於共顯性致死基因，雙份等位基因組合（Super White Out）會在胚胎期致死。計算機會在結果中標示無效或致死組合，協助繁育者避免錯誤配對。"
-            }
-        }
-    ]
+  '@type': 'FAQPage',
+  '@id': `${calcUrl}#faq`,
+  mainEntity: [
+    {
+      '@type': 'Question',
+      name: '基因計算機是怎麼算出子代機率的？',
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: '依據孟德爾遺傳定律（隱性、顯性、共顯性）計算等位基因組合機率。每一個子代基因型的機率為 25%、50% 或 75%，取決於親代為純合 (homo) 或雜合 (het)。多基因表現型（如高黃、橘化、土匪）由多個基因座共同決定，無法用單一比例預測，計算機會以機率分布形式呈現。'
+      }
+    },
+    {
+      '@type': 'Question',
+      name: '「Het」是什麼意思？',
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: 'Het 是 Heterozygous（雜合）的縮寫，表示個體攜帶一份等位基因但外觀未表現。例如「Het Tremper Albino」代表個體帶有一份隱性 Tremper 白化基因但外觀為正常型。將兩隻 Het 個體配對，理論上有 25% 機率產出純合白化子代。'
+      }
+    },
+    {
+      '@type': 'Question',
+      name: '基因計算機支援哪些物種？',
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: '目前支援豹紋守宮（Eublepharis macularius）、肥尾守宮（Hemitheconyx caudicinctus）與豬鼻蛇（Heterodon nasicus），未來會持續擴充。可在頁面上方切換物種類別與物種。'
+      }
+    },
+    {
+      '@type': 'Question',
+      name: '多基因（Polygenic）能用計算機算嗎？',
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: '多基因表現型（如橘化 Tangerine、高黃 High Yellow、土匪 Bandit）由多個基因座共同決定，無法以單一機率預測。計算機會顯示表現型機率分布，但實際個體變異會受血統選育與環境影響，建議搭配父母外觀與血統紀錄一併判斷。'
+      }
+    },
+    {
+      '@type': 'Question',
+      name: '反向匹配（Reverse Match）是什麼？',
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: '反向匹配讓你輸入想要的子代基因型，計算機會反推最有可能產出該子代的親代組合。在任一張卡片切換為「子代」即可啟動反向模式，適用於規劃育種計畫時尋找合適親代。'
+      }
+    },
+    {
+      '@type': 'Question',
+      name: '致死基因會被偵測嗎？',
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: '會。例如肥尾守宮的「立可白（White Out）」屬於共顯性致死基因，雙份等位基因組合（Super White Out）會在胚胎期致死。計算機會在結果中標示無效或致死組合，協助繁育者避免錯誤配對。'
+      }
+    }
+  ]
 }
 
 // BreadcrumbList
 const calcBreadcrumbLd = {
-    "@context": "https://schema.org",
-    "@type": "BreadcrumbList",
-    "itemListElement": [
-        { "@type": "ListItem", "position": 1, "name": "首頁", "item": "https://www.genckobreeding.com/" },
-        { "@type": "ListItem", "position": 2, "name": "基因計算機", "item": calcUrl }
-    ]
+  '@context': 'https://schema.org',
+  '@type': 'BreadcrumbList',
+  itemListElement: [
+    { '@type': 'ListItem', position: 1, name: '首頁', item: 'https://www.genckobreeding.com/' },
+    { '@type': 'ListItem', position: 2, name: '基因計算機', item: calcUrl }
+  ]
 }
 
 // WebPage 包覆
 const calcWebPageLd = {
-    "@context": "https://schema.org",
-    "@type": "WebPage",
-    "@id": calcUrl,
-    "url": calcUrl,
-    "name": "Gencko 基因計算機",
-    "inLanguage": "zh-TW",
-    "isPartOf": { "@type": "WebSite", "@id": "https://www.genckobreeding.com/#website" },
-    "primaryImageOfPage": { "@type": "ImageObject", "url": calcImg },
-    "speakable": {
-        "@type": "SpeakableSpecification",
-        "cssSelector": [".seo-hint", ".calc-help-hint-text"]
-    },
-    "mainEntity": calcAppLd,
-    "hasPart": [calcHowToLd, calcFaqLd]
+  '@context': 'https://schema.org',
+  '@type': 'WebPage',
+  '@id': calcUrl,
+  url: calcUrl,
+  name: 'Gencko 基因計算機',
+  inLanguage: 'zh-TW',
+  isPartOf: { '@type': 'WebSite', '@id': 'https://www.genckobreeding.com/#website' },
+  primaryImageOfPage: { '@type': 'ImageObject', url: calcImg },
+  speakable: {
+    '@type': 'SpeakableSpecification',
+    cssSelector: ['.seo-hint', '.calc-help-hint-text']
+  },
+  mainEntity: calcAppLd,
+  hasPart: [calcHowToLd, calcFaqLd]
 }
 
 useHead({
-    title: '基因計算機｜守宮配對子代機率推算（孟德爾、Het、致死偵測）',
-    meta:[
-        { name: 'description', content: 'Gencko 基因計算機：線上模擬豹紋守宮、肥尾守宮與豬鼻蛇的配對子代機率，依孟德爾遺傳定律計算隱性、顯性、共顯性、多基因（Polygenic）、Het 雜合推算與反向匹配，並偵測致死基因組合。' },
-        { name: 'keywords', content: '基因計算機, 守宮基因計算機, 豹紋守宮基因, 肥尾守宮基因, 豬鼻蛇基因, Morph Calculator, Het, 孟德爾遺傳, 子代機率, 反向匹配, 致死基因' },
-        // Open Graph
-        { property: 'og:title', content: '基因計算機｜守宮配對子代機率推算（孟德爾、Het、致死偵測）' },
-        { property: 'og:description', content: '線上模擬豹紋守宮、肥尾守宮、豬鼻蛇配對子代機率。支援 Het、共顯性、多基因與反向匹配。' },
-        { property: 'og:image', content: calcImg },
-        { property: 'og:image:alt', content: 'Gencko 基因計算機 - 守宮配對子代機率推算工具' },
-        { property: 'og:url', content: calcUrl },
-        { property: 'og:type', content: 'website' },
-        // Twitter Card
-        { name: 'twitter:card', content: 'summary_large_image' },
-        { name: 'twitter:title', content: '基因計算機｜守宮配對子代機率推算' },
-        { name: 'twitter:description', content: '線上模擬豹紋守宮、肥尾守宮、豬鼻蛇配對子代機率。支援 Het、共顯性、多基因與反向匹配。' },
-        { name: 'twitter:image', content: calcImg }
-    ],
-    link:[
-        { rel: 'canonical', href: calcUrl }
-    ],
-    script:[
-        { type: 'application/ld+json', children: JSON.stringify(calcWebPageLd) },
-        { type: 'application/ld+json', children: JSON.stringify(calcBreadcrumbLd) }
-    ]
+  title: '基因計算機｜守宮配對子代機率推算（孟德爾、Het、致死偵測）',
+  meta: [
+    {
+      name: 'description',
+      content:
+        'Gencko 基因計算機：線上模擬豹紋守宮、肥尾守宮與豬鼻蛇的配對子代機率，依孟德爾遺傳定律計算隱性、顯性、共顯性、多基因（Polygenic）、Het 雜合推算與反向匹配，並偵測致死基因組合。'
+    },
+    {
+      name: 'keywords',
+      content:
+        '基因計算機, 守宮基因計算機, 豹紋守宮基因, 肥尾守宮基因, 豬鼻蛇基因, Morph Calculator, Het, 孟德爾遺傳, 子代機率, 反向匹配, 致死基因'
+    },
+    // Open Graph
+    { property: 'og:title', content: '基因計算機｜守宮配對子代機率推算（孟德爾、Het、致死偵測）' },
+    {
+      property: 'og:description',
+      content:
+        '線上模擬豹紋守宮、肥尾守宮、豬鼻蛇配對子代機率。支援 Het、共顯性、多基因與反向匹配。'
+    },
+    { property: 'og:image', content: calcImg },
+    { property: 'og:image:alt', content: 'Gencko 基因計算機 - 守宮配對子代機率推算工具' },
+    { property: 'og:url', content: calcUrl },
+    { property: 'og:type', content: 'website' },
+    // Twitter Card
+    { name: 'twitter:card', content: 'summary_large_image' },
+    { name: 'twitter:title', content: '基因計算機｜守宮配對子代機率推算' },
+    {
+      name: 'twitter:description',
+      content:
+        '線上模擬豹紋守宮、肥尾守宮、豬鼻蛇配對子代機率。支援 Het、共顯性、多基因與反向匹配。'
+    },
+    { name: 'twitter:image', content: calcImg }
+  ],
+  link: [{ rel: 'canonical', href: calcUrl }],
+  script: [
+    { type: 'application/ld+json', children: JSON.stringify(calcWebPageLd) },
+    { type: 'application/ld+json', children: JSON.stringify(calcBreadcrumbLd) }
+  ]
 })
 
 const calcSp = ref('豹紋守宮')
 const calcSpeciesGroup = ref('terrestrial_gecko')
 const calcSpeciesGroupMenuOpen = ref(false)
 const calcSpeciesMenuOpen = ref(false)
-const calcMale = ref([ ])
-const calcFemale = ref([ ])
+const calcMale = ref([])
+const calcFemale = ref([])
 const calcResult = ref(null)
 const calcModalOpen = ref(false)
 const calcActiveInfo = ref(null)
+// 開啟基因說明 modal（合併為方法，避免行內多語句被 prettier 拆掉分號而解析失敗）
+const openCalcInfo = (key) => {
+  calcActiveInfo.value = key
+  calcModalOpen.value = true
+}
 const calcExpandedCategories = ref({ Male: 'recessive', Female: 'recessive' })
 const calcCardRoles = ref({ Male: 'male', Female: 'female' })
 const calcExpandedGenes = ref({})
 const calcReverseMatchBackup = ref(null)
 const calcParentCards = [
-    { key: 'Male', label: '公', defaultRole: 'male', icon: '♂', accent: 'm' },
-    { key: 'Female', label: '母', defaultRole: 'female', icon: '♀', accent: 'f' }
+  { key: 'Male', label: '公', defaultRole: 'male', icon: '♂', accent: 'm' },
+  { key: 'Female', label: '母', defaultRole: 'female', icon: '♀', accent: 'f' }
 ]
 const calcSpeciesGroups = [
-    { id: 'terrestrial_gecko', label: '地棲守宮', species: ['豹紋守宮', '肥尾守宮'] },
-    { id: 'snake', label: '蛇', species: ['豬鼻蛇'] }
+  { id: 'terrestrial_gecko', label: '地棲守宮', species: ['豹紋守宮', '肥尾守宮'] },
+  { id: 'snake', label: '蛇', species: ['豬鼻蛇'] }
 ]
 
 const currentSpeciesConfig = computed(() => getSpeciesConfig(calcSp.value))
 const calcSanitizedSpeciesConfig = computed(() => {
-    const config = currentSpeciesConfig.value
-    if (!config) return null
+  const config = currentSpeciesConfig.value
+  if (!config) return null
 
-    const genes = (config.genes || []).filter((gene) => gene.category !== 'bloodline' && gene.type !== CALC_TYPES.BLOOD)
-    const geneIds = new Set(genes.map((gene) => gene.id))
+  const genes = (config.genes || []).filter(
+    (gene) => gene.category !== 'bloodline' && gene.type !== CALC_TYPES.BLOOD
+  )
+  const geneIds = new Set(genes.map((gene) => gene.id))
 
-    return {
-        ...config,
-        geneCategories: (config.geneCategories || []).filter((category) => category.id !== 'bloodline'),
-        genes,
-        presetMorphs: (config.presetMorphs || []).filter((gene) => !gene.components?.some((component) => !geneIds.has(component.geneId))),
-        comboRules: (config.comboRules || []).filter((rule) => rule.required.every((required) => geneIds.has(required.id)))
-    }
+  return {
+    ...config,
+    geneCategories: (config.geneCategories || []).filter((category) => category.id !== 'bloodline'),
+    genes,
+    presetMorphs: (config.presetMorphs || []).filter(
+      (gene) => !gene.components?.some((component) => !geneIds.has(component.geneId))
+    ),
+    comboRules: (config.comboRules || []).filter((rule) =>
+      rule.required.every((required) => geneIds.has(required.id))
+    )
+  }
 })
-const calcCurrentDefs = computed(() => calcSanitizedSpeciesConfig.value?.genes || [ ])
-const calcGeneCategories = computed(() => calcSanitizedSpeciesConfig.value?.geneCategories || [ ])
-const calcPresetMorphs = computed(() => calcSanitizedSpeciesConfig.value?.presetMorphs || [ ])
+const calcCurrentDefs = computed(() => calcSanitizedSpeciesConfig.value?.genes || [])
+const calcGeneCategories = computed(() => calcSanitizedSpeciesConfig.value?.geneCategories || [])
+const calcPresetMorphs = computed(() => calcSanitizedSpeciesConfig.value?.presetMorphs || [])
 const calcDisplayCategories = computed(() => {
-    const categories = [ ...calcGeneCategories.value ]
-    if (calcPresetMorphs.value.length) categories.unshift({ id: 'morph', label: '品系' })
-    return categories
+  const categories = [...calcGeneCategories.value]
+  if (calcPresetMorphs.value.length) categories.unshift({ id: 'morph', label: '品系' })
+  return categories
 })
-const calcCurrentSpeciesGroup = computed(() => calcSpeciesGroups.find((group) => group.id === calcSpeciesGroup.value) || calcSpeciesGroups[0])
-const calcSpeciesOptions = computed(() => calcCurrentSpeciesGroup.value?.species || [ ])
+const calcCurrentSpeciesGroup = computed(
+  () =>
+    calcSpeciesGroups.find((group) => group.id === calcSpeciesGroup.value) || calcSpeciesGroups[0]
+)
+const calcSpeciesOptions = computed(() => calcCurrentSpeciesGroup.value?.species || [])
 const calcCurrentSpeciesGroupLabel = computed(() => calcCurrentSpeciesGroup.value?.label || '')
 const calcCurrentSpeciesLabel = computed(() => calcSp.value || '')
-const calcChildCardKey = computed(() => Object.entries(calcCardRoles.value).find(([, role]) => role === 'child')?.[0] || null)
-const calcKnownParentCardKey = computed(() => calcParentCards.find((card) => card.key !== calcChildCardKey.value)?.key || null)
+const calcChildCardKey = computed(
+  () => Object.entries(calcCardRoles.value).find(([, role]) => role === 'child')?.[0] || null
+)
+const calcKnownParentCardKey = computed(
+  () => calcParentCards.find((card) => card.key !== calcChildCardKey.value)?.key || null
+)
 const calcIsReverseMode = computed(() => Boolean(calcChildCardKey.value))
 const calcGenesByCategory = computed(() => {
-    const groups = {}
-    calcGeneCategories.value.forEach((category) => {
-        groups[category.id] = [ ]
+  const groups = {}
+  calcGeneCategories.value.forEach((category) => {
+    groups[category.id] = []
+  })
+
+  calcCurrentDefs.value
+    .filter((gene) => !gene.components?.length)
+    .forEach((gene) => {
+      if (!groups[gene.category]) groups[gene.category] = []
+      groups[gene.category].push(gene)
     })
 
-    calcCurrentDefs.value
-        .filter((gene) => !gene.components?.length)
-        .forEach((gene) => {
-            if (!groups[gene.category]) groups[gene.category] = [ ]
-            groups[gene.category].push(gene)
-        })
-
-    return groups
+  return groups
 })
 
-const calcAllOutcomes = computed(() => calcResult.value?.outcomes || [ ])
+const calcAllOutcomes = computed(() => calcResult.value?.outcomes || [])
 
 const calcRun = () => {
-    if (calcIsReverseMode.value) {
-        calcResult.value = null
-        return
-    }
+  if (calcIsReverseMode.value) {
+    calcResult.value = null
+    return
+  }
 
-    if (calcMale.value.length === 0 && calcFemale.value.length === 0) {
-        calcResult.value = null
-        return
-    }
-    calcResult.value = calculateGenetics(
-        calcSanitizedSpeciesConfig.value,
-        JSON.parse(JSON.stringify(calcMale.value)),
-        JSON.parse(JSON.stringify(calcFemale.value))
-    )
+  if (calcMale.value.length === 0 && calcFemale.value.length === 0) {
+    calcResult.value = null
+    return
+  }
+  calcResult.value = calculateGenetics(
+    calcSanitizedSpeciesConfig.value,
+    JSON.parse(JSON.stringify(calcMale.value)),
+    JSON.parse(JSON.stringify(calcFemale.value))
+  )
 }
 
 watch(() => calcMale.value, calcRun, { deep: true })
 watch(() => calcFemale.value, calcRun, { deep: true })
 watch(calcCardRoles, calcRun, { deep: true })
 watch(calcSpeciesGroup, (nextGroupId) => {
-    const nextGroup = calcSpeciesGroups.find((group) => group.id === nextGroupId)
-    if (nextGroup?.species?.length && !nextGroup.species.includes(calcSp.value)) {
-        calcSp.value = nextGroup.species[0]
-    }
-    calcSpeciesGroupMenuOpen.value = false
-    calcSpeciesMenuOpen.value = false
+  const nextGroup = calcSpeciesGroups.find((group) => group.id === nextGroupId)
+  if (nextGroup?.species?.length && !nextGroup.species.includes(calcSp.value)) {
+    calcSp.value = nextGroup.species[0]
+  }
+  calcSpeciesGroupMenuOpen.value = false
+  calcSpeciesMenuOpen.value = false
 })
 watch(calcSp, () => {
-    calcMale.value = [ ]
-    calcFemale.value = [ ]
-    calcResult.value = null
-    calcExpandedCategories.value = { Male: 'recessive', Female: 'recessive' }
-    calcCardRoles.value = { Male: 'male', Female: 'female' }
-    const matchedGroup = calcSpeciesGroups.find((group) => group.species.includes(calcSp.value))
-    if (matchedGroup) {
-        calcSpeciesGroup.value = matchedGroup.id
-    }
-    calcSpeciesMenuOpen.value = false
+  calcMale.value = []
+  calcFemale.value = []
+  calcResult.value = null
+  calcExpandedCategories.value = { Male: 'recessive', Female: 'recessive' }
+  calcCardRoles.value = { Male: 'male', Female: 'female' }
+  const matchedGroup = calcSpeciesGroups.find((group) => group.species.includes(calcSp.value))
+  if (matchedGroup) {
+    calcSpeciesGroup.value = matchedGroup.id
+  }
+  calcSpeciesMenuOpen.value = false
 })
 
 const calcToggleSpeciesGroupMenu = () => {
-    calcSpeciesGroupMenuOpen.value = !calcSpeciesGroupMenuOpen.value
-    if (calcSpeciesGroupMenuOpen.value) calcSpeciesMenuOpen.value = false
+  calcSpeciesGroupMenuOpen.value = !calcSpeciesGroupMenuOpen.value
+  if (calcSpeciesGroupMenuOpen.value) calcSpeciesMenuOpen.value = false
 }
 
 const calcToggleSpeciesMenu = () => {
-    calcSpeciesMenuOpen.value = !calcSpeciesMenuOpen.value
-    if (calcSpeciesMenuOpen.value) calcSpeciesGroupMenuOpen.value = false
+  calcSpeciesMenuOpen.value = !calcSpeciesMenuOpen.value
+  if (calcSpeciesMenuOpen.value) calcSpeciesGroupMenuOpen.value = false
 }
 
 const calcSelectSpeciesGroup = (groupId) => {
-    calcSpeciesGroup.value = groupId
+  calcSpeciesGroup.value = groupId
 }
 
 const calcSelectSpecies = (species) => {
-    calcSp.value = species
+  calcSp.value = species
 }
 
 const handleCalcOutsideClick = (event) => {
-    const target = event.target
-    if (!(target instanceof Element)) return
-    if (!target.closest('.calc-species-selector')) {
-        calcSpeciesGroupMenuOpen.value = false
-        calcSpeciesMenuOpen.value = false
-    }
+  const target = event.target
+  if (!(target instanceof Element)) return
+  if (!target.closest('.calc-species-selector')) {
+    calcSpeciesGroupMenuOpen.value = false
+    calcSpeciesMenuOpen.value = false
+  }
 }
 
 onMounted(() => {
-    document.addEventListener('click', handleCalcOutsideClick)
+  document.addEventListener('click', handleCalcOutsideClick)
 })
 
 onUnmounted(() => {
-    document.removeEventListener('click', handleCalcOutsideClick)
+  document.removeEventListener('click', handleCalcOutsideClick)
 })
 
 const getGeneListBySex = (sex) => (sex === 'Male' ? calcMale.value : calcFemale.value)
 const getGeneDef = (geneId) => calcCurrentDefs.value.find((def) => def.id === geneId)
-const getGeneIndexById = (sex, geneId) => getGeneListBySex(sex).findIndex((gene) => gene.geneId === geneId)
-const getSelectedGeneEntry = (sex, geneId) => getGeneListBySex(sex).find((gene) => gene.geneId === geneId) || null
+const getGeneIndexById = (sex, geneId) =>
+  getGeneListBySex(sex).findIndex((gene) => gene.geneId === geneId)
+const getSelectedGeneEntry = (sex, geneId) =>
+  getGeneListBySex(sex).find((gene) => gene.geneId === geneId) || null
 
 const setGeneListBySex = (sex, nextGenes) => {
-    if (sex === 'Male') {
-        calcMale.value = nextGenes
-        return
-    }
-    calcFemale.value = nextGenes
+  if (sex === 'Male') {
+    calcMale.value = nextGenes
+    return
+  }
+  calcFemale.value = nextGenes
 }
 
 const calcToggleCategory = (sex, categoryId) => {
-    calcExpandedCategories.value[sex] = categoryId
+  calcExpandedCategories.value[sex] = categoryId
 }
 
 const calcSetRole = (cardKey, role) => {
-    calcCardRoles.value[cardKey] = role
+  calcCardRoles.value[cardKey] = role
 }
 
 const calcToggleGeneExpanded = (geneId) => {
-    calcExpandedGenes.value[geneId] = !calcExpandedGenes.value[geneId]
+  calcExpandedGenes.value[geneId] = !calcExpandedGenes.value[geneId]
 }
 
 const calcIsGeneExpanded = (geneId) => calcExpandedGenes.value[geneId] === true
 
-const getFilteredGenesForCategory = (categoryId) => calcGenesByCategory.value[categoryId] || [ ]
+const getFilteredGenesForCategory = (categoryId) => calcGenesByCategory.value[categoryId] || []
 
 const calcIsGeneSelected = (geneId, sex) => getGeneIndexById(sex, geneId) !== -1
 
 const calcAddGene = (geneId, sex) => {
-    const def = calcCurrentDefs.value.find(d => d.id === geneId)
-    if (!def || calcIsGeneSelected(geneId, sex)) return
+  const def = calcCurrentDefs.value.find((d) => d.id === geneId)
+  if (!def || calcIsGeneSelected(geneId, sex)) return
 
-    let zygosity = ZYG.VIS
-    if (def.type === CALC_TYPES.CODOM) zygosity = ZYG.SGL
+  let zygosity = ZYG.VIS
+  if (def.type === CALC_TYPES.CODOM) zygosity = ZYG.SGL
 
-    const nextGenes = [ ...getGeneListBySex(sex), { geneId, zygosity } ]
-    setGeneListBySex(sex, nextGenes)
-    calcExpandedGenes.value[geneId] = true
-    calcRun()
+  const nextGenes = [...getGeneListBySex(sex), { geneId, zygosity }]
+  setGeneListBySex(sex, nextGenes)
+  calcExpandedGenes.value[geneId] = true
+  calcRun()
 }
 
 const calcRemoveGene = (index, sex) => {
-    const list = [ ...getGeneListBySex(sex) ]
-    list.splice(index, 1)
-    setGeneListBySex(sex, list)
-    calcRun()
+  const list = [...getGeneListBySex(sex)]
+  list.splice(index, 1)
+  setGeneListBySex(sex, list)
+  calcRun()
 }
 
 const calcRemoveGeneById = (sex, geneId) => {
-    const index = getGeneIndexById(sex, geneId)
-    if (index === -1) return
-    calcRemoveGene(index, sex)
-    calcExpandedGenes.value[geneId] = false
+  const index = getGeneIndexById(sex, geneId)
+  if (index === -1) return
+  calcRemoveGene(index, sex)
+  calcExpandedGenes.value[geneId] = false
 }
 
 const calcUpdateZygosity = (e, index, sex) => {
-    const list = [ ...getGeneListBySex(sex) ]
-    list[index].zygosity = e.target.value
-    setGeneListBySex(sex, list)
-    calcRun()
+  const list = [...getGeneListBySex(sex)]
+  list[index].zygosity = e.target.value
+  setGeneListBySex(sex, list)
+  calcRun()
 }
 
 const calcSetGeneZygosity = (sex, geneId, zygosity) => {
-    const index = getGeneIndexById(sex, geneId)
-    if (index === -1) return
-    const list = [ ...getGeneListBySex(sex) ]
-    list[index].zygosity = zygosity
-    setGeneListBySex(sex, list)
-    calcRun()
+  const index = getGeneIndexById(sex, geneId)
+  if (index === -1) return
+  const list = [...getGeneListBySex(sex)]
+  list[index].zygosity = zygosity
+  setGeneListBySex(sex, list)
+  calcRun()
 }
 
 const formatHetProbabilityLabel = (label) => {
-    if (label === 'Het') return 'Het'
-    if (label === '50% Poss Het') return '50% Het'
-    if (label === '66% Poss Het') return '66% Het'
-    return label.replace('Poss Het', 'Het')
+  if (label === 'Het') return 'Het'
+  if (label === '50% Poss Het') return '50% Het'
+  if (label === '66% Poss Het') return '66% Het'
+  return label.replace('Poss Het', 'Het')
 }
 
 const formatGeneListSummary = (geneList, hetStats = {}) => {
-    if (!geneList.length) return '尚未選擇基因'
+  if (!geneList.length) return '尚未選擇基因'
 
-    const visibleGenes = geneList
-        .filter((gene) => gene.zygosity !== ZYG.HET)
-        .map((gene) => {
-            const geneDef = getGeneDef(gene.geneId)
-            if (!geneDef) return ''
-            if (gene.zygosity === ZYG.SUP) return `超級 ${geneDef.name}`
-            return geneDef.name
-        })
-        .filter(Boolean)
+  const visibleGenes = geneList
+    .filter((gene) => gene.zygosity !== ZYG.HET)
+    .map((gene) => {
+      const geneDef = getGeneDef(gene.geneId)
+      if (!geneDef) return ''
+      if (gene.zygosity === ZYG.SUP) return `超級 ${geneDef.name}`
+      return geneDef.name
+    })
+    .filter(Boolean)
 
-    const hetGenes = geneList
-        .filter((gene) => gene.zygosity === ZYG.HET)
-        .map((gene) => {
-            const geneDef = getGeneDef(gene.geneId)
-            if (!geneDef) return ''
-            const label = formatHetProbabilityLabel(hetStats[gene.geneId] || 'Het')
-            return `${label} ${geneDef.name}`
-        })
-        .filter(Boolean)
+  const hetGenes = geneList
+    .filter((gene) => gene.zygosity === ZYG.HET)
+    .map((gene) => {
+      const geneDef = getGeneDef(gene.geneId)
+      if (!geneDef) return ''
+      const label = formatHetProbabilityLabel(hetStats[gene.geneId] || 'Het')
+      return `${label} ${geneDef.name}`
+    })
+    .filter(Boolean)
 
-    return [ ...visibleGenes, ...hetGenes ].join(' ')
+  return [...visibleGenes, ...hetGenes].join(' ')
 }
 
 const calcSelectedGeneSummary = (sex) => formatGeneListSummary(getGeneListBySex(sex))
-const calcMatchedMorph = (sex) => findMatchingMorph(calcSanitizedSpeciesConfig.value, getGeneListBySex(sex))
+const calcMatchedMorph = (sex) =>
+  findMatchingMorph(calcSanitizedSpeciesConfig.value, getGeneListBySex(sex))
 
 const calcApplyMorph = (sex, morphDef) => {
-    if (!morphDef) return
-    setGeneListBySex(sex, expandMorphComponents(morphDef))
-    calcRun()
+  if (!morphDef) return
+  setGeneListBySex(sex, expandMorphComponents(morphDef))
+  calcRun()
 }
 
 const calcGetGeneStateText = (sex, geneId) => {
-    const selected = getSelectedGeneEntry(sex, geneId)
-    const geneDef = getGeneDef(geneId)
-    if (!selected || !geneDef) return ''
-    if (geneDef.type === CALC_TYPES.REC) return selected.zygosity === ZYG.HET ? 'Het' : ''
-    if (geneDef.type === CALC_TYPES.CODOM) return selected.zygosity === ZYG.SUP ? '超級' : ''
-    return ''
+  const selected = getSelectedGeneEntry(sex, geneId)
+  const geneDef = getGeneDef(geneId)
+  if (!selected || !geneDef) return ''
+  if (geneDef.type === CALC_TYPES.REC) return selected.zygosity === ZYG.HET ? 'Het' : ''
+  if (geneDef.type === CALC_TYPES.CODOM) return selected.zygosity === ZYG.SUP ? '超級' : ''
+  return ''
 }
 
 const calcCycleGeneSelection = (sex, geneId) => {
-    const geneDef = getGeneDef(geneId)
-    if (!geneDef) return
+  const geneDef = getGeneDef(geneId)
+  if (!geneDef) return
 
-    const selected = getSelectedGeneEntry(sex, geneId)
-    if (!selected) {
-        calcAddGene(geneId, sex)
-        return
+  const selected = getSelectedGeneEntry(sex, geneId)
+  if (!selected) {
+    calcAddGene(geneId, sex)
+    return
+  }
+
+  if (geneDef.type === CALC_TYPES.REC) {
+    if (selected.zygosity === ZYG.VIS) {
+      calcSetGeneZygosity(sex, geneId, ZYG.HET)
+      return
     }
-
-    if (geneDef.type === CALC_TYPES.REC) {
-        if (selected.zygosity === ZYG.VIS) {
-            calcSetGeneZygosity(sex, geneId, ZYG.HET)
-            return
-        }
-        calcRemoveGeneById(sex, geneId)
-        return
-    }
-
-    if (geneDef.type === CALC_TYPES.CODOM) {
-        if (selected.zygosity === ZYG.SGL) {
-            calcSetGeneZygosity(sex, geneId, ZYG.SUP)
-            return
-        }
-        calcRemoveGeneById(sex, geneId)
-        return
-    }
-
     calcRemoveGeneById(sex, geneId)
+    return
+  }
+
+  if (geneDef.type === CALC_TYPES.CODOM) {
+    if (selected.zygosity === ZYG.SGL) {
+      calcSetGeneZygosity(sex, geneId, ZYG.SUP)
+      return
+    }
+    calcRemoveGeneById(sex, geneId)
+    return
+  }
+
+  calcRemoveGeneById(sex, geneId)
 }
 
-
 const calcBuildUnknownStateOptions = (geneDef, childGenes, knownParentGenes) => {
-    // Check if child has this gene (any form: Het or Vis)
-    const childHasGene = childGenes.some(g => g.geneId === geneDef.id)
-    // Check if known parent doesn't have this gene
-    const knownParentLacksGene = !knownParentGenes.some(g => g.geneId === geneDef.id)
+  // Check if child has this gene (any form: Het or Vis)
+  const childHasGene = childGenes.some((g) => g.geneId === geneDef.id)
+  // Check if known parent doesn't have this gene
+  const knownParentLacksGene = !knownParentGenes.some((g) => g.geneId === geneDef.id)
 
-    // If child has this gene but known parent doesn't, unknown parent must have it
-    const mustHaveGene = childHasGene && knownParentLacksGene
+  // If child has this gene but known parent doesn't, unknown parent must have it
+  const mustHaveGene = childHasGene && knownParentLacksGene
 
-    if (geneDef.type === CALC_TYPES.REC) {
-        return mustHaveGene ? [ZYG.HET, ZYG.VIS] : [null, ZYG.HET, ZYG.VIS]
-    }
-    if (geneDef.type === CALC_TYPES.CODOM) {
-        return mustHaveGene ? [ZYG.SGL, ZYG.SUP] : [null, ZYG.SGL, ZYG.SUP]
-    }
-    return mustHaveGene ? [ZYG.VIS] : [null, ZYG.VIS]
+  if (geneDef.type === CALC_TYPES.REC) {
+    return mustHaveGene ? [ZYG.HET, ZYG.VIS] : [null, ZYG.HET, ZYG.VIS]
+  }
+  if (geneDef.type === CALC_TYPES.CODOM) {
+    return mustHaveGene ? [ZYG.SGL, ZYG.SUP] : [null, ZYG.SGL, ZYG.SUP]
+  }
+  return mustHaveGene ? [ZYG.VIS] : [null, ZYG.VIS]
 }
 
 const calcDoesOutcomeMatchChild = (rawGenes, childGenes) => {
-    const childMap = new Map(childGenes.map((gene) => [gene.geneId, gene.zygosity]))
-    const rawMap = new Map(rawGenes.map((gene) => [gene.geneId, gene.zygosity]))
+  const childMap = new Map(childGenes.map((gene) => [gene.geneId, gene.zygosity]))
+  const rawMap = new Map(rawGenes.map((gene) => [gene.geneId, gene.zygosity]))
 
-    for (const gene of childGenes) {
-        if (rawMap.get(gene.geneId) !== gene.zygosity) {
-            return false
-        }
+  for (const gene of childGenes) {
+    if (rawMap.get(gene.geneId) !== gene.zygosity) {
+      return false
     }
+  }
 
-    for (const geneDef of calcCurrentDefs.value) {
-        const rawZygosity = rawMap.get(geneDef.id)
-        if (childMap.has(geneDef.id) || !rawZygosity) continue
-        if (geneDef.type === CALC_TYPES.REC && rawZygosity === ZYG.HET) continue
-        return false
-    }
+  for (const geneDef of calcCurrentDefs.value) {
+    const rawZygosity = rawMap.get(geneDef.id)
+    if (childMap.has(geneDef.id) || !rawZygosity) continue
+    if (geneDef.type === CALC_TYPES.REC && rawZygosity === ZYG.HET) continue
+    return false
+  }
 
-    return true
+  return true
 }
 
 const calcDoesOutcomeMatchCarrierChild = (rawGenes, childGenes) => {
-    const rawMap = new Map(rawGenes.map((gene) => [gene.geneId, gene.zygosity]))
+  const rawMap = new Map(rawGenes.map((gene) => [gene.geneId, gene.zygosity]))
 
-    return childGenes.every((gene) => {
-        const geneDef = getGeneDef(gene.geneId)
-        const rawZygosity = rawMap.get(gene.geneId)
-        if (!geneDef) return false
+  return childGenes.every((gene) => {
+    const geneDef = getGeneDef(gene.geneId)
+    const rawZygosity = rawMap.get(gene.geneId)
+    if (!geneDef) return false
 
-        if (geneDef.type === CALC_TYPES.REC && gene.zygosity === ZYG.VIS) {
-            return rawZygosity === ZYG.HET || rawZygosity === ZYG.VIS
-        }
+    if (geneDef.type === CALC_TYPES.REC && gene.zygosity === ZYG.VIS) {
+      return rawZygosity === ZYG.HET || rawZygosity === ZYG.VIS
+    }
 
-        return rawZygosity === gene.zygosity
-    })
+    return rawZygosity === gene.zygosity
+  })
 }
 
 const calcResolveReverseTier = (probability) => {
-    if (probability >= 0.99) return { key: 'het', sort: 1, label: 'Het' }
-    if (probability >= 0.60) return { key: 'het66', sort: 2, label: '66% Het' }
-    if (probability >= 0.45 && probability < 0.60) return { key: 'het50', sort: 3, label: '50% Het' }
-    return { key: 'other', sort: 4, label: `${Math.round(probability * 100)}% Het` }
+  if (probability >= 0.99) return { key: 'het', sort: 1, label: 'Het' }
+  if (probability >= 0.6) return { key: 'het66', sort: 2, label: '66% Het' }
+  if (probability >= 0.45 && probability < 0.6) return { key: 'het50', sort: 3, label: '50% Het' }
+  return { key: 'other', sort: 4, label: `${Math.round(probability * 100)}% Het` }
 }
 
 const calcReverseMatches = computed(() => {
-    if (!calcIsReverseMode.value || !calcChildCardKey.value || !calcKnownParentCardKey.value || !calcSanitizedSpeciesConfig.value) {
-        return [ ]
+  if (
+    !calcIsReverseMode.value ||
+    !calcChildCardKey.value ||
+    !calcKnownParentCardKey.value ||
+    !calcSanitizedSpeciesConfig.value
+  ) {
+    return []
+  }
+
+  const childGenes = getGeneListBySex(calcChildCardKey.value)
+  const knownParentGenes = getGeneListBySex(calcKnownParentCardKey.value)
+  if (!childGenes.length) return []
+
+  const relevantGeneIds = new Set([
+    ...childGenes.map((gene) => gene.geneId),
+    ...knownParentGenes.map((gene) => gene.geneId)
+  ])
+  const relevantGenes = calcCurrentDefs.value.filter((gene) => relevantGeneIds.has(gene.id))
+  const stateGroups = relevantGenes.map((geneDef) => ({
+    geneDef,
+    states: calcBuildUnknownStateOptions(geneDef, childGenes, knownParentGenes)
+  }))
+  const generatedParents = []
+
+  const buildParents = (index, currentGenes) => {
+    if (index >= stateGroups.length) {
+      generatedParents.push(currentGenes)
+      return
     }
 
-    const childGenes = getGeneListBySex(calcChildCardKey.value)
-    const knownParentGenes = getGeneListBySex(calcKnownParentCardKey.value)
-    if (!childGenes.length) return [ ]
+    const { geneDef, states } = stateGroups[index]
+    states.forEach((state) => {
+      if (!state) {
+        buildParents(index + 1, currentGenes)
+        return
+      }
 
-    const relevantGeneIds = new Set([
-        ...childGenes.map((gene) => gene.geneId),
-        ...knownParentGenes.map((gene) => gene.geneId)
-    ])
-    const relevantGenes = calcCurrentDefs.value.filter((gene) => relevantGeneIds.has(gene.id))
-    const stateGroups = relevantGenes.map((geneDef) => ({
-        geneDef,
-        states: calcBuildUnknownStateOptions(geneDef, childGenes, knownParentGenes)
-    }))
-    const generatedParents = [ ]
+      buildParents(index + 1, [...currentGenes, { geneId: geneDef.id, zygosity: state }])
+    })
+  }
 
-    const buildParents = (index, currentGenes) => {
-        if (index >= stateGroups.length) {
-            generatedParents.push(currentGenes)
-            return
-        }
+  buildParents(0, [])
 
-        const { geneDef, states } = stateGroups[index]
-        states.forEach((state) => {
-            if (!state) {
-                buildParents(index + 1, currentGenes)
-                return
-            }
+  const results = []
 
-            buildParents(index + 1, [ ...currentGenes, { geneId: geneDef.id, zygosity: state } ])
-        })
+  generatedParents.forEach((candidateGenes) => {
+    if (candidateGenes.length === 0) return
+
+    const knownParentIsMale = calcKnownParentCardKey.value === 'Male'
+    const maleGenes = knownParentIsMale ? knownParentGenes : candidateGenes
+    const femaleGenes = knownParentIsMale ? candidateGenes : knownParentGenes
+    const calcResult = calculateGenetics(
+      calcSanitizedSpeciesConfig.value,
+      JSON.parse(JSON.stringify(maleGenes)),
+      JSON.parse(JSON.stringify(femaleGenes))
+    )
+
+    if (!calcResult) return
+
+    let bestOutcome = null
+    let bestProb = 0
+
+    calcResult.outcomes.forEach((outcome) => {
+      const isExactMatch = (outcome.rawGenotypes || []).some((rawGenes) =>
+        calcDoesOutcomeMatchChild(rawGenes, childGenes)
+      )
+
+      if (isExactMatch && outcome.prob > bestProb) {
+        bestOutcome = outcome
+        bestProb = outcome.prob
+      }
+    })
+
+    if (bestOutcome) {
+      results.push({
+        genes: candidateGenes,
+        prob: bestProb,
+        label: formatGeneListSummary(candidateGenes),
+        childLabel: bestOutcome.fullLabel,
+        totalCombos: calcResult.totalCombos
+      })
     }
+  })
 
-    buildParents(0, [ ])
+  const sorted = results.sort((a, b) => b.prob - a.prob)
 
-    const results = []
+  const uniqueMatches = []
+  const seen = new Set()
 
-    generatedParents.forEach((candidateGenes) => {
-        if (candidateGenes.length === 0) return
+  sorted.forEach((match) => {
+    if (!seen.has(match.label)) {
+      seen.add(match.label)
+      uniqueMatches.push(match)
+    }
+  })
 
-        const knownParentIsMale = calcKnownParentCardKey.value === 'Male'
-        const maleGenes = knownParentIsMale ? knownParentGenes : candidateGenes
-        const femaleGenes = knownParentIsMale ? candidateGenes : knownParentGenes
-        const calcResult = calculateGenetics(
-            calcSanitizedSpeciesConfig.value,
-            JSON.parse(JSON.stringify(maleGenes)),
-            JSON.parse(JSON.stringify(femaleGenes))
-        )
-
-        if (!calcResult) return
-
-        let bestOutcome = null
-        let bestProb = 0
-
-        calcResult.outcomes.forEach((outcome) => {
-            const isExactMatch = (outcome.rawGenotypes || []).some((rawGenes) =>
-                calcDoesOutcomeMatchChild(rawGenes, childGenes)
-            )
-
-            if (isExactMatch && outcome.prob > bestProb) {
-                bestOutcome = outcome
-                bestProb = outcome.prob
-            }
-        })
-
-        if (bestOutcome) {
-            results.push({
-                genes: candidateGenes,
-                prob: bestProb,
-                label: formatGeneListSummary(candidateGenes),
-                childLabel: bestOutcome.fullLabel,
-                totalCombos: calcResult.totalCombos
-            })
-        }
-    })
-
-    const sorted = results.sort((a, b) => b.prob - a.prob)
-
-    const uniqueMatches = []
-    const seen = new Set()
-
-    sorted.forEach((match) => {
-        if (!seen.has(match.label)) {
-            seen.add(match.label)
-            uniqueMatches.push(match)
-        }
-    })
-
-    return uniqueMatches
+  return uniqueMatches
 })
 
 const calcApplyRecommendedParent = (genes) => {
-    if (!calcReverseMatchBackup.value) {
-        calcReverseMatchBackup.value = {
-            maleGenes: JSON.parse(JSON.stringify(calcMale.value)),
-            femaleGenes: JSON.parse(JSON.stringify(calcFemale.value)),
-            cardRoles: JSON.parse(JSON.stringify(calcCardRoles.value))
-        }
+  if (!calcReverseMatchBackup.value) {
+    calcReverseMatchBackup.value = {
+      maleGenes: JSON.parse(JSON.stringify(calcMale.value)),
+      femaleGenes: JSON.parse(JSON.stringify(calcFemale.value)),
+      cardRoles: JSON.parse(JSON.stringify(calcCardRoles.value))
     }
+  }
 
-    const unknownParentKey = calcKnownParentCardKey.value === 'Male' ? 'Female' : 'Male'
+  const unknownParentKey = calcKnownParentCardKey.value === 'Male' ? 'Female' : 'Male'
 
-    if (unknownParentKey === 'Male') {
-        calcMale.value = JSON.parse(JSON.stringify(genes))
-    } else {
-        calcFemale.value = JSON.parse(JSON.stringify(genes))
-    }
+  if (unknownParentKey === 'Male') {
+    calcMale.value = JSON.parse(JSON.stringify(genes))
+  } else {
+    calcFemale.value = JSON.parse(JSON.stringify(genes))
+  }
 
-    calcCardRoles.value = { Male: 'male', Female: 'female' }
+  calcCardRoles.value = { Male: 'male', Female: 'female' }
 }
 
 const calcReturnToReverse = () => {
-    if (!calcReverseMatchBackup.value) return
+  if (!calcReverseMatchBackup.value) return
 
-    calcMale.value = calcReverseMatchBackup.value.maleGenes
-    calcFemale.value = calcReverseMatchBackup.value.femaleGenes
-    calcCardRoles.value = calcReverseMatchBackup.value.cardRoles
-    calcReverseMatchBackup.value = null
+  calcMale.value = calcReverseMatchBackup.value.maleGenes
+  calcFemale.value = calcReverseMatchBackup.value.femaleGenes
+  calcCardRoles.value = calcReverseMatchBackup.value.cardRoles
+  calcReverseMatchBackup.value = null
 }
 
 const calcIsShowingRecommended = computed(() => Boolean(calcReverseMatchBackup.value))
@@ -687,290 +773,518 @@ const calcIsShowingRecommended = computed(() => Boolean(calcReverseMatchBackup.v
 const formatResultText = (text) => text || ''
 
 const formatWarningText = (text) => {
-    if (!text) return ''
-    return text.replace(/Lethal/gi, '致死').replace(/Super/gi, '超級')
+  if (!text) return ''
+  return text.replace(/Lethal/gi, '致死').replace(/Super/gi, '超級')
 }
 </script>
 
 <template>
-    <div class="calc-container">
-        
-        <div class="calc-header">
-            <h1 class="seo-hint">Gencko基因計算機</h1>
+  <div class="calc-container">
+    <div class="calc-header">
+      <h1 class="seo-hint">Gencko基因計算機</h1>
 
-            <div class="calc-species-selector">
-                <div class="calc-species-row">
-                    <div class="calc-species-group-col">
-                        <div class="calc-selector-dropdown">
-                            <button
-                                type="button"
-                                :class="['calc-selector-chip', 'calc-selector-chip--dropdown', { active: calcSpeciesGroupMenuOpen }]"
-                                @click.stop="calcToggleSpeciesGroupMenu()">
-                                <span>{{ calcCurrentSpeciesGroupLabel }}</span>
-                                <span class="calc-selector-arrow">{{ calcSpeciesGroupMenuOpen ? '▲' : '▼' }}</span>
-                            </button>
-                            <div v-if="calcSpeciesGroupMenuOpen" class="calc-selector-menu">
-                                <button
-                                    v-for="group in calcSpeciesGroups"
-                                    :key="group.id"
-                                    type="button"
-                                    :class="['calc-selector-menu-item', { active: calcSpeciesGroup === group.id }]"
-                                    @click.stop="calcSelectSpeciesGroup(group.id)">
-                                    {{ group.label }}
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="calc-species-item-col">
-                        <div class="calc-selector-dropdown">
-                            <button
-                                type="button"
-                                :class="['calc-selector-chip', 'calc-selector-chip--dropdown', 'calc-selector-chip--species', { active: calcSpeciesMenuOpen }]"
-                                @click.stop="calcToggleSpeciesMenu()">
-                                <span>{{ calcCurrentSpeciesLabel }}</span>
-                                <span class="calc-selector-arrow">{{ calcSpeciesMenuOpen ? '▲' : '▼' }}</span>
-                            </button>
-                            <div v-if="calcSpeciesMenuOpen" class="calc-selector-menu">
-                                <button
-                                    v-for="species in calcSpeciesOptions"
-                                    :key="species"
-                                    type="button"
-                                    :class="['calc-selector-menu-item', { active: calcSp === species }]"
-                                    @click.stop="calcSelectSpecies(species)">
-                                    {{ species }}
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="calc-helper-btns">
-                <div class="calc-help-btn-wrapper">
-                    <button type="button" class="calc-help-btn" @click="calcActiveInfo = 'types'; calcModalOpen = true">基因觀念</button>
-                    <button type="button" class="calc-help-btn" @click="calcActiveInfo = 'poly'; calcModalOpen = true">多遺傳說明</button>
-                </div>
-                <div class="calc-help-hint">
-                    <span class="calc-help-hint-line"><span class="calc-help-hint-text">其中一張選擇子代時為反向匹配</span></span>
-                    <span class="calc-help-hint-line"><span class="calc-help-hint-text">預期子代所需要的親代為何</span></span>
-                </div>
-            </div>
-        </div>
-
-        <div class="calc-parent-grid">
-            <div
-                v-for="parent in calcParentCards"
-                :key="parent.key"
-                class="calc-parent-card">
-                <div class="calc-p-header">
-                    <div class="calc-role-switch">
-                        <button
-                            type="button"
-                            :class="['calc-role-chip', { active: calcCardRoles[parent.key] === parent.defaultRole }]"
-                            @click="calcSetRole(parent.key, parent.defaultRole)">
-                            {{ parent.label }}
-                        </button>
-                        <button
-                            type="button"
-                            :class="['calc-role-chip', { active: calcCardRoles[parent.key] === 'child' }]"
-                            @click="calcSetRole(parent.key, 'child')">
-                            子代
-                        </button>
-                    </div>
-                </div>
-
-                <div class="calc-p-body">
-                    <div class="calc-selected-summary">{{ calcSelectedGeneSummary(parent.key) }}</div>
-
-                    <div class="calc-gene-category-panel">
-                        <div class="calc-gene-category-list">
-                            <button
-                                v-for="category in calcDisplayCategories"
-                                :key="`${parent.key}-${category.id}`"
-                                type="button"
-                                :class="['calc-category-chip', { active: calcExpandedCategories[parent.key] === category.id }]"
-                                @click="calcToggleCategory(parent.key, category.id)">
-                                {{ category.label }}
-                            </button>
-                        </div>
-                    </div>
-
-                    <div class="calc-inline-panel">
-                        <template v-for="category in calcDisplayCategories" :key="`${parent.key}-panel-${category.id}`">
-                            <div v-if="calcExpandedCategories[parent.key] === category.id" class="calc-dd-sub calc-dd-sub--inline">
-                                <div v-if="category.id === 'morph'">
-                                    <div class="calc-dd-grid">
-                                        <button
-                                            v-for="morph in calcPresetMorphs"
-                                            :key="`${parent.key}-morph-${morph.id}`"
-                                            type="button"
-                                            class="calc-dd-item"
-                                            :class="{ selected: calcMatchedMorph(parent.key)?.id === morph.id }"
-                                            @click="calcApplyMorph(parent.key, morph)">
-                                            <div class="calc-dd-item-row">
-                                                <div class="calc-dd-item-main">
-                                                    <span>{{ morph.name }}</span>
-                                                </div>
-                                            </div>
-                                        </button>
-                                    </div>
-                                </div>
-                                <div v-else-if="getFilteredGenesForCategory(category.id).filter(g => g.id !== 'normal' && g.id !== 'aft_normal').length" class="calc-dd-grid">
-                                    <button
-                                        v-for="gene in getFilteredGenesForCategory(category.id).filter(g => g.id !== 'normal' && g.id !== 'aft_normal')"
-                                        :key="gene.id"
-                                        type="button"
-                                        class="calc-dd-item"
-                                        :class="{ selected: calcIsGeneSelected(gene.id, parent.key), 'mobile-expanded': calcIsGeneExpanded(gene.id) }"
-                                        @click="calcIsGeneSelected(gene.id, parent.key) ? calcRemoveGeneById(parent.key, gene.id) : calcAddGene(gene.id, parent.key)">
-                                        <div class="calc-dd-item-row">
-                                            <div class="calc-dd-item-main">
-                                                <span>{{ gene.name }}</span>
-                                            </div>
-                                        </div>
-                                        <div
-                                            v-if="calcIsGeneSelected(gene.id, parent.key) && (gene.type === CALC_TYPES.REC || gene.type === CALC_TYPES.CODOM) && calcIsGeneExpanded(gene.id)"
-                                            class="calc-dd-flags"
-                                            @click.stop>
-                                                <button
-                                                    v-if="gene.type === CALC_TYPES.REC"
-                                                    type="button"
-                                                    :class="['calc-dd-badge', { active: getSelectedGeneEntry(parent.key, gene.id)?.zygosity === ZYG.HET }]"
-                                                    @click.stop="calcSetGeneZygosity(parent.key, gene.id, getSelectedGeneEntry(parent.key, gene.id)?.zygosity === ZYG.HET ? ZYG.VIS : ZYG.HET)">
-                                                    Het
-                                                </button>
-                                                <button
-                                                    v-else-if="gene.type === CALC_TYPES.CODOM"
-                                                    type="button"
-                                                    :class="['calc-dd-badge', { active: getSelectedGeneEntry(parent.key, gene.id)?.zygosity === ZYG.SUP }]"
-                                                    @click.stop="calcSetGeneZygosity(parent.key, gene.id, getSelectedGeneEntry(parent.key, gene.id)?.zygosity === ZYG.SUP ? ZYG.SGL : ZYG.SUP)">
-                                                    超級
-                                                </button>
-                                            </div>
-                                    </button>
-                                </div>
-                                <div v-else class="calc-inline-hint">目前此分類沒有可選基因</div>
-                            </div>
-                        </template>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div v-if="calcIsReverseMode || calcResult" class="calc-result-area">
-            <template v-if="calcIsReverseMode">
-                <div v-if="!calcChildCardKey || getGeneListBySex(calcChildCardKey).length === 0" class="calc-inline-hint calc-inline-hint--warn">
-                    請先在子代卡片中選擇至少一個基因。</div>
-
-                <div v-else-if="!calcKnownParentCardKey || getGeneListBySex(calcKnownParentCardKey).length === 0" class="calc-inline-hint calc-inline-hint--warn">
-                    請先在已知親代卡片中選擇至少一個基因。</div>
-
-                <div v-else-if="calcReverseMatches.length === 0" class="calc-inline-hint calc-inline-hint--warn">
-                    目前沒有符合條件的另一方配對結果。</div>
-
-                <div v-else class="calc-results-grouped">
-                    <h3 style="color:var(--pri); font-weight:900; margin-bottom:0;">
-                        推薦種{{ calcKnownParentCardKey === 'Male' ? '母' : '公' }}
-                    </h3>
-                    <div class="calc-res-card-grid">
-                        <div
-                            v-for="(match, idx) in calcReverseMatches"
-                            :key="`reverse-${idx}`"
-                            class="calc-reverse-card"
-                            style="cursor: pointer;"
-                            @click="calcApplyRecommendedParent(match.genes)">
-                            <div style="flex: 1;">
-                                <div style="font-size: 0.95rem; font-weight: 500; color: var(--txt); margin:0;">{{ match.label }}</div>
-                            </div>
-                            <div style="text-align: right; margin-left: 12px;">
-                                <div style="font-size: 1.4rem; font-weight: bold; color: var(--pri); margin-bottom: 4px;">{{ Math.round(match.prob * 100) }}<small style="font-size:0.8rem">%</small></div>
-                                <div style="font-size: 0.9rem; color: #666;">出現 {{ match.childLabel }}</div>
-                                <div style="font-size:0.7rem; color:#888; font-family:monospace;" v-if="match.prob < 0.99">
-                                    {{ getProbFraction(match.prob) }}
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </template>
-
-            <template v-else>
-            <div v-if="calcIsShowingRecommended" style="margin-bottom:20px;">
+      <div class="calc-species-selector">
+        <div class="calc-species-row">
+          <div class="calc-species-group-col">
+            <div class="calc-selector-dropdown">
+              <button
+                type="button"
+                :class="[
+                  'calc-selector-chip',
+                  'calc-selector-chip--dropdown',
+                  { active: calcSpeciesGroupMenuOpen }
+                ]"
+                @click.stop="calcToggleSpeciesGroupMenu()"
+              >
+                <span>{{ calcCurrentSpeciesGroupLabel }}</span>
+                <span class="calc-selector-arrow">{{ calcSpeciesGroupMenuOpen ? '▲' : '▼' }}</span>
+              </button>
+              <div v-if="calcSpeciesGroupMenuOpen" class="calc-selector-menu">
                 <button
-                    type="button"
-                    style="padding:10px 20px; background:var(--pri); color:white; border:none; border-radius:4px; cursor:pointer; font-weight:bold;"
-                    @click="calcReturnToReverse">
-                    ← 返回反向匹配
+                  v-for="group in calcSpeciesGroups"
+                  :key="group.id"
+                  type="button"
+                  :class="['calc-selector-menu-item', { active: calcSpeciesGroup === group.id }]"
+                  @click.stop="calcSelectSpeciesGroup(group.id)"
+                >
+                  {{ group.label }}
                 </button>
+              </div>
             </div>
-
-            <div v-if="calcResult.warning" class="calc-warn">
-                <div style="font-size:1.8rem; line-height:1;">⚠️</div>
-                <div style="white-space:pre-line">{{ formatWarningText(calcResult.warning) }}</div>
+          </div>
+          <div class="calc-species-item-col">
+            <div class="calc-selector-dropdown">
+              <button
+                type="button"
+                :class="[
+                  'calc-selector-chip',
+                  'calc-selector-chip--dropdown',
+                  'calc-selector-chip--species',
+                  { active: calcSpeciesMenuOpen }
+                ]"
+                @click.stop="calcToggleSpeciesMenu()"
+              >
+                <span>{{ calcCurrentSpeciesLabel }}</span>
+                <span class="calc-selector-arrow">{{ calcSpeciesMenuOpen ? '▲' : '▼' }}</span>
+              </button>
+              <div v-if="calcSpeciesMenuOpen" class="calc-selector-menu">
+                <button
+                  v-for="species in calcSpeciesOptions"
+                  :key="species"
+                  type="button"
+                  :class="['calc-selector-menu-item', { active: calcSp === species }]"
+                  @click.stop="calcSelectSpecies(species)"
+                >
+                  {{ species }}
+                </button>
+              </div>
             </div>
-
-            <div v-if="calcResult.notices && calcResult.notices.length" class="calc-notice">
-                <div style="font-size:1.8rem; line-height:1;">ℹ️</div>
-                <div>
-                    <div v-for="n in calcResult.notices" :key="n">• {{ n }}</div>
-                </div>
-            </div>
-
-            <div class="calc-results-grouped">
-                <div v-if="calcAllOutcomes.length" class="calc-res-card-grid">
-                    <div
-                        v-for="(o, idx) in calcAllOutcomes"
-                        :key="idx"
-                        :class="['calc-res-card', {lethal: o.description && o.description.includes('致死')}]">
-                        <div class="calc-prob-box">
-                            <div class="calc-prob-val">{{ Math.round(o.prob * 100) }}<small style="font-size:0.8rem">%</small></div>
-                            <div class="calc-prob-sub" style="font-size:0.75rem;color:#888;font-family:monospace;margin-top:0;" v-if="o.prob < 0.99">
-                                {{ getProbFraction(o.prob) }}
-                            </div>
-                        </div>
-                        <div class="calc-res-info" style="display:flex; align-items:center;">
-                            <div class="calc-res-name" style="margin:0; line-height:1.4;" v-html="formatResultText(o.fullLabel)"></div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            </template>
+          </div>
         </div>
+      </div>
 
-        <!-- Info Modal Overlay -->
-        <div v-if="calcModalOpen" class="lightbox-overlay" @click="calcModalOpen = false" style="justify-content:center; padding:20px;">
-            <div class="page-text-box" style="width:100%; max-width:600px; max-height:80vh; overflow-y:auto; position:relative;" @click.stop>
-                <div class="lightbox-close" @click="calcModalOpen = false" style="top:10px; right:10px; width:40px; height:40px; font-size:1.5rem;">✕</div>
-                <h2 style="color:var(--pri); margin-top:0; margin-bottom:0;">
-                    {{ calcActiveInfo === 'types' ? '基礎觀念' : '多遺傳基因與選育品系' }}
-                </h2>
-
-                <div v-if="calcActiveInfo === 'types'">
-                    <p style="color:#ff5252; font-weight:bold; border-left:4px solid #ff5252; padding-left:10px;">⚠️ 提醒： 不同物種的遺傳法則與基因交互作用（如等位基因）可能存在差異，請依據對應物種的專屬基因庫進行判讀。</p>
-                    <h4 style="color:var(--txt); border-bottom:1px solid var(--bd); padding-bottom:5px; margin-top:0;">完全顯性</h4>
-                    <p style="font-size:0.95rem; color:var(--txt); opacity:0.7;">只要遺傳到一份基因，就會在視覺上表現出來。其最大特徵是：單基因與雙基因的外觀表現完全相同，不存在進階的超級型態。</p>
-                    <h4 style="color:var(--txt); border-bottom:1px solid var(--bd); padding-bottom:5px; margin-top:0;">不完全顯性 / 共顯性</h4>
-                    <p style="font-size:0.95rem; color:var(--txt); opacity:0.7;">只要帶有一份基因就會改變外觀。若同時遺傳到兩份相同的基因，則會疊加表現出更極端的「超級」型態。</p>
-                    <h4 style="color:var(--txt); border-bottom:1px solid var(--bd); padding-bottom:5px; margin-top:0;">隱性</h4>
-                    <p style="font-size:0.95rem; color:var(--txt); opacity:0.7;">必須同時具備兩份相同的基因，才能在視覺上表現出來。若體內只有一份隱性基因，外觀會與普通原色無異，這在繁育上被稱為「帶基因 (Het)」。</p>
-                </div>
-
-                <div v-if="calcActiveInfo === 'poly'">
-                    <p style="border-left:4px solid var(--pri); padding-left:10px;">多基因特徵無法使用傳統的遺傳法則來精確計算機率。這類品系是由繁育者挑選具備特定優勢的個體，經過多代交配，將特徵「越洗越純」的結果。子代最終的表現優劣，高度取決於親代的視覺表現等級。</p>
-                    <div style="margin-top:0; background:rgba(255, 69, 0, 0.05); border: 1px solid rgba(255, 69, 0, 0.1); padding:10px; border-radius:8px;">
-                        <div style="color:var(--pri); font-weight:bold;">🟥 體色強化</div>
-                        <p style="font-size:0.9rem; margin:5px 0 0 0; color:var(--txt); opacity:0.8;">透過選育讓特定底色加深、提亮或擴大覆蓋面積。</p>
-                        <p style="font-size:0.9rem; margin:5px 0 0 0; color:var(--txt); opacity:0.8;">常見舉例：豹紋/肥尾守宮的橘化、黑夜；豬鼻蛇的極端紅、綠。</p>
-                    </div>
-                    <div style="margin-top:0; background:rgba(255, 69, 0, 0.05); border: 1px solid rgba(255, 69, 0, 0.1); padding:10px; border-radius:8px;">
-                        <div style="color:var(--pri); font-weight:bold;">🔲 紋路改造</div>
-                        <p style="font-size:0.9rem; margin:5px 0 0 0; color:var(--txt); opacity:0.8;">透過代代挑選，改變頭部、背部或尾部的斑塊排列與粗細。</p>
-                        <p style="font-size:0.9rem; margin:5px 0 0 0; color:var(--txt); opacity:0.8;">常見舉例：豹紋守宮的土匪、直線；豬鼻蛇的老虎、雙斑。</p>
-                    </div>
-                </div>
-            </div>
+      <div class="calc-helper-btns">
+        <div class="calc-help-btn-wrapper">
+          <button type="button" class="calc-help-btn" @click="openCalcInfo('types')">
+            基因觀念
+          </button>
+          <button type="button" class="calc-help-btn" @click="openCalcInfo('poly')">
+            多遺傳說明
+          </button>
         </div>
+        <div class="calc-help-hint">
+          <span class="calc-help-hint-line">
+            <span class="calc-help-hint-text">其中一張選擇子代時為反向匹配</span>
+          </span>
+          <span class="calc-help-hint-line">
+            <span class="calc-help-hint-text">預期子代所需要的親代為何</span>
+          </span>
+        </div>
+      </div>
     </div>
+
+    <div class="calc-parent-grid">
+      <div v-for="parent in calcParentCards" :key="parent.key" class="calc-parent-card">
+        <div class="calc-p-header">
+          <div class="calc-role-switch">
+            <button
+              type="button"
+              :class="[
+                'calc-role-chip',
+                { active: calcCardRoles[parent.key] === parent.defaultRole }
+              ]"
+              @click="calcSetRole(parent.key, parent.defaultRole)"
+            >
+              {{ parent.label }}
+            </button>
+            <button
+              type="button"
+              :class="['calc-role-chip', { active: calcCardRoles[parent.key] === 'child' }]"
+              @click="calcSetRole(parent.key, 'child')"
+            >
+              子代
+            </button>
+          </div>
+        </div>
+
+        <div class="calc-p-body">
+          <div class="calc-selected-summary">{{ calcSelectedGeneSummary(parent.key) }}</div>
+
+          <div class="calc-gene-category-panel">
+            <div class="calc-gene-category-list">
+              <button
+                v-for="category in calcDisplayCategories"
+                :key="`${parent.key}-${category.id}`"
+                type="button"
+                :class="[
+                  'calc-category-chip',
+                  { active: calcExpandedCategories[parent.key] === category.id }
+                ]"
+                @click="calcToggleCategory(parent.key, category.id)"
+              >
+                {{ category.label }}
+              </button>
+            </div>
+          </div>
+
+          <div class="calc-inline-panel">
+            <template
+              v-for="category in calcDisplayCategories"
+              :key="`${parent.key}-panel-${category.id}`"
+            >
+              <div
+                v-if="calcExpandedCategories[parent.key] === category.id"
+                class="calc-dd-sub calc-dd-sub--inline"
+              >
+                <div v-if="category.id === 'morph'">
+                  <div class="calc-dd-grid">
+                    <button
+                      v-for="morph in calcPresetMorphs"
+                      :key="`${parent.key}-morph-${morph.id}`"
+                      type="button"
+                      class="calc-dd-item"
+                      :class="{ selected: calcMatchedMorph(parent.key)?.id === morph.id }"
+                      @click="calcApplyMorph(parent.key, morph)"
+                    >
+                      <div class="calc-dd-item-row">
+                        <div class="calc-dd-item-main">
+                          <span>{{ morph.name }}</span>
+                        </div>
+                      </div>
+                    </button>
+                  </div>
+                </div>
+                <div
+                  v-else-if="
+                    getFilteredGenesForCategory(category.id).filter(
+                      (g) => g.id !== 'normal' && g.id !== 'aft_normal'
+                    ).length
+                  "
+                  class="calc-dd-grid"
+                >
+                  <button
+                    v-for="gene in getFilteredGenesForCategory(category.id).filter(
+                      (g) => g.id !== 'normal' && g.id !== 'aft_normal'
+                    )"
+                    :key="gene.id"
+                    type="button"
+                    class="calc-dd-item"
+                    :class="{
+                      selected: calcIsGeneSelected(gene.id, parent.key),
+                      'mobile-expanded': calcIsGeneExpanded(gene.id)
+                    }"
+                    @click="
+                      calcIsGeneSelected(gene.id, parent.key)
+                        ? calcRemoveGeneById(parent.key, gene.id)
+                        : calcAddGene(gene.id, parent.key)
+                    "
+                  >
+                    <div class="calc-dd-item-row">
+                      <div class="calc-dd-item-main">
+                        <span>{{ gene.name }}</span>
+                      </div>
+                    </div>
+                    <div
+                      v-if="
+                        calcIsGeneSelected(gene.id, parent.key) &&
+                        (gene.type === CALC_TYPES.REC || gene.type === CALC_TYPES.CODOM) &&
+                        calcIsGeneExpanded(gene.id)
+                      "
+                      class="calc-dd-flags"
+                      @click.stop
+                    >
+                      <button
+                        v-if="gene.type === CALC_TYPES.REC"
+                        type="button"
+                        :class="[
+                          'calc-dd-badge',
+                          {
+                            active: getSelectedGeneEntry(parent.key, gene.id)?.zygosity === ZYG.HET
+                          }
+                        ]"
+                        @click.stop="
+                          calcSetGeneZygosity(
+                            parent.key,
+                            gene.id,
+                            getSelectedGeneEntry(parent.key, gene.id)?.zygosity === ZYG.HET
+                              ? ZYG.VIS
+                              : ZYG.HET
+                          )
+                        "
+                      >
+                        Het
+                      </button>
+                      <button
+                        v-else-if="gene.type === CALC_TYPES.CODOM"
+                        type="button"
+                        :class="[
+                          'calc-dd-badge',
+                          {
+                            active: getSelectedGeneEntry(parent.key, gene.id)?.zygosity === ZYG.SUP
+                          }
+                        ]"
+                        @click.stop="
+                          calcSetGeneZygosity(
+                            parent.key,
+                            gene.id,
+                            getSelectedGeneEntry(parent.key, gene.id)?.zygosity === ZYG.SUP
+                              ? ZYG.SGL
+                              : ZYG.SUP
+                          )
+                        "
+                      >
+                        超級
+                      </button>
+                    </div>
+                  </button>
+                </div>
+                <div v-else class="calc-inline-hint">目前此分類沒有可選基因</div>
+              </div>
+            </template>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div v-if="calcIsReverseMode || calcResult" class="calc-result-area">
+      <template v-if="calcIsReverseMode">
+        <div
+          v-if="!calcChildCardKey || getGeneListBySex(calcChildCardKey).length === 0"
+          class="calc-inline-hint calc-inline-hint--warn"
+        >
+          請先在子代卡片中選擇至少一個基因。
+        </div>
+
+        <div
+          v-else-if="
+            !calcKnownParentCardKey || getGeneListBySex(calcKnownParentCardKey).length === 0
+          "
+          class="calc-inline-hint calc-inline-hint--warn"
+        >
+          請先在已知親代卡片中選擇至少一個基因。
+        </div>
+
+        <div
+          v-else-if="calcReverseMatches.length === 0"
+          class="calc-inline-hint calc-inline-hint--warn"
+        >
+          目前沒有符合條件的另一方配對結果。
+        </div>
+
+        <div v-else class="calc-results-grouped">
+          <h3 style="color: var(--pri); font-weight: 900; margin-bottom: 0">
+            推薦種{{ calcKnownParentCardKey === 'Male' ? '母' : '公' }}
+          </h3>
+          <div class="calc-res-card-grid">
+            <div
+              v-for="(match, idx) in calcReverseMatches"
+              :key="`reverse-${idx}`"
+              class="calc-reverse-card"
+              style="cursor: pointer"
+              @click="calcApplyRecommendedParent(match.genes)"
+            >
+              <div style="flex: 1">
+                <div style="font-size: 0.95rem; font-weight: 500; color: var(--txt); margin: 0">
+                  {{ match.label }}
+                </div>
+              </div>
+              <div style="text-align: right; margin-left: 12px">
+                <div
+                  style="
+                    font-size: 1.4rem;
+                    font-weight: bold;
+                    color: var(--pri);
+                    margin-bottom: 4px;
+                  "
+                >
+                  {{ Math.round(match.prob * 100) }}
+                  <small style="font-size: 0.8rem">%</small>
+                </div>
+                <div style="font-size: 0.9rem; color: #666">出現 {{ match.childLabel }}</div>
+                <div
+                  style="font-size: 0.7rem; color: #888; font-family: monospace"
+                  v-if="match.prob < 0.99"
+                >
+                  {{ getProbFraction(match.prob) }}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </template>
+
+      <template v-else>
+        <div v-if="calcIsShowingRecommended" style="margin-bottom: 20px">
+          <button
+            type="button"
+            style="
+              padding: 10px 20px;
+              background: var(--pri);
+              color: white;
+              border: none;
+              border-radius: 4px;
+              cursor: pointer;
+              font-weight: bold;
+            "
+            @click="calcReturnToReverse"
+          >
+            ← 返回反向匹配
+          </button>
+        </div>
+
+        <div v-if="calcResult.warning" class="calc-warn">
+          <div style="font-size: 1.8rem; line-height: 1">⚠️</div>
+          <div style="white-space: pre-line">{{ formatWarningText(calcResult.warning) }}</div>
+        </div>
+
+        <div v-if="calcResult.notices && calcResult.notices.length" class="calc-notice">
+          <div style="font-size: 1.8rem; line-height: 1">ℹ️</div>
+          <div>
+            <div v-for="n in calcResult.notices" :key="n">• {{ n }}</div>
+          </div>
+        </div>
+
+        <div class="calc-results-grouped">
+          <div v-if="calcAllOutcomes.length" class="calc-res-card-grid">
+            <div
+              v-for="(o, idx) in calcAllOutcomes"
+              :key="idx"
+              :class="[
+                'calc-res-card',
+                { lethal: o.description && o.description.includes('致死') }
+              ]"
+            >
+              <div class="calc-prob-box">
+                <div class="calc-prob-val">
+                  {{ Math.round(o.prob * 100) }}
+                  <small style="font-size: 0.8rem">%</small>
+                </div>
+                <div
+                  class="calc-prob-sub"
+                  style="font-size: 0.75rem; color: #888; font-family: monospace; margin-top: 0"
+                  v-if="o.prob < 0.99"
+                >
+                  {{ getProbFraction(o.prob) }}
+                </div>
+              </div>
+              <div class="calc-res-info" style="display: flex; align-items: center">
+                <div
+                  class="calc-res-name"
+                  style="margin: 0; line-height: 1.4"
+                  v-html="formatResultText(o.fullLabel)"
+                ></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </template>
+    </div>
+
+    <!-- Info Modal Overlay -->
+    <div
+      v-if="calcModalOpen"
+      class="lightbox-overlay"
+      @click="calcModalOpen = false"
+      style="justify-content: center; padding: 20px"
+    >
+      <div
+        class="page-text-box"
+        style="
+          width: 100%;
+          max-width: 600px;
+          max-height: 80vh;
+          overflow-y: auto;
+          position: relative;
+        "
+        @click.stop
+      >
+        <div
+          class="lightbox-close"
+          @click="calcModalOpen = false"
+          style="top: 10px; right: 10px; width: 40px; height: 40px; font-size: 1.5rem"
+        >
+          ✕
+        </div>
+        <h2 style="color: var(--pri); margin-top: 0; margin-bottom: 0">
+          {{ calcActiveInfo === 'types' ? '基礎觀念' : '多遺傳基因與選育品系' }}
+        </h2>
+
+        <div v-if="calcActiveInfo === 'types'">
+          <p
+            style="
+              color: #ff5252;
+              font-weight: bold;
+              border-left: 4px solid #ff5252;
+              padding-left: 10px;
+            "
+          >
+            ⚠️ 提醒：
+            不同物種的遺傳法則與基因交互作用（如等位基因）可能存在差異，請依據對應物種的專屬基因庫進行判讀。
+          </p>
+          <h4
+            style="
+              color: var(--txt);
+              border-bottom: 1px solid var(--bd);
+              padding-bottom: 5px;
+              margin-top: 0;
+            "
+          >
+            完全顯性
+          </h4>
+          <p style="font-size: 0.95rem; color: var(--txt); opacity: 0.7">
+            只要遺傳到一份基因，就會在視覺上表現出來。其最大特徵是：單基因與雙基因的外觀表現完全相同，不存在進階的超級型態。
+          </p>
+          <h4
+            style="
+              color: var(--txt);
+              border-bottom: 1px solid var(--bd);
+              padding-bottom: 5px;
+              margin-top: 0;
+            "
+          >
+            不完全顯性 / 共顯性
+          </h4>
+          <p style="font-size: 0.95rem; color: var(--txt); opacity: 0.7">
+            只要帶有一份基因就會改變外觀。若同時遺傳到兩份相同的基因，則會疊加表現出更極端的「超級」型態。
+          </p>
+          <h4
+            style="
+              color: var(--txt);
+              border-bottom: 1px solid var(--bd);
+              padding-bottom: 5px;
+              margin-top: 0;
+            "
+          >
+            隱性
+          </h4>
+          <p style="font-size: 0.95rem; color: var(--txt); opacity: 0.7">
+            必須同時具備兩份相同的基因，才能在視覺上表現出來。若體內只有一份隱性基因，外觀會與普通原色無異，這在繁育上被稱為「帶基因
+            (Het)」。
+          </p>
+        </div>
+
+        <div v-if="calcActiveInfo === 'poly'">
+          <p style="border-left: 4px solid var(--pri); padding-left: 10px">
+            多基因特徵無法使用傳統的遺傳法則來精確計算機率。這類品系是由繁育者挑選具備特定優勢的個體，經過多代交配，將特徵「越洗越純」的結果。子代最終的表現優劣，高度取決於親代的視覺表現等級。
+          </p>
+          <div
+            style="
+              margin-top: 0;
+              background: rgba(255, 69, 0, 0.05);
+              border: 1px solid rgba(255, 69, 0, 0.1);
+              padding: 10px;
+              border-radius: 8px;
+            "
+          >
+            <div style="color: var(--pri); font-weight: bold">🟥 體色強化</div>
+            <p style="font-size: 0.9rem; margin: 5px 0 0 0; color: var(--txt); opacity: 0.8">
+              透過選育讓特定底色加深、提亮或擴大覆蓋面積。
+            </p>
+            <p style="font-size: 0.9rem; margin: 5px 0 0 0; color: var(--txt); opacity: 0.8">
+              常見舉例：豹紋/肥尾守宮的橘化、黑夜；豬鼻蛇的極端紅、綠。
+            </p>
+          </div>
+          <div
+            style="
+              margin-top: 0;
+              background: rgba(255, 69, 0, 0.05);
+              border: 1px solid rgba(255, 69, 0, 0.1);
+              padding: 10px;
+              border-radius: 8px;
+            "
+          >
+            <div style="color: var(--pri); font-weight: bold">🔲 紋路改造</div>
+            <p style="font-size: 0.9rem; margin: 5px 0 0 0; color: var(--txt); opacity: 0.8">
+              透過代代挑選，改變頭部、背部或尾部的斑塊排列與粗細。
+            </p>
+            <p style="font-size: 0.9rem; margin: 5px 0 0 0; color: var(--txt); opacity: 0.8">
+              常見舉例：豹紋守宮的土匪、直線；豬鼻蛇的老虎、雙斑。
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 </template>
 
 <style scoped>
@@ -978,602 +1292,1320 @@ const formatWarningText = (text) => {
   計算機頁面樣式
   顏色盡量沿用全站 CSS 變數，避免直接寫死色碼。
 */
-.calc-container { max-width: 1100px; margin: 0 auto; position: relative; padding-top: 15px; }
+.calc-container {
+  max-width: 1100px;
+  margin: 0 auto;
+  position: relative;
+  padding-top: 15px;
+}
 
-.calc-header { text-align: center; margin-bottom: 0; }
+.calc-header {
+  text-align: center;
+  margin-bottom: 0;
+}
 /* h1 重設：visually 與舊版 div 完全一致（無 margin、繼承字級顏色，由外層 .calc-top-desc 等決定樣式） */
 .seo-hint {
-    margin: 0;
-    padding: 0;
-    font-size: inherit;
-    font-weight: inherit;
-    line-height: inherit;
-    color: inherit;
-    text-align: inherit;
-    letter-spacing: inherit;
+  margin: 0;
+  padding: 0;
+  font-size: inherit;
+  font-weight: inherit;
+  line-height: inherit;
+  color: inherit;
+  text-align: inherit;
+  letter-spacing: inherit;
 }
-.calc-top-desc { text-align: center; color: var(--pri); font-weight: 700; margin-bottom: 0; font-size: 0.95rem; letter-spacing: 1px; }
-.calc-sub-desc { text-align: center; color: var(--txt); opacity: 0.6; font-size: 0.85rem; margin-bottom: 0; }
+.calc-top-desc {
+  text-align: center;
+  color: var(--pri);
+  font-weight: 700;
+  margin-bottom: 0;
+  font-size: 0.95rem;
+  letter-spacing: 1px;
+}
+.calc-sub-desc {
+  text-align: center;
+  color: var(--txt);
+  opacity: 0.6;
+  font-size: 0.85rem;
+  margin-bottom: 0;
+}
 
-.calc-species-selector { display: flex; flex-direction: column; gap: 12px; margin: 20px 0 16px; }
-.calc-species-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; align-items: start; }
+.calc-species-selector {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 20px 0 16px;
+}
+.calc-species-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  align-items: start;
+}
 .calc-species-group-col,
-.calc-species-item-col { min-width: 0; display: flex; justify-content: flex-start; }
-.calc-selector-dropdown { position: relative; width: 100%; }
-.calc-selector-chip { padding: 10px 16px; border-radius: 999px; border: 1px solid var(--bd); background: var(--card-bg); color: var(--txt); font-weight: 700; font-size: 0.9rem; font-family: inherit; cursor: pointer; transition: 0.2s; margin: 0; }
-.calc-selector-chip:hover { border-color: var(--pri); color: var(--pri); }
-.calc-selector-chip.active { background: var(--pri); border-color: var(--pri); color: #fff; box-shadow: 0 6px 16px rgba(255, 69, 0, 0.18); }
-.calc-selector-chip--species { min-width: 110px; }
-.calc-selector-chip--dropdown { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 12px; text-align: left; }
-.calc-selector-arrow { flex-shrink: 0; font-size: 0.7rem; }
-.calc-selector-menu { position: absolute; top: calc(100% + 8px); left: 0; right: 0; z-index: 40; display: flex; flex-direction: column; gap: 6px; padding: 8px; border: 1px solid var(--bd); border-radius: 14px; background: var(--card-bg); box-shadow: 0 14px 32px rgba(0,0,0,0.12); }
-.calc-selector-menu-item { width: 100%; padding: 9px 12px; border: 1px solid transparent; border-radius: 10px; background: transparent; color: var(--txt); font-size: 0.85rem; font-family: inherit; text-align: left; cursor: pointer; transition: 0.2s; }
-.calc-selector-menu-item:hover { border-color: var(--pri); color: var(--pri); background: rgba(255, 69, 0, 0.05); }
-.calc-selector-menu-item.active { border-color: var(--pri); color: var(--pri); background: rgba(255, 69, 0, 0.08); }
-
-.calc-helper-btns { display: flex; justify-content: space-between; gap: 20px; flex-wrap: wrap; margin: 0; align-items: center; }
-.calc-help-btn-wrapper { display: flex; gap: 8px; align-items: center; }
-.calc-help-btn { display: flex; align-items: center; gap: 4px; padding: 5px 12px; border-radius: 20px; border: 1px dashed var(--bd); font-size: 0.85rem; color: var(--txt); opacity: 0.7; cursor: pointer; transition: 0.2s; background: var(--card-bg); font-family: inherit; line-height: 1.4; margin: 0; white-space: nowrap; }
-.calc-help-hint { font-size: 0.85rem; color: var(--txt); opacity: 0.85; font-weight: 500; text-align: right; }
-.calc-help-hint-line { display: inline; }
-.calc-help-hint-line + .calc-help-hint-line::before { content: '，'; }
-.calc-help-btn:hover { border-color: var(--pri); color: var(--pri); opacity: 1; background: rgba(255, 69, 0, 0.05); }
-
-.calc-parent-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 15px; margin-bottom: 0; }
-.calc-parent-card { min-width: 0; max-width: 100%; background: var(--card-bg); border: 1px solid var(--bd); border-radius: 10px; display: flex; flex-direction: column; overflow: visible; border-top: 3px solid var(--pri); transition: 0.3s; box-shadow: 0 5px 20px rgba(0,0,0,0.1); }
-.calc-parent-card:hover { transform: translateY(-3px); }
-
-.calc-p-header { padding: 12px; display: flex; align-items: center; justify-content: center; border-bottom: 1px solid var(--bd); }
-.calc-role-switch { width: 100%; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
-.calc-role-chip { width: 100%; padding: 8px 10px; border-radius: 999px; border: 1px solid var(--bd); background: var(--card-bg); color: var(--txt); font-size: 0.8rem; font-family: inherit; cursor: pointer; transition: 0.2s; }
-.calc-role-chip.active { background: var(--pri); border-color: var(--pri); color: #fff; }
-
-.calc-p-body { padding: 12px; flex: 1; display: flex; flex-direction: column; gap: 12px; }
-.calc-selected-summary { min-height: 44px; padding: 10px 12px; border-radius: 8px; background: rgba(255, 69, 0, 0.06); border: 1px solid rgba(255, 69, 0, 0.14); color: var(--txt); font-size: 0.85rem; line-height: 1.55; }
-.calc-morph-list { display: flex; flex-wrap: wrap; gap: 8px; }
-.calc-morph-chip { padding: 8px 10px; border-radius: 999px; border: 1px solid var(--bd); background: var(--card-bg); color: var(--txt); font-size: 0.76rem; white-space: nowrap; font-family: inherit; cursor: pointer; transition: 0.2s; }
-.calc-morph-chip:hover { border-color: var(--pri); color: var(--pri); }
-.calc-morph-chip.active { background: var(--pri); border-color: var(--pri); color: #fff; box-shadow: 0 6px 16px rgba(255, 69, 0, 0.18); }
-.calc-gene-category-panel { display: flex; flex-direction: column; gap: 6px; }
-.calc-gene-category-list { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
-.calc-category-chip { width: 100%; padding: 8px 10px; border-radius: 999px; border: 1px solid var(--bd); background: var(--card-bg); color: var(--txt); font-size: 0.76rem; white-space: nowrap; font-family: inherit; cursor: pointer; transition: 0.2s; overflow: hidden; text-overflow: ellipsis; }
-.calc-category-chip:hover { border-color: var(--pri); color: var(--pri); }
-.calc-category-chip.active { background: var(--pri); border-color: var(--pri); color: #fff; box-shadow: 0 6px 16px rgba(255, 69, 0, 0.18); }
-.calc-inline-hint { padding: 8px 10px; border-radius: 8px; background: rgba(33, 150, 243, 0.08); border: 1px solid rgba(33, 150, 243, 0.18); color: var(--txt); font-size: 0.8rem; line-height: 1.5; }
-.calc-inline-hint--warn { background: rgba(255, 193, 7, 0.08); border-color: rgba(255, 193, 7, 0.28); }
-.calc-inline-panel { border: 1px solid var(--bd); border-radius: 8px; overflow: hidden; background: var(--card-bg); }
-.calc-dd-sub--inline { padding: 8px; }
-
-.calc-dropdown-container { position: relative; z-index: 20; width: 100%; max-width: 100%; }
-.calc-add-btn { width: 100%; max-width: 100%; box-sizing: border-box; padding: 10px; border: 1px solid var(--bd); border-radius: 8px; background: var(--card-bg); color: var(--txt); font-weight: bold; font-size: 0.85rem; cursor: pointer; display: flex; justify-content: space-between; align-items: center; transition: 0.2s; white-space: nowrap; overflow: hidden; opacity: 0.8; }
-.calc-add-btn span:first-child { overflow: hidden; text-overflow: ellipsis; padding-right: 5px; }
-@media (hover: hover) {
-    .calc-add-btn:hover { border-color: var(--pri); color: var(--pri); opacity: 1; box-shadow: 0 0 10px rgba(255,69,0,0.1); }
+.calc-species-item-col {
+  min-width: 0;
+  display: flex;
+  justify-content: flex-start;
 }
-.calc-add-btn.open { border-color: var(--pri); color: var(--pri); opacity: 1; box-shadow: 0 0 10px rgba(255,69,0,0.1); }
-.calc-dropdown-menu { position: absolute; top: 100%; left: 0; width: 100%; box-sizing: border-box; background: var(--card-bg); border: 1px solid var(--bd); border-radius: 8px; box-shadow: 0 10px 40px rgba(0,0,0,0.2); z-index: 100; max-height: 250px; overflow-y: auto; overflow-x: hidden; margin-top: 0; }
-.calc-dd-group-btn { width: 100%; padding: 10px 12px; text-align: left; background: transparent; border: none; border-bottom: 1px solid var(--bd); color: var(--txt); opacity: 0.9; font-weight: bold; font-size: 0.85rem; cursor: pointer; display: flex; justify-content: space-between; align-items: center; box-sizing: border-box; transition: 0.2s; }
-@media (hover: hover) {
-    .calc-dd-group-btn:hover { background: rgba(255, 69, 0, 0.05); color: var(--pri); opacity: 1; }
+.calc-selector-dropdown {
+  position: relative;
+  width: 100%;
 }
-.calc-dd-group-btn.active { background: rgba(255, 69, 0, 0.05); color: var(--pri); opacity: 1; }
-
-.calc-dd-sub { background: rgba(128, 128, 128, 0.05); border-bottom: 1px solid var(--bd); width: 100%; box-sizing: border-box; }
-.calc-dd-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
-.calc-dd-item { width: 100%; min-width: 0; padding: 10px; text-align: left; background: transparent; border: 1px solid var(--bd); border-radius: 10px; color: var(--txt); opacity: 0.95; font-size: 0.78rem; cursor: pointer; display: flex; box-sizing: border-box; line-height: 1.25; transition: 0.2s; }
-@media (hover: hover) {
-    .calc-dd-item:hover { color: var(--pri); opacity: 1; border-color: var(--pri); background: rgba(255, 69, 0, 0.05); }
+.calc-selector-chip {
+  padding: 10px 16px;
+  border-radius: 999px;
+  border: 1px solid var(--bd);
+  background: var(--card-bg);
+  color: var(--txt);
+  font-weight: 700;
+  font-size: 0.9rem;
+  font-family: inherit;
+  cursor: pointer;
+  transition: 0.2s;
+  margin: 0;
 }
-.calc-dd-item.selected { border-color: var(--pri); background: rgba(255, 69, 0, 0.06); }
-.calc-dd-item.expanded { border-color: var(--pri); background: rgba(255, 69, 0, 0.08); }
-.calc-dd-item-row { min-width: 0; width: 100%; display: flex; align-items: center; gap: 4px; }
-.calc-dd-item-main { min-width: 0; display: flex; flex: 1; overflow: hidden; }
-.calc-dd-item-main > span:first-child { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.calc-dd-flags { display: flex; justify-content: flex-end; margin-top: 0; width: 100%; }
-.calc-dd-badge { padding: 4px 8px; border-radius: 999px; border: 1px solid var(--bd); font-size: 0.68rem; line-height: 1; color: var(--txt); background: var(--card-bg); cursor: pointer; font-family: inherit; transition: 0.2s; }
-.calc-dd-badge:hover { border-color: var(--pri); color: var(--pri); }
-.calc-dd-badge.active { border-color: var(--pri); color: var(--pri); background: rgba(255, 69, 0, 0.08); }
-.calc-dd-combo-group { padding: 8px 15px; font-size: 0.8rem; font-weight: bold; color: var(--txt); opacity: 0.7; display: flex; align-items: center; gap: 5px; cursor: pointer; border-bottom: 1px solid var(--bd); width: 100%; box-sizing: border-box; transition: 0.2s; }
-.calc-dd-combo-group:hover { color: var(--pri); opacity: 1; background: rgba(255, 69, 0, 0.05); }
+.calc-selector-chip:hover {
+  border-color: var(--pri);
+  color: var(--pri);
+}
+.calc-selector-chip.active {
+  background: var(--pri);
+  border-color: var(--pri);
+  color: #fff;
+  box-shadow: 0 6px 16px rgba(255, 69, 0, 0.18);
+}
+.calc-selector-chip--species {
+  min-width: 110px;
+}
+.calc-selector-chip--dropdown {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  text-align: left;
+}
+.calc-selector-arrow {
+  flex-shrink: 0;
+  font-size: 0.7rem;
+}
+.calc-selector-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  right: 0;
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px;
+  border: 1px solid var(--bd);
+  border-radius: 14px;
+  background: var(--card-bg);
+  box-shadow: 0 14px 32px rgba(0, 0, 0, 0.12);
+}
+.calc-selector-menu-item {
+  width: 100%;
+  padding: 9px 12px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--txt);
+  font-size: 0.85rem;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: 0.2s;
+}
+.calc-selector-menu-item:hover {
+  border-color: var(--pri);
+  color: var(--pri);
+  background: rgba(255, 69, 0, 0.05);
+}
+.calc-selector-menu-item.active {
+  border-color: var(--pri);
+  color: var(--pri);
+  background: rgba(255, 69, 0, 0.08);
+}
 
-.calc-tag.super { background: rgba(156, 39, 176, 0.1); color: #ce93d8; border-color: rgba(156, 39, 176, 0.4); font-weight: bold; }
-.calc-tag.het { font-size: 0.75rem; }
+.calc-helper-btns {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  flex-wrap: wrap;
+  margin: 0;
+  align-items: center;
+}
+.calc-help-btn-wrapper {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.calc-help-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 12px;
+  border-radius: 20px;
+  border: 1px dashed var(--bd);
+  font-size: 0.85rem;
+  color: var(--txt);
+  opacity: 0.7;
+  cursor: pointer;
+  transition: 0.2s;
+  background: var(--card-bg);
+  font-family: inherit;
+  line-height: 1.4;
+  margin: 0;
+  white-space: nowrap;
+}
+.calc-help-hint {
+  font-size: 0.85rem;
+  color: var(--txt);
+  opacity: 0.85;
+  font-weight: 500;
+  text-align: right;
+}
+.calc-help-hint-line {
+  display: inline;
+}
+.calc-help-hint-line + .calc-help-hint-line::before {
+  content: '，';
+}
+.calc-help-btn:hover {
+  border-color: var(--pri);
+  color: var(--pri);
+  opacity: 1;
+  background: rgba(255, 69, 0, 0.05);
+}
 
-.calc-result-area { margin-top: 0; animation: fadeUp 0.5s ease; padding-bottom: 40px; }
+.calc-parent-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 15px;
+  margin-bottom: 0;
+}
+.calc-parent-card {
+  min-width: 0;
+  max-width: 100%;
+  background: var(--card-bg);
+  border: 1px solid var(--bd);
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  overflow: visible;
+  border-top: 3px solid var(--pri);
+  transition: 0.3s;
+  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
+}
+.calc-parent-card:hover {
+  transform: translateY(-3px);
+}
+
+.calc-p-header {
+  padding: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-bottom: 1px solid var(--bd);
+}
+.calc-role-switch {
+  width: 100%;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+.calc-role-chip {
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--bd);
+  background: var(--card-bg);
+  color: var(--txt);
+  font-size: 0.8rem;
+  font-family: inherit;
+  cursor: pointer;
+  transition: 0.2s;
+}
+.calc-role-chip.active {
+  background: var(--pri);
+  border-color: var(--pri);
+  color: #fff;
+}
+
+.calc-p-body {
+  padding: 12px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.calc-selected-summary {
+  min-height: 44px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: rgba(255, 69, 0, 0.06);
+  border: 1px solid rgba(255, 69, 0, 0.14);
+  color: var(--txt);
+  font-size: 0.85rem;
+  line-height: 1.55;
+}
+.calc-morph-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.calc-morph-chip {
+  padding: 8px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--bd);
+  background: var(--card-bg);
+  color: var(--txt);
+  font-size: 0.76rem;
+  white-space: nowrap;
+  font-family: inherit;
+  cursor: pointer;
+  transition: 0.2s;
+}
+.calc-morph-chip:hover {
+  border-color: var(--pri);
+  color: var(--pri);
+}
+.calc-morph-chip.active {
+  background: var(--pri);
+  border-color: var(--pri);
+  color: #fff;
+  box-shadow: 0 6px 16px rgba(255, 69, 0, 0.18);
+}
+.calc-gene-category-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.calc-gene-category-list {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+.calc-category-chip {
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--bd);
+  background: var(--card-bg);
+  color: var(--txt);
+  font-size: 0.76rem;
+  white-space: nowrap;
+  font-family: inherit;
+  cursor: pointer;
+  transition: 0.2s;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.calc-category-chip:hover {
+  border-color: var(--pri);
+  color: var(--pri);
+}
+.calc-category-chip.active {
+  background: var(--pri);
+  border-color: var(--pri);
+  color: #fff;
+  box-shadow: 0 6px 16px rgba(255, 69, 0, 0.18);
+}
+.calc-inline-hint {
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: rgba(33, 150, 243, 0.08);
+  border: 1px solid rgba(33, 150, 243, 0.18);
+  color: var(--txt);
+  font-size: 0.8rem;
+  line-height: 1.5;
+}
+.calc-inline-hint--warn {
+  background: rgba(255, 193, 7, 0.08);
+  border-color: rgba(255, 193, 7, 0.28);
+}
+.calc-inline-panel {
+  border: 1px solid var(--bd);
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--card-bg);
+}
+.calc-dd-sub--inline {
+  padding: 8px;
+}
+
+.calc-dropdown-container {
+  position: relative;
+  z-index: 20;
+  width: 100%;
+  max-width: 100%;
+}
+.calc-add-btn {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  padding: 10px;
+  border: 1px solid var(--bd);
+  border-radius: 8px;
+  background: var(--card-bg);
+  color: var(--txt);
+  font-weight: bold;
+  font-size: 0.85rem;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: 0.2s;
+  white-space: nowrap;
+  overflow: hidden;
+  opacity: 0.8;
+}
+.calc-add-btn span:first-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding-right: 5px;
+}
+@media (hover: hover) {
+  .calc-add-btn:hover {
+    border-color: var(--pri);
+    color: var(--pri);
+    opacity: 1;
+    box-shadow: 0 0 10px rgba(255, 69, 0, 0.1);
+  }
+}
+.calc-add-btn.open {
+  border-color: var(--pri);
+  color: var(--pri);
+  opacity: 1;
+  box-shadow: 0 0 10px rgba(255, 69, 0, 0.1);
+}
+.calc-dropdown-menu {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  width: 100%;
+  box-sizing: border-box;
+  background: var(--card-bg);
+  border: 1px solid var(--bd);
+  border-radius: 8px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+  z-index: 100;
+  max-height: 250px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  margin-top: 0;
+}
+.calc-dd-group-btn {
+  width: 100%;
+  padding: 10px 12px;
+  text-align: left;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--bd);
+  color: var(--txt);
+  opacity: 0.9;
+  font-weight: bold;
+  font-size: 0.85rem;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-sizing: border-box;
+  transition: 0.2s;
+}
+@media (hover: hover) {
+  .calc-dd-group-btn:hover {
+    background: rgba(255, 69, 0, 0.05);
+    color: var(--pri);
+    opacity: 1;
+  }
+}
+.calc-dd-group-btn.active {
+  background: rgba(255, 69, 0, 0.05);
+  color: var(--pri);
+  opacity: 1;
+}
+
+.calc-dd-sub {
+  background: rgba(128, 128, 128, 0.05);
+  border-bottom: 1px solid var(--bd);
+  width: 100%;
+  box-sizing: border-box;
+}
+.calc-dd-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+.calc-dd-item {
+  width: 100%;
+  min-width: 0;
+  padding: 10px;
+  text-align: left;
+  background: transparent;
+  border: 1px solid var(--bd);
+  border-radius: 10px;
+  color: var(--txt);
+  opacity: 0.95;
+  font-size: 0.78rem;
+  cursor: pointer;
+  display: flex;
+  box-sizing: border-box;
+  line-height: 1.25;
+  transition: 0.2s;
+}
+@media (hover: hover) {
+  .calc-dd-item:hover {
+    color: var(--pri);
+    opacity: 1;
+    border-color: var(--pri);
+    background: rgba(255, 69, 0, 0.05);
+  }
+}
+.calc-dd-item.selected {
+  border-color: var(--pri);
+  background: rgba(255, 69, 0, 0.06);
+}
+.calc-dd-item.expanded {
+  border-color: var(--pri);
+  background: rgba(255, 69, 0, 0.08);
+}
+.calc-dd-item-row {
+  min-width: 0;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.calc-dd-item-main {
+  min-width: 0;
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+.calc-dd-item-main > span:first-child {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.calc-dd-flags {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 0;
+  width: 100%;
+}
+.calc-dd-badge {
+  padding: 4px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--bd);
+  font-size: 0.68rem;
+  line-height: 1;
+  color: var(--txt);
+  background: var(--card-bg);
+  cursor: pointer;
+  font-family: inherit;
+  transition: 0.2s;
+}
+.calc-dd-badge:hover {
+  border-color: var(--pri);
+  color: var(--pri);
+}
+.calc-dd-badge.active {
+  border-color: var(--pri);
+  color: var(--pri);
+  background: rgba(255, 69, 0, 0.08);
+}
+.calc-dd-combo-group {
+  padding: 8px 15px;
+  font-size: 0.8rem;
+  font-weight: bold;
+  color: var(--txt);
+  opacity: 0.7;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  cursor: pointer;
+  border-bottom: 1px solid var(--bd);
+  width: 100%;
+  box-sizing: border-box;
+  transition: 0.2s;
+}
+.calc-dd-combo-group:hover {
+  color: var(--pri);
+  opacity: 1;
+  background: rgba(255, 69, 0, 0.05);
+}
+
+.calc-tag.super {
+  background: rgba(156, 39, 176, 0.1);
+  color: #ce93d8;
+  border-color: rgba(156, 39, 176, 0.4);
+  font-weight: bold;
+}
+.calc-tag.het {
+  font-size: 0.75rem;
+}
+
+.calc-result-area {
+  margin-top: 0;
+  animation: fadeUp 0.5s ease;
+  padding-bottom: 40px;
+}
 /* 結果提示 */
-.calc-warn, .calc-notice {
-    padding: 15px; 
-    border-radius: 6px; 
-    margin-bottom: 15px; 
-    border-left: 5px solid; 
-    display: flex; 
-    gap: 12px;
-    align-items: center;
-    font-weight: bold;
-    line-height: 1.5;
-    color: var(--txt);
+.calc-warn,
+.calc-notice {
+  padding: 15px;
+  border-radius: 6px;
+  margin-bottom: 15px;
+  border-left: 5px solid;
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  font-weight: bold;
+  line-height: 1.5;
+  color: var(--txt);
 }
 
-.calc-warn { 
-    background: rgba(244, 67, 54, 0.1); 
-    border-color: #f44336; 
+.calc-warn {
+  background: rgba(244, 67, 54, 0.1);
+  border-color: #f44336;
 }
 
-.calc-notice { 
-    background: rgba(255, 193, 7, 0.1); 
-    border-color: #ffc107; 
+.calc-notice {
+  background: rgba(255, 193, 7, 0.1);
+  border-color: #ffc107;
 }
 
-.calc-res-card { background: var(--card-bg); border: 1px solid var(--bd); border-radius: 8px; margin-bottom: 0; display: flex; overflow: visible; transition: 0.3s; position: relative; }
-.calc-res-card::after { content: ''; position: absolute; bottom: 0; right: 0; width: 0; height: 0; border-left: 15px solid transparent; border-top: 15px solid transparent; border-right: 15px solid var(--pri); border-bottom: 15px solid var(--pri); border-radius: 0 0 8px 0; }
-.calc-reverse-card { background: var(--card-bg); border: 1px solid var(--bd); border-radius: 8px; margin-bottom: 0; display: flex; overflow: visible; align-items: center; justify-content: space-between; padding: 12px; transition: 0.3s; position: relative; }
-.calc-reverse-card::after { content: ''; position: absolute; bottom: 0; right: 0; width: 0; height: 0; border-left: 15px solid transparent; border-top: 15px solid transparent; border-right: 15px solid var(--pri); border-bottom: 15px solid var(--pri); border-radius: 0 0 8px 0; }
-.calc-res-card:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(0,0,0,0.1); border-color: var(--pri); }
-.calc-res-card.lethal { border-top-color: #f44336; background: rgba(244,67,54,0.05); }
-.calc-prob-box { width: 90px; background: rgba(128,128,128,0.05); display: flex; flex-direction: column; align-items: center; justify-content: center; border-right: 1px solid var(--bd); flex-shrink: 0; padding: 8px; }
-.calc-prob-val { font-size: 1.4rem; font-weight: 900; color: var(--pri); line-height: 1; }
-.calc-res-card.lethal .calc-prob-val { color: #f44336; }
-.calc-res-info { padding: 12px; flex: 1; }
-.calc-res-name { font-size: 1rem; font-weight: bold; margin-bottom: 0; color: var(--txt); word-break: break-word; }
-.calc-reverse-tier { font-size: 0.8rem; color: var(--txt); opacity: 0.65; }
+.calc-res-card {
+  background: var(--card-bg);
+  border: 1px solid var(--bd);
+  border-radius: 8px;
+  margin-bottom: 0;
+  display: flex;
+  overflow: visible;
+  transition: 0.3s;
+  position: relative;
+}
+.calc-res-card::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 0;
+  height: 0;
+  border-left: 15px solid transparent;
+  border-top: 15px solid transparent;
+  border-right: 15px solid var(--pri);
+  border-bottom: 15px solid var(--pri);
+  border-radius: 0 0 8px 0;
+}
+.calc-reverse-card {
+  background: var(--card-bg);
+  border: 1px solid var(--bd);
+  border-radius: 8px;
+  margin-bottom: 0;
+  display: flex;
+  overflow: visible;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px;
+  transition: 0.3s;
+  position: relative;
+}
+.calc-reverse-card::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 0;
+  height: 0;
+  border-left: 15px solid transparent;
+  border-top: 15px solid transparent;
+  border-right: 15px solid var(--pri);
+  border-bottom: 15px solid var(--pri);
+  border-radius: 0 0 8px 0;
+}
+.calc-res-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+  border-color: var(--pri);
+}
+.calc-res-card.lethal {
+  border-top-color: #f44336;
+  background: rgba(244, 67, 54, 0.05);
+}
+.calc-prob-box {
+  width: 90px;
+  background: rgba(128, 128, 128, 0.05);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border-right: 1px solid var(--bd);
+  flex-shrink: 0;
+  padding: 8px;
+}
+.calc-prob-val {
+  font-size: 1.4rem;
+  font-weight: 900;
+  color: var(--pri);
+  line-height: 1;
+}
+.calc-res-card.lethal .calc-prob-val {
+  color: #f44336;
+}
+.calc-res-info {
+  padding: 12px;
+  flex: 1;
+}
+.calc-res-name {
+  font-size: 1rem;
+  font-weight: bold;
+  margin-bottom: 0;
+  color: var(--txt);
+  word-break: break-word;
+}
+.calc-reverse-tier {
+  font-size: 0.8rem;
+  color: var(--txt);
+  opacity: 0.65;
+}
 
 /* Mobile View Overrides */
 @media (max-width: 768px) {
-    .calc-container { padding-top: 0 !important; margin-top: -10px; }
-    .calc-header { margin-bottom: 0 !important; }
-    .calc-top-desc { font-size: 0.95rem; margin-bottom: 0; }
-    .calc-sub-desc { font-size: 0.75rem; margin-bottom: 0; opacity: 0.8; line-height: 1.2; }
-    
-    .calc-species-row { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
-    .calc-selector-chip { font-size: 0.8rem; padding: 8px 12px; }
-    .calc-selector-menu { padding: 6px; border-radius: 12px; }
-    .calc-selector-menu-item { font-size: 0.8rem; padding: 8px 10px; }
-    
-    .calc-helper-btns { display: flex; width: 100%; gap: 10px; margin-bottom: 0; padding: 0 2px; align-items: center; flex-wrap: nowrap; }
-    .calc-help-btn-wrapper { display: flex; flex-direction: column; gap: 6px; flex-shrink: 0; }
-    .calc-help-btn { display: flex; align-items: center; justify-content: center; text-align: center; white-space: nowrap; font-size: 0.8rem; padding: 6px 10px; border-radius: 6px; }
-    .calc-help-hint { display: block; text-align: left; font-size: 0.75rem; line-height: 1.5; margin-left: auto; }
-    .calc-help-hint-line { display: block; }
-    .calc-help-hint-line + .calc-help-hint-line::before { content: ''; }
+  .calc-container {
+    padding-top: 0 !important;
+    margin-top: -10px;
+  }
+  .calc-header {
+    margin-bottom: 0 !important;
+  }
+  .calc-top-desc {
+    font-size: 0.95rem;
+    margin-bottom: 0;
+  }
+  .calc-sub-desc {
+    font-size: 0.75rem;
+    margin-bottom: 0;
+    opacity: 0.8;
+    line-height: 1.2;
+  }
 
-    .calc-parent-grid { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; gap: 6px; margin-bottom: 0; }
-    
-    .calc-parent-card { 
-        overflow: visible; 
-        display: flex; 
-        flex-direction: column; 
-        transform: none !important; 
-        box-shadow: none !important;
-        background: transparent !important; 
-        border: none !important; 
-    }
-    
-    .calc-p-header { border-radius: 8px 8px 0 0; background: var(--card-bg); border: 1px solid var(--bd); border-bottom: none; padding: 8px; }
-    .calc-role-switch { gap: 6px; }
-    
-    .calc-p-body { background: var(--card-bg); border: 1px solid var(--bd); border-top: none; border-radius: 0 0 8px 8px; padding: 8px; gap: 8px; flex: 1; display: flex; flex-direction: column; }
-    .calc-selected-summary { min-height: 64px; font-size: 0.8rem; padding: 8px 10px; }
-    .calc-morph-list { gap: 4px; flex-wrap: nowrap; overflow-x: auto; justify-content: flex-start; scrollbar-width: none; }
-    .calc-morph-list::-webkit-scrollbar { display: none; }
-    .calc-morph-chip { font-size: 0.68rem; padding: 7px 8px; }
-    .calc-gene-category-list {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 4px;
-    }
-    .calc-category-chip {
-        width: auto;
-        font-size: 0.68rem;
-        padding: 7px 10px;
-        white-space: nowrap;
-        overflow: visible;
-        text-overflow: clip;
-        flex: 0 0 auto;
-    }
-    .calc-inline-hint { font-size: 0.75rem; padding: 7px 9px; }
-    .calc-dd-grid { grid-template-columns: 1fr; gap: 6px; }
-    .calc-dd-item { padding: 8px; font-size: 0.74rem; flex-direction: column; }
-    .calc-dd-item-row { gap: 3px; }
-    .calc-dd-badge { font-size: 0.62rem; padding: 4px 6px; }
-    .calc-dd-flags { display: none !important; margin-top: 0; }
-    .calc-dd-item.mobile-expanded .calc-dd-flags { display: flex !important; }
+  .calc-species-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+  .calc-selector-chip {
+    font-size: 0.8rem;
+    padding: 8px 12px;
+  }
+  .calc-selector-menu {
+    padding: 6px;
+    border-radius: 12px;
+  }
+  .calc-selector-menu-item {
+    font-size: 0.8rem;
+    padding: 8px 10px;
+  }
 
-    .calc-dropdown-container { position: static; } 
-    .calc-add-btn { width: 100%; padding: 10px; font-size: 0.85rem; text-align: center; justify-content: center; }
-    
-    .calc-dropdown-menu {
-        position: fixed !important;
-        top: 50% !important; 
-        left: 50% !important;
-        transform: translate(-50%, -50%) !important;
-        width: 85% !important; 
-        max-height: 75vh !important;
-        height: auto !important;
-        z-index: 2147483647 !important; 
-        border-radius: 12px !important;
-        border: 1px solid var(--bd) !important;
-        background: var(--card-bg); 
-        padding: 0 !important; 
-        overflow-y: auto;
-        display: block;
-        box-shadow: 0 20px 50px rgba(0,0,0,0.4) !important;
-        will-change: transform, opacity;
-        backface-visibility: hidden;
-        -webkit-font-smoothing: antialiased;
-    }
-    
-    .mobile-close-x {
-        font-size: 1.5rem; 
-        cursor: pointer;
-        width: 30px; 
-        height: 30px; 
-        display: flex; 
-        align-items: center; 
-        justify-content: center;
-        border-radius: 50%;
-        background: rgba(128,128,128,0.1);
-    }
+  .calc-helper-btns {
+    display: flex;
+    width: 100%;
+    gap: 10px;
+    margin-bottom: 0;
+    padding: 0 2px;
+    align-items: center;
+    flex-wrap: nowrap;
+  }
+  .calc-help-btn-wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    flex-shrink: 0;
+  }
+  .calc-help-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    white-space: nowrap;
+    font-size: 0.8rem;
+    padding: 6px 10px;
+    border-radius: 6px;
+  }
+  .calc-help-hint {
+    display: block;
+    text-align: left;
+    font-size: 0.75rem;
+    line-height: 1.5;
+    margin-left: auto;
+  }
+  .calc-help-hint-line {
+    display: block;
+  }
+  .calc-help-hint-line + .calc-help-hint-line::before {
+    content: '';
+  }
 
-    .mobile-close-hint {
-        display: flex !important;
-        position: sticky !important;
-        top: 0; left: 0; width: 100%;
-        height: 50px;
-        background: var(--card-bg);
-        border-bottom: 1px solid var(--bd);
-        align-items: center;
-        justify-content: space-between;
-        padding: 0 15px;
-        z-index: 100000;
-        font-weight: bold;
-        color: var(--txt);
-        border-radius: 12px 12px 0 0;
-    }
-    
-    .calc-dd-group-btn { padding: 15px; font-size: 1rem; border-bottom: 1px solid var(--bd); }
-    
-    .calc-result-area { padding-bottom: 80px; }
-    .calc-res-card { flex-direction: row; align-items: center; padding: 5px; min-height: 70px; }
-    .calc-prob-box { width: 60px; height: 100%; border-right: 1px solid var(--bd); border-bottom: none; background: transparent; padding: 0 5px; flex-direction: column; justify-content: center; gap: 0; }
-    .calc-res-info { padding: 5px 10px; overflow: hidden; }
+  .calc-parent-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 6px;
+    margin-bottom: 0;
+  }
+
+  .calc-parent-card {
+    overflow: visible;
+    display: flex;
+    flex-direction: column;
+    transform: none !important;
+    box-shadow: none !important;
+    background: transparent !important;
+    border: none !important;
+  }
+
+  .calc-p-header {
+    border-radius: 8px 8px 0 0;
+    background: var(--card-bg);
+    border: 1px solid var(--bd);
+    border-bottom: none;
+    padding: 8px;
+  }
+  .calc-role-switch {
+    gap: 6px;
+  }
+
+  .calc-p-body {
+    background: var(--card-bg);
+    border: 1px solid var(--bd);
+    border-top: none;
+    border-radius: 0 0 8px 8px;
+    padding: 8px;
+    gap: 8px;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+  }
+  .calc-selected-summary {
+    min-height: 64px;
+    font-size: 0.8rem;
+    padding: 8px 10px;
+  }
+  .calc-morph-list {
+    gap: 4px;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    justify-content: flex-start;
+    scrollbar-width: none;
+  }
+  .calc-morph-list::-webkit-scrollbar {
+    display: none;
+  }
+  .calc-morph-chip {
+    font-size: 0.68rem;
+    padding: 7px 8px;
+  }
+  .calc-gene-category-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+  .calc-category-chip {
+    width: auto;
+    font-size: 0.68rem;
+    padding: 7px 10px;
+    white-space: nowrap;
+    overflow: visible;
+    text-overflow: clip;
+    flex: 0 0 auto;
+  }
+  .calc-inline-hint {
+    font-size: 0.75rem;
+    padding: 7px 9px;
+  }
+  .calc-dd-grid {
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+  .calc-dd-item {
+    padding: 8px;
+    font-size: 0.74rem;
+    flex-direction: column;
+  }
+  .calc-dd-item-row {
+    gap: 3px;
+  }
+  .calc-dd-badge {
+    font-size: 0.62rem;
+    padding: 4px 6px;
+  }
+  .calc-dd-flags {
+    display: none !important;
+    margin-top: 0;
+  }
+  .calc-dd-item.mobile-expanded .calc-dd-flags {
+    display: flex !important;
+  }
+
+  .calc-dropdown-container {
+    position: static;
+  }
+  .calc-add-btn {
+    width: 100%;
+    padding: 10px;
+    font-size: 0.85rem;
+    text-align: center;
+    justify-content: center;
+  }
+
+  .calc-dropdown-menu {
+    position: fixed !important;
+    top: 50% !important;
+    left: 50% !important;
+    transform: translate(-50%, -50%) !important;
+    width: 85% !important;
+    max-height: 75vh !important;
+    height: auto !important;
+    z-index: 2147483647 !important;
+    border-radius: 12px !important;
+    border: 1px solid var(--bd) !important;
+    background: var(--card-bg);
+    padding: 0 !important;
+    overflow-y: auto;
+    display: block;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4) !important;
+    will-change: transform, opacity;
+    backface-visibility: hidden;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .mobile-close-x {
+    font-size: 1.5rem;
+    cursor: pointer;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: rgba(128, 128, 128, 0.1);
+  }
+
+  .mobile-close-hint {
+    display: flex !important;
+    position: sticky !important;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 50px;
+    background: var(--card-bg);
+    border-bottom: 1px solid var(--bd);
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 15px;
+    z-index: 100000;
+    font-weight: bold;
+    color: var(--txt);
+    border-radius: 12px 12px 0 0;
+  }
+
+  .calc-dd-group-btn {
+    padding: 15px;
+    font-size: 1rem;
+    border-bottom: 1px solid var(--bd);
+  }
+
+  .calc-result-area {
+    padding-bottom: 80px;
+  }
+  .calc-res-card {
+    flex-direction: row;
+    align-items: center;
+    padding: 5px;
+    min-height: 70px;
+  }
+  .calc-prob-box {
+    width: 60px;
+    height: 100%;
+    border-right: 1px solid var(--bd);
+    border-bottom: none;
+    background: transparent;
+    padding: 0 5px;
+    flex-direction: column;
+    justify-content: center;
+    gap: 0;
+  }
+  .calc-res-info {
+    padding: 5px 10px;
+    overflow: hidden;
+  }
 }
 
 @media (min-width: 769px) {
-    .mobile-close-hint { display: none !important; }
+  .mobile-close-hint {
+    display: none !important;
+  }
 }
 
 .dropdown-anim-enter-active,
-.dropdown-anim-leave-active { transition: all 0.2s ease-out; }
+.dropdown-anim-leave-active {
+  transition: all 0.2s ease-out;
+}
 .dropdown-anim-enter-from,
-.dropdown-anim-leave-to { opacity: 0; transform: translateY(-10px); }
+.dropdown-anim-leave-to {
+  opacity: 0;
+  transform: translateY(-10px);
+}
 
 @media (max-width: 768px) {
-    .dropdown-anim-enter-active { animation: mobile-zoom-in 0.25s cubic-bezier(0.34, 1.56, 0.64, 1); }
-    .dropdown-anim-leave-active { transition: opacity 0.2s ease, transform 0.2s ease; }
-    .dropdown-anim-enter-from,
-    .dropdown-anim-leave-to { opacity: 0; transform: translate(-50%, -50%) scale(0.9) !important; }
+  .dropdown-anim-enter-active {
+    animation: mobile-zoom-in 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+  .dropdown-anim-leave-active {
+    transition:
+      opacity 0.2s ease,
+      transform 0.2s ease;
+  }
+  .dropdown-anim-enter-from,
+  .dropdown-anim-leave-to {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.9) !important;
+  }
 }
 
 @keyframes mobile-zoom-in {
-    0% { opacity: 0; transform: translate(-50%, -50%) scale(0.85); }
-    100% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.85);
+  }
+  100% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
 }
 
 .slide-anim-enter-active,
-.slide-anim-leave-active { transition: all 0.2s ease; max-height: 500px; overflow: hidden; }
+.slide-anim-leave-active {
+  transition: all 0.2s ease;
+  max-height: 500px;
+  overflow: hidden;
+}
 .slide-anim-enter-from,
-.slide-anim-leave-to { opacity: 0; max-height: 0; }
+.slide-anim-leave-to {
+  opacity: 0;
+  max-height: 0;
+}
 
 /* 卡片資訊區 */
 .calc-mode-selector {
-    display: flex;
-    gap: 10px;
-    margin-bottom: 20px;
-    justify-content: center;
-    flex-wrap: wrap;
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+  justify-content: center;
+  flex-wrap: wrap;
 }
 
 .calc-mode-btn {
-    padding: 10px 18px;
-    border: 2px solid var(--bd);
-    border-radius: 8px;
-    background: var(--card-bg);
-    color: var(--txt);
-    cursor: pointer;
-    transition: all 0.3s;
-    font-weight: 700;
-    font-size: 0.9rem;
-    font-family: inherit;
+  padding: 10px 18px;
+  border: 2px solid var(--bd);
+  border-radius: 8px;
+  background: var(--card-bg);
+  color: var(--txt);
+  cursor: pointer;
+  transition: all 0.3s;
+  font-weight: 700;
+  font-size: 0.9rem;
+  font-family: inherit;
 }
 
 .calc-mode-btn:hover {
-    border-color: var(--pri);
-    color: var(--pri);
+  border-color: var(--pri);
+  color: var(--pri);
 }
 
 .calc-mode-btn.active {
-    background: var(--pri);
-    color: #fff;
-    border-color: var(--pri);
-    box-shadow: 0 4px 12px rgba(255, 69, 0, 0.3);
+  background: var(--pri);
+  color: #fff;
+  border-color: var(--pri);
+  box-shadow: 0 4px 12px rgba(255, 69, 0, 0.3);
 }
 
 /* 結果卡強化 */
 .calc-reverse-mode {
-    margin-bottom: 25px;
+  margin-bottom: 25px;
 }
 
 .calc-outcome-preview {
-    background: var(--card-bg);
-    border: 1px solid var(--bd);
-    border-radius: 10px;
-    padding: 20px;
-    border-top: 3px solid var(--pri);
+  background: var(--card-bg);
+  border: 1px solid var(--bd);
+  border-radius: 10px;
+  padding: 20px;
+  border-top: 3px solid var(--pri);
 }
 
 .calc-outcome-preview h3 {
-    color: var(--txt);
-    font-size: 1.2rem;
-    font-weight: 900;
-    margin: 0 0 10px 0;
+  color: var(--txt);
+  font-size: 1.2rem;
+  font-weight: 900;
+  margin: 0 0 10px 0;
 }
 
 .calc-outcome-list {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 
 .calc-outcome-preview-item {
-    padding: 15px;
-    background: var(--card-bg);
-    border: 1px solid var(--bd);
-    border-radius: 8px;
-    cursor: pointer;
-    transition: all 0.2s;
+  padding: 15px;
+  background: var(--card-bg);
+  border: 1px solid var(--bd);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
 }
 
 .calc-outcome-preview-item:hover {
-    border-color: var(--pri);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-    transform: translateX(5px);
+  border-color: var(--pri);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transform: translateX(5px);
 }
 
 .calc-outcome-preview-item.tier-1 {
-    border-left: 4px solid var(--pri);
-    background: rgba(255, 69, 0, 0.08);
-    font-weight: 700;
+  border-left: 4px solid var(--pri);
+  background: rgba(255, 69, 0, 0.08);
+  font-weight: 700;
 }
 
 .calc-outcome-preview-item.tier-2 {
-    border-left: 2px solid var(--pri);
+  border-left: 2px solid var(--pri);
 }
 
 .calc-outcome-preview-item.tier-3 {
-    border-left: 1px solid var(--bd);
-    opacity: 0.7;
+  border-left: 1px solid var(--bd);
+  opacity: 0.7;
 }
 
 .calc-outcome-preview-item.selected {
-    border: 2px solid var(--pri);
-    box-shadow: 0 0 12px rgba(255, 69, 0, 0.3);
+  border: 2px solid var(--pri);
+  box-shadow: 0 0 12px rgba(255, 69, 0, 0.3);
 }
 
 /* 結果卡狀態樣式 */
 .calc-reverse-parents-panel {
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    background: var(--card-bg);
-    border-top: 2px solid var(--pri);
-    border-radius: 20px 20px 0 0;
-    padding: 20px;
-    max-height: 70vh;
-    overflow-y: auto;
-    z-index: 100;
-    box-shadow: 0 -5px 30px rgba(0, 0, 0, 0.15);
-    animation: slideUp 0.3s ease;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: var(--card-bg);
+  border-top: 2px solid var(--pri);
+  border-radius: 20px 20px 0 0;
+  padding: 20px;
+  max-height: 70vh;
+  overflow-y: auto;
+  z-index: 100;
+  box-shadow: 0 -5px 30px rgba(0, 0, 0, 0.15);
+  animation: slideUp 0.3s ease;
 }
 
 .calc-reverse-panel-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    margin-bottom: 20px;
-    padding-bottom: 15px;
-    border-bottom: 1px solid var(--bd);
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 20px;
+  padding-bottom: 15px;
+  border-bottom: 1px solid var(--bd);
 }
 
 .calc-reverse-panel-header h3 {
-    margin: 0 0 5px 0;
-    font-size: 1.2rem;
-    word-break: break-word;
-    white-space: normal;
+  margin: 0 0 5px 0;
+  font-size: 1.2rem;
+  word-break: break-word;
+  white-space: normal;
 }
 
 .calc-reverse-close {
-    background: transparent;
-    border: none;
-    font-size: 1.5rem;
-    cursor: pointer;
-    color: var(--txt);
-    opacity: 0.6;
-    transition: 0.2s;
-    padding: 5px;
-    line-height: 1;
+  background: transparent;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: var(--txt);
+  opacity: 0.6;
+  transition: 0.2s;
+  padding: 5px;
+  line-height: 1;
 }
 
 .calc-reverse-close:hover {
-    opacity: 1;
-    color: var(--pri);
-    transform: scale(1.1);
+  opacity: 1;
+  color: var(--pri);
+  transform: scale(1.1);
 }
 
 .calc-reverse-panel-content {
-    display: flex;
-    flex-direction: column;
-    gap: 15px;
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
 }
 
 @keyframes slideUp {
-    from {
-        transform: translateY(100%);
-        opacity: 0;
-    }
-    to {
-        transform: translateY(0);
-        opacity: 1;
-    }
+  from {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
 }
 
 .panel-anim-enter-active,
 .panel-anim-leave-active {
-    transition: all 0.3s ease;
+  transition: all 0.3s ease;
 }
 
 .panel-anim-enter-from,
 .panel-anim-leave-to {
-    transform: translateY(100%);
-    opacity: 0;
+  transform: translateY(100%);
+  opacity: 0;
 }
 
 @media (max-width: 768px) {
-    .calc-reverse-parents-panel {
-        padding: 15px;
-        max-height: 60vh;
-    }
+  .calc-reverse-parents-panel {
+    padding: 15px;
+    max-height: 60vh;
+  }
 
-    .calc-reverse-panel-header {
-        flex-direction: column;
-        gap: 10px;
-    }
+  .calc-reverse-panel-header {
+    flex-direction: column;
+    gap: 10px;
+  }
 
-    .calc-reverse-close {
-        position: absolute;
-        top: 10px;
-        right: 15px;
-    }
+  .calc-reverse-close {
+    position: absolute;
+    top: 10px;
+    right: 15px;
+  }
 }
 
 /* 詳細資料區 */
 .calc-res-card-grid {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: 12px;
-    margin-bottom: 0;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+  margin-bottom: 0;
 }
 
 .calc-res-card-grid-tier2 {
-    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
 }
 
 .calc-res-card-grid-tier3 {
-    grid-template-columns: 1fr;
+  grid-template-columns: 1fr;
 }
 
 /* Tier 1: 擃?? */
 .calc-res-card.tier-1 {
-    border-left: 4px solid var(--pri) !important;
-    background: rgba(255, 69, 0, 0.08) !important;
-    min-height: 90px;
-    position: relative;
+  border-left: 4px solid var(--pri) !important;
+  background: rgba(255, 69, 0, 0.08) !important;
+  min-height: 90px;
+  position: relative;
 }
 
 .calc-res-card.tier-1::before {
-    content: '結果';
-    position: absolute;
-    top: 10px;
-    right: 10px;
-    background: rgba(255, 69, 0, 0.2);
-    color: var(--pri);
-    padding: 4px 10px;
-    border-radius: 4px;
-    font-size: 0.75rem;
-    font-weight: bold;
-    z-index: 1;
+  content: '結果';
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: rgba(255, 69, 0, 0.2);
+  color: var(--pri);
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: bold;
+  z-index: 1;
 }
 
 .calc-res-card.tier-1 .calc-res-name {
-    font-weight: 900 !important;
-    font-size: 1.05rem !important;
+  font-weight: 900 !important;
+  font-size: 1.05rem !important;
 }
 
 .calc-res-card.tier-1 .calc-prob-val {
-    color: var(--pri);
-    font-size: 1.5rem !important;
+  color: var(--pri);
+  font-size: 1.5rem !important;
 }
 
 /* Tier 2: 銝剖?? */
 .calc-res-card.tier-2 {
-    border-left: 2px solid var(--pri) !important;
-    background: var(--card-bg) !important;
+  border-left: 2px solid var(--pri) !important;
+  background: var(--card-bg) !important;
 }
 
 .calc-res-card.tier-2 .calc-prob-val {
-    color: var(--pri);
+  color: var(--pri);
 }
 
 /* Tier 3: 雿?? */
 .calc-res-card.tier-3 {
-    border-left: 1px solid var(--bd) !important;
-    background: rgba(128, 128, 128, 0.03) !important;
-    opacity: 0.8;
+  border-left: 1px solid var(--bd) !important;
+  background: rgba(128, 128, 128, 0.03) !important;
+  opacity: 0.8;
 }
 
 .calc-res-card.tier-3 .calc-prob-val {
-    color: var(--txt);
-    opacity: 0.6;
+  color: var(--txt);
+  opacity: 0.6;
 }
 
 .calc-res-card.tier-3 .calc-res-name {
-    opacity: 0.7;
+  opacity: 0.7;
 }
 
 /* 結果區塊間距 */
 .calc-results-tier-1,
 .calc-results-tier-2,
 .calc-results-tier-3 {
-    margin-bottom: 20px;
+  margin-bottom: 20px;
 }
 
 .calc-results-grouped {
-    /* 右上角標記 */
+  /* 右上角標記 */
 }
 
 /* 行動版細節調整 */
 @media (max-width: 768px) {
-    .calc-mode-selector {
-        flex-direction: column;
-        gap: 8px;
-    }
+  .calc-mode-selector {
+    flex-direction: column;
+    gap: 8px;
+  }
 
-    .calc-mode-btn {
-        width: 100%;
-        padding: 12px;
-    }
+  .calc-mode-btn {
+    width: 100%;
+    padding: 12px;
+  }
 
-    .calc-res-card-grid-tier2 {
-        grid-template-columns: 1fr;
-    }
+  .calc-res-card-grid-tier2 {
+    grid-template-columns: 1fr;
+  }
 
-    .calc-res-card.tier-1 {
-        min-height: 70px;
-    }
+  .calc-res-card.tier-1 {
+    min-height: 70px;
+  }
 
-    .calc-res-card.tier-1::before {
-        font-size: 0.7rem;
-        padding: 3px 8px;
-    }
+  .calc-res-card.tier-1::before {
+    font-size: 0.7rem;
+    padding: 3px 8px;
+  }
 
-    .calc-outcome-preview-item {
-        padding: 12px;
-    }
+  .calc-outcome-preview-item {
+    padding: 12px;
+  }
 }
 
 /* 動畫 */
 .calc-res-card.lethal .calc-prob-val {
-    color: #f44336 !important;
+  color: #f44336 !important;
 }
 </style>
-
