@@ -461,7 +461,7 @@
 - [ ] #10 useMainStore 拆分
 - [x] #11 UTF-8 亂碼修復 ✅ 2026-06-24（commit e10004b，移除 338+ mojibake 標記，保留率閾值 18% 避免誤傷合法中文）
 - [ ] #12 TypeScript 漸進導入
-- [ ] #13 Supabase 型別自動產生
+- [x] #13 Supabase 型別自動產生 ✅ 2026-06-30（types/supabase.ts 由 supabase gen types 從遠端 schema 產生，不需 Docker；npm run db:types 可重產；composables/useDB.ts 提供 useSupabaseClient<Database>() 具型別封裝供 #12 使用；types/supabase.ts 已加入 .prettierignore）
 
 ### Phase 3
 
