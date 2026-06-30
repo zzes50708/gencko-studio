@@ -12,51 +12,51 @@
 
 ## 📦 已完成歷史（v1，僅存查；細節見各 commit）
 
-| # | 任務 | 狀態 |
-|---|---|---|
-| #1 | GA4 延遲到 idle | ✅ |
-| #2 | LINE SDK 按鈕才載入 | ✅ |
-| #3 | Cloudflare beacon 延遲 | ✅ |
-| #4 | Inter 字型移除 | ✅ |
-| #5 | Noto Sans TC 5→4 weight | ✅ |
-| #6 | calculator TresJS 動態 import | ⏭️ 跳過（實測未用 Three.js，前提誤判） |
-| #7 | 全站圖片 lazy 審查 | ✅ |
-| #8 | utils/seo-schemas.js helper | ✅ |
-| #9 | utils/site-constants.js | ✅ |
-| #11 | UTF-8 亂碼批次修復 | ✅ |
-| #13 | Supabase 型別自動產生（types/supabase.ts + db:types + useDB） | ✅ |
-| #14 | 內部連結自動產生器（utils/auto-link.js） | ✅ |
-| #15 | Sitemap image:image | ✅ |
-| #16 | RSS feed（server/routes/feed.xml.ts） | ✅ |
-| #17 | 靜態預渲染 5 頁 | ✅ |
-| #18 | articles.faq → FAQPage | ✅ |
-| #20 | BreadcrumbList helper | ✅ |
-| #22 | anon key 移至 env | ✅ |
-| #23 | CSP header | ✅ |
-| #26 | Supabase 重試（utils/supabase-retry.js） | ✅ |
-| #27 | WCAG AA 對比度（--pri-btn / --txt-muted / --ok-* token） | ✅ |
-| #28 | Skip to content | ✅ |
-| #29 | 客製 404（error.vue） | ✅ |
-| #30 | PWA Offline（public/offline.html） | ✅ |
-| #31 | 全站 Skeleton | ✅ |
-| #32 | 單元測試（tests/calc-utils.spec.js） | ✅ |
-| #33 | E2E（tests/e2e/critical-paths.spec.ts） | ✅ |
-| #34 | Lighthouse CI | ✅ |
-| #35 | husky + prettier pre-commit | ✅ |
+| #   | 任務                                                          | 狀態                                   |
+| --- | ------------------------------------------------------------- | -------------------------------------- |
+| #1  | GA4 延遲到 idle                                               | ✅                                     |
+| #2  | LINE SDK 按鈕才載入                                           | ✅                                     |
+| #3  | Cloudflare beacon 延遲                                        | ✅                                     |
+| #4  | Inter 字型移除                                                | ✅                                     |
+| #5  | Noto Sans TC 5→4 weight                                       | ✅                                     |
+| #6  | calculator TresJS 動態 import                                 | ⏭️ 跳過（實測未用 Three.js，前提誤判） |
+| #7  | 全站圖片 lazy 審查                                            | ✅                                     |
+| #8  | utils/seo-schemas.js helper                                   | ✅                                     |
+| #9  | utils/site-constants.js                                       | ✅                                     |
+| #11 | UTF-8 亂碼批次修復                                            | ✅                                     |
+| #13 | Supabase 型別自動產生（types/supabase.ts + db:types + useDB） | ✅                                     |
+| #14 | 內部連結自動產生器（utils/auto-link.js）                      | ✅                                     |
+| #15 | Sitemap image:image                                           | ✅                                     |
+| #16 | RSS feed（server/routes/feed.xml.ts）                         | ✅                                     |
+| #17 | 靜態預渲染 5 頁                                               | ✅                                     |
+| #18 | articles.faq → FAQPage                                        | ✅                                     |
+| #20 | BreadcrumbList helper                                         | ✅                                     |
+| #22 | anon key 移至 env                                             | ✅                                     |
+| #23 | CSP header                                                    | ✅                                     |
+| #26 | Supabase 重試（utils/supabase-retry.js）                      | ✅                                     |
+| #27 | WCAG AA 對比度（--pri-btn / --txt-muted / --ok-\* token）     | ✅                                     |
+| #28 | Skip to content                                               | ✅                                     |
+| #29 | 客製 404（error.vue）                                         | ✅                                     |
+| #30 | PWA Offline（public/offline.html）                            | ✅                                     |
+| #31 | 全站 Skeleton                                                 | ✅                                     |
+| #32 | 單元測試（tests/calc-utils.spec.js）                          | ✅                                     |
+| #33 | E2E（tests/e2e/critical-paths.spec.ts）                       | ✅                                     |
+| #34 | Lighthouse CI                                                 | ✅                                     |
+| #35 | husky + prettier pre-commit                                   | ✅                                     |
 
 ---
 
 ## 🗺️ 待辦任務總覽
 
-| 階段 | 主題 | 任務 | 預估 | 來源 |
-|---|---|---|---|---|
-| **A** | 首頁與資訊架構 | #U1 #U2 #U3 | 11h | UI/UX 評分 |
-| **B** | 轉換與信任 | #U4 | 3h | UI/UX 評分 |
-| **C** | 無障礙與效能韌性 | #U5 #U6 | 7h | UI/UX 評分 |
-| **D** | 架構與型別 | #10 #12 | 8h | v1 沿用 |
-| **E** | 安全與資料 | #21 #36 | 2.5h | v1 沿用 |
-| **F** | 後台 | #40 | 8h+ | v1 沿用 |
-| **G** | 特寵醫院強化 | #A–#E | 10h | v1 沿用，觸發詞「換特寵醫院」 |
+| 階段  | 主題             | 任務        | 預估 | 來源                          |
+| ----- | ---------------- | ----------- | ---- | ----------------------------- |
+| **A** | 首頁與資訊架構   | #U1 #U2 #U3 | 11h  | UI/UX 評分                    |
+| **B** | 轉換與信任       | #U4         | 3h   | UI/UX 評分                    |
+| **C** | 無障礙與效能韌性 | #U5 #U6     | 7h   | UI/UX 評分                    |
+| **D** | 架構與型別       | #10 #12     | 8h   | v1 沿用                       |
+| **E** | 安全與資料       | #21 #36     | 2.5h | v1 沿用                       |
+| **F** | 後台             | #40         | 8h+  | v1 沿用                       |
+| **G** | 特寵醫院強化     | #A–#E       | 10h  | v1 沿用，觸發詞「換特寵醫院」 |
 
 > **建議順序**：先 A（首頁/IA 是評分最弱項、影響最廣）→ C（效能/無障礙韌性）→ B（轉換）→ D（架構）→ E → F/G 視需求。
 
@@ -68,6 +68,7 @@
 
 ## #U1 首頁 intro gate 轉換重構
 
+- **狀態**：`[~]` 保守微調已完成（2026-06-30）。① 負面文案「不看介紹，直接進入官網」→ 正面「直接進入官網 →」（`pages/index.vue` fallback + `BrandServiceScrollScene.vue` 第一幕 skip）。② 查證：首頁 3D 場景之上**仍顯示全域導覽列（桌機頂部 + 手機底部 TheBottomNav）**，使用者隨時可導向任一區塊 → intro gate 為軟性，原評分對其扣分略高估。**B（首屏並陳 + 解除 scroll-lock）/ C（內容優先）結構改動經使用者決定先不做**（需視覺驗證，待預覽工具恢復再評估）。
 - **痛點/背景**：`/`（`pages/index.vue` + `BrandServiceScrollScene.vue`）是一段 3D 介紹動畫，首屏主 CTA 是「不看介紹，直接進入官網」。等於把品牌動畫**擋在內容之前**，新訪客需多一個動作才到得了在售個體/知識，增加跳出風險（評分「轉換與信任」「IA」皆因此扣分）。
 - **影響面與收益**：降低首屏跳出、縮短「到達在售個體」的路徑、行動版體感更快。直接影響轉換與 SEO 互動指標。
 - **牽涉檔案**：`pages/index.vue`、`components/BrandServiceScrollScene.vue`、`app.vue`（curTab/路由判斷）、`utils/site-constants.js`（ROUTES）。
@@ -261,26 +262,31 @@
 > 競品 `crittermap.snyr.tw`（小獸所）分析後的借鑑。我方優勢：Supabase Studio 直編、schema 完整、E.164 電話、VeterinaryCare schema。
 
 ## #A hospitals 加 `pets text[]` 收治物種
+
 - **檔案**：Supabase SQL（`ALTER TABLE hospitals ADD COLUMN pets TEXT[] DEFAULT '{}'`）+ `pages/hospital.vue`（篩選器 + JSON-LD `knowsAbout`）。
 - **做法**：後台填收治物種陣列 → UI 加「找會看守宮的醫院」篩選 → VeterinaryCare schema 多標。
 - **驗收**：可依物種篩選；schema 含對應 medicalSpecialty。**預估**：2h。
 
 ## #B `google_rating` + `google_review_count`
+
 - **檔案**：Supabase（`ALTER TABLE ... ADD COLUMN google_rating NUMERIC(2,1), google_review_count INT`）+ `pages/hospital.vue`。
 - **做法**：後台填 Google 星等/評論數 → UI 顯示星等 → schema `aggregateRating`（SERP 星等 rich result）。
 - **驗收**：卡片顯示星等；Rich Results Test 通過 aggregateRating。**預估**：1.5h（+ 人工填 78 筆 ~1.5h）。
 
 ## #C 公告系統（停診/特診/活動）
+
 - **檔案**：新表 `hospital_announcements (id, hospital_id, type, title, summary, source_label, source_url, valid_from, valid_to, created_at)` + UI。
 - **做法**：type enum（closed/special_clinic/event/other）→ 醫院卡右上紅點展開 → 列表頁「最新公告」區。
 - **驗收**：可新增/顯示有效期內公告；過期自動隱藏。**預估**：3h。**依賴**：#A 一起 review 結構更佳。
 
 ## #D 多源驗證 `source_label` + `source_url`
+
 - **檔案**：Supabase（兩欄）+ UI（醫院詳情「資料來源」）+ schema `citation`。
 - **做法**：填來源標籤與連結 → UI 顯示 → schema 加 citation（E-E-A-T）。
 - **驗收**：詳情顯示來源；schema 含 citation。**預估**：1.5h。
 
 ## #E 擴充清單 78 → 150+（維持精選）
+
 - **檔案**：Supabase Studio（加 `category enum`：exotic_specialty / general_with_exotic）+ `pages/hospital.vue` 篩選。
 - **做法**：主清單預設只顯示 exotic_specialty（保留 78 精選）；勾選才顯示綜合醫院；補 70+ 綜合醫院。
 - **驗收**：可切換精選/全部；預設仍是 78 精選。**預估**：2h（程式）+ 人工填入。**依賴**：#A（pets）、#D（source）。
@@ -289,15 +295,15 @@
 
 ## 📌 已決定跳過
 
-| # | 項目 | 原因 |
-|---|---|---|
-| 19 | OG image 動態產生 | 暫不需 |
-| 24 | Subresource Integrity | 暫不需 |
-| 25 | Sentry 錯誤監控 | 暫不需 |
-| 37 | 使用者帳號 | 暫不需 |
-| 38 | 競標通知 | 暫不需 |
-| 39 | 評論評星 | 暫不需 |
-| 41 | 多語系（英文） | 暫不需 |
+| #   | 項目                  | 原因   |
+| --- | --------------------- | ------ |
+| 19  | OG image 動態產生     | 暫不需 |
+| 24  | Subresource Integrity | 暫不需 |
+| 25  | Sentry 錯誤監控       | 暫不需 |
+| 37  | 使用者帳號            | 暫不需 |
+| 38  | 競標通知              | 暫不需 |
+| 39  | 評論評星              | 暫不需 |
+| 41  | 多語系（英文）        | 暫不需 |
 
 > 日後想做再討論。
 

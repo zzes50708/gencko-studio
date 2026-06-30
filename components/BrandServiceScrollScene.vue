@@ -12,65 +12,74 @@ const store = useMainStore()
 
 // ?嚗sap.to ?箏? 1.8s expo.inOut ??????皜??蝯脫?????
 // ?????????????????????????????????????????????????????????????????????????????
-const stageEl           = ref(null)    
-const isMounted         = ref(false)
-const canUseMotion      = useMediaQuery('(prefers-reduced-motion: no-preference)')
-const isDesktop         = useMediaQuery('(hover: hover) and (pointer: fine)')
+const stageEl = ref(null)
+const isMounted = ref(false)
+const canUseMotion = useMediaQuery('(prefers-reduced-motion: no-preference)')
+const isDesktop = useMediaQuery('(hover: hover) and (pointer: fine)')
 
-const currentSceneIndex = ref(0)     
-const isTransitioning   = ref(false) // 頧??true ??璉??撓??
-const snapTrigger       = ref(0)     
-const transitionInfo    = ref({ from: -1, to: -1, ts: 0 })  
+const currentSceneIndex = ref(0)
+const isTransitioning = ref(false) // 頧??true ??璉??撓??
+const snapTrigger = ref(0)
+const transitionInfo = ref({ from: -1, to: -1, ts: 0 })
 
 // animScene 撽?????恬?瘚桅? 0~5嚗?
 const animScene = ref(0)
-const _proxy    = { v: 0 }   // GSAP 銝?湔 tween Vue ref嚗 proxy ?拐辣?腹
+const _proxy = { v: 0 } // GSAP 銝?湔 tween Vue ref嚗 proxy ?拐辣?腹
 
-let sceneTween     = null   // ?桀?????tween
-let gsapObserver   = null   // GSAP Observer 撖虫?
-let keydownHandler = null   // ?萇???剁?onBeforeUnmount ?宏?歹?
+let sceneTween = null // ?桀?????tween
+let gsapObserver = null // GSAP Observer 撖虫?
+let keydownHandler = null // ?萇???剁?onBeforeUnmount ?宏?歹?
 
 // ?? ?詨?嚗蜓???迎?4 撅日霅瘀?????????????????????????????????????????????????
 const navigateTo = (next) => {
-  if (isTransitioning.value) return            
-  if (next === currentSceneIndex.value) return  
-  if (next < 0 || next > 5) return             // Layer 3嚗???銵?
+  if (isTransitioning.value) return
+  if (next === currentSceneIndex.value) return
+  if (next < 0 || next > 5) return // Layer 3嚗???銵?
 
-  const from = currentSceneIndex.value          // 閮??箇暺?transitionInfo 雿輻
+  const from = currentSceneIndex.value // 閮??箇暺?transitionInfo 雿輻
   currentSceneIndex.value = next
-  isTransitioning.value   = true
+  isTransitioning.value = true
 
-  
   transitionInfo.value = { from, to: next, ts: Date.now() }
 
   if (sceneTween) sceneTween.kill()
-  _proxy.v = animScene.value   // 敺?筑暺脣漲?箇
+  _proxy.v = animScene.value // 敺?筑暺脣漲?箇
 
   sceneTween = gsap.to(_proxy, {
-    v:         next,
-    duration:  canUseMotion.value ? 1.8 : 0,   // reduced-motion：瞬切，不做長轉場
-    ease:      'expo.inOut',    // ????皜??蔣?結皛?
+    v: next,
+    duration: canUseMotion.value ? 1.8 : 0, // reduced-motion：瞬切，不做長轉場
+    ease: 'expo.inOut', // ????皜??蔣?結皛?
     overwrite: true,
-    onUpdate   () { animScene.value = _proxy.v },
-    onComplete () {
-      animScene.value       = next   
-      _proxy.v              = next
-      isTransitioning.value = false  
-      snapTrigger.value++            // 頧摰??
+    onUpdate() {
+      animScene.value = _proxy.v
     },
+    onComplete() {
+      animScene.value = next
+      _proxy.v = next
+      isTransitioning.value = false
+      snapTrigger.value++ // 頧摰??
+    }
   })
 }
 
 // ?? 摰?瑟?嚗????2嚗????????????????????????????????????????????????????
 const destroyObserver = () => {
-  if (sceneTween)   { sceneTween.kill();   sceneTween   = null }
-  if (gsapObserver) { gsapObserver.kill(); gsapObserver = null }
+  if (sceneTween) {
+    sceneTween.kill()
+    sceneTween = null
+  }
+  if (gsapObserver) {
+    gsapObserver.kill()
+    gsapObserver = null
+  }
   if (keydownHandler) {
     window.removeEventListener('keydown', keydownHandler)
     keydownHandler = null
   }
-  
-  try { Observer.getAll().forEach(o => o.kill()) } catch (e) {}
+
+  try {
+    Observer.getAll().forEach((o) => o.kill())
+  } catch (e) {}
 }
 
 onMounted(async () => {
@@ -81,23 +90,31 @@ onMounted(async () => {
   gsap.registerPlugin(Observer)
 
   currentSceneIndex.value = 0
-  animScene.value         = 0
-  _proxy.v                = 0
-  isTransitioning.value   = false
+  animScene.value = 0
+  _proxy.v = 0
+  isTransitioning.value = false
 
   // 一般模式也加 fail-safe 避免卡死
-  loaderFailSafeTimer = setTimeout(() => { isLoading.value = false }, 4500)
+  loaderFailSafeTimer = setTimeout(() => {
+    isLoading.value = false
+  }, 4500)
 
   // Layer 4：GSAP Observer 接管滾動；避免真的讓頁面 scroll，造成頂部導覽列閃動/底部導覽列跳動
   gsapObserver = Observer.create({
-    target:         stageEl.value || window,
-    type:           'wheel,touch,pointer',
-    tolerance:      10,
+    target: stageEl.value || window,
+    type: 'wheel,touch,pointer',
+    tolerance: 10,
     preventDefault: true,
     // 觸控裝置：手指往上滑（視覺上內容往上）應該要進入下一幕
     // 目前 Observer 的 onDown/onUp 在 touch 上的語意與直覺容易相反，因此在非桌機時反轉一次
-    onDown: () => (isDesktop.value ? navigateTo(currentSceneIndex.value + 1) : navigateTo(currentSceneIndex.value - 1)),
-    onUp:   () => (isDesktop.value ? navigateTo(currentSceneIndex.value - 1) : navigateTo(currentSceneIndex.value + 1)),
+    onDown: () =>
+      isDesktop.value
+        ? navigateTo(currentSceneIndex.value + 1)
+        : navigateTo(currentSceneIndex.value - 1),
+    onUp: () =>
+      isDesktop.value
+        ? navigateTo(currentSceneIndex.value - 1)
+        : navigateTo(currentSceneIndex.value + 1)
   })
 
   // PageDown / ArrowDown = 往下；PageUp / ArrowUp = 往上
@@ -115,10 +132,12 @@ onMounted(async () => {
 })
 
 onBeforeUnmount(() => {
-  destroyObserver()   
+  destroyObserver()
   isMounted.value = false
   if (loaderFailSafeTimer) {
-    try { clearTimeout(loaderFailSafeTimer) } catch (e) {}
+    try {
+      clearTimeout(loaderFailSafeTimer)
+    } catch (e) {}
     loaderFailSafeTimer = null
   }
   if (!import.meta.client) return
@@ -126,7 +145,9 @@ onBeforeUnmount(() => {
 
 if (import.meta.hot) {
   import.meta.hot.dispose(() => {
-    try { destroyObserver() } catch (e) {}
+    try {
+      destroyObserver()
+    } catch (e) {}
   })
 }
 
@@ -137,7 +158,7 @@ const scene = computed(() => {
 })
 
 const isDayMode = computed(() => false)
-const bgColor   = computed(() => '#0D0B0A')   // canvas clearColor = 同 stage 背景色
+const bgColor = computed(() => '#0D0B0A') // canvas clearColor = 同 stage 背景色
 
 // ── 載入動畫 ──────────────────────────────────────────────────────────────────
 // LCP 優化：本場景採延遲載入（由 index.vue 控制），掛載時 fallback 已在使用者眼前
@@ -162,7 +183,7 @@ watch(activeDot, (v) => {
 })
 
 // Per-scene alpha嚗?蝺改??臭?蝺拙???GSAP tween ??expo.inOut嚗?
-const ss = x => x * x * (3 - 2 * x)   
+const ss = (x) => x * x * (3 - 2 * x)
 const ALPHA_FADE = 0.65
 const centerAlpha = (s, n) => {
   const dist = Math.abs(s - n)
@@ -171,7 +192,7 @@ const centerAlpha = (s, n) => {
 }
 const sceneAlpha = computed(() => {
   const s = scene.value
-  return [0, 1, 2, 3, 4, 5].map(n => centerAlpha(s, n))
+  return [0, 1, 2, 3, 4, 5].map((n) => centerAlpha(s, n))
 })
 
 const sceneStyle = (idx) => ({ opacity: String(sceneAlpha.value[idx]) })
@@ -179,39 +200,55 @@ const sceneStyle = (idx) => ({ opacity: String(sceneAlpha.value[idx]) })
 // Scene content（文字復原為可讀版本；維持原本 6 段場景結構）
 const scenes = [
   {
-    kicker: '', hero: true, cta: false,
-    title: 'Gencko Studio', subtitle: '品牌服務',
-    desc: '', btn: null,
+    kicker: '',
+    hero: true,
+    cta: false,
+    title: 'Gencko Studio',
+    subtitle: '品牌服務',
+    desc: '',
+    btn: null
   },
   {
-    kicker: 'Microscopic World', hero: false, cta: false,
+    kicker: 'Microscopic World',
+    hero: false,
+    cta: false,
     title: '每一種花紋<br>源於基因',
     desc: '豹紋守宮的體色與斑紋由基因組合決定。Gencko 以遺傳學為起點，讓選育方向清晰可循。',
-    btn: { label: '閱讀基因知識', to: '/articles' },
+    btn: { label: '閱讀基因知識', to: '/articles' }
   },
   {
-    kicker: 'Gencko Studio', hero: false, cta: false,
+    kicker: 'Gencko Studio',
+    hero: false,
+    cta: false,
     title: '專業選育<br>追溯血緣',
     desc: '每隻個體保有完整紀錄與基因資料，選育過程透明，來源清晰。',
-    btn: { label: '瀏覽在售個體', to: '/shop' },
+    btn: { label: '瀏覽在售個體', to: '/shop' }
   },
   {
-    kicker: 'Gene Science', hero: false, cta: false,
+    kicker: 'Gene Science',
+    hero: false,
+    cta: false,
     title: '基因計算機<br>科學化配對',
     desc: '輸入親本基因型，自動計算子代出現比例。每一次配對，都以孟德爾遺傳定律作為依據。',
-    btn: { label: '前往基因計算機', to: '/calculator' },
+    btn: { label: '前往基因計算機', to: '/calculator' }
   },
   {
-    kicker: 'Taiwan Coverage', hero: false, cta: false,
+    kicker: 'Taiwan Coverage',
+    hero: false,
+    cta: false,
     title: '全台特寵獸醫<br>資訊整合',
     desc: '購入後 48 小時健康保固，找到最近的特寵醫院資訊，需要時就近就醫。',
-    btn: { label: '查看特寵醫院', to: '/hospital' },
+    btn: { label: '查看特寵醫院', to: '/hospital' }
   },
   {
-    kicker: '', hero: true, cta: true,
-    title: '準備好了嗎', subtitle: '從你的第一隻豹紋守宮開始',
-    desc: '', btn: null,
-  },
+    kicker: '',
+    hero: true,
+    cta: true,
+    title: '準備好了嗎',
+    subtitle: '從你的第一隻豹紋守宮開始',
+    desc: '',
+    btn: null
+  }
 ]
 
 const clamp01 = (v) => Math.max(0, Math.min(1, v))
@@ -225,39 +262,86 @@ const geneFxActive = computed(() => isMounted.value && isDesktop.value && geneFx
 
 // 3D holo 卡片：以 scene≈3 為主（避免四捨五入剛好落在 2/4 導致看不到），再補 activeDot 保險
 const cardShowing = computed(() => Math.abs(scene.value - 3) < 0.75 || activeDot.value === 3)
-const cardRenderState = computed(() => `${isDesktop.value ? 'desktop' : 'mobile'}-${cardShowing.value ? 'visible' : 'hidden'}`)
+const cardRenderState = computed(
+  () => `${isDesktop.value ? 'desktop' : 'mobile'}-${cardShowing.value ? 'visible' : 'hidden'}`
+)
 
 const HOLO_CARDS = [
-  { pct: '50%',  gene: 'TREMPER ALBINO', label: 'GENETICS / RESULT', status: 'HET / CONFIRMED',    left: '33%', top: '16%', rotateY: '-14deg', rotateX: '5deg',  delay: '0s',    srcDx: '29vw', srcDy: '12vh',  connSide: 'right', connAngle: '22deg' },
-  { pct: '100%', gene: 'HET ECLIPSE',    label: 'GENETICS / RESULT', status: 'VISUAL / CONFIRMED', left: '66%', top: '40%', rotateY: '10deg',  rotateX: '2deg',  delay: '0.12s', srcDx: '-6vw', srcDy: '8vh',   connSide: 'left',  connAngle: '28deg' },
-  { pct: '25%',  gene: 'BLIZZARD',       label: 'GENETICS / RESULT', status: 'HET / POSSIBLE',     left: '42%', top: '67%', rotateY: '-6deg',  rotateX: '-3deg', delay: '0.22s', srcDx: '20vw', srcDy: '-17vh', connSide: 'top',   connAngle: '22deg' },
+  {
+    pct: '50%',
+    gene: 'TREMPER ALBINO',
+    label: 'GENETICS / RESULT',
+    status: 'HET / CONFIRMED',
+    left: '33%',
+    top: '16%',
+    rotateY: '-14deg',
+    rotateX: '5deg',
+    delay: '0s',
+    srcDx: '29vw',
+    srcDy: '12vh',
+    connSide: 'right',
+    connAngle: '22deg'
+  },
+  {
+    pct: '100%',
+    gene: 'HET ECLIPSE',
+    label: 'GENETICS / RESULT',
+    status: 'VISUAL / CONFIRMED',
+    left: '66%',
+    top: '40%',
+    rotateY: '10deg',
+    rotateX: '2deg',
+    delay: '0.12s',
+    srcDx: '-6vw',
+    srcDy: '8vh',
+    connSide: 'left',
+    connAngle: '28deg'
+  },
+  {
+    pct: '25%',
+    gene: 'BLIZZARD',
+    label: 'GENETICS / RESULT',
+    status: 'HET / POSSIBLE',
+    left: '42%',
+    top: '67%',
+    rotateY: '-6deg',
+    rotateX: '-3deg',
+    delay: '0.22s',
+    srcDx: '20vw',
+    srcDy: '-17vh',
+    connSide: 'top',
+    connAngle: '22deg'
+  }
 ]
 
 const holoCardStyle = (card) => {
   // 手機版：保留 left/top 分布，縮小卡片並以 scale 跳出（無 3D 旋轉）
   if (!isDesktop.value) {
     return {
-      left: card.left, top: card.top,
+      left: card.left,
+      top: card.top,
       '--delay': card.delay,
       transitionDelay: cardShowing.value ? card.delay : '0s',
       transform: cardShowing.value ? 'scale(1)' : 'scale(0.04)',
-      opacity:   cardShowing.value ? 1 : 0,
+      opacity: cardShowing.value ? 1 : 0
     }
   }
   // 桌機版：原始 3D 浮動卡片
   return {
-    left: card.left, top: card.top,
-    '--conn-angle': card.connAngle, '--delay': card.delay,
+    left: card.left,
+    top: card.top,
+    '--conn-angle': card.connAngle,
+    '--delay': card.delay,
     transitionDelay: cardShowing.value ? card.delay : '0s',
     opacity: cardShowing.value ? 1 : 0,
     transform: cardShowing.value
       ? `perspective(900px) rotateY(${card.rotateY}) rotateX(${card.rotateX}) scale(1)`
-      : `perspective(900px) rotateY(${card.rotateY}) rotateX(${card.rotateX}) translateX(${card.srcDx}) translateY(${card.srcDy}) scale(0.04)`,
+      : `perspective(900px) rotateY(${card.rotateY}) rotateX(${card.rotateX}) translateX(${card.srcDx}) translateY(${card.srcDy}) scale(0.04)`
   }
 }
 
-const CAROUSEL_STEP  = 45
-const carouselRadius = computed(() => isDesktop.value ? 200 : 130)
+const CAROUSEL_STEP = 45
+const carouselRadius = computed(() => (isDesktop.value ? 200 : 130))
 const carouselScenes = scenes.slice(1, 5)
 
 const carouselDeg = computed(() => {
@@ -282,20 +366,19 @@ const carouselItemOpacity = (idx) => {
 
 const geneTokens = computed(() => {
   const raw = store.genePages?.value || []
-  return raw.map(g => g?.Name).filter(Boolean)
+  return raw.map((g) => g?.Name).filter(Boolean)
 })
 </script>
 
 <template>
   <div ref="stageEl" class="stage" :class="{ 'stage--day': isDayMode }">
-
     <!-- ?? z-index 2: WebGL 3D canvas嚗?璈?+ ?????剁??? -->
     <div class="bg-layer">
       <ClientOnly>
         <TresCanvas :alpha="true" :clear-color="bgColor" window-size>
           <TresPerspectiveCamera :position="[0, 0, 8]" :fov="52" />
           <TresAmbientLight
-            :intensity="isDayMode ? 0.30 : 0.2"
+            :intensity="isDayMode ? 0.3 : 0.2"
             :color="isDayMode ? '#fff5ee' : '#1a0a05'"
           />
           <TresDirectionalLight
@@ -324,7 +407,6 @@ const geneTokens = computed(() => {
       :tokens="geneTokens"
     />
 
-    
     <div class="holo-layer" aria-hidden="true">
       <div
         v-for="(card, idx) in HOLO_CARDS"
@@ -333,7 +415,6 @@ const geneTokens = computed(() => {
         :class="{ 'holo-card--visible': cardShowing }"
         :style="holoCardStyle(card)"
       >
-        
         <div class="holo-card__header">
           <span class="holo-card__dot" />
           <span class="holo-card__label">{{ card.label }}</span>
@@ -351,7 +432,7 @@ const geneTokens = computed(() => {
           <div class="holo-card__connector-line" />
           <div class="holo-card__connector-dot" />
         </div>
-        
+
         <div class="holo-card__scanline" />
       </div>
     </div>
@@ -363,15 +444,9 @@ const geneTokens = computed(() => {
         2. .carousel-reel    ??Y 頠訾葉敹??歹?隞?DNA 撌西遘 26vw ?箏?敹?
         3. .carousel-item    ????舀?憿隞塚??箏?閫漲撌?+ translateZ 憭嚗?
     -->
-    <div
-      class="carousel-camera"
-      :style="{ opacity: carouselAlpha }"
-    >
+    <div class="carousel-camera" :style="{ opacity: carouselAlpha }">
       <!-- 頧嚗???CSS transition嚗?亥???lerpedProgress 蝣箔???畾萄??典雿?-->
-      <div
-        class="carousel-reel"
-        :style="{ transform: `rotateY(${carouselDeg}deg)` }"
-      >
+      <div class="carousel-reel" :style="{ transform: `rotateY(${carouselDeg}deg)` }">
         <div
           v-for="(scene, idx) in carouselScenes"
           :key="idx"
@@ -379,7 +454,7 @@ const geneTokens = computed(() => {
           :style="{
             transform: `rotateY(${idx * CAROUSEL_STEP}deg) translateZ(${carouselRadius}px)`,
             opacity: carouselItemOpacity(idx),
-            visibility: carouselItemOpacity(idx) > 0.02 ? 'visible' : 'hidden',
+            visibility: carouselItemOpacity(idx) > 0.02 ? 'visible' : 'hidden'
           }"
         >
           <div class="carousel-item__content">
@@ -389,8 +464,11 @@ const geneTokens = computed(() => {
             <h2 class="scene-title" v-html="scene.title" />
             <!-- eslint-disable-next-line vue/no-v-html -->
             <p v-if="scene.desc" class="scene-desc" v-html="scene.desc" />
-            <div v-if="scene.btn" class="scene-cta" style="pointer-events: auto;">
-              <NuxtLink :to="scene.btn.to" class="btn-app btn-app--primary btn-app--md btn-app--pill">
+            <div v-if="scene.btn" class="scene-cta" style="pointer-events: auto">
+              <NuxtLink
+                :to="scene.btn.to"
+                class="btn-app btn-app--primary btn-app--md btn-app--pill"
+              >
                 {{ scene.btn.label }}
               </NuxtLink>
             </div>
@@ -424,36 +502,39 @@ const geneTokens = computed(() => {
           class="scene-hero-skip"
           :style="{
             opacity: String(sceneAlpha[0]),
-            pointerEvents: activeDot === 0 ? 'auto' : 'none',
+            pointerEvents: activeDot === 0 ? 'auto' : 'none'
           }"
         >
-          <NuxtLink to="/home" class="btn-app btn-app--ghost btn-app--sm btn-app--pill" aria-label="不看介紹，直接進入官網">
-            不看介紹，直接進入官網
+          <NuxtLink
+            to="/home"
+            class="btn-app btn-app--ghost btn-app--sm btn-app--pill"
+            aria-label="直接進入官網"
+          >
+            直接進入官網 →
           </NuxtLink>
         </div>
-        
+
         <div
           v-if="idx === 5"
           class="scene-end-nav"
           :style="{
             opacity: String(sceneAlpha[5]),
-            pointerEvents: activeDot === 5 ? 'auto' : 'none',
+            pointerEvents: activeDot === 5 ? 'auto' : 'none'
           }"
         >
-          <NuxtLink to="/shop" class="btn-app btn-app--primary btn-app--md btn-app--pill">前往選購</NuxtLink>
-          <NuxtLink to="/home" class="btn-app btn-app--ghost btn-app--md btn-app--pill">回到首頁</NuxtLink>
+          <NuxtLink to="/shop" class="btn-app btn-app--primary btn-app--md btn-app--pill">
+            前往選購
+          </NuxtLink>
+          <NuxtLink to="/home" class="btn-app btn-app--ghost btn-app--md btn-app--pill">
+            回到首頁
+          </NuxtLink>
         </div>
       </div>
     </div>
 
     <!-- ?? z-index 32: Visual chrome (dots, scroll hint) ??pointer-events:none ?? -->
     <div class="dots-nav" aria-hidden="true">
-      <span
-        v-for="i in 6"
-        :key="i"
-        class="dot"
-        :class="{ 'dot--active': activeDot === i - 1 }"
-      />
+      <span v-for="i in 6" :key="i" class="dot" :class="{ 'dot--active': activeDot === i - 1 }" />
     </div>
 
     <Transition name="hint-fade">
@@ -471,7 +552,6 @@ const geneTokens = computed(() => {
          canvas clearColor 為實心黑色，此層將官網蜂巢格紋疊在 WebGL 畫面上方，
          使格紋在粒子動畫期間保持可見 ── -->
     <div class="hex-overlay" aria-hidden="true" />
-
   </div>
 
   <!-- ── 載入動畫（position: fixed，在 .stage 外層）─────────────────────────── -->
@@ -495,13 +575,12 @@ const geneTokens = computed(() => {
   inset: 0;
   overflow: hidden;
   /* 官網原生背景在全站的 body::before（六角幾何紋理），這裡保持透明讓它透出 */
-  background-color: #0D0B0A;
+  background-color: #0d0b0a;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='70' height='120'%3E%3Cpolygon points='35,0 70,20 70,60 35,80 0,60 0,20' fill='rgba(255,255,255,0.06)' stroke='rgba(255,110,10,0.15)' stroke-width='1.2' stroke-linejoin='round'/%3E%3Cpolygon points='0,60 35,80 35,120 0,140 -35,120 -35,60' fill='rgba(255,255,255,0.06)' stroke='rgba(255,110,10,0.15)' stroke-width='1.2' stroke-linejoin='round'/%3E%3Cpolygon points='70,60 105,80 105,120 70,140 35,120 35,80' fill='rgba(255,255,255,0.06)' stroke='rgba(255,110,10,0.15)' stroke-width='1.2' stroke-linejoin='round'/%3E%3C/svg%3E");
   background-size: 70px 120px;
   background-repeat: repeat;
 
-  
-  --txt: rgba(255,255,255,0.92);
+  --txt: rgba(255, 255, 255, 0.92);
   --pri: #ff6622;
 }
 .stage--day {
@@ -540,7 +619,10 @@ const geneTokens = computed(() => {
 }
 
 /* 1300vh spacer ??maxScroll = 1200vh ??p_max = 1200/400 = 3.0 */
-.scroll-spacer { width: 100%; height: 1300vh; }
+.scroll-spacer {
+  width: 100%;
+  height: 1300vh;
+}
 
 /* ?? Scene UI overlay ?? */
 /*
@@ -573,7 +655,7 @@ const geneTokens = computed(() => {
   pointer-events: none;
   /* opacity ??sceneAlpha ?湔撽?嚗宏??CSS transition ?踹???蝺拙? */
   transform-style: preserve-3d;
-  
+
   transform-origin: 26vw 50%;
 }
 
@@ -593,7 +675,7 @@ const geneTokens = computed(() => {
   line-height: 1.08;
   letter-spacing: -0.02em;
   color: var(--txt);
-  text-shadow: 0 6px 34px rgba(0,0,0,0.55);
+  text-shadow: 0 6px 34px rgba(0, 0, 0, 0.55);
   margin: 0;
   text-align: left;
 }
@@ -627,7 +709,9 @@ const geneTokens = computed(() => {
 }
 .scene-block--hero .scene-title,
 .scene-block--hero .scene-kicker,
-.scene-block--hero .scene-desc { text-align: center; }
+.scene-block--hero .scene-desc {
+  text-align: center;
+}
 
 /* Hero title: extra large */
 .scene-title--hero {
@@ -666,7 +750,7 @@ const geneTokens = computed(() => {
   position: fixed;
   inset: 0;
   z-index: 99999;
-  background-color: #0D0B0A;
+  background-color: #0d0b0a;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='70' height='120'%3E%3Cpolygon points='35,0 70,20 70,60 35,80 0,60 0,20' fill='rgba(255,255,255,0.06)' stroke='rgba(255,110,10,0.15)' stroke-width='1.2' stroke-linejoin='round'/%3E%3Cpolygon points='0,60 35,80 35,120 0,140 -35,120 -35,60' fill='rgba(255,255,255,0.06)' stroke='rgba(255,110,10,0.15)' stroke-width='1.2' stroke-linejoin='round'/%3E%3Cpolygon points='70,60 105,80 105,120 70,140 35,120 35,80' fill='rgba(255,255,255,0.06)' stroke='rgba(255,110,10,0.15)' stroke-width='1.2' stroke-linejoin='round'/%3E%3C/svg%3E");
   background-size: 70px 120px;
   display: flex;
@@ -684,22 +768,34 @@ const geneTokens = computed(() => {
   font-family: inherit;
   font-size: clamp(2.8rem, 7vw, 5.5rem);
   font-weight: 700;
-  letter-spacing: 0.30em;
+  letter-spacing: 0.3em;
   color: #fff;
   text-shadow:
-    0 0 30px rgba(232,68,10,0.70),
-    0 0 70px rgba(232,68,10,0.25);
+    0 0 30px rgba(232, 68, 10, 0.7),
+    0 0 70px rgba(232, 68, 10, 0.25);
   animation: loader-brand-pulse 2.4s ease-in-out infinite;
 }
 @keyframes loader-brand-pulse {
-  0%, 100% { opacity: 0.80; text-shadow: 0 0 30px rgba(232,68,10,0.50), 0 0 70px rgba(232,68,10,0.18); }
-  50%       { opacity: 1.00; text-shadow: 0 0 30px rgba(232,68,10,0.90), 0 0 80px rgba(232,68,10,0.40), 0 0 120px rgba(232,68,10,0.12); }
+  0%,
+  100% {
+    opacity: 0.8;
+    text-shadow:
+      0 0 30px rgba(232, 68, 10, 0.5),
+      0 0 70px rgba(232, 68, 10, 0.18);
+  }
+  50% {
+    opacity: 1;
+    text-shadow:
+      0 0 30px rgba(232, 68, 10, 0.9),
+      0 0 80px rgba(232, 68, 10, 0.4),
+      0 0 120px rgba(232, 68, 10, 0.12);
+  }
 }
 .about-loader__sub {
-  font-size: 0.80rem;
+  font-size: 0.8rem;
   letter-spacing: 0.55em;
   text-transform: uppercase;
-  color: rgba(255,255,255,0.35);
+  color: rgba(255, 255, 255, 0.35);
   margin-top: -0.6rem;
 }
 /* DNA 均衡器：7 條垂直色條以波浪節奏振盪，象徵 DNA 橫桿 */
@@ -714,17 +810,30 @@ const geneTokens = computed(() => {
   width: 3px;
   border-radius: 2px;
   background: #e8440a;
-  box-shadow: 0 0 8px rgba(232,68,10,0.70), 0 0 20px rgba(232,68,10,0.30);
+  box-shadow:
+    0 0 8px rgba(232, 68, 10, 0.7),
+    0 0 20px rgba(232, 68, 10, 0.3);
   animation: dna-bar 1.6s ease-in-out infinite;
   animation-delay: calc((var(--i) - 1) * 0.13s);
 }
 @keyframes dna-bar {
-  0%, 100% { height: 6px;  opacity: 0.35; }
-  50%       { height: 36px; opacity: 1.00; }
+  0%,
+  100% {
+    height: 6px;
+    opacity: 0.35;
+  }
+  50% {
+    height: 36px;
+    opacity: 1;
+  }
 }
 /* 淡出轉場 */
-.loader-out-leave-active { transition: opacity 0.9s cubic-bezier(0.4, 0, 0.2, 1); }
-.loader-out-leave-to     { opacity: 0; }
+.loader-out-leave-active {
+  transition: opacity 0.9s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.loader-out-leave-to {
+  opacity: 0;
+}
 .stage--day .scene-title {
   text-shadow: none;
   color: var(--txt);
@@ -760,10 +869,12 @@ const geneTokens = computed(() => {
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: rgba(255,255,255,0.25);
-  transition: all 1.33s cubic-bezier(0.4,0,0.2,1);
+  background: rgba(255, 255, 255, 0.25);
+  transition: all 1.33s cubic-bezier(0.4, 0, 0.2, 1);
 }
-.stage--day .dot { background: rgba(0,0,0,0.18); }
+.stage--day .dot {
+  background: rgba(0, 0, 0, 0.18);
+}
 .dot--active {
   background: var(--pri);
   transform: scale(1.6);
@@ -793,7 +904,6 @@ const geneTokens = computed(() => {
   opacity: 0.65;
 }
 
-  
 /* ── Lamp hint（參考 Inspira UI Lamp Effect：conic + spotlight + glowing line） ── */
 .lamp-hint {
   position: relative;
@@ -801,8 +911,7 @@ const geneTokens = computed(() => {
   height: 120px;
   display: block;
   opacity: 1;
-  filter:
-    drop-shadow(0 0 22px rgba(255, 102, 34, 0.55))
+  filter: drop-shadow(0 0 22px rgba(255, 102, 34, 0.55))
     drop-shadow(0 0 44px rgba(255, 102, 34, 0.22));
 }
 
@@ -817,13 +926,12 @@ const geneTokens = computed(() => {
 
 .lamp-hint__cone {
   inset: 0;
-  background:
-    conic-gradient(
-      from 180deg at 50% 0%,
-      transparent 0deg 78deg,
-      rgba(255, 102, 34, 0.62) 90deg,
-      transparent 102deg 360deg
-    );
+  background: conic-gradient(
+    from 180deg at 50% 0%,
+    transparent 0deg 78deg,
+    rgba(255, 102, 34, 0.62) 90deg,
+    transparent 102deg 360deg
+  );
   filter: blur(14px);
   mask-image: radial-gradient(ellipse 68% 100% at 50% 0%, #000 44%, transparent 92%);
   opacity: 1;
@@ -836,11 +944,7 @@ const geneTokens = computed(() => {
   top: -12px;
   width: 260px;
   height: 84px;
-  background:
-    radial-gradient(circle at 50% 50%,
-      rgba(255, 102, 34, 0.70) 0%,
-      transparent 72%
-    );
+  background: radial-gradient(circle at 50% 50%, rgba(255, 102, 34, 0.7) 0%, transparent 72%);
   filter: blur(10px);
   opacity: 1;
   animation: lamp-spot 2.8s ease-in-out infinite;
@@ -856,81 +960,110 @@ const geneTokens = computed(() => {
     rgba(255, 102, 34, 0.45),
     transparent
   );
-  filter:
-    drop-shadow(0 0 14px rgba(255, 102, 34, 0.55))
+  filter: drop-shadow(0 0 14px rgba(255, 102, 34, 0.55))
     drop-shadow(0 0 34px rgba(255, 102, 34, 0.22));
   transform-origin: top center;
   animation: lamp-line 2.8s ease-in-out infinite;
 }
 
 @keyframes lamp-cone {
-  0%, 100% { opacity: 0.58; transform: translateX(-50%) scaleY(0.90) scaleX(0.95); }
-  45%      { opacity: 1.00; transform: translateX(-50%) scaleY(1.00) scaleX(1.02); }
+  0%,
+  100% {
+    opacity: 0.58;
+    transform: translateX(-50%) scaleY(0.9) scaleX(0.95);
+  }
+  45% {
+    opacity: 1;
+    transform: translateX(-50%) scaleY(1) scaleX(1.02);
+  }
 }
 
 @keyframes lamp-spot {
-  0%, 100% { opacity: 0.48; transform: translateX(-50%) scale(0.90); }
-  45%      { opacity: 1.00; transform: translateX(-50%) scale(1.00); }
+  0%,
+  100% {
+    opacity: 0.48;
+    transform: translateX(-50%) scale(0.9);
+  }
+  45% {
+    opacity: 1;
+    transform: translateX(-50%) scale(1);
+  }
 }
 
 @keyframes lamp-line {
-  0%, 100% { opacity: 0.45; transform: translateX(-50%) scaleY(0.60); }
-  45%      { opacity: 1.00; transform: translateX(-50%) scaleY(1.00); }
+  0%,
+  100% {
+    opacity: 0.45;
+    transform: translateX(-50%) scaleY(0.6);
+  }
+  45% {
+    opacity: 1;
+    transform: translateX(-50%) scaleY(1);
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .lamp-hint__cone,
   .lamp-hint__spot,
-  .lamp-hint__line { animation: none; }
+  .lamp-hint__line {
+    animation: none;
+  }
 }
 
 /* Scroll hint leave transition */
-.hint-fade-leave-active { transition: opacity 2s ease; }
-.hint-fade-leave-to     { opacity: 0; }
+.hint-fade-leave-active {
+  transition: opacity 2s ease;
+}
+.hint-fade-leave-to {
+  opacity: 0;
+}
 
 /* ?? Mobile ?? */
 /* ??????????????????????????????????????????????????????????????????????
    ????(??68px)
    ?????????????????????????????????????????????????????????????????????? */
 @media (max-width: 768px) {
-
-  
   /* 手機版：holo-layer 顯示，與桌機相同分布，卡片縮小 */
-  .holo-layer { display: block; }
+  .holo-layer {
+    display: block;
+  }
   .holo-card {
     width: 100px;
-    transition: transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.3s ease !important;
+    transition:
+      transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1),
+      opacity 0.3s ease !important;
   }
-  .holo-card__connector { display: none; }   /* ?典??∠?嚗ebGL 靘陷嚗?/
+  .holo-card__connector {
+    display: none;
+  } /* ?典??∠?嚗ebGL 靘陷嚗?/
   .dna-layer     { display: none; }   /* 撌血 DNA 鋆ˇ嚗?蝛粹?嚗?/
   .gene-fx-layer { display: none; }   /* ?箏??剁?獢???嚗?/
   .dots-nav      { display: none; }   /* ?湔?內暺?*/
 
   /* ?? scroll hint ?? */
   /* 讓 Lamp 提示永遠在底部導覽列上方 */
-  .scroll-hint { bottom: calc(env(safe-area-inset-bottom, 0px) + 56px - 1.8rem); }
+  .scroll-hint {
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 56px - 1.8rem);
+  }
 
   /* ????????????????????????????????????????????????????????????????????
      3D 頧嚗?璈??摰?嚗誑?Ｗ?銝剖亢?箄遘敹?
      ??????????????????????????????????????????????????????????????????? */
 
-  
   .carousel-camera {
     perspective-origin: 50% 50%;
-    overflow: hidden;    /* 鋆?頞?Ｗ???ａ???*/
+    overflow: hidden; /* 鋆?頞?Ｗ???ａ???*/
   }
 
-  
   .carousel-reel {
     left: 50%;
   }
 
-  
   .carousel-item__content {
     width: 88vw;
     max-width: 420px;
     padding-left: 0;
-    align-items: center;   
+    align-items: center;
     text-align: center;
   }
 
@@ -941,7 +1074,7 @@ const geneTokens = computed(() => {
   }
 
   .carousel-item .scene-kicker {
-    font-size: 0.60rem;
+    font-size: 0.6rem;
     text-align: center;
   }
 
@@ -958,7 +1091,6 @@ const geneTokens = computed(() => {
     gap: 0.65rem;
   }
 
-  
   .scene-block {
     max-width: 100%;
     align-items: center;
@@ -968,39 +1100,83 @@ const geneTokens = computed(() => {
   }
 
   .scene-block .scene-title,
-  .scene-block .scene-kicker { text-align: center; }
+  .scene-block .scene-kicker {
+    text-align: center;
+  }
 
   .scene-title--hero {
     font-size: clamp(2.4rem, 10vw, 3.8rem);
   }
 
   /* ── 手機版整頁縮放：文字、UI 元素等比縮小至約 80% ── */
-  .carousel-item .scene-title  { font-size: clamp(1.55rem, 6.5vw, 2.2rem); }
-  .carousel-item .scene-kicker { font-size: 0.52rem; }
-  .carousel-item .scene-desc   { font-size: 0.75rem; line-height: 1.65; }
-  .scene-title--hero            { font-size: clamp(1.85rem, 7.8vw, 3rem); }
-  .scene-subtitle               { font-size: 0.68rem; letter-spacing: 0.14em; margin-top: 0.3rem; }
-  .scene-kicker                 { font-size: 0.50rem; letter-spacing: 0.22em; }
-  .hint-text                    { font-size: 0.68rem; }
+  .carousel-item .scene-title {
+    font-size: clamp(1.55rem, 6.5vw, 2.2rem);
+  }
+  .carousel-item .scene-kicker {
+    font-size: 0.52rem;
+  }
+  .carousel-item .scene-desc {
+    font-size: 0.75rem;
+    line-height: 1.65;
+  }
+  .scene-title--hero {
+    font-size: clamp(1.85rem, 7.8vw, 3rem);
+  }
+  .scene-subtitle {
+    font-size: 0.68rem;
+    letter-spacing: 0.14em;
+    margin-top: 0.3rem;
+  }
+  .scene-kicker {
+    font-size: 0.5rem;
+    letter-spacing: 0.22em;
+  }
+  .hint-text {
+    font-size: 0.68rem;
+  }
 
   /* 全像卡片縮小 */
-  .holo-card { width: 82px; }
-  .holo-card__pct    { font-size: 1.1rem; }
-  .holo-card__gene   { font-size: 0.50rem; }
-  .holo-card__status { font-size: 0.42rem; }
+  .holo-card {
+    width: 82px;
+  }
+  .holo-card__pct {
+    font-size: 1.1rem;
+  }
+  .holo-card__gene {
+    font-size: 0.5rem;
+  }
+  .holo-card__status {
+    font-size: 0.42rem;
+  }
 
   /* 燈光特效縮小 */
-  .lamp-hint       { width: min(280px, 58vw); height: 88px; }
-  .lamp-hint__spot { width: 180px; height: 62px; }
-  .lamp-hint__line { height: 54px; }
+  .lamp-hint {
+    width: min(280px, 58vw);
+    height: 88px;
+  }
+  .lamp-hint__spot {
+    width: 180px;
+    height: 62px;
+  }
+  .lamp-hint__line {
+    height: 54px;
+  }
 
   /* 結尾 CTA 按鈕縮小 */
-  .scene-end-nav .btn-app { font-size: 0.82rem; padding: 0.6em 1.4em; }
+  .scene-end-nav .btn-app {
+    font-size: 0.82rem;
+    padding: 0.6em 1.4em;
+  }
 
   /* 指示點縮小（行動版改為顯示） */
-  .dots-nav { display: flex; gap: 6px; }
-  .dot       { width: 4px; height: 4px; }
-
+  .dots-nav {
+    display: flex;
+    gap: 6px;
+  }
+  .dot {
+    width: 4px;
+    height: 4px;
+  }
 }
 
 /* ??????????????????????????????????????????????????????????????????????
@@ -1023,7 +1199,7 @@ const geneTokens = computed(() => {
    ?亙/??游??怎 lerpedProgress ??lerp 撟單???               */
 .carousel-reel {
   position: absolute;
-  left: 33vw;   /* 敺?喟宏嚗? perspective-origin 銝?湛? */
+  left: 33vw; /* 敺?喟宏嚗? perspective-origin 銝?湛? */
   top: 50%;
   width: 0;
   height: 0;
@@ -1094,24 +1270,24 @@ const geneTokens = computed(() => {
     0 0 14px rgba(0, 210, 255, 0.16),
     0 0 36px rgba(0, 210, 255, 0.07),
     inset 0 0 20px rgba(0, 200, 255, 0.04);
-  overflow: visible;         /* 撘?蝺撓?箏????*/
-  
+  overflow: visible; /* 撘?蝺撓?箏????*/
+
   opacity: 0;
   will-change: transform, opacity;
   /* ??湛????????鋡怎洵鈭?.holo-card 閬??箸迤撘潘? */
   transition:
-    transform 0.56s cubic-bezier(0.60, 0, 0.98, 0.50),
-    opacity   0.50s 0.06s ease-in;
+    transform 0.56s cubic-bezier(0.6, 0, 0.98, 0.5),
+    opacity 0.5s 0.06s ease-in;
 }
 
 /* ?? ?∠??航???撠? + 瘚桀?
       ?脣 transition嚗pring cubic-bezier ?堆?敺桀?                  ?? */
 .holo-card--visible {
   opacity: 1;
-  
+
   transition:
     transform 0.72s cubic-bezier(0.175, 0.885, 0.32, 1.275),
-    opacity   0.28s ease;
+    opacity 0.28s ease;
   /* 瘚桀?嚗蝙??translate ?撅祆改?銝僕??transform ?脣? */
   animation: holo-float 6s ease-in-out infinite;
   animation-delay: var(--delay, 0s);
@@ -1141,7 +1317,7 @@ const geneTokens = computed(() => {
 
 .holo-card__label {
   font-family: 'Courier New', Courier, monospace;
-  font-size: 0.60rem;
+  font-size: 0.6rem;
   font-weight: 700;
   letter-spacing: 0.18em;
   text-transform: uppercase;
@@ -1157,7 +1333,7 @@ const geneTokens = computed(() => {
   color: #ffffff;
   text-shadow:
     0 0 10px rgba(0, 210, 255, 0.45),
-    0 0 30px rgba(0, 180, 255, 0.20);
+    0 0 30px rgba(0, 180, 255, 0.2);
   letter-spacing: -0.02em;
   margin-bottom: 4px;
 }
@@ -1167,10 +1343,10 @@ const geneTokens = computed(() => {
   font-family: 'Courier New', Courier, monospace;
   font-size: 0.78rem;
   font-weight: 700;
-  letter-spacing: 0.20em;
+  letter-spacing: 0.2em;
   text-transform: uppercase;
   color: #ffffff;
-  text-shadow: 0 0 8px rgba(255, 100, 30, 0.50);
+  text-shadow: 0 0 8px rgba(255, 100, 30, 0.5);
   margin-bottom: 10px;
 }
 
@@ -1178,10 +1354,11 @@ const geneTokens = computed(() => {
 .holo-card__divider {
   width: 100%;
   height: 1px;
-  background: linear-gradient(90deg,
+  background: linear-gradient(
+    90deg,
     transparent,
-    rgba(0, 210, 255, 0.50) 30%,
-    rgba(0, 210, 255, 0.50) 70%,
+    rgba(0, 210, 255, 0.5) 30%,
+    rgba(0, 210, 255, 0.5) 70%,
     transparent
   );
   margin-bottom: 8px;
@@ -1217,7 +1394,7 @@ const geneTokens = computed(() => {
   top: 50%;
   transform: translateY(-50%) translateX(-100%) rotate(var(--conn-angle, 0deg));
   transform-origin: 100% 50%;
-  flex-direction: row-reverse;  
+  flex-direction: row-reverse;
 }
 
 .holo-card__connector--top {
@@ -1225,7 +1402,7 @@ const geneTokens = computed(() => {
   top: 0;
   transform: translateX(-50%) translateY(-100%) rotate(var(--conn-angle, 0deg));
   transform-origin: 50% 100%;
-  flex-direction: column-reverse;  
+  flex-direction: column-reverse;
   align-items: center;
 }
 
@@ -1269,15 +1446,15 @@ const geneTokens = computed(() => {
   flex-shrink: 0;
   background: rgba(0, 220, 255, 0.82);
   box-shadow:
-    0 0 5px  rgba(0, 220, 255, 0.95),
+    0 0 5px rgba(0, 220, 255, 0.95),
     0 0 14px rgba(0, 220, 255, 0.55);
   animation: holo-pulse 2.2s ease-in-out infinite;
 }
 
 .holo-card {
   transition:
-    transform 0.56s cubic-bezier(0.60, 0, 0.98, 0.50),
-    opacity   0.50s 0.06s ease-in;
+    transform 0.56s cubic-bezier(0.6, 0, 0.98, 0.5),
+    opacity 0.5s 0.06s ease-in;
 }
 
 /* ?? ??蝺??? */
@@ -1286,11 +1463,7 @@ const geneTokens = computed(() => {
   left: 0;
   right: 0;
   height: 1px;
-  background: linear-gradient(90deg,
-    transparent,
-    rgba(0, 220, 255, 0.55),
-    transparent
-  );
+  background: linear-gradient(90deg, transparent, rgba(0, 220, 255, 0.55), transparent);
   animation: holo-scan 3s linear infinite;
   pointer-events: none;
 }
@@ -1301,23 +1474,44 @@ const geneTokens = computed(() => {
 
 /* 瘚桀?嚗蝙??CSS ?撅祆?translate嚗???transform ?脣?銵? */
 @keyframes holo-float {
-  0%, 100% { translate: 0   0px; }
-  50%       { translate: 0  -7px; }
+  0%,
+  100% {
+    translate: 0 0px;
+  }
+  50% {
+    translate: 0 -7px;
+  }
 }
 
 @keyframes holo-blink {
-  0%, 100% { opacity: 1; }
-  50%       { opacity: 0.15; }
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.15;
+  }
 }
 
 @keyframes holo-pulse {
-  0%, 100% { transform: scale(1);   opacity: 1; }
-  50%       { transform: scale(1.5); opacity: 0.6; }
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.5);
+    opacity: 0.6;
+  }
 }
 
 @keyframes holo-scan {
-  0%   { top: 0%; }
-  100% { top: 100%; }
+  0% {
+    top: 0%;
+  }
+  100% {
+    top: 100%;
+  }
 }
 
 .scene-end-nav {
@@ -1328,6 +1522,4 @@ const geneTokens = computed(() => {
   margin-top: 2rem;
   pointer-events: auto;
 }
-
 </style>
-
