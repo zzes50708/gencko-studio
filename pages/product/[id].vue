@@ -541,7 +541,10 @@ const generatePromo = async () => {
                 <span class="status-badge s-nfs">非賣（自留）</span>
               </template>
               <template v-else>
-                <div class="price">NT$ {{ productModules.transaction.price }}</div>
+                <div v-if="store.isExhibitionMode" class="price exhibition-price">
+                  {{ store.exhibitionNote }}
+                </div>
+                <div v-else class="price">NT$ {{ productModules.transaction.price }}</div>
               </template>
             </div>
 
@@ -660,7 +663,8 @@ const generatePromo = async () => {
             <div class="related-info">
               <div class="related-morph">{{ item.Morph }}</div>
               <div class="related-price">
-                <span v-if="item.Status === 'ForSale'">${{ item.ListingPrice }}</span>
+                <span v-if="store.isExhibitionMode" style="color: var(--pri)">展場中</span>
+                <span v-else-if="item.Status === 'ForSale'">${{ item.ListingPrice }}</span>
                 <span v-else-if="item.Status === 'Auction'" style="color: var(--pri)">競標中</span>
                 <span v-else style="color: #888">已售出</span>
               </div>

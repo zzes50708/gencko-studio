@@ -1,9 +1,11 @@
 <script setup>
 import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
+import { useMainStore } from '~/stores/useMainStore'
 import { getCleanUrl } from '~/utils/image.js'
 
 const router = useRouter()
+const store = useMainStore()
 
 const props = defineProps({
   item: { type: Object, required: true },
@@ -46,6 +48,7 @@ const birthdayText = computed(() => {
 })
 
 const priceText = computed(() => {
+  if (store.isExhibitionMode) return store.exhibitionNote
   if (props.item?.Status === 'Sold') return '售出'
   const p = props.item?.ListingPrice
   if (p === null || p === undefined || p === '') return '未登錄'
@@ -165,7 +168,10 @@ const onImgLoad = () => {
               </button>
             </template>
             <template v-else>
-              <div class="price slim-price">${{ item.ListingPrice }}</div>
+              <span v-if="store.isExhibitionMode" class="exhibition-note">
+                {{ store.exhibitionNote }}
+              </span>
+              <div v-else class="price slim-price">${{ item.ListingPrice }}</div>
             </template>
           </div>
         </div>
@@ -236,6 +242,13 @@ const onImgLoad = () => {
 .find-similar-btn:hover,
 .find-similar-btn:focus-visible {
   text-decoration: underline;
+}
+
+/* 展場模式：價格改顯示提示文字（#task4） */
+.exhibition-note {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--pri);
 }
 
 .flip-inner {

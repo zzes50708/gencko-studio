@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { useSupabaseClient } from '#imports'
 import { useRouter } from 'vue-router'
 import { withRetry } from '~/utils/supabase-retry'
@@ -21,6 +21,8 @@ export const useMainStore = defineStore('main', () => {
   const marqueeList = ref([])
   const hotList = ref([])
   const auctionList = ref([])
+  // 展場模式設定（來自 Supabase site_settings 單列表；表不存在時保持 null＝非展場）
+  const siteSettings = ref(null)
 
   // --- 使用者狀態 (Auth) ---
   const currentUser = ref(null)
@@ -123,12 +125,17 @@ export const useMainStore = defineStore('main', () => {
     }
 
     // 2. 次要資料表：平行獨立載入，互不影響
-    const [merchResult, artResult, geneResult, configResult] = await Promise.allSettled([
-      withRetry(() => supabase.from('merchandise').select('*'), { label: 'merchandise' }),
-      withRetry(() => supabase.from('articles').select('*'), { label: 'articles' }),
-      withRetry(() => supabase.from('genetic_pages').select('*'), { label: 'genetic_pages' }),
-      withRetry(() => supabase.from('config').select('*'), { label: 'config' })
-    ])
+    const [merchResult, artResult, geneResult, configResult, settingsResult] =
+      await Promise.allSettled([
+        withRetry(() => supabase.from('merchandise').select('*'), { label: 'merchandise' }),
+        withRetry(() => supabase.from('articles').select('*'), { label: 'articles' }),
+        withRetry(() => supabase.from('genetic_pages').select('*'), { label: 'genetic_pages' }),
+        withRetry(() => supabase.from('config').select('*'), { label: 'config' }),
+        // site_settings 為選用表；不存在時靜默略過（維持非展場模式）
+        withRetry(() => supabase.from('site_settings').select('*').limit(1).maybeSingle(), {
+          label: 'site_settings'
+        })
+      ])
 
     if (merchResult.status === 'fulfilled' && !merchResult.value.error && merchResult.value.data) {
       merchList.value = merchResult.value.data.map((m) => ({
@@ -187,7 +194,27 @@ export const useMainStore = defineStore('main', () => {
     } else if (configResult.status === 'rejected' || configResult.value?.error) {
       console.error('讀取跑馬燈設定失敗:', configResult.reason || configResult.value?.error)
     }
+
+    // site_settings（展場模式）：表存在且有資料才套用；不存在／空值靜默維持非展場
+    if (settingsResult.status === 'fulfilled' && !settingsResult.value.error) {
+      siteSettings.value = settingsResult.value.data || null
+    }
   }
+
+  // 展場模式：enabled 且（無日期或現在落在起訖區間內）
+  const isExhibitionMode = computed(() => {
+    const s = siteSettings.value
+    if (!s || !s.exhibition_enabled) return false
+    const now = Date.now()
+    const start = s.exhibition_start ? new Date(s.exhibition_start).getTime() : null
+    const end = s.exhibition_end ? new Date(s.exhibition_end).getTime() : null
+    if (start && now < start) return false
+    if (end && now > end) return false
+    return true
+  })
+  const exhibitionNote = computed(
+    () => siteSettings.value?.exhibition_note || '展場期間價格請洽現場'
+  )
 
   async function loadAuctions() {
     try {
@@ -511,6 +538,9 @@ export const useMainStore = defineStore('main', () => {
     marqueeList,
     hotList,
     auctionList,
+    siteSettings,
+    isExhibitionMode,
+    exhibitionNote,
     currentUser,
     wishlist,
     hospWishlist,
