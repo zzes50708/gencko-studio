@@ -116,8 +116,29 @@ const kickoffScene = () => {
   cleanupKickoff()
 }
 
+// #U2：是否自動載入 3D 場景。
+// reduced-motion（無障礙）或真正低階裝置（核心/記憶體不足）→ 不自動載入，
+// 改維持靜態 fallback 並提供「載入互動動畫」按鈕，兼顧無障礙與行動效能/LCP。
+// 一般手機/桌機維持原本自動載入體驗。
+const manualLoadOnly = ref(false)
+const shouldAutoLoadScene = () => {
+  if (!import.meta.client) return false
+  if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches)
+    return false
+  const cores = navigator.hardwareConcurrency || 8
+  const mem = navigator.deviceMemory || 8
+  if (cores <= 4 || mem <= 4) return false
+  return true
+}
+
 onMounted(() => {
   if (!import.meta.client) return
+
+  // reduced-motion / 低階裝置：不自動載入，顯示手動載入入口
+  if (!shouldAutoLoadScene()) {
+    manualLoadOnly.value = true
+    return
+  }
 
   // 路徑 A：瀏覽器 idle（最佳，行動裝置常見 100–800ms）
   if ('requestIdleCallback' in window) {
@@ -152,9 +173,20 @@ onBeforeUnmount(() => {
         <div class="fallback-content">
           <div class="fallback-title" aria-hidden="true">Gencko Studio</div>
           <div class="fallback-subtitle" aria-hidden="true">品牌服務</div>
-          <NuxtLink to="/home" class="fallback-skip" aria-label="直接進入官網">
-            直接進入官網 →
-          </NuxtLink>
+          <div class="fallback-actions">
+            <NuxtLink to="/home" class="fallback-skip" aria-label="直接進入官網">
+              直接進入官網 →
+            </NuxtLink>
+            <!-- #U2：reduced-motion / 低階裝置不自動載入 3D，改由使用者自願載入 -->
+            <button
+              v-if="manualLoadOnly"
+              type="button"
+              class="fallback-skip fallback-load-btn"
+              @click="kickoffScene"
+            >
+              載入互動動畫
+            </button>
+          </div>
         </div>
       </div>
     </Transition>
@@ -219,9 +251,16 @@ onBeforeUnmount(() => {
   opacity: 0.55;
 }
 
+.fallback-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  margin-top: 32px;
+}
+
 .fallback-skip {
   display: inline-block;
-  margin-top: 32px;
   padding: 10px 24px;
   border-radius: 999px;
   border: 1px solid rgba(255, 255, 255, 0.28);
@@ -241,6 +280,19 @@ onBeforeUnmount(() => {
   border-color: #e8440a;
   background: rgba(232, 68, 10, 0.12);
   color: #fff;
+}
+
+/* #U2：手動載入 3D 動畫按鈕（reduced-motion / 低階裝置時顯示），填色以示主要動作 */
+.fallback-load-btn {
+  cursor: pointer;
+  background: #cc3b08;
+  border-color: #cc3b08;
+  font-family: inherit;
+}
+.fallback-load-btn:hover,
+.fallback-load-btn:focus {
+  background: #e8440a;
+  border-color: #e8440a;
 }
 
 /* ── Cross-fade 入場動畫：fallback 與 scene 重疊淡出/淡入 ── */

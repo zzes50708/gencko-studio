@@ -87,6 +87,7 @@
 
 ## #U2 3D Hero：prefers-reduced-motion 與行動降載 fallback
 
+- **狀態**：`[x]` 完成（2026-06-30）。`pages/index.vue` 新增 `shouldAutoLoadScene()`：`prefers-reduced-motion: reduce` 或低階裝置（`hardwareConcurrency<=4` 或 `deviceMemory<=4`）時**不自動載入 3D**，維持靜態 fallback 並顯示「載入互動動畫」按鈕（使用者可自願載入）；一般手機/桌機維持原自動載入。預覽驗證：高階機自動載入無按鈕；模擬 reduced-motion → canvas 0 + 按鈕出現；點按鈕 → 場景載入。**保守取捨**：只擋 reduced-motion 與真正低階，不動一般行動體驗。（#U6 可在此基礎再壓 bundle/LCP。）
 - **痛點/背景**：首頁 TresJS/WebGL 場景是行動版 LCP 風險與耗電來源；目前未尊重 `prefers-reduced-motion`，低階裝置體感慢（評分「效能 7.0」「無障礙 7.5」主因之一）。
 - **影響面與收益**：行動 PageSpeed/LCP 改善、省電、無障礙合規、低階機可用性。
 - **牽涉檔案**：`pages/index.vue`、`components/BrandServiceScrollScene.vue`、`components/GeckoScene3D.vue`、`nuxt.config.ts`（必要時調 lazy hydration）。
