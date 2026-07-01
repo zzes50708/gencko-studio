@@ -12,8 +12,9 @@ const props = defineProps({
   isCompared: { type: Boolean, default: false },
   compareDisabled: { type: Boolean, default: false },
   hasAuction: { type: Boolean, default: false },
+  showCompare: { type: Boolean, default: true },
   onToggleWishlist: { type: Function, required: true },
-  onToggleCompare: { type: Function, required: true }
+  onToggleCompare: { type: Function, default: () => {} }
 })
 
 const linkTo = computed(() => `/product/${props.item.ID}`)
@@ -94,7 +95,7 @@ const onImgLoad = () => {
             </button>
 
             <button
-              v-if="item.Status !== 'Sold'"
+              v-if="showCompare && item.Status !== 'Sold'"
               type="button"
               class="btn-app btn-app--ghost btn-app--xs btn-app--pill card-action-btn"
               :class="{ 'card-action-btn--active': isCompared }"
@@ -198,7 +199,7 @@ const onImgLoad = () => {
             </button>
 
             <button
-              v-if="item.Status !== 'Sold'"
+              v-if="showCompare && item.Status !== 'Sold'"
               type="button"
               class="btn-app btn-app--ghost btn-app--xs btn-app--pill flip-action-btn"
               :class="{ 'flip-action-btn--active': isCompared }"

@@ -3,6 +3,7 @@ import { computed, ref } from 'vue'
 import { useHead, useAsyncData, useSupabaseClient } from '#imports'
 import { useMainStore } from '~/stores/useMainStore'
 import { getCleanUrl } from '~/utils/image.js'
+import ShopFlipCard from '~/components/ShopFlipCard.vue'
 
 const store = useMainStore()
 const supabase = useSupabaseClient()
@@ -41,6 +42,17 @@ const breederGender = ref('全部')
 const selectBreederSp = (species) => {
   breederSp.value = species
   breederGender.value = '全部'
+}
+
+// 收藏切換（與 shop 行為一致，含 localStorage 持久化）
+const toggleWishlist = (id) => {
+  if (!store.wishlist) store.wishlist = []
+  if (store.wishlist.includes(id)) {
+    store.wishlist = store.wishlist.filter((x) => x !== id)
+  } else {
+    store.wishlist.push(id)
+  }
+  if (import.meta.client) localStorage.setItem('gencko_wishlist', JSON.stringify(store.wishlist))
 }
 
 // 計算種群展示列表（加入性別篩選）
@@ -262,46 +274,17 @@ useHead({
       目前尚無可展示的種群資料。
     </div>
 
-    <!-- Breeders Grid (Photo Grid) -->
+    <!-- Breeders Grid：改用與 shop 相同的翻卡，點擊進個體頁（#task3）；種群為非賣品故隱藏比較 -->
     <div class="grid photo-grid" v-else>
-      <div
-        class="card"
-        v-for="i in breedersList"
+      <ShopFlipCard
+        v-for="(i, index) in breedersList"
         :key="i.ID"
-        role="button"
-        tabindex="0"
-        :aria-label="`查看 ${i.Morph} 大圖`"
-        @click="store.openLightbox(i)"
-        @keydown.enter.space.prevent="store.openLightbox(i)"
-      >
-        <!-- 🌟 核心修正：將 NuxtImg 替換為原生 img -->
-        <img
-          v-if="i.ImageURL"
-          :src="getCleanUrl(i.ImageURL, 400)"
-          :alt="i.Morph"
-          class="card-img"
-          loading="lazy"
-          decoding="async"
-        />
-        <div
-          v-else
-          class="card-img"
-          style="
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: #333;
-            font-size: 2rem;
-            background: #000;
-          "
-        >
-          🦎
-        </div>
-
-        <div class="card-body" style="padding: 10px">
-          <div class="morph-title" style="font-size: 1rem; text-align: center">{{ i.Morph }}</div>
-        </div>
-      </div>
+        :item="i"
+        :index="index"
+        :is-wishlisted="(store.wishlist || []).includes(i.ID)"
+        :show-compare="false"
+        :on-toggle-wishlist="toggleWishlist"
+      />
     </div>
   </div>
 </template>
