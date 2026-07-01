@@ -16,6 +16,18 @@ const supabase = useSupabaseClient()
 
 const productId = String(route.params.id || '').trim()
 
+// 展場設定於 SSR 先載入到 store，避免個體頁價格「先顯示原價再切成提示」的閃爍
+const { data: ssrSiteSettings } = await useAsyncData('product-site-settings', async () => {
+  try {
+    const { data, error } = await supabase.from('site_settings').select('*').limit(1).maybeSingle()
+    if (error) return null
+    return data || null
+  } catch (e) {
+    return null
+  }
+})
+if (ssrSiteSettings.value) store.siteSettings = ssrSiteSettings.value
+
 const { data: currentProduct, pending } = await useAsyncData(`product-${productId}`, async () => {
   if (!productId) return null
   try {

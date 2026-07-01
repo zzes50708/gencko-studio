@@ -82,19 +82,31 @@ export const useMainStore = defineStore('main', () => {
   async function loadDataFromAPI() {
     loading.value = true
 
-    // 1. animals（核心資料，獨立處理，控制 loading 狀態）
+    // 1. animals（核心資料，控制 loading 狀態）＋ site_settings（展場模式）平行載入，
+    //    讓展場設定在卡片渲染前就備妥，避免價格「先顯示原價再切成提示」的閃爍
     try {
       // 只選官網所需欄位，省略後台專用的 cost_price
-      const { data: invData, error: invErr } = await withRetry(
-        () =>
-          supabase
-            .from('animals')
-            .select(
-              'id, source, species, morph, genes, gender_type, gender_value, birthday, listing_price, sold_price, status, note, image_url, is_hot, created_at'
-            )
-            .order('created_at', { ascending: false }),
-        { label: 'animals' }
-      )
+      const [invRes, settingsRes] = await Promise.all([
+        withRetry(
+          () =>
+            supabase
+              .from('animals')
+              .select(
+                'id, source, species, morph, genes, gender_type, gender_value, birthday, listing_price, sold_price, status, note, image_url, is_hot, created_at'
+              )
+              .order('created_at', { ascending: false }),
+          { label: 'animals' }
+        ),
+        // site_settings 為選用表；不存在／出錯時靜默維持非展場模式
+        withRetry(() => supabase.from('site_settings').select('*').limit(1).maybeSingle(), {
+          label: 'site_settings'
+        }).catch(() => ({ data: null, error: true }))
+      ])
+
+      // 展場設定先套用（表不存在時保持 null＝非展場）
+      if (settingsRes && !settingsRes.error) siteSettings.value = settingsRes.data || null
+
+      const { data: invData, error: invErr } = invRes
       if (invErr) throw invErr
 
       inv.value = invData.map((i) => ({
@@ -125,17 +137,13 @@ export const useMainStore = defineStore('main', () => {
     }
 
     // 2. 次要資料表：平行獨立載入，互不影響
-    const [merchResult, artResult, geneResult, configResult, settingsResult] =
-      await Promise.allSettled([
-        withRetry(() => supabase.from('merchandise').select('*'), { label: 'merchandise' }),
-        withRetry(() => supabase.from('articles').select('*'), { label: 'articles' }),
-        withRetry(() => supabase.from('genetic_pages').select('*'), { label: 'genetic_pages' }),
-        withRetry(() => supabase.from('config').select('*'), { label: 'config' }),
-        // site_settings 為選用表；不存在時靜默略過（維持非展場模式）
-        withRetry(() => supabase.from('site_settings').select('*').limit(1).maybeSingle(), {
-          label: 'site_settings'
-        })
-      ])
+    const [merchResult, artResult, geneResult, configResult] = await Promise.allSettled([
+      withRetry(() => supabase.from('merchandise').select('*'), { label: 'merchandise' }),
+      withRetry(() => supabase.from('articles').select('*'), { label: 'articles' }),
+      withRetry(() => supabase.from('genetic_pages').select('*'), { label: 'genetic_pages' }),
+      withRetry(() => supabase.from('config').select('*'), { label: 'config' })
+      // 註：site_settings（展場模式）改於 app.vue 以 SSR useAsyncData 先載入，避免價格閃爍
+    ])
 
     if (merchResult.status === 'fulfilled' && !merchResult.value.error && merchResult.value.data) {
       merchList.value = merchResult.value.data.map((m) => ({
@@ -193,11 +201,6 @@ export const useMainStore = defineStore('main', () => {
       marqueeList.value = configResult.value.data.map((c) => ({ text: c.text, url: c.url }))
     } else if (configResult.status === 'rejected' || configResult.value?.error) {
       console.error('讀取跑馬燈設定失敗:', configResult.reason || configResult.value?.error)
-    }
-
-    // site_settings（展場模式）：表存在且有資料才套用；不存在／空值靜默維持非展場
-    if (settingsResult.status === 'fulfilled' && !settingsResult.value.error) {
-      siteSettings.value = settingsResult.value.data || null
     }
   }
 

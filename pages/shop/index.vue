@@ -489,7 +489,7 @@ const activeFilterCount = computed(() => {
               已售出
             </label>
           </div>
-          <div class="f-group">
+          <div v-if="!store.isExhibitionMode" class="f-group">
             <div class="f-label">價格（最高 {{ maxPrice }}）</div>
             <div style="display: flex; gap: 5px">
               <input type="number" v-model="fil.minP" class="f-inp" placeholder="最低" />
@@ -761,7 +761,7 @@ const activeFilterCount = computed(() => {
 }
 .inp {
   width: 100%;
-  padding: 10px 12px 10px 35px;
+  padding: 10px 12px 10px 48px;
   background: var(--card-bg);
   border: 1px solid var(--bd);
   color: var(--txt);
@@ -785,6 +785,7 @@ const activeFilterCount = computed(() => {
   opacity: 0.5;
   font-size: 1rem;
   pointer-events: none;
+  white-space: nowrap;
 }
 
 .btn-filter-icon {
