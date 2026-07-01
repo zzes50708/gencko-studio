@@ -150,6 +150,7 @@
 
 ## #U5 無障礙補完（alt / label / 鍵盤）
 
+- **狀態**：`[x]` 完成（2026-06-30）。以渲染後 DOM 稽核（非 grep，避免多行標籤誤報）：① 圖片 alt 全站已具備（shop/hospital/首頁掃描 0 缺）。② 補 9 個表單控制項 aria-label：shop 搜尋框/排序/最低價/最高價、articles 搜尋、hospital 區域縣市/行政區 select、auction 暱稱/出價金額。③ 首頁 3D `.bg-layer`（TresCanvas）加 `aria-hidden="true"`，純裝飾對 AT 隱藏。掃描驗證 shop/hospital 表單缺名稱＝0、icon 按鈕缺名稱＝0。**未解（非 WCAG 硬失敗，另記）**：首頁 fallback h1 與場景 h1 並存（疑 hydration，屬 SEO 最佳實踐、不擋 a11y 分數）。
 - **痛點/背景**：#27 已修對比、#28 已加 skip-link，但仍有缺口：圖片 alt 覆蓋率未稽核、表單 label 關聯未確認、3D 場景鍵盤可略過性未處理（評分「無障礙 7.5」）。
 - **影響面與收益**：無障礙合規、SEO 圖片搜尋、Lighthouse a11y 衝 100。
 - **牽涉檔案**：全站 `<img>`/`<NuxtImg>`、各 `<select>`/`<input>`（`pages/hospital.vue`、`pages/calculator.vue`、shop 篩選）、`pages/index.vue`（3D 區）、`app.vue`。

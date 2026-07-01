@@ -373,7 +373,7 @@ const geneTokens = computed(() => {
 <template>
   <div ref="stageEl" class="stage" :class="{ 'stage--day': isDayMode }">
     <!-- ?? z-index 2: WebGL 3D canvas嚗?璈?+ ?????剁??? -->
-    <div class="bg-layer">
+    <div class="bg-layer" aria-hidden="true">
       <ClientOnly>
         <TresCanvas :alpha="true" :clear-color="bgColor" window-size>
           <TresPerspectiveCamera :position="[0, 0, 8]" :fov="52" />

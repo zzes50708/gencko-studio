@@ -492,8 +492,20 @@ const activeFilterCount = computed(() => {
           <div v-if="!store.isExhibitionMode" class="f-group">
             <div class="f-label">價格（最高 {{ maxPrice }}）</div>
             <div style="display: flex; gap: 5px">
-              <input type="number" v-model="fil.minP" class="f-inp" placeholder="最低" />
-              <input type="number" v-model="fil.maxP" class="f-inp" placeholder="最高" />
+              <input
+                type="number"
+                v-model="fil.minP"
+                class="f-inp"
+                placeholder="最低"
+                aria-label="最低價格"
+              />
+              <input
+                type="number"
+                v-model="fil.maxP"
+                class="f-inp"
+                placeholder="最高"
+                aria-label="最高價格"
+              />
             </div>
           </div>
           <div class="f-group">
@@ -560,6 +572,7 @@ const activeFilterCount = computed(() => {
                 :value="kw"
                 @input="onSearchInput"
                 placeholder="搜尋關鍵字或 ID..."
+                aria-label="搜尋關鍵字或編號"
               />
             </div>
             <button
@@ -610,7 +623,7 @@ const activeFilterCount = computed(() => {
 
             <div class="chip-divider"></div>
 
-            <select v-model="sortOrder" class="chip-select">
+            <select v-model="sortOrder" class="chip-select" aria-label="排序方式">
               <option value="default">預設排序</option>
               <option value="price_asc">價格：低 → 高</option>
               <option value="price_desc">價格：高 → 低</option>

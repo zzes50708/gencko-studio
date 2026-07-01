@@ -312,6 +312,7 @@ const fmtDate = (d) => {
         type="text"
         placeholder="搜尋關鍵字、症狀、主題..."
         class="search-input"
+        aria-label="搜尋文章"
       />
       <button
         v-if="searchQuery"
