@@ -283,6 +283,8 @@ useHead({
         :index="index"
         :is-wishlisted="(store.wishlist || []).includes(i.ID)"
         :show-compare="false"
+        :show-status-badge="false"
+        :show-back-price="false"
         :on-toggle-wishlist="toggleWishlist"
       />
     </div>

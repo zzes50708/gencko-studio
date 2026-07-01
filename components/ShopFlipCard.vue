@@ -15,6 +15,8 @@ const props = defineProps({
   compareDisabled: { type: Boolean, default: false },
   hasAuction: { type: Boolean, default: false },
   showCompare: { type: Boolean, default: true },
+  showStatusBadge: { type: Boolean, default: true },
+  showBackPrice: { type: Boolean, default: true },
   onToggleWishlist: { type: Function, required: true },
   onToggleCompare: { type: Function, default: () => {} }
 })
@@ -157,7 +159,7 @@ const onImgLoad = () => {
               <span class="status-badge s-auction">競標中</span>
             </template>
             <template v-else-if="item.Status === 'SelfKeep'">
-              <span class="status-badge s-nfs">自留</span>
+              <span v-if="showStatusBadge" class="status-badge s-nfs">自留</span>
               <button
                 type="button"
                 class="find-similar-btn"
@@ -189,7 +191,7 @@ const onImgLoad = () => {
             <span class="k">生日</span>
             <span class="v">{{ birthdayText }}</span>
           </div>
-          <div class="flip-back-row">
+          <div v-if="showBackPrice" class="flip-back-row">
             <span class="k">價格</span>
             <span class="v">{{ priceText }}</span>
           </div>
