@@ -30,8 +30,14 @@ pnpm-debug.log*
 out/
 dev.nitro.error.log
 *.nitro.error.log
-dev-robots.log
-dev-robots.err.log
+# 背景 dev server 殘留 log（開發用，勿追蹤）
+dev*.log
+dev*.err.log
+.dev.pid
+
+# 暫存 / 草稿（截圖、腳本草稿、repomix、outline 暫存等）
+.tmp/
+.tmp_*
 
 # Supabase CLI 本機暫存
 supabase/.branches
