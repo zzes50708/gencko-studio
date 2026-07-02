@@ -106,6 +106,7 @@
 
 ## #U3 導航資訊架構收斂
 
+- **狀態**：`[~]` 調查後不重構（2026-06-30）。實查 `TheNavbar.vue`（桌機）與 `TheBottomNav.vue`（手機）發現**導航其實已分成 3 個邏輯群組**：專欄文章（飼養指南/文章/常見問題）、探索選購（選購/競標/種群/周邊）、工具知識（基因圖鑑/計算機/醫院/健康評估/飼養前評估），桌機用下拉、手機用底部 sheet。並非評分假設的「扁平 12 項」——評分 IA 7.0 是以路由數而非實際分組判斷，略高估問題。**結論**：現有 3 群已整齊，強行改 4 群非明顯更優、且會破壞運作良好的導航（下拉/sheet/active 判斷）並需視覺驗證，故**不執行重構**。唯一可再議者為 care(飼養指南)/health(健康評估)/qs(飼養前評估) 的命名/歸類清晰度，屬內容微調、留待使用者決定。
 - **痛點/背景**：頂層功能 12+（shop/articles/genes/calculator/care/health/qs/hospital/auction/merch/breeders/compare/faq…）。其中 **care（新手教學）/ health（健康評估）/ qs（飼養前評估）語意接近**，新訪客易混淆；頂層過寬不利導覽（評分「IA 7.0」主因）。
 - **影響面與收益**：降低認知負荷、提升可發現性、SEO 內部連結更有層次。
 - **牽涉檔案**：`components/TheNavbar.vue`（桌機下拉）、`components/TheBottomNav.vue`（手機底欄）、`utils/seo-schemas.js`（ROUTE_LABELS/breadcrumb）、`utils/site-constants.js`（ROUTES）、`app.vue`（curTab 對應）。
