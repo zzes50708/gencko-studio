@@ -1236,8 +1236,8 @@ const activeFilterCount = computed(() => {
 
   .grid.photo-grid {
     display: grid !important;
-    grid-template-columns: repeat(3, 1fr) !important;
-    gap: 8px !important;
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 10px !important;
   }
 
   /* 注意：卡片已改成元件（ShopFlipCard），scoped 樣式不會套用到子元件內部
@@ -1256,8 +1256,19 @@ const activeFilterCount = computed(() => {
     font-size: 0.85rem !important;
     margin-bottom: 2px !important;
   }
-  .slim-price {
-    font-size: 1rem !important;
+  /* 價格縮小並避免超出卡片（#手機修正 b）；ShopFlipCard 為子元件，需 :deep 才能套入 */
+  :deep(.slim-price) {
+    font-size: 0.88rem !important;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+  }
+  :deep(.slim-price-row) {
+    min-width: 0;
+  }
+  :deep(.slim-title) {
+    font-size: 0.9rem !important;
   }
 
   .trust-badge {

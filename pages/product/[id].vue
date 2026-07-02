@@ -501,7 +501,11 @@ const generatePromo = async () => {
       </div>
 
       <div v-else class="prod-container">
-        <TheBackButton fallback="/shop" text="返回列表" />
+        <div class="prod-topbar">
+          <TheBackButton fallback="/shop" text="返回列表" />
+          <!-- 手機版：健康保證聲明移到返回按鈕右側（桌機隱藏，仍用下方 .prod-guarantee 區塊） -->
+          <span class="prod-guarantee-inline">{{ productModules.health.statement }}</span>
+        </div>
 
         <div class="prod-layout">
           <div class="prod-img-box">
@@ -622,6 +626,52 @@ const generatePromo = async () => {
             </li>
           </ul>
         </div>
+        <section v-if="relatedProducts.length > 0" class="related-section">
+          <div
+            class="section-head"
+            style="margin-bottom: 14px; border-bottom: 1px solid var(--bd); padding-bottom: 10px"
+          >
+            <h2 class="sec-title" style="font-size: 1.2rem">相似個體推薦</h2>
+            <NuxtLink to="/shop" class="sec-more" style="text-decoration: none; font-size: 0.85rem">
+              查看更多 →
+            </NuxtLink>
+          </div>
+          <div class="related-grid">
+            <NuxtLink
+              v-for="item in relatedProducts"
+              :key="item.ID"
+              :to="`/product/${item.ID}`"
+              class="related-card"
+              style="text-decoration: none; color: inherit"
+            >
+              <div class="related-img-wrap">
+                <img
+                  v-if="item.ImageURL"
+                  :src="getCleanUrl(item.ImageURL, 300)"
+                  :alt="item.Morph"
+                  loading="lazy"
+                  decoding="async"
+                />
+                <div v-else class="related-img-placeholder">🦎</div>
+                <span v-if="item.Status === 'Sold'" class="rel-badge rel-sold">售出</span>
+                <span v-else-if="item.Status === 'Auction'" class="rel-badge rel-auction">
+                  競標
+                </span>
+              </div>
+              <div class="related-info">
+                <div class="related-morph">{{ item.Morph }}</div>
+                <div class="related-price">
+                  <span v-if="store.isExhibitionMode" style="color: var(--pri)">展場中</span>
+                  <span v-else-if="item.Status === 'ForSale'">${{ item.ListingPrice }}</span>
+                  <span v-else-if="item.Status === 'Auction'" style="color: var(--pri)">
+                    競標中
+                  </span>
+                  <span v-else style="color: #888">已售出</span>
+                </div>
+              </div>
+            </NuxtLink>
+          </div>
+        </section>
       </div>
 
       <div v-if="generatedImage" class="promo-modal-overlay" @click="generatedImage = null">
@@ -642,48 +692,6 @@ const generatePromo = async () => {
           />
         </div>
       </div>
-      <section v-if="relatedProducts.length > 0" class="related-section">
-        <div
-          class="section-head"
-          style="margin-bottom: 14px; border-bottom: 1px solid var(--bd); padding-bottom: 10px"
-        >
-          <h2 class="sec-title" style="font-size: 1.2rem">相似個體推薦</h2>
-          <NuxtLink to="/shop" class="sec-more" style="text-decoration: none; font-size: 0.85rem">
-            查看更多 →
-          </NuxtLink>
-        </div>
-        <div class="related-grid">
-          <NuxtLink
-            v-for="item in relatedProducts"
-            :key="item.ID"
-            :to="`/product/${item.ID}`"
-            class="related-card"
-            style="text-decoration: none; color: inherit"
-          >
-            <div class="related-img-wrap">
-              <img
-                v-if="item.ImageURL"
-                :src="getCleanUrl(item.ImageURL, 300)"
-                :alt="item.Morph"
-                loading="lazy"
-                decoding="async"
-              />
-              <div v-else class="related-img-placeholder">🦎</div>
-              <span v-if="item.Status === 'Sold'" class="rel-badge rel-sold">售出</span>
-              <span v-else-if="item.Status === 'Auction'" class="rel-badge rel-auction">競標</span>
-            </div>
-            <div class="related-info">
-              <div class="related-morph">{{ item.Morph }}</div>
-              <div class="related-price">
-                <span v-if="store.isExhibitionMode" style="color: var(--pri)">展場中</span>
-                <span v-else-if="item.Status === 'ForSale'">${{ item.ListingPrice }}</span>
-                <span v-else-if="item.Status === 'Auction'" style="color: var(--pri)">競標中</span>
-                <span v-else style="color: #888">已售出</span>
-              </div>
-            </div>
-          </NuxtLink>
-        </div>
-      </section>
     </div>
   </div>
 </template>
@@ -697,6 +705,15 @@ const generatePromo = async () => {
   max-width: 1100px;
   margin: 0 auto;
   padding-top: 15px;
+}
+/* 返回列表 + 健康聲明（聲明僅手機顯示；桌機沿用下方 .prod-guarantee 區塊） */
+.prod-topbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.prod-guarantee-inline {
+  display: none;
 }
 .prod-layout {
   display: flex;
@@ -1032,12 +1049,14 @@ const generatePromo = async () => {
     padding-top: 0;
     padding-bottom: 15px;
   }
+  /* (c) 圖片區與資訊區改上下堆疊 */
   .prod-layout {
     display: grid;
-    grid-template-columns: 140px 1fr;
+    grid-template-columns: 1fr;
     gap: 12px;
     align-items: start;
     margin-top: 5px;
+    order: 1;
   }
   .prod-img-box {
     border-radius: 8px;
@@ -1102,10 +1121,41 @@ const generatePromo = async () => {
     font-size: 0.65rem;
     padding: 4px 6px;
   }
+  /* (e) 隱藏原健康保證區塊（改在返回按鈕右側以 .prod-guarantee-inline 顯示） */
   .prod-guarantee {
-    font-size: 0.75rem;
-    padding: 8px;
-    margin-bottom: 10px;
+    display: none;
+  }
+  .prod-guarantee-inline {
+    display: block;
+    flex: 1;
+    min-width: 0;
+    font-size: 0.68rem;
+    line-height: 1.35;
+    color: var(--txt-muted);
+  }
+
+  /* (d) 資訊列一律不換行（超出則可橫向捲動，避免版面斷行） */
+  .guarantee-icons-row,
+  .gene-tag-row {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .spec-row {
+    flex-wrap: nowrap;
+    white-space: nowrap;
+  }
+
+  /* (f) 相似個體推薦排到「取貨注意事項」之上（僅手機；桌機維持原順序） */
+  .prod-container {
+    display: flex;
+    flex-direction: column;
+  }
+  .related-section {
+    order: 2;
+  }
+  .prod-terms-box {
+    order: 3;
   }
 
   .prod-actions {
