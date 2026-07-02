@@ -49,7 +49,7 @@ const fil = ref({
 })
 const showMobileFilter = ref(false)
 const openFCat = ref(null)
-const sortOrder = ref('default')
+const sortOrder = ref('price_desc')
 const showOnlyFav = ref(false)
 const showOnlyHistory = ref(false)
 
@@ -242,7 +242,7 @@ watch(
     if (!fil.value.sexF) query.sexF = 'false'
     if (fil.value.beginner) query.beginner = 'true'
     if (fil.value.genes.length) query.genes = fil.value.genes.join(',')
-    if (sortOrder.value !== 'default') query.sort = sortOrder.value
+    if (sortOrder.value !== 'price_desc') query.sort = sortOrder.value
 
     router.replace({ query }).catch(() => {})
   },
@@ -388,7 +388,7 @@ const resetFilters = () => {
     beginner: false
   }
   kw.value = ''
-  sortOrder.value = 'default'
+  sortOrder.value = 'price_desc'
   showOnlyFav.value = false
   showOnlyHistory.value = false
   store.displayLimit = 20
@@ -566,7 +566,7 @@ const activeFilterCount = computed(() => {
         <div style="flex: 1; min-width: 0; display: flex; flex-direction: column">
           <div class="search-filter-row">
             <div class="inp-wrap">
-              <span class="search-icon">搜尋</span>
+              <span class="search-icon" aria-hidden="true">🔍</span>
               <input
                 class="inp"
                 :value="kw"
@@ -599,7 +599,8 @@ const activeFilterCount = computed(() => {
             </button>
           </div>
 
-          <div class="scroll-chips-row">
+          <!-- 物種分類：獨立一列（一列兩個按鈕） -->
+          <div class="species-tabs-row">
             <div
               class="chip-tab main-tab"
               :class="{ active: sp === '豹紋守宮' }"
@@ -620,13 +621,12 @@ const activeFilterCount = computed(() => {
             >
               肥尾守宮
             </div>
+          </div>
 
-            <div class="chip-divider"></div>
-
+          <div class="scroll-chips-row">
             <select v-model="sortOrder" class="chip-select" aria-label="排序方式">
-              <option value="default">預設排序</option>
-              <option value="price_asc">價格：低 → 高</option>
               <option value="price_desc">價格：高 → 低</option>
+              <option value="price_asc">價格：低 → 高</option>
             </select>
 
             <div
@@ -857,6 +857,20 @@ const activeFilterCount = computed(() => {
   display: none;
 }
 
+/* 物種分類獨立一列：一列兩個按鈕、滿版置中 */
+.species-tabs-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.species-tabs-row .chip-tab {
+  width: 100%;
+  text-align: center;
+  flex-shrink: 1;
+  padding: 8px 12px;
+}
+
 .chip-tab {
   padding: 6px 12px;
   border-radius: 20px;
@@ -888,10 +902,10 @@ const activeFilterCount = computed(() => {
 }
 
 .chip-select {
-  background: var(--card-bg);
+  background-color: var(--card-bg);
   color: var(--txt);
   border: 1px solid var(--bd);
-  padding: 6px 10px;
+  padding: 6px 30px 6px 14px;
   border-radius: 20px;
   font-size: 0.85rem;
   font-weight: bold;
@@ -899,10 +913,18 @@ const activeFilterCount = computed(() => {
   flex-shrink: 0;
   cursor: pointer;
   appearance: none;
-  text-align: center;
+  -webkit-appearance: none;
+  text-align: left;
+  /* 自訂下拉箭頭（appearance:none 移除原生箭頭後補回，符合官網 pill 風格） */
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23e8440a' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  transition: 0.2s;
 }
+.chip-select:hover,
 .chip-select:focus {
   border-color: var(--pri);
+  color: var(--pri);
 }
 
 .chip-toggle {
@@ -961,8 +983,8 @@ const activeFilterCount = computed(() => {
   height: fit-content;
 }
 .f-group {
-  margin-bottom: 15px;
-  padding-bottom: 10px;
+  margin-bottom: 10px;
+  padding-bottom: 7px;
   border-bottom: 1px solid var(--bd);
 }
 .f-group:last-child {
@@ -971,17 +993,17 @@ const activeFilterCount = computed(() => {
 .f-label {
   font-weight: bold;
   color: var(--pri);
-  margin-bottom: 8px;
-  font-size: 0.95rem;
+  margin-bottom: 5px;
+  font-size: 0.82rem;
 }
 .f-check {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   cursor: pointer;
-  padding: 6px 0;
-  margin-bottom: 2px;
-  font-size: 0.9rem;
+  padding: 2px 0;
+  margin-bottom: 0;
+  font-size: 0.8rem;
   color: var(--txt);
   opacity: 0.8;
 }

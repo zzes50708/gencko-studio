@@ -35,16 +35,12 @@ const { data: ssrBreeders } = await useAsyncData('breeders-list-seo-v1', async (
 // 物種切換（使用本地 ref，store 中未定義 breeder_sp，直接寫入 store 不具響應性）
 const breederSp = ref('豹紋守宮')
 
-// 性別篩選
-const breederGender = ref('全部')
-
-// 切換物種（合併為方法，避免行內多語句被 prettier 拆掉分號而解析失敗）
+// 切換物種
 const selectBreederSp = (species) => {
   breederSp.value = species
-  breederGender.value = '全部'
 }
 
-// 收藏切換（與 shop 行為一致，含 localStorage 持久化）
+// 收藏切換（保留以滿足 ShopFlipCard 的 prop；種群卡已隱藏收藏鈕 show-wishlist=false）
 const toggleWishlist = (id) => {
   if (!store.wishlist) store.wishlist = []
   if (store.wishlist.includes(id)) {
@@ -55,36 +51,22 @@ const toggleWishlist = (id) => {
   if (import.meta.client) localStorage.setItem('gencko_wishlist', JSON.stringify(store.wishlist))
 }
 
-// 計算種群展示列表（加入性別篩選）
+// 種群展示列表：不分種公種母；依「熱門 → 售價高到低」排序（不顯示排序 UI）
 const breedersList = computed(() => {
-  let list = store.inv.filter((i) => {
-    if (i.Species !== breederSp.value || i.Status !== 'SelfKeep') return false
-    if (breederGender.value === '公') {
-      return i.GenderType === '公' || (i.GenderType === '溫控' && Number(i.GenderValue) >= 30)
-    }
-    if (breederGender.value === '母') {
-      return i.GenderType === '母' || (i.GenderType === '溫控' && Number(i.GenderValue) <= 27)
-    }
-    return true
-  })
-  return list.sort((a, b) => {
-    const imgA = a.ImageURL ? 1 : 0
-    const imgB = b.ImageURL ? 1 : 0
-    if (imgA !== imgB) return imgB - imgA
-    return new Date(b.CreatedDate) - new Date(a.CreatedDate)
-  })
-})
-
-// 各性別數量統計
-const genderCount = computed(() => {
-  const all = store.inv.filter((i) => i.Species === breederSp.value && i.Status === 'SelfKeep')
-  const male = all.filter(
-    (i) => i.GenderType === '公' || (i.GenderType === '溫控' && Number(i.GenderValue) >= 30)
-  ).length
-  const female = all.filter(
-    (i) => i.GenderType === '母' || (i.GenderType === '溫控' && Number(i.GenderValue) <= 27)
-  ).length
-  return { all: all.length, male, female }
+  return store.inv
+    .filter((i) => i.Species === breederSp.value && i.Status === 'SelfKeep')
+    .slice()
+    .sort((a, b) => {
+      const hotA = a.IsHot ? 1 : 0
+      const hotB = b.IsHot ? 1 : 0
+      if (hotA !== hotB) return hotB - hotA
+      const priceA = Number(a.ListingPrice) || 0
+      const priceB = Number(b.ListingPrice) || 0
+      if (priceA !== priceB) return priceB - priceA
+      const imgA = a.ImageURL ? 1 : 0
+      const imgB = b.ImageURL ? 1 : 0
+      return imgB - imgA
+    })
 })
 
 const breedersUrl = 'https://www.genckobreeding.com/breeders'
@@ -242,34 +224,6 @@ useHead({
       </button>
     </div>
 
-    <!-- 性別篩選 -->
-    <div class="gender-filter-row">
-      <button
-        class="g-btn"
-        :class="{ active: breederGender === '全部' }"
-        @click="breederGender = '全部'"
-      >
-        全部
-        <span class="g-count">{{ genderCount.all }}</span>
-      </button>
-      <button
-        class="g-btn male"
-        :class="{ active: breederGender === '公' }"
-        @click="breederGender = '公'"
-      >
-        ♂ 種公
-        <span class="g-count">{{ genderCount.male }}</span>
-      </button>
-      <button
-        class="g-btn female"
-        :class="{ active: breederGender === '母' }"
-        @click="breederGender = '母'"
-      >
-        ♀ 種母
-        <span class="g-count">{{ genderCount.female }}</span>
-      </button>
-    </div>
-
     <div v-if="breedersList.length === 0" style="text-align: center; padding: 3rem; color: #888">
       目前尚無可展示的種群資料。
     </div>
@@ -283,6 +237,7 @@ useHead({
         :index="index"
         :is-wishlisted="(store.wishlist || []).includes(i.ID)"
         :show-compare="false"
+        :show-wishlist="false"
         :show-status-badge="false"
         :show-back-price="false"
         :on-toggle-wishlist="toggleWishlist"

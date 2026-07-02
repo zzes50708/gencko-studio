@@ -15,6 +15,7 @@ const props = defineProps({
   compareDisabled: { type: Boolean, default: false },
   hasAuction: { type: Boolean, default: false },
   showCompare: { type: Boolean, default: true },
+  showWishlist: { type: Boolean, default: true },
   showStatusBadge: { type: Boolean, default: true },
   showBackPrice: { type: Boolean, default: true },
   onToggleWishlist: { type: Function, required: true },
@@ -91,6 +92,7 @@ const onImgLoad = () => {
           <!-- 手機/無 hover：按鈕維持在照片上（因為沒有背面翻牌） -->
           <div class="card-action-stack flip-front-actions">
             <button
+              v-if="showWishlist"
               type="button"
               class="btn-app btn-app--ghost btn-app--xs btn-app--pill card-action-btn"
               :class="{ 'card-action-btn--active': isWishlisted }"
@@ -137,8 +139,6 @@ const onImgLoad = () => {
           >
             無圖片
           </div>
-
-          <div v-if="item.Status === 'ForSale'" class="trust-badge">100% 健康</div>
         </div>
 
         <div class="card-body slim-body">
@@ -198,6 +198,7 @@ const onImgLoad = () => {
 
           <div class="flip-back-actions">
             <button
+              v-if="showWishlist"
               type="button"
               class="btn-app btn-app--ghost btn-app--xs btn-app--pill flip-action-btn"
               :class="{ 'flip-action-btn--active': isWishlisted }"
@@ -361,8 +362,8 @@ const onImgLoad = () => {
   top: 8px;
   right: 8px;
   display: flex;
-  flex-direction: column;
-  gap: 6px;
+  flex-direction: row;
+  gap: 4px;
   z-index: 20;
 }
 
@@ -418,8 +419,8 @@ const onImgLoad = () => {
 @media (hover: none), (pointer: coarse), (max-width: 768px) {
   .flip-front-actions .card-action-btn {
     opacity: 1;
-    padding: 3px 8px;
-    font-size: 0.75rem;
+    padding: 2px 7px;
+    font-size: 0.68rem;
     background: rgba(255, 255, 255, 0.92);
     border-color: rgba(0, 0, 0, 0.12);
     color: #111;
