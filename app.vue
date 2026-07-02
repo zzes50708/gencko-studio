@@ -3,8 +3,8 @@ import { computed, onMounted, onUnmounted, onBeforeUnmount, watch, ref } from 'v
 import { useRoute, useRouter } from 'vue-router'
 import { useHead, useNuxtApp } from '#imports'
 import { useMainStore } from '~/stores/useMainStore'
-import Lenis from 'lenis'
-import { gsap } from 'gsap'
+// #U6：Lenis / gsap 改為動態 import（見 initGlobalLenis），把 ~528KB 移出每頁初始關鍵路徑，
+// 平滑捲動於 mount 後才啟用（漸進增強，不阻擋 LCP）。首頁（about）本就不啟用全域 Lenis。
 
 const store = useMainStore()
 const route = useRoute()
@@ -16,6 +16,7 @@ const nuxtApp = useNuxtApp()
 // /about 頁由 BrandServiceScrollScene 自帶私有 Lenis，此處必須讓路
 let globalLenis = null
 let globalLenisTicker = null
+let gsapLib = null
 
 // `/` 現在也是 about 動畫頁（不改網址），因此也要視為 about，避免全域 Lenis 介入造成導覽列閃動/版面跳動
 const isAboutPage = computed(() => route.path === '/' || route.path.startsWith('/about'))
@@ -43,7 +44,7 @@ const handleLenisScroll = ({ scroll }) => {
 
 const destroyGlobalLenis = () => {
   if (globalLenisTicker) {
-    gsap.ticker.remove(globalLenisTicker)
+    gsapLib?.ticker.remove(globalLenisTicker)
     globalLenisTicker = null
   }
   if (globalLenis) {
@@ -55,9 +56,14 @@ const destroyGlobalLenis = () => {
   }
 }
 
-const initGlobalLenis = () => {
+const initGlobalLenis = async () => {
   if (!import.meta.client || isAboutPage.value) return
   destroyGlobalLenis()
+  // 動態載入，避免 ~528KB 進入初始關鍵路徑（#U6）
+  const [{ default: Lenis }, gsapMod] = await Promise.all([import('lenis'), import('gsap')])
+  gsapLib = gsapMod.gsap
+  // 競態保護：載入期間若切到 about 頁或已被銷毀，就不啟用
+  if (isAboutPage.value) return
   globalLenis = new Lenis({
     duration: 1.2,
     easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)), // expo ease-out
@@ -69,8 +75,8 @@ const initGlobalLenis = () => {
     infinite: false
   })
   globalLenisTicker = (time) => globalLenis.raf(time * 1000)
-  gsap.ticker.add(globalLenisTicker)
-  gsap.ticker.lagSmoothing(0)
+  gsapLib.ticker.add(globalLenisTicker)
+  gsapLib.ticker.lagSmoothing(0)
   globalLenis.on('scroll', handleLenisScroll)
 }
 

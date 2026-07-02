@@ -167,6 +167,7 @@
 
 ## #U6 3D/首屏效能進階（LCP 與 bundle）
 
+- **狀態**：`[x]` 完成（2026-06-30）。bundle 分析：① Three.js（867KB chunk）已 code-split、且確認**不在首頁初始載入**（defineAsyncComponent + #U2 gating，場景載入時才拉）→ 不阻擋 LCP。② 3D 場景為**程序化粒子（THREE.BufferGeometry）、無外部模型/貼圖** → 無壓縮空間。③ **主要新增優化**：`app.vue` 的 gsap/Lenis（原每頁初始 ~528KB）改為**動態 import**，移出每頁關鍵路徑、mount 後才載入（平滑捲動漸進增強）。驗證：build 通過、/shop 仍有 `html.lenis`（Lenis 正常初始化）、無 console 錯誤。**待補**：正式站 Lighthouse 行動分數改前/改後量測（需部署後）。
 - **痛點/背景**：評分「效能 7.0」。即使做了 #U2 降載，首屏 3D 與相關 bundle 仍可再瘦身。
 - **影響面與收益**：行動 LCP/TBT 再降、bundle 更小。
 - **牽涉檔案**：`nuxt.config.ts`、`pages/index.vue`、`components/GeckoScene3D.vue`、TresJS 相關 import。
