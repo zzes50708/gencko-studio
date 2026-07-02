@@ -397,9 +397,9 @@ onBeforeUnmount(() => {
       :href="
         'https://line.me/R/ti/p/@219abdzn?text=' +
         encodeURIComponent(
-          'Hi Gencko, ???閎閰Ｗ??嗉?皜銝剔?摰悅 (' +
+          'Hi Gencko，我想詢問我收藏的守宮個體（共 ' +
             store.wishlist.length +
-            '?? ID嚗n' +
+            ' 隻，ID：\n' +
             store.wishlist.join(', ')
         )
       "
