@@ -85,7 +85,7 @@ const productModules = computed(() => {
       statement: '本工作室嚴格把關，所有上架個體均確認進食與排泄正常，無健康隱憂始開放選購。'
     },
     expectations: {
-      notice: '基因表現受環境與成長過程影響，圖片僅供當下參考。'
+      notice: '守宮發色變化大，圖片僅供當下參考，請向官方索取最新照片'
     },
     transaction: {
       price: p.ListingPrice,
@@ -537,6 +537,7 @@ const generatePromo = async () => {
                   {{ g }}
                 </span>
               </div>
+              <div class="prod-identity-notice">⚠️ {{ productModules.expectations.notice }}</div>
               <div v-if="productModules.identity.note" class="prod-note">
                 📝 備註：{{ productModules.identity.note }}
               </div>
@@ -605,29 +606,7 @@ const generatePromo = async () => {
                 </button>
               </div>
             </div>
-            <div class="prod-expect-notice">⚠️ {{ productModules.expectations.notice }}</div>
           </div>
-        </div>
-        <div class="prod-terms-box">
-          <div class="terms-title">⚠️ 取貨注意事項 & 購買須知 ⚠️</div>
-          <ul class="terms-list">
-            <li>
-              Gencko工作室出貨前皆確認個體100%健康，所有個體皆為負責人親自餵食，確保進食穩定且無隱憂才會上架販售。
-            </li>
-            <li>開箱請全程錄影，以利於後續爭議處理。</li>
-            <li>有任何問題請於48小時內提出，逾期不候。</li>
-            <li>請提前準備好守宮之飼養環境。</li>
-            <li>守宮會因飼主飼養方式不當而造成問題，本工作室將不予退換貨。</li>
-            <li>個體有缺陷且本工作室無事先告知，本方無條件退款 (需提供錄影確保個體無調包嫌疑)。</li>
-            <li>
-              運送過程死亡，本工作室全額退款；運送過程斷尾，本工作室退還50%款項
-              (需提供錄影確保個體無調包嫌疑)。
-            </li>
-            <li>購買前請做足功課，本社群、官方皆可無償教學，請做好準備再進行購買。</li>
-            <li style="color: var(--pri); font-weight: bold; margin-top: 10px">
-              購買視同同意以上須知事項。
-            </li>
-          </ul>
         </div>
         <section v-if="relatedProducts.length > 0" class="related-section">
           <div
@@ -675,6 +654,27 @@ const generatePromo = async () => {
             </NuxtLink>
           </div>
         </section>
+        <div class="prod-terms-box">
+          <div class="terms-title">⚠️ 取貨注意事項 & 購買須知 ⚠️</div>
+          <ul class="terms-list">
+            <li>
+              Gencko工作室出貨前皆確認個體100%健康，所有個體皆為負責人親自餵食，確保進食穩定且無隱憂才會上架販售。
+            </li>
+            <li>開箱請全程錄影，以利於後續爭議處理。</li>
+            <li>有任何問題請於48小時內提出，逾期不候。</li>
+            <li>請提前準備好守宮之飼養環境。</li>
+            <li>守宮會因飼主飼養方式不當而造成問題，本工作室將不予退換貨。</li>
+            <li>個體有缺陷且本工作室無事先告知，本方無條件退款 (需提供錄影確保個體無調包嫌疑)。</li>
+            <li>
+              運送過程死亡，本工作室全額退款；運送過程斷尾，本工作室退還50%款項
+              (需提供錄影確保個體無調包嫌疑)。
+            </li>
+            <li>購買前請做足功課，本社群、官方皆可無償教學，請做好準備再進行購買。</li>
+            <li style="color: var(--pri); font-weight: bold; margin-top: 10px">
+              購買視同同意以上須知事項。
+            </li>
+          </ul>
+        </div>
       </div>
 
       <div v-if="generatedImage" class="promo-modal-overlay" @click="generatedImage = null">
@@ -824,6 +824,14 @@ const generatePromo = async () => {
   font-weight: bold;
   border: 1px solid var(--pri);
 }
+.prod-identity-notice {
+  margin-top: 2px;
+  margin-bottom: 12px;
+  color: var(--txt);
+  opacity: 0.68;
+  font-size: 0.82rem;
+  line-height: 1.5;
+}
 
 .prod-guarantee {
   background: transparent;
@@ -923,13 +931,6 @@ const generatePromo = async () => {
 .btn-promo:disabled {
   opacity: 0.5;
   cursor: not-allowed;
-}
-
-.prod-expect-notice {
-  font-size: 0.8rem;
-  color: var(--txt);
-  opacity: 0.6;
-  margin-top: 10px;
 }
 
 .prod-terms-box {
@@ -1178,9 +1179,6 @@ const generatePromo = async () => {
     font-size: 0.85rem;
   }
 
-  .prod-expect-notice {
-    font-size: 0.7rem;
-  }
   .prod-terms-box {
     grid-column: 1 / -1;
     padding: 15px;
