@@ -381,7 +381,30 @@ export const useMainStore = defineStore('main', () => {
         email: emailOrId,
         picture: profile.pictureUrl
       }
+      // 持久化 LINE 登入，讓登入狀態跨頁面重新載入仍保留（修：登入後顯示未登入）
+      try {
+        localStorage.setItem('gencko_line_user', JSON.stringify(currentUser.value))
+      } catch (e) {}
+    } else if (window.liff && currentUser.value?.type === 'line') {
+      // LIFF 已載入但實際未登入（session 過期），清掉先前還原的假登入狀態
+      currentUser.value = null
+      try {
+        localStorage.removeItem('gencko_line_user')
+      } catch (e) {}
     }
+  }
+
+  // 從 localStorage 還原上次的 LINE 登入使用者（即時顯示，再由 initLiff 重新驗證）
+  function restoreLineUser() {
+    if (!import.meta.client) return false
+    try {
+      const raw = localStorage.getItem('gencko_line_user')
+      if (raw) {
+        currentUser.value = JSON.parse(raw)
+        return true
+      }
+    } catch (e) {}
+    return false
   }
 
   if (import.meta.client) {
@@ -403,10 +426,11 @@ export const useMainStore = defineStore('main', () => {
     if (!isLiffInitialized.value) {
       const ok = await initLiff()
       if (!ok) {
-        // 載入失敗 fallback：直接連到 LINE 加好友頁
-        try {
-          window.location.href = lineLink.value
-        } catch (e) {}
+        // 載入失敗（LIFF SDK 載入失敗、init 失敗，或非 www.genckobreeding.com 網域）。
+        // 不再跳轉到 LINE 加好友頁（會誤導成加好友），改提示使用者。
+        alert(
+          'LINE 登入暫時無法使用。請確認您是透過 https://www.genckobreeding.com 造訪，或稍後再試。'
+        )
         return
       }
     }
@@ -433,6 +457,9 @@ export const useMainStore = defineStore('main', () => {
     if (currentUser.value?.type === 'line' && window.liff) window.liff.logout()
     else await supabase.auth.signOut()
     currentUser.value = null
+    try {
+      localStorage.removeItem('gencko_line_user')
+    } catch (e) {}
   }
 
   function initTheme() {
@@ -570,6 +597,7 @@ export const useMainStore = defineStore('main', () => {
     loadAuctions,
     initLiff,
     hasPendingLineAuth,
+    restoreLineUser,
     checkAuthStatus,
     loginWithLine,
     loginWithGoogle,

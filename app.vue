@@ -174,9 +174,11 @@ onMounted(() => {
   store.initTheme()
   store.loadDataFromAPI()
   store.loadAuctions()
-  // LINE SDK 延遲載入：只在「正在 OAuth callback 流程中」時才預先 init
-  // 平常使用者進站不載入，等點「LINE 登入」按鈕才會載
-  if (store.hasPendingLineAuth()) store.initLiff()
+  // 先還原上次 LINE 登入（即時顯示已登入狀態，修：登入後跨頁顯示未登入）
+  const hadLineSession = store.restoreLineUser()
+  // LINE SDK 載入時機：OAuth callback 流程中，或先前已 LINE 登入（重新驗證 session）。
+  // 平常未登入使用者進站不載入，等點「LINE 登入」按鈕才會載。
+  if (store.hasPendingLineAuth() || hadLineSession) store.initLiff()
   store.initPWAInstallPrompt()
 
   // ?? Vue / JS runtime error嚗?蝡撅??⊥??斗?孵?
