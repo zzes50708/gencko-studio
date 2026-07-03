@@ -50,7 +50,7 @@ const fmtSex = computed(() => {
   if (!item.value) return ''
   const i = item.value
   if (i.GenderType === '溫控') {
-    return `孵化溫度 ${i.GenderValue || '?'}°C`
+    return `孵化溫度:${i.GenderValue || '?'}度`
   }
   return i.GenderType || 'Unsexed'
 })

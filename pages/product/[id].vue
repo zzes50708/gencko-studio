@@ -136,8 +136,7 @@ const siteData = computed(() => {
       addProp.push({
         '@type': 'PropertyValue',
         name: '性別',
-        value:
-          p.GenderType + (p.GenderType === '溫控' && p.GenderValue ? ` (${p.GenderValue}°C)` : '')
+        value: p.GenderType === '溫控' ? `孵化溫度:${p.GenderValue || '?'}度` : p.GenderType
       })
     if (p.Birthday) addProp.push({ '@type': 'PropertyValue', name: '孵化日', value: p.Birthday })
     if (p.Species) addProp.push({ '@type': 'PropertyValue', name: '物種', value: p.Species })
@@ -328,11 +327,11 @@ const fmtSex = (i) => {
   if (!i) return ''
   if (i.GenderType === '溫控') {
     let t = +i.GenderValue
-    if (t >= 31) return t + '°C (90%公)'
-    if (t >= 30) return t + '°C (75%公)'
-    if (t >= 28) return t + '°C (均)'
-    if (t >= 27) return t + '°C (75%母)'
-    return t + '°C (90%母)'
+    if (t >= 31) return `孵化溫度:${t}度 (90%公)`
+    if (t >= 30) return `孵化溫度:${t}度 (75%公)`
+    if (t >= 28) return `孵化溫度:${t}度 (均)`
+    if (t >= 27) return `孵化溫度:${t}度 (75%母)`
+    return `孵化溫度:${t}度 (90%母)`
   }
   return i.GenderType
 }
@@ -453,7 +452,11 @@ const generatePromo = async () => {
     ctx.font = 'bold 75px sans-serif'
     ctx.fillText(productModules.value.identity.morph.substring(0, 16), 50, 930)
     ctx.font = 'bold 45px sans-serif'
-    const genderVal = productModules.value.identity.gender
+    const rawGender = productModules.value.identity.gender
+    const genderVal =
+      rawGender === '溫控'
+        ? `孵化溫度:${productModules.value.identity.genderValue || '?'}度`
+        : rawGender
     if (genderVal && genderVal !== '未定') {
       ctx.fillText(`性別：${genderVal}`, 50, 1010)
     }

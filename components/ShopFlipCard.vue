@@ -40,7 +40,7 @@ const genderText = computed(() => {
   if (!t) return '未登錄'
   if (t === '溫控') {
     const v = normalizeSpace(props.item?.GenderValue || '')
-    return v ? `溫控 ${v}°C` : '溫控'
+    return v ? `孵化溫度:${v}度` : '孵化溫度'
   }
   return t
 })

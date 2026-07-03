@@ -200,11 +200,11 @@ const fmtSex = (i) => {
   if (!i) return '-'
   if (i.GenderType === '溫控') {
     const t = +i.GenderValue
-    if (t >= 31) return `${t}°C（90% 公）`
-    if (t >= 30) return `${t}°C（75% 公）`
-    if (t >= 28) return `${t}°C（均等）`
-    if (t >= 27) return `${t}°C（75% 母）`
-    return `${t}°C（90% 母）`
+    if (t >= 31) return `孵化溫度:${t}度（90% 公）`
+    if (t >= 30) return `孵化溫度:${t}度（75% 公）`
+    if (t >= 28) return `孵化溫度:${t}度（均等）`
+    if (t >= 27) return `孵化溫度:${t}度（75% 母）`
+    return `孵化溫度:${t}度（90% 母）`
   }
   return i.GenderType || '-'
 }
