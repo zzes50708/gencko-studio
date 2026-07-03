@@ -506,8 +506,6 @@ const generatePromo = async () => {
       <div v-else class="prod-container">
         <div class="prod-topbar">
           <TheBackButton fallback="/shop" text="返回列表" />
-          <!-- 手機版：健康保證聲明移到返回按鈕右側（桌機隱藏，仍用下方 .prod-guarantee 區塊） -->
-          <span class="prod-guarantee-inline">{{ productModules.health.statement }}</span>
         </div>
 
         <div class="prod-layout">
@@ -572,11 +570,6 @@ const generatePromo = async () => {
               <div class="g-icon-pill g-pill-green">100% 健康</div>
               <div class="g-icon-pill g-pill-blue">基因正確</div>
               <div class="g-icon-pill g-pill-orange">運輸賠償</div>
-            </div>
-
-            <div class="prod-guarantee">
-              <span style="font-size: 1.2rem; margin-right: 10px">健康保證</span>
-              <span>{{ productModules.health.statement }}</span>
             </div>
 
             <div class="prod-actions">
@@ -709,14 +702,10 @@ const generatePromo = async () => {
   margin: 0 auto;
   padding-top: 15px;
 }
-/* 返回列表 + 健康聲明（聲明僅手機顯示；桌機沿用下方 .prod-guarantee 區塊） */
 .prod-topbar {
   display: flex;
   align-items: center;
   gap: 12px;
-}
-.prod-guarantee-inline {
-  display: none;
 }
 .prod-layout {
   display: flex;
@@ -833,19 +822,6 @@ const generatePromo = async () => {
   line-height: 1.5;
 }
 
-.prod-guarantee {
-  background: transparent;
-  color: var(--txt);
-  border: 1px solid var(--bd);
-  padding: 12px;
-  border-radius: 8px;
-  border-left: 4px solid #4caf50;
-  display: flex;
-  align-items: flex-start;
-  line-height: 1.5;
-  margin-bottom: 15px;
-  font-size: 0.9rem;
-}
 .guarantee-icons-row {
   display: flex;
   gap: 10px;
@@ -1125,19 +1101,6 @@ const generatePromo = async () => {
     font-size: 0.65rem;
     padding: 4px 6px;
   }
-  /* (e) 隱藏原健康保證區塊（改在返回按鈕右側以 .prod-guarantee-inline 顯示） */
-  .prod-guarantee {
-    display: none;
-  }
-  .prod-guarantee-inline {
-    display: block;
-    flex: 1;
-    min-width: 0;
-    font-size: 0.68rem;
-    line-height: 1.35;
-    color: var(--txt-muted);
-  }
-
   /* (d) 資訊列一律不換行（超出則可橫向捲動，避免版面斷行） */
   .guarantee-icons-row,
   .gene-tag-row {
