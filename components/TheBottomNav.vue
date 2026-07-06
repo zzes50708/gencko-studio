@@ -4,24 +4,36 @@ import { computed, ref, watch } from 'vue'
 
 const route = useRoute()
 const sheetOpen = ref(false)
-const activeSheet = ref(null) // 'articles' | 'shop' | 'tools' | null
+const activeSheet = ref(null)
 
-const isServiceActive = computed(() => route.path === '/' || route.path.startsWith('/about'))
-const isArticlesActive = computed(() => route.path.startsWith('/articles') || route.path.startsWith('/care') || route.path.startsWith('/faq'))
-const isShopActive = computed(() =>
-  route.path.startsWith('/shop') ||
-  route.path.startsWith('/product') ||
-  route.path.startsWith('/identity') ||
-  route.path.startsWith('/auction') ||
-  route.path.startsWith('/breeders') ||
-  route.path.startsWith('/merch')
+const isArticlesActive = computed(
+  () =>
+    route.path.startsWith('/articles') ||
+    route.path.startsWith('/care') ||
+    route.path.startsWith('/faq') ||
+    route.path.startsWith('/start-here')
 )
-const isToolsActive = computed(() =>
-  route.path.startsWith('/genes') ||
-  route.path.startsWith('/calculator') ||
-  route.path.startsWith('/hospital') ||
-  route.path.startsWith('/health') ||
-  route.path.startsWith('/qs')
+
+const isShopActive = computed(
+  () =>
+    route.path.startsWith('/shop') ||
+    route.path.startsWith('/product') ||
+    route.path.startsWith('/identity') ||
+    route.path.startsWith('/buying-guide') ||
+    route.path.startsWith('/why-gencko') ||
+    route.path.startsWith('/stories') ||
+    route.path.startsWith('/auction') ||
+    route.path.startsWith('/breeders') ||
+    route.path.startsWith('/merch')
+)
+
+const isToolsActive = computed(
+  () =>
+    route.path.startsWith('/genes') ||
+    route.path.startsWith('/calculator') ||
+    route.path.startsWith('/hospital') ||
+    route.path.startsWith('/health') ||
+    route.path.startsWith('/qs')
 )
 
 const openSheet = (key) => {
@@ -44,17 +56,44 @@ watch(
 
 <template>
   <div>
-    <nav class="bottom-nav" aria-label="底部導覽（上拉式選單）">
-      <button type="button" class="nav-item nav-item-btn" :class="{ active: isArticlesActive }" @click="openSheet('articles')" aria-label="專欄文章">
-        <span class="label">專欄文章 <span class="sheet-caret" aria-hidden="true">▴</span></span>
+    <nav class="bottom-nav" aria-label="手機底部導覽">
+      <button
+        type="button"
+        class="nav-item nav-item-btn"
+        :class="{ active: isArticlesActive }"
+        @click="openSheet('articles')"
+        aria-label="知識內容"
+      >
+        <span class="label">
+          知識內容
+          <span class="sheet-caret" aria-hidden="true">▾</span>
+        </span>
       </button>
 
-      <button type="button" class="nav-item nav-item-btn" :class="{ active: isShopActive }" @click="openSheet('shop')" aria-label="探索選購">
-        <span class="label">探索選購 <span class="sheet-caret" aria-hidden="true">▴</span></span>
+      <button
+        type="button"
+        class="nav-item nav-item-btn"
+        :class="{ active: isShopActive }"
+        @click="openSheet('shop')"
+        aria-label="探索選購"
+      >
+        <span class="label">
+          探索選購
+          <span class="sheet-caret" aria-hidden="true">▾</span>
+        </span>
       </button>
 
-      <button type="button" class="nav-item nav-item-btn" :class="{ active: isToolsActive }" @click="openSheet('tools')" aria-label="工具知識">
-        <span class="label">工具知識 <span class="sheet-caret" aria-hidden="true">▴</span></span>
+      <button
+        type="button"
+        class="nav-item nav-item-btn"
+        :class="{ active: isToolsActive }"
+        @click="openSheet('tools')"
+        aria-label="工具知識"
+      >
+        <span class="label">
+          工具知識
+          <span class="sheet-caret" aria-hidden="true">▾</span>
+        </span>
       </button>
     </nav>
 
@@ -67,13 +106,22 @@ watch(
         <div class="sheet-handle" aria-hidden="true" />
         <div class="sheet-header">
           <div class="sheet-title">
-            {{ activeSheet === 'articles' ? '專欄文章' : activeSheet === 'shop' ? '探索選購' : '工具知識' }}
+            {{
+              activeSheet === 'articles'
+                ? '知識內容'
+                : activeSheet === 'shop'
+                  ? '探索選購'
+                  : '工具知識'
+            }}
           </div>
-          <button type="button" class="sheet-close" @click="closeSheet" aria-label="關閉">關閉</button>
+          <button type="button" class="sheet-close" @click="closeSheet" aria-label="關閉">
+            關閉
+          </button>
         </div>
 
         <div class="sheet-body">
           <div v-if="activeSheet === 'articles'" class="sheet-list">
+            <NuxtLink to="/start-here" class="sheet-item">新手入門</NuxtLink>
             <NuxtLink to="/care" class="sheet-item">飼養指南</NuxtLink>
             <NuxtLink to="/articles" class="sheet-item">文章列表</NuxtLink>
             <NuxtLink to="/faq" class="sheet-item">常見問題</NuxtLink>
@@ -81,6 +129,8 @@ watch(
 
           <div v-else-if="activeSheet === 'shop'" class="sheet-list">
             <NuxtLink to="/shop" class="sheet-item">選購守宮</NuxtLink>
+            <NuxtLink to="/buying-guide" class="sheet-item">購買流程</NuxtLink>
+            <NuxtLink to="/why-gencko" class="sheet-item">信任保證</NuxtLink>
             <NuxtLink to="/auction" class="sheet-item">線上競標</NuxtLink>
             <NuxtLink to="/breeders" class="sheet-item">種群展示</NuxtLink>
             <NuxtLink to="/merch" class="sheet-item">周邊商品</NuxtLink>
@@ -120,7 +170,6 @@ watch(
     -webkit-backdrop-filter: blur(20px);
     border-top: none;
     z-index: 9999;
-    /* 移除向上陰影，避免在首頁熱門精選下方形成「灰色軌道」視覺 */
     box-shadow: none;
   }
 }
@@ -135,7 +184,7 @@ watch(
   color: var(--txt);
   opacity: 0.6;
   transition: 0.2s ease-in-out;
-  gap: 0px;
+  gap: 0;
   height: 100%;
   min-width: 60px;
 }
@@ -242,7 +291,7 @@ watch(
 }
 
 .sheet-item:active {
-  background: rgba(255, 69, 0, 0.10);
+  background: rgba(255, 69, 0, 0.1);
   border-color: rgba(232, 68, 10, 0.45);
   color: var(--pri);
 }
@@ -251,6 +300,7 @@ watch(
 .sheet-fade-leave-active {
   transition: opacity 220ms ease;
 }
+
 .sheet-fade-enter-from,
 .sheet-fade-leave-to {
   opacity: 0;
@@ -258,8 +308,11 @@ watch(
 
 .sheet-slide-enter-active,
 .sheet-slide-leave-active {
-  transition: transform 260ms cubic-bezier(0.16, 1, 0.3, 1), opacity 220ms ease;
+  transition:
+    transform 260ms cubic-bezier(0.16, 1, 0.3, 1),
+    opacity 220ms ease;
 }
+
 .sheet-slide-enter-from,
 .sheet-slide-leave-to {
   transform: translateY(18px);

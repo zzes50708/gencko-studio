@@ -143,10 +143,14 @@ watch(
     // 隞亥楝敺?startsWith ?Ⅱ??嚗??鞈?route.name ?芸??賢?銝帘摰???
     if (newPath === '/') store.curTab = 'home'
     else if (newPath.startsWith('/articles')) store.curTab = 'articles'
+    else if (newPath.startsWith('/start-here')) store.curTab = 'care'
     else if (
       newPath.startsWith('/shop') ||
       newPath.startsWith('/product') ||
-      newPath.startsWith('/identity')
+      newPath.startsWith('/identity') ||
+      newPath.startsWith('/buying-guide') ||
+      newPath.startsWith('/why-gencko') ||
+      newPath.startsWith('/stories')
     )
       store.curTab = 'shop'
     else if (newPath.startsWith('/auction')) store.curTab = 'auction'
