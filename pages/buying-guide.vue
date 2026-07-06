@@ -14,56 +14,61 @@ const icons = {
 
 const flowLabels = ['挑選', '詢問', '確認', '到家']
 
+// 連結地圖：只有 01（有守宮可逛）、04（對到飼養頁）掛連結，其餘純流程不連。
 const flowNodes = [
   {
     no: '01',
     icon: icons.pick,
     group: '買前',
     title: '看中意的個體',
-    body: '從外觀、狀態和價格看起，找到幾隻想進一步了解的。'
+    body: '外觀、狀態、價格都看過一輪，先圈幾隻想問的。',
+    to: '/shop',
+    linkLabel: '去逛守宮'
   },
   {
     no: '02',
     icon: icons.chat,
     group: '私訊',
     title: '私訊問清楚',
-    body: '性別、基因、平常吃什麼、目前狀態，還有怎麼交付，都問一問。'
+    body: '性別、基因、平常吃蟋蟀還是杜比亞、最近排便正不正常，一次問齊。'
   },
   {
     no: '03',
     icon: icons.deal,
     group: '購買',
     title: '談好條件',
-    body: '保留規則、付款方式、什麼時候交付，這些先講清楚。'
+    body: '保留幾天、怎麼付款、什麼時候寄，白紙黑字講定再下單。'
   },
   {
     no: '04',
     icon: icons.home,
     group: '到家前',
     title: '先把環境備好',
-    body: '加熱、濕區、躲避屋和營養品，趁牠還沒到先準備。'
+    body: '加熱墊貼好、濕度盒放進去，熱點到涼區的溫差先拉出來。',
+    to: '/care',
+    linkLabel: '看飼養頁'
   },
   {
     no: '05',
     icon: icons.rest,
     group: '到家後',
     title: '讓牠先適應',
-    body: '剛到會怕生，前幾天別太常打擾，注意精神、進食和排泄。'
+    body: '頭幾天別一直開盒，看牠開不開食、排不排便就好。'
   }
 ]
 
 const checkpoints = [
   {
     title: '私訊前',
-    rows: ['挑好想問的那幾隻', '把想問的問題列一列']
+    rows: ['圈好想問的那幾隻', '把問題列成一排，免得漏問']
   },
   {
     title: '付款前',
-    rows: ['確認保留和付款規則', '問清楚什麼時候出貨']
+    rows: ['保留天數、付款方式講定', '確認寄出日期跟包裝方式']
   },
   {
     title: '到家後',
-    rows: ['前幾天盡量少打擾', '拍點照片影片留記錄']
+    rows: ['頭幾天少開盒', '拍照錄影，有狀況時方便對照']
   }
 ]
 
@@ -93,13 +98,12 @@ useHead({
 
 <template>
   <div class="flow-page">
-    <section class="flow-hero card">
-      <div class="hero-copy">
-        <div class="hero-kicker">BUYING FLOW</div>
-        <h1 class="page-title">買守宮，流程大概長這樣</h1>
-        <p class="hero-lead">第一次買難免緊張，其實流程沒那麼複雜，知道每一步在做什麼就好。</p>
-      </div>
-
+    <PageHero
+      layout="stack"
+      kicker="BUYING FLOW"
+      title="買守宮，流程大概長這樣"
+      lead="第一次買會緊張很正常。這頁把從看上到寄到家的每一步拆開講。"
+    >
       <div class="hero-strip" aria-hidden="true">
         <template v-for="(item, idx) in flowLabels" :key="item">
           <span class="hero-strip-item">{{ item }}</span>
@@ -108,38 +112,10 @@ useHead({
           </span>
         </template>
       </div>
-    </section>
+    </PageHero>
 
     <section class="content-grid">
-      <section class="poster card">
-        <div class="panel-kicker">FLOW</div>
-
-        <article v-for="node in flowNodes" :key="node.no" class="poster-node">
-          <div class="node-pin">
-            <div class="node-no">{{ node.no }}</div>
-          </div>
-
-          <div class="node-card">
-            <div class="node-top">
-              <span class="node-icon">
-                <svg
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="1.9"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  aria-hidden="true"
-                  v-html="node.icon"
-                />
-              </span>
-              <span class="node-group">{{ node.group }}</span>
-            </div>
-            <h2 class="node-title">{{ node.title }}</h2>
-            <p class="node-body">{{ node.body }}</p>
-          </div>
-        </article>
-      </section>
+      <Timeline :nodes="flowNodes" />
 
       <section class="check-panel card">
         <div class="panel-head">
@@ -172,25 +148,7 @@ useHead({
       </section>
     </section>
 
-    <section class="next-panel card">
-      <div class="next-head">
-        <div class="panel-kicker">NEXT</div>
-        <h2 class="sec-title">流程看完後</h2>
-        <p class="next-lead">流程都懂了，就可以開始挑了。</p>
-      </div>
-
-      <div class="next-actions">
-        <NuxtLink
-          v-for="item in nextActions"
-          :key="item.to"
-          :to="item.to"
-          class="btn-app btn-app--md btn-app--pill"
-          :class="item.primary ? 'btn-app--primary' : 'btn-app--ghost'"
-        >
-          {{ item.label }}
-        </NuxtLink>
-      </div>
-    </section>
+    <NextCta title="流程看完後" lead="看完流程，挑一隻開始吧。" :actions="nextActions" />
   </div>
 </template>
 
@@ -201,76 +159,12 @@ useHead({
   padding: 4px 12px 40px;
 }
 
-.flow-hero,
-.poster,
-.check-panel,
-.next-panel {
-  padding: 20px;
-  background: var(--card-bg);
-}
-
 .card {
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-card);
 }
 
-/* ---------- Hero ---------- */
-.flow-hero {
-  position: relative;
-  display: grid;
-  gap: 14px;
-  margin-bottom: 16px;
-  overflow: hidden;
-}
-
-.flow-hero::before {
-  content: '';
-  position: absolute;
-  top: -50%;
-  right: -8%;
-  width: 55%;
-  height: 200%;
-  background: radial-gradient(closest-side, var(--pri-glow-soft), transparent 70%);
-  pointer-events: none;
-}
-
-.hero-copy {
-  position: relative;
-  z-index: 1;
-  display: grid;
-  gap: 8px;
-}
-
-.hero-lead {
-  margin: 0;
-  color: var(--txt);
-  opacity: 0.78;
-  line-height: 1.5;
-  font-size: 0.95rem;
-}
-
-/* Kicker（小色點 + uppercase 標籤） */
-.hero-kicker,
-.panel-kicker {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  color: var(--pri);
-  font-weight: 900;
-  font-size: 0.82rem;
-  letter-spacing: 0.16em;
-}
-
-.hero-kicker::before,
-.panel-kicker::before {
-  content: '';
-  width: 7px;
-  height: 7px;
-  border-radius: 999px;
-  background: var(--pri);
-  box-shadow: 0 0 0 4px var(--pri-glow-soft);
-}
-
+/* Hero 內的流程 pill 帶（slot 內容，樣式留在頁面） */
 .hero-strip {
   position: relative;
   z-index: 1;
@@ -318,119 +212,44 @@ useHead({
   margin-bottom: 16px;
 }
 
-.poster > .panel-kicker {
-  margin-bottom: 14px;
-}
-
-/* ---------- Poster timeline（連接線自動跟隨內容高度） ---------- */
-.poster-node {
-  position: relative;
-  display: grid;
-  grid-template-columns: 48px 1fr;
-  gap: 12px;
-  align-items: stretch;
-}
-
-.poster-node:not(:last-child) {
-  padding-bottom: 14px;
-}
-
-.node-pin {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-}
-
-.node-no {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  flex: 0 0 auto;
-  width: 40px;
-  height: 40px;
-  border-radius: 999px;
-  border: 2px solid rgba(232, 68, 10, 0.28);
-  background: rgba(232, 68, 10, 0.06);
-  color: var(--pri);
-  font-weight: 900;
-  font-size: 0.85rem;
-}
-
-/* 垂直連接線：以 pin 欄的 flex 剩餘空間繪製，內容變高也對齊 */
-.poster-node:not(:last-child) .node-pin::after {
-  content: '';
-  width: 3px;
-  flex: 1 1 auto;
-  margin: 6px 0 -14px;
-  border-radius: 999px;
-  background: linear-gradient(180deg, var(--pri), rgba(232, 68, 10, 0.2));
-}
-
-.node-card {
-  display: grid;
-  gap: 6px;
-  padding: 14px 16px;
-  border-radius: var(--radius-md);
-  border: 1px solid var(--bd);
-  background: rgba(128, 128, 128, 0.05);
-  transition:
-    transform var(--transition),
-    border-color var(--transition),
-    box-shadow var(--transition);
-}
-
-.node-top {
+.panel-kicker {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-}
-
-.node-icon {
-  display: inline-flex;
-  color: var(--pri);
-}
-
-.node-icon svg {
-  width: 18px;
-  height: 18px;
-}
-
-.node-group {
   color: var(--pri);
   font-weight: 900;
-  font-size: 0.8rem;
-  letter-spacing: 0.1em;
+  font-size: 0.82rem;
+  letter-spacing: 0.16em;
 }
 
-.node-title,
-.sec-title,
-.check-title {
-  margin: 0;
-  color: var(--txt);
-  font-weight: 900;
-}
-
-.node-title {
-  font-size: 1.05rem;
-}
-
-.node-body {
-  margin: 0;
-  color: var(--txt);
-  opacity: 0.8;
-  line-height: 1.5;
+.panel-kicker::before {
+  content: '';
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: var(--pri);
+  box-shadow: 0 0 0 4px var(--pri-glow-soft);
 }
 
 /* ---------- Checkpoint panel ---------- */
 .check-panel {
   display: grid;
   align-content: start;
+  padding: 20px;
+  background: var(--card-bg);
 }
 
 .panel-head {
   display: grid;
   gap: 8px;
   margin-bottom: 14px;
+}
+
+.sec-title,
+.check-title {
+  margin: 0;
+  color: var(--txt);
+  font-weight: 900;
 }
 
 .check-grid {
@@ -487,37 +306,7 @@ useHead({
   height: 12px;
 }
 
-/* ---------- Next CTA ---------- */
-.next-panel {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 18px;
-}
-
-.next-head {
-  display: grid;
-  gap: 8px;
-}
-
-.next-lead {
-  margin: 0;
-  color: var(--txt);
-  opacity: 0.78;
-  font-size: 0.92rem;
-}
-
-.next-actions {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  gap: 10px;
-}
-
-/* ---------- Hover ---------- */
 @media (hover: hover) and (pointer: fine) {
-  .node-card:hover,
   .check-card:hover {
     border-color: var(--bd-hover);
     transform: translateY(-3px);
@@ -525,7 +314,6 @@ useHead({
   }
 }
 
-/* ---------- RWD ---------- */
 @media (max-width: 900px) {
   .content-grid {
     grid-template-columns: 1fr;
@@ -538,22 +326,6 @@ useHead({
     padding: 4px 12px 32px;
   }
 
-  .flow-hero,
-  .poster,
-  .check-panel,
-  .next-panel {
-    padding: 16px;
-  }
-
-  .page-title {
-    font-size: 1.32rem;
-  }
-
-  .hero-lead,
-  .next-lead {
-    font-size: 0.86rem;
-  }
-
   .hero-strip-item {
     padding: 4px 10px;
     font-size: 0.8rem;
@@ -563,54 +335,25 @@ useHead({
     width: 16px;
   }
 
-  .poster-node {
-    grid-template-columns: 40px 1fr;
-    gap: 10px;
+  .check-panel {
+    padding: 16px;
   }
 
-  .node-no {
-    width: 34px;
-    height: 34px;
-    font-size: 0.74rem;
-  }
-
-  .node-card {
-    padding: 12px 14px;
-  }
-
-  .node-title,
   .sec-title,
   .check-title {
     font-size: 0.98rem;
   }
 
-  .node-body,
   .check-item {
     font-size: 0.82rem;
-  }
-
-  .next-panel {
-    gap: 14px;
-  }
-
-  .next-actions {
-    width: 100%;
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-
-  .next-actions .btn-app {
-    padding-inline: 8px;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .node-card,
   .check-card {
     transition: none;
   }
 
-  .node-card:hover,
   .check-card:hover {
     transform: none;
   }

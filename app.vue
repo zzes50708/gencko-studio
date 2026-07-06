@@ -54,6 +54,8 @@ const destroyGlobalLenis = () => {
     globalLenis.destroy()
     globalLenis = null
   }
+  // 讓 router.options.ts 的 scrollBehavior 能取得（或得知已無）全域 Lenis
+  if (import.meta.client) window.__lenis = null
 }
 
 const initGlobalLenis = async () => {
@@ -78,6 +80,8 @@ const initGlobalLenis = async () => {
   gsapLib.ticker.add(globalLenisTicker)
   gsapLib.ticker.lagSmoothing(0)
   globalLenis.on('scroll', handleLenisScroll)
+  // 暴露給 router scrollBehavior：換頁歸零 / 返回還原捲動位置
+  window.__lenis = globalLenis
 }
 
 // /about ↔ 其他頁切換時：啟停全域 Lenis

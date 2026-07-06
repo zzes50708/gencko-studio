@@ -1,6 +1,5 @@
 <script setup>
 import { useHead } from '#imports'
-import { onMounted } from 'vue'
 
 const pageUrl = 'https://www.genckobreeding.com/start-here'
 
@@ -25,7 +24,7 @@ const lanes = [
     no: '01',
     icon: icons.care,
     title: '了解飼養',
-    caption: '知道牠平常吃什麼、住什麼樣的環境嗎？',
+    caption: '知道熱點涼區怎麼配、一週餵幾次嗎？',
     actions: [
       { label: '飼養指南', to: '/care' },
       { label: '常見問題', to: '/faq' }
@@ -35,7 +34,7 @@ const lanes = [
     no: '02',
     icon: icons.assess,
     title: '評估準備',
-    caption: '怕帶回家才發現自己還沒準備好？',
+    caption: '怕帶回家才發現設備沒買齊？',
     actions: [
       { label: '健康評估', to: '/health' },
       { label: '購買流程', to: '/buying-guide' }
@@ -45,27 +44,30 @@ const lanes = [
     no: '03',
     icon: icons.pick,
     title: '挑選個體',
-    caption: '都準備得差不多，來看看哪隻適合你。',
+    caption: '都備齊了，來看看哪隻對眼。',
     actions: [{ label: '新手推薦個體', to: '/shop?beginner=true' }]
   }
 ]
 
+// prep 01 掛 /care inline 連結；02 是到家後行為，維持純文字。
 const prepNotes = [
   {
     no: '01',
     icon: icons.home,
     title: '環境和營養品先備齊',
-    body: '加熱設備、濕區、躲避屋，還有鈣粉跟維他命，趁牠還沒到就準備好。'
+    body: '加熱墊、濕度盒、躲避屋，加上鈣粉跟綜合維他命，牠到之前就位。',
+    to: '/care',
+    linkLabel: '看飼養頁'
   },
   {
     no: '02',
     icon: icons.rest,
     title: '到家後先讓牠靜一靜',
-    body: '剛換環境會緊張，前幾天別太常打擾，觀察牠吃不吃、排泄和精神就好。'
+    body: '頭幾天少開盒，看牠開不開食、排不排便就好。'
   }
 ]
 
-const nextLinks = [
+const nextActions = [
   { label: '飼養指南', to: '/care' },
   { label: '健康評估', to: '/health' },
   { label: '購買流程', to: '/buying-guide' },
@@ -88,25 +90,15 @@ useHead({
   ],
   link: [{ rel: 'canonical', href: pageUrl }]
 })
-
-onMounted(() => {
-  if (import.meta.client) {
-    window.scrollTo({ top: 0, behavior: 'auto' })
-  }
-})
 </script>
 
 <template>
   <div class="starter-page">
-    <section class="hero-stage card">
-      <div class="hero-copy">
-        <div class="hero-kicker">START HERE</div>
-        <h1 class="page-title">第一次養守宮，先別急著挑個體</h1>
-        <p class="hero-lead">
-          很多人一開始就急著挑最漂亮的，結果東西沒備好、也不確定養不養得起來。先把基礎搞懂，帶回家才安心。
-        </p>
-      </div>
-
+    <PageHero
+      kicker="START HERE"
+      title="第一次養守宮，先別急著挑個體"
+      lead="很多人一上來就先挑最漂亮的，結果加熱、濕度都沒到位。先把養法搞懂，再挑不遲。"
+    >
       <ol class="hero-flow">
         <template v-for="(item, idx) in flowSteps" :key="item.no">
           <li class="flow-node">
@@ -118,7 +110,7 @@ onMounted(() => {
           </li>
         </template>
       </ol>
-    </section>
+    </PageHero>
 
     <section class="lane-board">
       <article v-for="lane in lanes" :key="lane.no" class="lane-card card">
@@ -182,29 +174,15 @@ onMounted(() => {
           </div>
           <h3 class="prep-title">{{ item.title }}</h3>
           <p class="prep-body">{{ item.body }}</p>
+          <NuxtLink v-if="item.to" :to="item.to" class="prep-link">
+            {{ item.linkLabel || '看更多' }}
+            <span aria-hidden="true">→</span>
+          </NuxtLink>
         </article>
       </div>
     </section>
 
-    <section class="next-step card">
-      <div class="next-head">
-        <div class="panel-kicker">NEXT</div>
-        <h2 class="sec-title">下一步</h2>
-        <p class="next-lead">基礎有了、也準備得差不多，就可以來挑了。</p>
-      </div>
-
-      <div class="next-step-actions">
-        <NuxtLink
-          v-for="item in nextLinks"
-          :key="item.to"
-          :to="item.to"
-          class="btn-app btn-app--md btn-app--pill"
-          :class="item.primary ? 'btn-app--primary' : 'btn-app--ghost'"
-        >
-          {{ item.label }}
-        </NuxtLink>
-      </div>
-    </section>
+    <NextCta title="下一步" lead="基礎有了、設備也備齊，就可以來挑了。" :actions="nextActions" />
   </div>
 </template>
 
@@ -215,78 +193,12 @@ onMounted(() => {
   padding: 4px 12px 40px;
 }
 
-.hero-stage,
-.prep-panel,
-.next-step {
-  padding: 20px;
-  background: var(--card-bg);
-}
-
 .card {
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-card);
 }
 
-/* ---------- Hero ---------- */
-.hero-stage {
-  position: relative;
-  display: grid;
-  grid-template-columns: minmax(0, 0.92fr) minmax(0, 1.08fr);
-  gap: 22px;
-  align-items: center;
-  margin-bottom: 16px;
-  overflow: hidden;
-}
-
-.hero-stage::before {
-  content: '';
-  position: absolute;
-  top: -40%;
-  right: -10%;
-  width: 60%;
-  height: 160%;
-  background: radial-gradient(closest-side, var(--pri-glow-soft), transparent 70%);
-  pointer-events: none;
-}
-
-.hero-copy {
-  position: relative;
-  z-index: 1;
-  display: grid;
-  gap: 10px;
-}
-
-.hero-lead {
-  margin: 2px 0 0;
-  color: var(--txt);
-  opacity: 0.78;
-  line-height: 1.55;
-  font-size: 0.95rem;
-}
-
-/* Kicker（小色點 + uppercase 標籤） */
-.hero-kicker,
-.panel-kicker {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  color: var(--pri);
-  font-weight: 900;
-  font-size: 0.82rem;
-  letter-spacing: 0.16em;
-}
-
-.hero-kicker::before,
-.panel-kicker::before {
-  content: '';
-  width: 7px;
-  height: 7px;
-  border-radius: 999px;
-  background: var(--pri);
-  box-shadow: 0 0 0 4px var(--pri-glow-soft);
-}
-
-/* ---------- Flow stepper ---------- */
+/* ---------- Flow stepper（Hero slot 內容） ---------- */
 .hero-flow {
   position: relative;
   z-index: 1;
@@ -409,7 +321,6 @@ onMounted(() => {
   height: 24px;
 }
 
-/* 編號疊在徽章右下角 */
 .lane-index,
 .prep-no {
   position: absolute;
@@ -436,16 +347,10 @@ onMounted(() => {
   padding-top: 2px;
 }
 
-.lane-title,
-.sec-title,
-.prep-title,
-.flow-title {
+.lane-title {
   margin: 0;
   color: var(--txt);
   font-weight: 900;
-}
-
-.lane-title {
   font-size: 1.05rem;
 }
 
@@ -463,7 +368,6 @@ onMounted(() => {
   gap: 8px;
 }
 
-/* 統一膠囊按鈕：沿用全域 .btn-app--ghost，只覆寫箭頭排版 */
 .lane-chip {
   justify-content: space-between;
   gap: 10px;
@@ -477,12 +381,39 @@ onMounted(() => {
 /* ---------- Prep panel ---------- */
 .prep-panel {
   margin-bottom: 16px;
+  padding: 20px;
+  background: var(--card-bg);
 }
 
 .panel-head {
   display: grid;
   gap: 8px;
   margin-bottom: 16px;
+}
+
+.panel-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--pri);
+  font-weight: 900;
+  font-size: 0.82rem;
+  letter-spacing: 0.16em;
+}
+
+.panel-kicker::before {
+  content: '';
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: var(--pri);
+  box-shadow: 0 0 0 4px var(--pri-glow-soft);
+}
+
+.sec-title {
+  margin: 0;
+  color: var(--txt);
+  font-weight: 900;
 }
 
 .prep-grid {
@@ -501,35 +432,20 @@ onMounted(() => {
 }
 
 .prep-title {
+  margin: 0;
+  color: var(--txt);
+  font-weight: 900;
   font-size: 1.02rem;
 }
 
-/* ---------- Next step CTA ---------- */
-.next-step {
-  display: flex;
+.prep-link {
+  display: inline-flex;
   align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 18px;
-}
-
-.next-head {
-  display: grid;
-  gap: 8px;
-}
-
-.next-lead {
-  margin: 0;
-  color: var(--txt);
-  opacity: 0.78;
-  font-size: 0.92rem;
-}
-
-.next-step-actions {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  gap: 10px;
+  gap: 6px;
+  color: var(--pri);
+  font-weight: 800;
+  font-size: 0.88rem;
+  text-decoration: none;
 }
 
 /* ---------- Hover ---------- */
@@ -541,35 +457,17 @@ onMounted(() => {
     transform: translateY(-3px);
     box-shadow: var(--shadow-hover);
   }
-}
 
-/* ---------- RWD ---------- */
-@media (max-width: 900px) {
-  .hero-stage {
-    grid-template-columns: 1fr;
-    gap: 18px;
+  .prep-link:hover {
+    text-decoration: underline;
   }
 }
 
+/* ---------- RWD ---------- */
 @media (max-width: 640px) {
   .starter-page {
     font-size: 13px;
     padding: 4px 12px 32px;
-  }
-
-  .hero-stage,
-  .prep-panel,
-  .next-step {
-    padding: 16px;
-  }
-
-  .page-title {
-    font-size: 1.32rem;
-  }
-
-  .hero-lead,
-  .next-lead {
-    font-size: 0.86rem;
   }
 
   /* 手機流程：改為垂直 stepper，連接線不再隱藏 */
@@ -629,19 +527,9 @@ onMounted(() => {
   }
 
   .lane-caption,
-  .prep-body {
+  .prep-body,
+  .prep-link {
     font-size: 0.82rem;
-  }
-
-  .next-step {
-    gap: 14px;
-  }
-
-  .next-step-actions {
-    width: 100%;
-    justify-content: stretch;
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
