@@ -24,7 +24,7 @@ const lanes = [
     no: '01',
     icon: icons.care,
     title: '了解飼養',
-    caption: '知道熱點涼區怎麼配、一週餵幾次嗎？',
+    caption: '知道熱區冷區怎麼擺放、一週餵幾次嗎',
     actions: [
       { label: '飼養指南', to: '/care' },
       { label: '常見問題', to: '/faq' }
@@ -34,7 +34,7 @@ const lanes = [
     no: '02',
     icon: icons.assess,
     title: '評估準備',
-    caption: '怕帶回家才發現設備沒買齊？',
+    caption: '怕買到不健康的守宮嗎?知道守宮入住前需要做什麼嗎',
     actions: [
       { label: '健康評估', to: '/health' },
       { label: '購買流程', to: '/buying-guide' }
@@ -44,7 +44,7 @@ const lanes = [
     no: '03',
     icon: icons.pick,
     title: '挑選個體',
-    caption: '都備齊了，來看看哪隻對眼。',
+    caption: '都準備好了，來看看有哪些守宮吧',
     actions: [{ label: '新手推薦個體', to: '/shop?beginner=true' }]
   }
 ]
@@ -55,15 +55,15 @@ const prepNotes = [
     no: '01',
     icon: icons.home,
     title: '環境和營養品先備齊',
-    body: '加熱墊、濕度盒、躲避屋，加上鈣粉跟綜合維他命，牠到之前就位。',
+    body: '先準備房子、底材、加熱墊、躲避屋，還有D3鈣粉與綜合維他命，再把守宮帶回家',
     to: '/care',
     linkLabel: '看飼養頁'
   },
   {
     no: '02',
     icon: icons.rest,
-    title: '到家後先讓牠靜一靜',
-    body: '頭幾天少開盒，看牠開不開食、排不排便就好。'
+    title: '到家先安置',
+    body: '給水並靜養3~5天，不要馬上上手或餵食'
   }
 ]
 
@@ -79,12 +79,12 @@ useHead({
   meta: [
     {
       name: 'description',
-      content: '第一次養守宮別急著挑個體。先搞懂怎麼養、評估自己準備好了沒，再來看新手推薦。'
+      content: '第一次養守宮別著急。先學習怎麼養、評估自己準備好了沒，再來看看漂亮的守宮吧。'
     },
     { property: 'og:title', content: '新手入門｜第一次養守宮，該從哪開始' },
     {
       property: 'og:description',
-      content: '先搞懂飼養，評估自己準備好了沒，再挑個體。順序對了就少踩雷。'
+      content: '先學習飼養，再挑個體。順序對了才安心。'
     },
     { property: 'og:url', content: pageUrl }
   ],
@@ -97,7 +97,7 @@ useHead({
     <PageHero
       kicker="START HERE"
       title="第一次養守宮，先別急著挑個體"
-      lead="很多人一上來就先挑最漂亮的，結果加熱、濕度都沒到位。先把養法搞懂，再挑不遲。"
+      lead="先了解怎麼養守宮，才能讓守宮安心快樂地長大。先準備好再挑守宮。"
     >
       <ol class="hero-flow">
         <template v-for="(item, idx) in flowSteps" :key="item.no">
@@ -182,7 +182,7 @@ useHead({
       </div>
     </section>
 
-    <NextCta title="下一步" lead="基礎有了、設備也備齊，就可以來挑了。" :actions="nextActions" />
+    <NextCta title="下一步" lead="詳細看看有哪些該注意的，或是直接看守宮" :actions="nextActions" />
   </div>
 </template>
 

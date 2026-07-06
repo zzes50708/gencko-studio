@@ -20,8 +20,8 @@ const flowNodes = [
     no: '01',
     icon: icons.pick,
     group: '買前',
-    title: '看中意的個體',
-    body: '外觀、狀態、價格都看過一輪，先圈幾隻想問的。',
+    title: '找找喜歡的守宮',
+    body: '找外觀喜歡、狀況良好、價格能接受的守宮',
     to: '/shop',
     linkLabel: '去逛守宮'
   },
@@ -29,22 +29,22 @@ const flowNodes = [
     no: '02',
     icon: icons.chat,
     group: '私訊',
-    title: '私訊問清楚',
-    body: '性別、基因、平常吃蟋蟀還是杜比亞、最近排便正不正常，一次問齊。'
+    title: '私訊官方',
+    body: '喜歡的守宮還在不在?基因不了解請先詢問。私訊前請確保已經了解購買規定。'
   },
   {
     no: '03',
     icon: icons.deal,
     group: '購買',
-    title: '談好條件',
-    body: '保留幾天、怎麼付款、什麼時候寄，白紙黑字講定再下單。'
+    title: '確保已經了解規定',
+    body: '匯款方式、交易時間、保留幾天、訂金多少。'
   },
   {
     no: '04',
     icon: icons.home,
     group: '到家前',
     title: '先把環境備好',
-    body: '加熱墊貼好、濕度盒放進去，熱點到涼區的溫差先拉出來。',
+    body: '環境布置好、熱區冷區準備好、食物營養品準備好。',
     to: '/care',
     linkLabel: '看飼養頁'
   },
@@ -52,23 +52,23 @@ const flowNodes = [
     no: '05',
     icon: icons.rest,
     group: '到家後',
-    title: '讓牠先適應',
-    body: '頭幾天別一直開盒，看牠開不開食、排不排便就好。'
+    title: '讓寶寶先休息',
+    body: '請給寶寶好的休息環境，檢查排便狀況，檢查是否有脫水或其他健康問題。'
   }
 ]
 
 const checkpoints = [
   {
     title: '私訊前',
-    rows: ['圈好想問的那幾隻', '把問題列成一排，免得漏問']
+    rows: ['想問哪一隻', '守宮的基因與特性都了解了嗎']
   },
   {
-    title: '付款前',
+    title: '購買時',
     rows: ['保留天數、付款方式講定', '確認寄出日期跟包裝方式']
   },
   {
     title: '到家後',
-    rows: ['頭幾天少開盒', '拍照錄影，有狀況時方便對照']
+    rows: ['靜養3~5天', '拍照錄影，有疑慮第一時間詢問不要拖']
   }
 ]
 
@@ -79,16 +79,16 @@ const nextActions = [
 ]
 
 useHead({
-  title: '購買流程｜從看上到帶回家，會經過這幾步',
+  title: '購買流程｜從挑選到帶回家，會經過這幾步',
   meta: [
     {
       name: 'description',
-      content: '看中意、私訊問清楚、談好條件，再到準備環境和到家適應，購買守宮的流程一頁看懂。'
+      content: '找喜歡的守宮、私訊問清楚、談好流程、準備環境和到家適應，購買守宮的流程一頁看懂。'
     },
-    { property: 'og:title', content: '購買流程｜從看上到帶回家，會經過這幾步' },
+    { property: 'og:title', content: '購買流程｜從挑選到帶回家，會經過這幾步' },
     {
       property: 'og:description',
-      content: '把流程拆開看，每一步要做什麼一目了然。'
+      content: '流程一項一項看，每一步要做什麼一目了然。'
     },
     { property: 'og:url', content: pageUrl }
   ],
@@ -101,8 +101,8 @@ useHead({
     <PageHero
       layout="stack"
       kicker="BUYING FLOW"
-      title="買守宮，流程大概長這樣"
-      lead="第一次買會緊張很正常。這頁把從看上到寄到家的每一步拆開講。"
+      title="買守宮，流程長這樣"
+      lead="第一次買沒經驗很正常。這邊把守宮到家前後的每一步拆開說明。"
     >
       <div class="hero-strip" aria-hidden="true">
         <template v-for="(item, idx) in flowLabels" :key="item">
@@ -148,7 +148,11 @@ useHead({
       </section>
     </section>
 
-    <NextCta title="流程看完後" lead="看完流程，挑一隻開始吧。" :actions="nextActions" />
+    <NextCta
+      title="流程看完了嗎"
+      lead="詳細看看有哪些該注意的，或是直接看守宮"
+      :actions="nextActions"
+    />
   </div>
 </template>
 

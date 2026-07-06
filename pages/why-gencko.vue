@@ -4,10 +4,10 @@ import { useHead } from '#imports'
 const pageUrl = 'https://www.genckobreeding.com/why-gencko'
 
 const trustRows = [
-  { title: '個體資料公開', body: '編號、性別、生日、品種都在頁面上。' },
-  { title: '飼養方式透明', body: '溫度、濕度、餵食頻率整理成一頁。' },
-  { title: '工具開放試', body: '基因計算機直接開放使用。' },
-  { title: '醫療先備好', body: '特寵醫院名單先列好。' }
+  { title: '資料透明', body: '性別、生日、基因都在頁面中' },
+  { title: '飼養教學', body: '該怎麼養，該注意什麼，都幫你們整理好了' },
+  { title: '專業繁殖工具', body: '專業爬蟲的基因計算機' },
+  { title: '特寵醫院名單', body: '不怕找不到最近的特寵醫院' }
 ]
 
 // 連結地圖：四張卡整張可點，各對到一個真實頁面。
@@ -16,31 +16,31 @@ const overviewBlocks = [
   {
     tag: '身分證',
     title: '每隻都有身分證',
-    body: '編號、性別、生日、品種，每隻都做成一張電子身分證。',
+    body: '性別、生日、品系，每隻都做成一張電子身分證，不怕忘記資料',
     to: '/shop',
     image: '/previews/identity-card.png',
     alt: 'Gencko 熱門個體電子身分證畫面'
   },
   {
     tag: '飼養',
-    title: '養法先講明白',
-    body: '熱點涼區的溫差、濕度、依年齡的餵食頻率，飼養頁全寫死。',
+    title: '第一次養也不怕',
+    body: '熱區冷區、濕度、餵食頻率，飼養指南幫你準備好了',
     to: '/care',
     image: '/previews/care-guide.png',
     alt: 'Gencko 飼養指南頁面畫面'
   },
   {
-    tag: '計算機',
-    title: '配對工具給你玩',
-    body: '想配什麼基因，配對前自己先跑一次計算機。',
+    tag: '基因計算機',
+    title: '工作室都在用的基因計算機',
+    body: '基因變成數據，所有繁殖結果都是可以預測的',
     to: '/calculator',
     image: '/previews/calculator-tool.png',
     alt: 'Gencko 基因計算機頁面畫面'
   },
   {
-    tag: '醫院',
-    title: '醫院名單先給你',
-    body: '特寵醫院名單都列好了，地區、聯絡方式一次找到。',
+    tag: '特寵醫院',
+    title: '輕鬆收藏特寵醫院名單',
+    body: '搜尋離家最近的特寵醫院資訊，不怕需要時找不到',
     to: '/hospital',
     image: '/previews/hospital-tool.png',
     alt: 'Gencko 特寵醫院頁面畫面'
@@ -54,16 +54,16 @@ const nextActions = [
 ]
 
 useHead({
-  title: '信任保證｜買之前該知道的，我們都先給你看',
+  title: '信任保證｜Gencko 專業的地方在哪',
   meta: [
     {
       name: 'description',
-      content: 'Gencko 把個體資料、飼養方式、配對工具和醫療資源都先攤開，讓你自己看清楚再決定。'
+      content: 'Gencko 有完整的個體資料、飼養教學、特寵醫院資訊乃至繁殖說明，讓你看完再決定。'
     },
-    { property: 'og:title', content: '信任保證｜買之前該知道的，我們都先給你看' },
+    { property: 'og:title', content: '信任保證｜Gencko 專業的地方在哪' },
     {
       property: 'og:description',
-      content: '個體資料、養法、配對工具、看診資源，通通先給你看。'
+      content: '個體資料、飼養教學、特寵醫院資訊乃至繁殖說明，讓你看完再決定。'
     },
     { property: 'og:url', content: pageUrl }
   ],
@@ -76,7 +76,7 @@ useHead({
     <PageHero
       kicker="WHY GENCKO"
       title="買之前該知道的，我們都先給你看"
-      lead="個體資料、怎麼養、配對工具、看診資源，不用等你問，一開始就都擺出來。"
+      lead="個體資料、飼養教學、特寵醫院資訊乃至繁殖說明，一站搞定。"
     >
       <div class="hero-reasons">
         <div v-for="item in trustRows" :key="item.title" class="reason-row">
@@ -109,7 +109,7 @@ useHead({
       >
         <div class="overview-head">
           <span class="overview-tag">{{ item.tag }}</span>
-          <span class="overview-cta" aria-hidden="true">查看 →</span>
+          <span class="overview-cta" aria-hidden="true">前往網頁→</span>
         </div>
         <h2 class="overview-title">{{ item.title }}</h2>
         <p class="overview-body">{{ item.body }}</p>
@@ -120,7 +120,11 @@ useHead({
       </NuxtLink>
     </section>
 
-    <NextCta title="看完這些" lead="資訊都擺出來了，接下來看你。" :actions="nextActions" />
+    <NextCta
+      title="看完了嗎"
+      lead="提供你飼養過程最全面的陪伴，接下來看你了"
+      :actions="nextActions"
+    />
   </div>
 </template>
 
