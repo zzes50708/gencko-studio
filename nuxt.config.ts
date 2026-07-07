@@ -350,7 +350,7 @@ export default defineNuxtConfig({
         // Organization 結構化資料（品牌身份，GEO / Knowledge Panel 基礎）
         {
           type: 'application/ld+json',
-          children: JSON.stringify({
+          innerHTML: JSON.stringify({
             '@context': 'https://schema.org',
             '@type': 'Organization',
             name: 'Gencko Breeding Studio',

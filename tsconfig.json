@@ -1,0 +1,12 @@
+{
+  // Nuxt 產生的基礎設定（.nuxt/tsconfig.json）之上做漸進導入。
+  // checkJs:false → 現有 .js / 無 lang 的 .vue 暫不型別檢查（漸進，避免一次淹沒）；
+  // 已轉的 .ts 檔仍受完整型別檢查。
+  "extends": "./.nuxt/tsconfig.json",
+  "compilerOptions": {
+    "checkJs": false,
+    "skipLibCheck": true
+  },
+  // supabase/functions 為 Deno Edge Function（獨立執行環境），不套用 Nuxt tsconfig
+  "exclude": ["node_modules", ".output", "dist", "supabase"]
+}

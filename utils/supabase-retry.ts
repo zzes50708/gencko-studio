@@ -6,16 +6,28 @@
  *
  * 用法：
  *   const { data, error } = await withRetry(() => supabase.from('animals').select('*'))
- *
- * @param {() => Promise<{data: any, error: any}>} queryFn 包好的 supabase 查詢
- * @param {{retries?: number, baseDelay?: number, label?: string}} opts
  */
-export async function withRetry(queryFn, opts = {}) {
+
+export interface QueryResult<T = unknown> {
+  data: T | null
+  error: unknown
+}
+
+export interface RetryOptions {
+  retries?: number
+  baseDelay?: number
+  label?: string
+}
+
+export async function withRetry<T = unknown>(
+  queryFn: () => Promise<QueryResult<T>>,
+  opts: RetryOptions = {}
+): Promise<QueryResult<T>> {
   const retries = opts.retries ?? 2
   const baseDelay = opts.baseDelay ?? 400
   const label = opts.label || 'supabase'
 
-  let lastErr = null
+  let lastErr: unknown = null
   for (let attempt = 0; attempt <= retries; attempt++) {
     try {
       const res = await queryFn()
@@ -23,7 +35,8 @@ export async function withRetry(queryFn, opts = {}) {
       if (!err) return res
 
       // 4xx → 不重試
-      const code = Number(err.code || err.status || 0)
+      const e = err as { code?: number | string; status?: number }
+      const code = Number(e.code || e.status || 0)
       if (code >= 400 && code < 500 && code !== 429) {
         return res
       }
@@ -38,7 +51,7 @@ export async function withRetry(queryFn, opts = {}) {
       if (import.meta.dev)
         console.warn(
           `[${label}] retry ${attempt + 1}/${retries} after ${Math.round(delay)}ms`,
-          lastErr?.message || lastErr
+          (lastErr as { message?: string })?.message || lastErr
         )
       await new Promise((r) => setTimeout(r, delay))
     }
