@@ -9,7 +9,7 @@ import {
   getBreadcrumbForPath,
   getSocialMeta,
   GECKO_TAXONS
-} from '~/utils/seo-schemas.js'
+} from '~/utils/seo-schemas'
 
 const faqUrl = absUrl('/faq')
 const faqTitle = '常見問題 FAQ｜Gencko 守宮飼養、健康、購買完整解答'
