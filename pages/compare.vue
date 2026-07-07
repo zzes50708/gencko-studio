@@ -3,7 +3,7 @@ import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useHead } from '#imports'
 import { useMainStore } from '~/stores/useMainStore'
-import { getCleanUrl } from '~/utils/image.js'
+import { getCleanUrl } from '~/utils/image'
 
 const store = useMainStore()
 const route = useRoute()

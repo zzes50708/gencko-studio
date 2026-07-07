@@ -4,7 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { useHead, useAsyncData, useSupabaseClient } from '#imports'
 import { useMainStore } from '~/stores/useMainStore'
 import { GENES_DB } from '~/utils/genes-db.js'
-import { getCleanUrl } from '~/utils/image.js'
+import { getCleanUrl } from '~/utils/image'
 import ShopFlipCard from '~/components/ShopFlipCard.vue'
 
 const store = useMainStore()

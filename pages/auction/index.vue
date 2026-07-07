@@ -3,7 +3,7 @@ import { computed, ref, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useHead, useAsyncData, useSupabaseClient } from '#imports'
 import { useMainStore } from '~/stores/useMainStore'
-import { getCleanUrl } from '~/utils/image.js'
+import { getCleanUrl } from '~/utils/image'
 
 const store = useMainStore()
 const router = useRouter()

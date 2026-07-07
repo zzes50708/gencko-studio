@@ -1,6 +1,6 @@
 ﻿<script setup>
 import { ref, computed, watch } from 'vue'
-import { getCleanUrl } from '~/utils/image.js'
+import { getCleanUrl } from '~/utils/image'
 import { useMainStore } from '~/stores/useMainStore' // ?? 撘 store
 
 const props = defineProps({

@@ -2,7 +2,7 @@
 import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useMainStore } from '~/stores/useMainStore'
-import { getCleanUrl } from '~/utils/image.js'
+import { getCleanUrl } from '~/utils/image'
 
 const router = useRouter()
 const store = useMainStore()

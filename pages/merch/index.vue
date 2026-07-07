@@ -2,7 +2,7 @@
 import { computed } from 'vue'
 import { useHead, useAsyncData, useSupabaseClient } from '#imports'
 import { useMainStore } from '~/stores/useMainStore'
-import { getCleanUrl } from '~/utils/image.js'
+import { getCleanUrl } from '~/utils/image'
 
 const store = useMainStore()
 const supabase = useSupabaseClient()
