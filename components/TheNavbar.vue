@@ -111,9 +111,26 @@ const navLogoUrl = computed(() => (store.logoUrl ? getCleanUrl(store.logoUrl, 72
           <button
             v-if="store.canInstall"
             @click="store.installApp"
-            class="btn-app btn-app--secondary btn-app--sm btn-app--pill dt-install-btn dt-only"
+            class="btn-app btn-app--secondary btn-app--sm btn-app--pill dt-install-btn"
+            aria-label="下載 App"
           >
-            下載 App
+            <svg
+              class="install-ico"
+              viewBox="0 0 24 24"
+              width="16"
+              height="16"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2.2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M12 3v12" />
+              <path d="M7 10l5 5 5-5" />
+              <path d="M5 20h14" />
+            </svg>
+            <span class="install-label">下載 App</span>
           </button>
 
           <NuxtLink
@@ -319,6 +336,12 @@ const navLogoUrl = computed(() => (store.logoUrl ? getCleanUrl(store.logoUrl, 72
 /* ?? 獢???鋆???*/
 .dt-install-btn {
   margin-right: 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.install-ico {
+  flex: 0 0 auto;
 }
 
 .dt-only {
@@ -354,6 +377,16 @@ const navLogoUrl = computed(() => (store.logoUrl ? getCleanUrl(store.logoUrl, 72
   }
   .dt-nav {
     display: none;
+  }
+
+  /* 手機版：下載 App 鈕只留 icon（省頂欄空間） */
+  .install-label {
+    display: none;
+  }
+  .dt-install-btn {
+    margin-right: 8px;
+    padding-left: 10px;
+    padding-right: 10px;
   }
 
   /* 手機：會員按鈕放右上（原亮色按鈕位置），亮/暗切換放最右（原漢堡位置） */
