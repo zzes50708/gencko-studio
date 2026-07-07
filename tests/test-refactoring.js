@@ -10,7 +10,7 @@
  */
 
 import { getSpeciesConfig, SPECIES_CONFIGS } from './utils/genetics/index.js'
-import { calculateGenetics } from './utils/calcUtils.js'
+import { calculateGenetics } from './utils/calcUtils'
 import { ZYG, CALC_TYPES } from './utils/genes.js'
 
 console.log('='.repeat(60))
@@ -27,17 +27,17 @@ const lgConfig = getSpeciesConfig('豹紋守宮')
 const aftConfig = getSpeciesConfig('肥尾守宮')
 
 if (lgConfig && lgConfig.genes && lgConfig.genes.length > 0) {
-    console.log(`✓ 豹紋守宮配置正確導入，包含 ${lgConfig.genes.length} 個基因`)
+  console.log(`✓ 豹紋守宮配置正確導入，包含 ${lgConfig.genes.length} 個基因`)
 } else {
-    console.log('✗ 豹紋守宮配置導入失敗')
-    process.exit(1)
+  console.log('✗ 豹紋守宮配置導入失敗')
+  process.exit(1)
 }
 
 if (aftConfig && aftConfig.genes && aftConfig.genes.length > 0) {
-    console.log(`✓ 肥尾守宮配置正確導入，包含 ${aftConfig.genes.length} 個基因`)
+  console.log(`✓ 肥尾守宮配置正確導入，包含 ${aftConfig.genes.length} 個基因`)
 } else {
-    console.log('✗ 肥尾守宮配置導入失敗')
-    process.exit(1)
+  console.log('✗ 肥尾守宮配置導入失敗')
+  process.exit(1)
 }
 
 // ============================================
@@ -55,22 +55,22 @@ const femaleGenes = [{ geneId: 'tremper', zygosity: ZYG.HET }]
 const result1 = calculateGenetics(lgConfig, maleGenes, femaleGenes)
 
 if (result1 && result1.outcomes && result1.outcomes.length > 0) {
-    console.log(`✓ 計算成功，產生 ${result1.totalCombos} 個結果`)
-    result1.outcomes.forEach((outcome, idx) => {
-        console.log(`  ${idx + 1}. ${outcome.description}: ${(outcome.prob * 100).toFixed(1)}%`)
-    })
+  console.log(`✓ 計算成功，產生 ${result1.totalCombos} 個結果`)
+  result1.outcomes.forEach((outcome, idx) => {
+    console.log(`  ${idx + 1}. ${outcome.description}: ${(outcome.prob * 100).toFixed(1)}%`)
+  })
 
-    // 驗證機率加總為 1
-    const totalProb = result1.outcomes.reduce((sum, o) => sum + o.prob, 0)
-    if (Math.abs(totalProb - 1.0) < 0.0001) {
-        console.log(`✓ 機率加總正確 (${(totalProb * 100).toFixed(1)}%)`)
-    } else {
-        console.log(`✗ 機率加總錯誤 (${(totalProb * 100).toFixed(1)}%)`)
-        process.exit(1)
-    }
-} else {
-    console.log('✗ 計算失敗')
+  // 驗證機率加總為 1
+  const totalProb = result1.outcomes.reduce((sum, o) => sum + o.prob, 0)
+  if (Math.abs(totalProb - 1.0) < 0.0001) {
+    console.log(`✓ 機率加總正確 (${(totalProb * 100).toFixed(1)}%)`)
+  } else {
+    console.log(`✗ 機率加總錯誤 (${(totalProb * 100).toFixed(1)}%)`)
     process.exit(1)
+  }
+} else {
+  console.log('✗ 計算失敗')
+  process.exit(1)
 }
 
 // ============================================
@@ -87,11 +87,11 @@ const femaleGenes2 = [{ geneId: 'aft_caramel', zygosity: ZYG.VIS }]
 const result2 = calculateGenetics(aftConfig, maleGenes2, femaleGenes2)
 
 if (result2 && result2.warning && result2.warning.includes('焦糖')) {
-    console.log('✓ 母焦糖警告正確觸發')
-    console.log(`  警告信息：${result2.warning.split('\n')[0]}`)
+  console.log('✓ 母焦糖警告正確觸發')
+  console.log(`  警告信息：${result2.warning.split('\n')[0]}`)
 } else {
-    console.log('✗ 母焦糖警告未觸發')
-    process.exit(1)
+  console.log('✗ 母焦糖警告未觸發')
+  process.exit(1)
 }
 
 // ============================================
@@ -105,51 +105,60 @@ console.log('-'.repeat(60))
 // 應該產生多個結果，並按「完整表現隱性基因數」排序
 
 const complexMale = [
-    { geneId: 'tremper', zygosity: ZYG.HET },
-    { geneId: 'eclipse', zygosity: ZYG.HET }
+  { geneId: 'tremper', zygosity: ZYG.HET },
+  { geneId: 'eclipse', zygosity: ZYG.HET }
 ]
 const complexFemale = [
-    { geneId: 'tremper', zygosity: ZYG.HET },
-    { geneId: 'eclipse', zygosity: ZYG.HET }
+  { geneId: 'tremper', zygosity: ZYG.HET },
+  { geneId: 'eclipse', zygosity: ZYG.HET }
 ]
 
 const result3 = calculateGenetics(lgConfig, complexMale, complexFemale)
 
 if (result3 && result3.outcomes) {
-    console.log(`✓ 複合基因計算成功，產生 ${result3.totalCombos} 個結果`)
+  console.log(`✓ 複合基因計算成功，產生 ${result3.totalCombos} 個結果`)
 
-    // 驗證排序：completeExpressionCount 應該遞減
-    let isSorted = true
-    for (let i = 1; i < result3.outcomes.length; i++) {
-        if (result3.outcomes[i].completeExpressionCount > result3.outcomes[i - 1].completeExpressionCount) {
-            isSorted = false
-            break
-        }
-        // 檢查 completeExpressionCount 相同時，是否按機率遞減
-        if (result3.outcomes[i].completeExpressionCount === result3.outcomes[i - 1].completeExpressionCount) {
-            if (result3.outcomes[i].prob > result3.outcomes[i - 1].prob) {
-                isSorted = false
-                break
-            }
-        }
+  // 驗證排序：completeExpressionCount 應該遞減
+  let isSorted = true
+  for (let i = 1; i < result3.outcomes.length; i++) {
+    if (
+      result3.outcomes[i].completeExpressionCount > result3.outcomes[i - 1].completeExpressionCount
+    ) {
+      isSorted = false
+      break
     }
-
-    if (isSorted) {
-        console.log('✓ 排序正確（按完整表現隱性基因數遞減，再按機率遞減）')
-    } else {
-        console.log('✗ 排序錯誤')
-        result3.outcomes.forEach((o, idx) => {
-            console.log(`  ${idx + 1}. ${o.description}: ${(o.prob * 100).toFixed(1)}%, 完整表現計數: ${o.completeExpressionCount.toFixed(2)}`)
-        })
-        process.exit(1)
+    // 檢查 completeExpressionCount 相同時，是否按機率遞減
+    if (
+      result3.outcomes[i].completeExpressionCount ===
+      result3.outcomes[i - 1].completeExpressionCount
+    ) {
+      if (result3.outcomes[i].prob > result3.outcomes[i - 1].prob) {
+        isSorted = false
+        break
+      }
     }
+  }
 
-    result3.outcomes.slice(0, 5).forEach((o, idx) => {
-        console.log(`  ${idx + 1}. ${o.description}: ${(o.prob * 100).toFixed(1)}%, 完整表現: ${o.completeExpressionCount.toFixed(2)}`)
+  if (isSorted) {
+    console.log('✓ 排序正確（按完整表現隱性基因數遞減，再按機率遞減）')
+  } else {
+    console.log('✗ 排序錯誤')
+    result3.outcomes.forEach((o, idx) => {
+      console.log(
+        `  ${idx + 1}. ${o.description}: ${(o.prob * 100).toFixed(1)}%, 完整表現計數: ${o.completeExpressionCount.toFixed(2)}`
+      )
     })
-    if (result3.outcomes.length > 5) {
-        console.log(`  ... 等共 ${result3.outcomes.length} 個結果`)
-    }
+    process.exit(1)
+  }
+
+  result3.outcomes.slice(0, 5).forEach((o, idx) => {
+    console.log(
+      `  ${idx + 1}. ${o.description}: ${(o.prob * 100).toFixed(1)}%, 完整表現: ${o.completeExpressionCount.toFixed(2)}`
+    )
+  })
+  if (result3.outcomes.length > 5) {
+    console.log(`  ... 等共 ${result3.outcomes.length} 個結果`)
+  }
 }
 
 // ============================================
@@ -167,10 +176,10 @@ const femaleGenes3 = [{ geneId: 'bell', zygosity: ZYG.VIS }]
 const result4 = calculateGenetics(lgConfig, maleGenes3, femaleGenes3)
 
 if (result4 && result4.warning && result4.warning.includes('互斥')) {
-    console.log('✓ 白化基因互斥警告正確觸發')
-    console.log(`  警告信息：${result4.warning.split('\n')[0]}`)
+  console.log('✓ 白化基因互斥警告正確觸發')
+  console.log(`  警告信息：${result4.warning.split('\n')[0]}`)
 } else {
-    console.log('⚠ 白化基因互斥警告未觸發（可能為預期行為）')
+  console.log('⚠ 白化基因互斥警告未觸發（可能為預期行為）')
 }
 
 // ============================================
