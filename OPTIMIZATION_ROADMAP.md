@@ -68,7 +68,7 @@
 
 ## #U1 首頁 intro gate 轉換重構
 
-- **狀態**：`[~]` 保守微調已完成（2026-06-30）。① 負面文案「不看介紹，直接進入官網」→ 正面「直接進入官網 →」（`pages/index.vue` fallback + `BrandServiceScrollScene.vue` 第一幕 skip）。② 查證：首頁 3D 場景之上**仍顯示全域導覽列（桌機頂部 + 手機底部 TheBottomNav）**，使用者隨時可導向任一區塊 → intro gate 為軟性，原評分對其扣分略高估。**B（首屏並陳 + 解除 scroll-lock）/ C（內容優先）結構改動經使用者決定先不做**（需視覺驗證，待預覽工具恢復再評估）。
+- **狀態**：`[~]` 保守微調已完成（2026-06-30）。① 負面文案「不看介紹，直接進入官網」→ 正面「直接進入官網 →」（`pages/index.vue` fallback + `BrandServiceScrollScene.vue` 第一幕 skip）。② 查證：首頁 3D 場景之上**仍顯示全域導覽列（桌機頂部 + 手機底部 TheBottomNav）**，使用者隨時可導向任一區塊 → intro gate 為軟性，原評分對其扣分略高估。**B（首屏並陳 + 解除 scroll-lock）/ C（內容優先）結構改動經使用者決定先不做**（需視覺驗證，待預覽工具恢復再評估）。**2026-07-07 更新**：intro gate 由「黑底品牌卡（Gencko Studio / 品牌服務）」改為「深色底 Gencko logo 淡入遮罩」——遮罩 `z-index:2000` 蓋住跑馬燈/導覽，一進站即在遮罩下載入 3D，待畫布就緒 + 停留 ~1.2s 淡出，遮住 3D 進場卡頓。仍非完整 #U1 重構（未做首屏內容並陳），但去除品牌卡換場的「當機感」。（commit `c965605`）
 - **痛點/背景**：`/`（`pages/index.vue` + `BrandServiceScrollScene.vue`）是一段 3D 介紹動畫，首屏主 CTA 是「不看介紹，直接進入官網」。等於把品牌動畫**擋在內容之前**，新訪客需多一個動作才到得了在售個體/知識，增加跳出風險（評分「轉換與信任」「IA」皆因此扣分）。
 - **影響面與收益**：降低首屏跳出、縮短「到達在售個體」的路徑、行動版體感更快。直接影響轉換與 SEO 互動指標。
 - **牽涉檔案**：`pages/index.vue`、`components/BrandServiceScrollScene.vue`、`app.vue`（curTab/路由判斷）、`utils/site-constants.js`（ROUTES）。
@@ -87,7 +87,7 @@
 
 ## #U2 3D Hero：prefers-reduced-motion 與行動降載 fallback
 
-- **狀態**：`[x]` 完成（2026-06-30）。`pages/index.vue` 新增 `shouldAutoLoadScene()`：`prefers-reduced-motion: reduce` 或低階裝置（`hardwareConcurrency<=4` 或 `deviceMemory<=4`）時**不自動載入 3D**，維持靜態 fallback 並顯示「載入互動動畫」按鈕（使用者可自願載入）；一般手機/桌機維持原自動載入。預覽驗證：高階機自動載入無按鈕；模擬 reduced-motion → canvas 0 + 按鈕出現；點按鈕 → 場景載入。**保守取捨**：只擋 reduced-motion 與真正低階，不動一般行動體驗。（#U6 可在此基礎再壓 bundle/LCP。）
+- **狀態**：`[x]` 完成（2026-06-30）。`pages/index.vue` 新增 `shouldAutoLoadScene()`：`prefers-reduced-motion: reduce` 或低階裝置（`hardwareConcurrency<=4` 或 `deviceMemory<=4`）時**不自動載入 3D**，維持靜態 fallback 並顯示「載入互動動畫」按鈕（使用者可自願載入）；一般手機/桌機維持原自動載入。預覽驗證：高階機自動載入無按鈕；模擬 reduced-motion → canvas 0 + 按鈕出現；點按鈕 → 場景載入。**保守取捨**：只擋 reduced-motion 與真正低階，不動一般行動體驗。（#U6 可在此基礎再壓 bundle/LCP。）**2026-07-07 行為變更**（隨 #U1 進場改版）：reduced-motion／低階裝置**不再顯示「載入互動動畫」按鈕**，改為**直接 `navigateTo('/home')`**（進場無按鈕，這些裝置直接進官網首頁、不載 3D）。`shouldAutoLoadScene()` 判斷邏輯不變。（commit `c965605`）
 - **痛點/背景**：首頁 TresJS/WebGL 場景是行動版 LCP 風險與耗電來源；目前未尊重 `prefers-reduced-motion`，低階裝置體感慢（評分「效能 7.0」「無障礙 7.5」主因之一）。
 - **影響面與收益**：行動 PageSpeed/LCP 改善、省電、無障礙合規、低階機可用性。
 - **牽涉檔案**：`pages/index.vue`、`components/BrandServiceScrollScene.vue`、`components/GeckoScene3D.vue`、`nuxt.config.ts`（必要時調 lazy hydration）。
@@ -318,3 +318,4 @@
 
 - **2026-06-22 v1** 初版（34 項、7 階段、估 51h）。
 - **2026-06-30 v2** 重訂：v1 完成項收進「已完成歷史」；依全站 UI/UX 評分（80/100）新增 Phase A–C（#U1–#U6）；保留 #10/#12/#21/#36/#40 與 Phase 8（#A–#E）並改寫為極度詳細格式。
+- **2026-07-07** 三頁（新手入門／購買流程／信任保證）互動化 + 去 AI 味 + 元件化（`PageHero`/`NextCta`/`Timeline`）+ 全站返回捲動還原（`app/router.options.ts`）；進場改為 logo 淡入遮罩（更新 #U1）、#U2 fallback 改導向 `/home`；手機版補下載 App 按鈕。commit `37dc230`→`c965605`。
