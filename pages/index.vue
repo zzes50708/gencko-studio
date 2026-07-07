@@ -106,32 +106,52 @@ const shouldAutoLoadScene = () => {
   return true
 }
 
-// 進場遮罩淡出時機：讓 3D 在遮罩底下完成進場，遮罩再淡出露出已就緒的畫面。
-// 條件：3D 畫布已出現，且遮罩至少停留 HOLD_MS（遮住 3D 進場卡頓）。
+// 進場遮罩：固定時間後淡出（不硬等 3D，避免搶首屏造成卡頓）。
 const HOLD_MS = 1200
 let revealTimer = null
 const scheduleReveal = () => {
   if (!import.meta.client) return
-  const start = performance.now()
-  const tick = () => {
-    const hasCanvas = !!document.querySelector('canvas')
-    const elapsed = performance.now() - start
-    // 畫布已就緒且達最短停留 → 淡出；5s 硬上限保險（避免極慢載入時卡住遮罩）
-    if ((hasCanvas && elapsed >= HOLD_MS) || elapsed >= 5000) {
-      splashHidden.value = true
-      revealTimer = null
-      return
-    }
-    revealTimer = setTimeout(tick, 120)
-  }
-  revealTimer = setTimeout(tick, 120)
+  revealTimer = setTimeout(() => {
+    splashHidden.value = true
+    revealTimer = null
+  }, HOLD_MS)
 }
 
 const kickoffScene = () => {
   if (sceneReady.value) return
   sceneReady.value = true
   lockScroll()
-  scheduleReveal()
+  cleanupSceneLoad()
+}
+
+// 3D 場景改 idle / 首次互動才載入（不搶首屏，避免進場卡）。
+let idleHandle = null
+let sceneTimeout = null
+let kickoffListeners = []
+const cleanupSceneLoad = () => {
+  if (idleHandle != null && 'cancelIdleCallback' in window) {
+    cancelIdleCallback(idleHandle)
+    idleHandle = null
+  }
+  if (sceneTimeout) {
+    clearTimeout(sceneTimeout)
+    sceneTimeout = null
+  }
+  kickoffListeners.forEach(([evt, fn]) => window.removeEventListener(evt, fn))
+  kickoffListeners = []
+}
+const scheduleSceneLoad = () => {
+  if ('requestIdleCallback' in window) {
+    idleHandle = requestIdleCallback(() => kickoffScene(), { timeout: 2000 })
+  } else {
+    sceneTimeout = setTimeout(() => kickoffScene(), 800)
+  }
+  // 任何互動也立即載入
+  ;['scroll', 'wheel', 'touchstart', 'keydown', 'pointerdown'].forEach((evt) => {
+    const fn = () => kickoffScene()
+    window.addEventListener(evt, fn, { once: true, passive: true })
+    kickoffListeners.push([evt, fn])
+  })
 }
 
 onMounted(() => {
@@ -143,8 +163,9 @@ onMounted(() => {
     return
   }
 
-  // 一般裝置：立即在遮罩底下載入 3D，由遮罩遮住其進場卡頓
-  kickoffScene()
+  // 遮罩固定時間淡出（獨立於 3D）；3D 於 idle/互動才載，不搶首屏
+  scheduleReveal()
+  scheduleSceneLoad()
 })
 
 onBeforeUnmount(() => {
@@ -152,6 +173,7 @@ onBeforeUnmount(() => {
     clearTimeout(revealTimer)
     revealTimer = null
   }
+  cleanupSceneLoad()
   if (sceneReady.value) unlockScroll()
 })
 </script>
