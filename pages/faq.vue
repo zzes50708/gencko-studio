@@ -1,7 +1,7 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { useHead } from '#imports'
-import { FAQ_CATEGORIES, FAQ_DATA } from '~/utils/faq.js'
+import { FAQ_CATEGORIES, FAQ_DATA } from '~/utils/faq'
 import { absUrl, DEFAULT_OG_IMAGE } from '~/utils/site-constants'
 import {
   getWebPage,
