@@ -1,4 +1,4 @@
-import { CALC_TYPES } from '../genes.js'
+import { CALC_TYPES } from '../genes'
 
 export const AFT_GECKO_GENE_CATEGORIES = [
   { id: 'recessive', label: '隱性' },
@@ -24,7 +24,7 @@ export const AFT_GECKO_GENES = [
 export const AFT_GECKO_COMBO_RULES = []
 
 export const AFT_GECKO_CHECKS = {
-  validateCaramelFemale: (femaleGenes) => {
+  validateCaramelFemale: (femaleGenes: any[]) => {
     const hasCaramel = femaleGenes.some((gene) => gene.geneId === 'aft_caramel')
     if (!hasCaramel) return { hasWarning: false }
 
@@ -33,7 +33,7 @@ export const AFT_GECKO_CHECKS = {
       warning: '母焦糖 (Caramel) 會有不孕問題。\n'
     }
   },
-  validateGhostFemale: (femaleGenes) => {
+  validateGhostFemale: (femaleGenes: any[]) => {
     const hasGhost = femaleGenes.some((gene) => gene.geneId === 'aft_ghost')
     if (!hasGhost) return { hasWarning: false }
 

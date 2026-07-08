@@ -9,7 +9,7 @@
  * 4. 「完整表現隱性基因數」排序能正常運作
  */
 
-import { getSpeciesConfig, SPECIES_CONFIGS } from './utils/genetics/index.js'
+import { getSpeciesConfig, SPECIES_CONFIGS } from './utils/genetics/index'
 import { calculateGenetics } from './utils/calcUtils'
 import { ZYG, CALC_TYPES } from './utils/genes'
 

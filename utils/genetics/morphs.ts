@@ -1,6 +1,6 @@
-import { CALC_TYPES, ZYG } from '../genes.js'
+import { CALC_TYPES, ZYG } from '../genes'
 
-export function buildDefaultGeneSelection(geneDef) {
+export function buildDefaultGeneSelection(geneDef: any) {
   if (!geneDef) return null
 
   let zygosity = ZYG.VIS
@@ -12,10 +12,10 @@ export function buildDefaultGeneSelection(geneDef) {
   }
 }
 
-export function expandMorphComponents(morphDef) {
+export function expandMorphComponents(morphDef: any) {
   if (!morphDef || !Array.isArray(morphDef.components)) return []
 
-  return morphDef.components.map((component) => ({
+  return morphDef.components.map((component: any) => ({
     geneId: component.geneId,
     zygosity:
       component.type === 'Het'
@@ -28,24 +28,28 @@ export function expandMorphComponents(morphDef) {
   }))
 }
 
-export function normalizeGeneSelection(genes = []) {
+export function normalizeGeneSelection(genes: any[] = []) {
   return genes
     .map((gene) => `${gene.geneId}:${gene.zygosity}`)
     .sort()
     .join('|')
 }
 
-export function areGeneSelectionsEqual(leftGenes = [], rightGenes = []) {
+export function areGeneSelectionsEqual(leftGenes: any[] = [], rightGenes: any[] = []) {
   return normalizeGeneSelection(leftGenes) === normalizeGeneSelection(rightGenes)
 }
 
-export function getPresetMorphs(speciesConfig) {
+export function getPresetMorphs(speciesConfig: any) {
   return (speciesConfig?.presetMorphs || speciesConfig?.genes || []).filter(
-    (gene) => Array.isArray(gene.components) && gene.components.length > 0
+    (gene: any) => Array.isArray(gene.components) && gene.components.length > 0
   )
 }
 
-export function findMatchingMorph(speciesConfig, genes = []) {
+export function findMatchingMorph(speciesConfig: any, genes: any[] = []) {
   const presetMorphs = getPresetMorphs(speciesConfig)
-  return presetMorphs.find((morph) => areGeneSelectionsEqual(expandMorphComponents(morph), genes)) || null
+  return (
+    presetMorphs.find((morph: any) =>
+      areGeneSelectionsEqual(expandMorphComponents(morph), genes)
+    ) || null
+  )
 }
