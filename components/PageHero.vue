@@ -1,4 +1,4 @@
-<script setup>
+<script setup lang="ts">
 // 三頁共用的 Hero：kicker（色點）+ 標題 + lead + 主色 glow。
 // 右側/下方的輔助內容（流程 stepper、pill 流程帶、信任理由）由 slot 傳入，
 // slot 內容仍由呼叫頁的 scoped 樣式負責（.hero-flow / .hero-strip / .hero-reasons）。

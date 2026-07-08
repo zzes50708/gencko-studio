@@ -1,10 +1,21 @@
-<script setup>
+<script setup lang="ts">
+import type { PropType } from 'vue'
+
+interface TimelineNode {
+  no: string
+  icon: string
+  group: string
+  title: string
+  body: string
+  to?: string
+  linkLabel?: string
+}
+
 // buying-guide 專用的縱向時間軸。連接線以 flex 剩餘空間繪製，自動跟隨節點內容高度。
 // 節點含可選 to / linkLabel：有 to 才在內文後渲染 inline 連結（純流程節點維持純文字）。
 defineProps({
   kicker: { type: String, default: 'FLOW' },
-  // [{ no, icon, group, title, body, to?, linkLabel? }]
-  nodes: { type: Array, default: () => [] }
+  nodes: { type: Array as PropType<TimelineNode[]>, default: () => [] }
 })
 </script>
 

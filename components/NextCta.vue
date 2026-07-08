@@ -1,13 +1,19 @@
-<script setup>
+<script setup lang="ts">
 import { computed } from 'vue'
+import type { PropType } from 'vue'
+
+interface CtaAction {
+  label: string
+  to: string
+  primary?: boolean
+}
 
 // 三頁共用的頁尾 CTA：kicker + 標題 + lead + 一排按鈕（主/次）。
 const props = defineProps({
   kicker: { type: String, default: 'NEXT' },
   title: { type: String, required: true },
   lead: { type: String, default: '' },
-  // [{ label, to, primary? }]
-  actions: { type: Array, default: () => [] }
+  actions: { type: Array as PropType<CtaAction[]>, default: () => [] }
 })
 
 // 手機版欄數：4 顆用 2×2，其餘照顆數排一列。
