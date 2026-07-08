@@ -1,4 +1,4 @@
-<script setup>
+<script setup lang="ts">
 import { useHead } from '#imports'
 
 const pageUrl = 'https://www.genckobreeding.com/buying-guide'
