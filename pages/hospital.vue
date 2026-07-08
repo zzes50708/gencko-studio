@@ -3,7 +3,7 @@ import { ref, computed } from 'vue'
 import { useHead, useAsyncData, useSupabaseClient } from '#imports'
 import { useMainStore } from '~/stores/useMainStore'
 // HOSPITAL_REGIONS 仍從 js 讀（縣市區域分組是固定常數）；HOSPITAL_DATA 已搬到 Supabase
-import { HOSPITAL_REGIONS } from '~/utils/hospitals.js'
+import { HOSPITAL_REGIONS } from '~/utils/hospitals'
 
 const store = useMainStore()
 const supabase = useSupabaseClient()

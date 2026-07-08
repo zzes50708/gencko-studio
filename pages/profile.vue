@@ -3,7 +3,7 @@ import { ref, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useHead, useSupabaseClient } from '#imports'
 import { useMainStore } from '~/stores/useMainStore'
-import { HOSPITAL_DATA } from '~/utils/hospitals.js'
+import { HOSPITAL_DATA } from '~/utils/hospitals'
 import { getCleanUrl } from '~/utils/image'
 
 const store = useMainStore()

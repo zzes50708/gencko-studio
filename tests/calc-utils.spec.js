@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { calculateGenetics, getProbFraction } from '../utils/calcUtils'
 import { LeopardGeckoConfig } from '../utils/genetics/leopardgecko.config.js'
-import { ZYG } from '../utils/genes.js'
+import { ZYG } from '../utils/genes'
 
 const cfg = LeopardGeckoConfig
 

@@ -11,13 +11,13 @@
  */
 const PROTECTED_TAGS = new Set(['a', 'code', 'pre', 'script', 'style', 'h1', 'h2', 'h3'])
 
-const escapeRegex = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+const escapeRegex = (s: string): string => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 
-export function autoLinkGenes(html, geneNames) {
+export function autoLinkGenes(html: string, geneNames: string[]): string {
   if (!html || !Array.isArray(geneNames) || geneNames.length === 0) return html || ''
 
   // ASCII 名要 >= 3（避免「OG」這種短名誤抓），CJK 名要 >= 2（守宮基因多為 2 字中文）
-  const isAscii = (n) => /^[\x20-\x7E]+$/.test(n)
+  const isAscii = (n: string): boolean => /^[\x20-\x7E]+$/.test(n)
   const names = [
     ...new Set(
       geneNames
@@ -28,9 +28,9 @@ export function autoLinkGenes(html, geneNames) {
 
   if (names.length === 0) return html
 
-  const used = new Set()
+  const used = new Set<string>()
   const parts = html.split(/(<[^>]+>)/g)
-  const protectStack = []
+  const protectStack: string[] = []
 
   for (let i = 0; i < parts.length; i++) {
     const tok = parts[i]

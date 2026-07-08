@@ -11,7 +11,7 @@
 
 import { getSpeciesConfig, SPECIES_CONFIGS } from './utils/genetics/index.js'
 import { calculateGenetics } from './utils/calcUtils'
-import { ZYG, CALC_TYPES } from './utils/genes.js'
+import { ZYG, CALC_TYPES } from './utils/genes'
 
 console.log('='.repeat(60))
 console.log('開始重構驗證測試')

@@ -4,7 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { useHead, useAsyncData, useSupabaseClient } from '#imports'
 import { useMainStore } from '~/stores/useMainStore'
 import { getCleanUrl } from '~/utils/image'
-import { autoLinkGenes } from '~/utils/auto-link.js'
+import { autoLinkGenes } from '~/utils/auto-link'
 
 // 🌟 強制每個不同 URL 建立獨立元件實例，防止 CSR 元件複用導致 useAsyncData 不重新抓取
 definePageMeta({

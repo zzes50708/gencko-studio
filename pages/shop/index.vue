@@ -3,7 +3,7 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useHead, useAsyncData, useSupabaseClient } from '#imports'
 import { useMainStore } from '~/stores/useMainStore'
-import { GENES_DB } from '~/utils/genes-db.js'
+import { GENES_DB } from '~/utils/genes-db'
 import { getCleanUrl } from '~/utils/image'
 import ShopFlipCard from '~/components/ShopFlipCard.vue'
 

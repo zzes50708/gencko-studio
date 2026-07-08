@@ -2,7 +2,7 @@
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useHead } from '#imports'
 import { useMainStore } from '~/stores/useMainStore'
-import { ZYG, CALC_TYPES } from '~/utils/genes.js'
+import { ZYG, CALC_TYPES } from '~/utils/genes'
 import { calculateGenetics, getProbFraction } from '~/utils/calcUtils'
 import { getSpeciesConfig } from '~/utils/genetics/index.js'
 import { expandMorphComponents, findMatchingMorph } from '~/utils/genetics/morphs.js'
