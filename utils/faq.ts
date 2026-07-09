@@ -10,6 +10,18 @@ export const FAQ_CATEGORIES = [
     subtitle: '新手飼養必看',
     questions: [
       {
+        title: '守宮是什麼？',
+        ans: '守宮是壁虎的一類，屬於蜥蜴、不是蛇。寵物市場最常見的是「豹紋守宮」（Eublepharis macularius）與「肥尾守宮」（Hemitheconyx caudicinctus）。牠們體型小、夜行、養在布置好的飼養箱裡即可，不用遛，是新手最容易入門的爬蟲之一。\n\n📖 <a href="/guide" style="color:var(--pri);font-weight:700;">守宮完整入門 →</a>'
+      },
+      {
+        title: '守宮好養嗎？新手適合養嗎？',
+        ans: '相對好養、適合新手。守宮的需求很單純——加熱、躲避、定期餵活餌、換水，一週花的時間不多，個性也溫馴、很少咬人。前提是帶回家前先把環境備好、把基本照顧搞懂再入手。\n\n📖 <a href="/qs" style="color:var(--pri);font-weight:700;">飼養前評估 →</a> ・ <a href="/care" style="color:var(--pri);font-weight:700;">飼養指南 →</a>'
+      },
+      {
+        title: '養守宮大概要多少錢？',
+        ans: '看品系。普通色平價就能入手，特殊基因或組合品系價格較高；此外還有一次性的設備成本（飼養箱、加熱、躲避屋、鈣粉與維他命等）。實際在售個體的價格可以到選購頁查看。\n\n📖 <a href="/shop" style="color:var(--pri);font-weight:700;">選購守宮 →</a>'
+      },
+      {
         title: '豹紋守宮適合新手飼養嗎？',
         ans: '非常適合。豹紋守宮是全球最受歡迎的入門爬蟲之一，原因如下：\n1. 體型適中、個性溫馴，容易上手互動。\n2. 食物取得容易（蟋蟀、杜比亞蟑螂在網路或寵物店均可購得）。\n3. 不挑環境，在台灣的氣候條件下相對容易維持適當溫濕度。\n但「好養」的前提是正確的設備與知識準備，建議入手前先做足功課。\n\n📖 <a href="/articles" style="color:var(--pri);font-weight:700;">查看相關專欄文章 →</a>'
       },
