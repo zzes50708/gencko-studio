@@ -113,6 +113,41 @@ const howToFeedLd = {
 }
 
 // JSON-LD：BreadcrumbList
+const howToAppetiteLd = {
+  '@context': 'https://schema.org',
+  '@type': 'HowTo',
+  '@id': 'https://www.genckobreeding.com/care#howto-appetite',
+  name: '守宮拒食時，怎麼判斷先觀察還是就醫',
+  description:
+    '用環境、體態、排泄與警訊四個層次，快速判斷守宮拒食時該先調整飼養條件，還是直接安排特寵醫院就診。',
+  step: [
+    {
+      '@type': 'HowToStep',
+      position: 1,
+      name: '先排查環境和近期變化',
+      text: '先確認熱端、冷端、濕躲與補鈣節奏是否正常，再回想最近是否有換環境、換餌料、脫皮或搬家等壓力事件。'
+    },
+    {
+      '@type': 'HowToStep',
+      position: 2,
+      name: '再看體態是否正在掉',
+      text: '如果尾巴厚度、體重和精神都還穩定，短期拒食通常可以先觀察；如果尾巴明顯變瘦、眼神疲弱或活動力下降，就不是單純挑食。'
+    },
+    {
+      '@type': 'HowToStep',
+      position: 3,
+      name: '把排泄和外觀一起看',
+      text: '同時檢查是否仍有正常排便、腹部是否脹、嘴角眼鼻是否有分泌物，避免只看吃不吃而漏掉消化道或感染問題。'
+    },
+    {
+      '@type': 'HowToStep',
+      position: 4,
+      name: '分辨何時該直接就醫',
+      text: '幼體連續多日不吃、成體長時間拒食合併掉重、拉稀、嘔吐、呼吸異常或脫水時，不要再拖，直接找會看爬蟲的特寵醫院。'
+    }
+  ]
+}
+
 const breadcrumbLd = {
   '@context': 'https://schema.org',
   '@type': 'BreadcrumbList',
@@ -140,7 +175,7 @@ const articleBodyText = [
 
 // JSON-LD：WebPage 包覆（Article 為 mainEntity，FAQPage / HowTo 為 hasPart）
 const webPageLd = computed(() => {
-  const hasPart = [howToEnvLd, howToFeedLd]
+  const hasPart = [howToEnvLd, howToFeedLd, howToAppetiteLd]
   if (faqPageLd.value) hasPart.push(faqPageLd.value)
   return {
     '@context': 'https://schema.org',
@@ -555,6 +590,45 @@ const showSpeciesCompare = ref(false)
               → {{ articleById(aid)?.Title || '相關閱讀' }}
             </button>
           </div>
+
+          <div class="care-subh">拒食時先觀察還是就醫？</div>
+          <section class="care-howto-card" aria-labelledby="care-appetite-title">
+            <h3 id="care-appetite-title" class="care-howto-title">守宮拒食判讀四步驟</h3>
+            <div class="care-howto-steps">
+              <div class="care-howto-step">
+                <div class="care-howto-no">01</div>
+                <div>
+                  <strong>先排查環境與近期變化</strong>
+                  <p>先看溫度、濕躲、補鈣與最近是否有換環境、脫皮、搬動或突然換餌。</p>
+                </div>
+              </div>
+              <div class="care-howto-step">
+                <div class="care-howto-no">02</div>
+                <div>
+                  <strong>再看體態有沒有掉</strong>
+                  <p>
+                    尾巴厚度、精神、站姿都還穩，通常可短期觀察；如果正在變瘦，就不要只當成挑食。
+                  </p>
+                </div>
+              </div>
+              <div class="care-howto-step">
+                <div class="care-howto-no">03</div>
+                <div>
+                  <strong>把排泄與外觀一起看</strong>
+                  <p>確認有沒有正常排便、腹脹、流口水、眼鼻分泌物，避免漏看消化道或感染問題。</p>
+                </div>
+              </div>
+              <div class="care-howto-step">
+                <div class="care-howto-no">04</div>
+                <div>
+                  <strong>出現警訊就直接就醫</strong>
+                  <p>
+                    幼體多日不吃、成體拒食合併掉重、拉稀、嘔吐、脫水或呼吸異常時，直接找特寵醫院。
+                  </p>
+                </div>
+              </div>
+            </div>
+          </section>
         </section>
 
         <section id="breeding" class="care-section">
@@ -967,6 +1041,65 @@ const showSpeciesCompare = ref(false)
 
 .care-subh:first-of-type {
   margin-top: 0;
+}
+
+.care-howto-card {
+  background: linear-gradient(180deg, rgba(255, 138, 76, 0.08), rgba(255, 138, 76, 0.02));
+  border: 1px solid rgba(255, 138, 76, 0.2);
+  border-radius: 16px;
+  margin-top: 12px;
+  padding: 16px;
+}
+
+.care-howto-title {
+  color: var(--txt);
+  font-size: 0.96rem;
+  font-weight: 900;
+  margin: 0 0 12px;
+}
+
+.care-howto-steps {
+  display: grid;
+  gap: 10px;
+}
+
+.care-howto-step {
+  align-items: flex-start;
+  background: rgba(255, 255, 255, 0.56);
+  border: 1px solid rgba(255, 138, 76, 0.16);
+  border-radius: 12px;
+  display: grid;
+  gap: 10px;
+  grid-template-columns: 52px minmax(0, 1fr);
+  padding: 12px;
+}
+
+.care-howto-step strong {
+  color: var(--txt);
+  display: block;
+  font-size: 0.88rem;
+  margin-bottom: 4px;
+}
+
+.care-howto-step p {
+  color: var(--txt);
+  line-height: 1.65;
+  margin: 0;
+  opacity: 0.84;
+}
+
+.care-howto-no {
+  align-items: center;
+  background: linear-gradient(135deg, var(--pri), #ff8c42);
+  border-radius: 999px;
+  color: #fff;
+  display: inline-flex;
+  font-family: 'Black Ops One', monospace, sans-serif;
+  font-size: 0.9rem;
+  height: 38px;
+  justify-content: center;
+  letter-spacing: 1px;
+  width: 38px;
 }
 
 .care-inline-chips {
@@ -1620,6 +1753,27 @@ const showSpeciesCompare = ref(false)
   .care-section {
     margin-bottom: 8px;
     padding: 10px 12px;
+  }
+  .care-howto-card {
+    border-radius: 14px;
+    padding: 12px;
+  }
+  .care-howto-step {
+    gap: 8px;
+    grid-template-columns: 42px minmax(0, 1fr);
+    padding: 10px;
+  }
+  .care-howto-no {
+    font-size: 0.78rem;
+    height: 32px;
+    width: 32px;
+  }
+  .care-howto-step strong {
+    font-size: 0.82rem;
+  }
+  .care-howto-step p {
+    font-size: 0.78rem;
+    line-height: 1.6;
   }
   .care-h {
     font-size: 0.92rem;
