@@ -158,6 +158,22 @@ const hospFaqLd = {
   mainEntity: [
     {
       '@type': 'Question',
+      name: '什麼是特寵醫院？',
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: '特寵醫院是指能診療特殊寵物的醫療院所，常見對象包含守宮、蛇、龜、兩棲類、鳥類與其他非犬貓動物。這類醫院通常較熟悉不同物種的保溫需求、麻醉與用藥劑量，也比較有處理爬蟲與兩棲動物常見疾病的經驗。'
+      }
+    },
+    {
+      '@type': 'Question',
+      name: '看守宮要找哪種醫院？',
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: '看守宮時，優先找有收治爬蟲或特殊寵物經驗的特寵醫院，而不是只看離家最近的一般犬貓醫院。掛號前建議先電話確認院方是否有看守宮、是否能處理急診或住院，以及是否熟悉守宮常見的拒食、代謝性骨病、脫皮異常與外傷問題。'
+      }
+    },
+    {
+      '@type': 'Question',
       name: '找不到我附近的特寵醫院怎麼辦？',
       acceptedAnswer: {
         '@type': 'Answer',
