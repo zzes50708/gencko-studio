@@ -30,6 +30,7 @@ export default defineEventHandler(async (event) => {
     { loc: '/calculator', changefreq: 'monthly', priority: 0.8 },
     { loc: '/hospital', changefreq: 'monthly', priority: 0.8 },
     { loc: '/about', changefreq: 'monthly', priority: 0.5 },
+    { loc: '/guide', changefreq: 'monthly', priority: 0.8 },
     { loc: '/care', changefreq: 'monthly', priority: 0.6 },
     { loc: '/faq', changefreq: 'monthly', priority: 0.5 },
     { loc: '/breeders', changefreq: 'monthly', priority: 0.7 },
