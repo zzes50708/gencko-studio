@@ -167,6 +167,7 @@ watch(
     else if (newPath.startsWith('/qs')) store.curTab = 'qs'
     else if (newPath.startsWith('/about')) store.curTab = 'about'
     else if (newPath.startsWith('/care')) store.curTab = 'care'
+    else if (newPath.startsWith('/guide')) store.curTab = 'guide'
     else if (newPath.startsWith('/faq')) store.curTab = 'faq'
     else if (newPath.startsWith('/profile')) store.curTab = 'profile'
     else store.curTab = 'home'

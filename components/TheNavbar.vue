@@ -18,7 +18,7 @@ const isShopActive = computed(() => ['shop', 'auction', 'breeders', 'merch'].inc
 const isToolActive = computed(() =>
   ['calculator', 'genes', 'health', 'qs', 'hospital'].includes(props.curTab)
 )
-const isArticlesActive = computed(() => ['articles', 'care', 'faq'].includes(props.curTab))
+const isArticlesActive = computed(() => ['articles', 'care', 'faq', 'guide'].includes(props.curTab))
 
 // LCP 優化：logo 原圖 4.4MB（1856×1865），實際只顯示 36×36
 // 透過 wsrv.nl 壓縮至 72px webp（≈ 3KB），縮減 99.9%
@@ -74,6 +74,7 @@ const navLogoUrl = computed(() => (store.logoUrl ? getCleanUrl(store.logoUrl, 72
             </NuxtLink>
             ▾
             <div class="dt-dropdown">
+              <NuxtLink to="/guide">守宮入門</NuxtLink>
               <NuxtLink to="/start-here">新手入門</NuxtLink>
               <NuxtLink to="/care">飼養指南</NuxtLink>
               <NuxtLink to="/articles">文章列表</NuxtLink>
