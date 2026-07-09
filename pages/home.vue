@@ -10,11 +10,16 @@ const store = useMainStore()
 const router = useRouter()
 
 useHead({
+  title: '守宮專業繁育｜豹紋・肥尾守宮選購與新手飼養',
   meta: [
     {
       name: 'description',
       content:
         'Gencko Studio 專注於豹紋守宮繁育、提供基因計算機工具、全台特寵醫院地圖，以及豐富的飼養知識專欄。新手入門首選的爬蟲與守宮平台。'
+    },
+    {
+      name: 'keywords',
+      content: '守宮, 豹紋守宮, 肥尾守宮, 守宮繁育, 守宮選購, 守宮飼養, 基因計算機, 特寵醫院'
     },
     { property: 'og:title', content: '專業豹紋守宮繁育與爬蟲知識 | Gencko Studio' },
     { property: 'og:description', content: '提供專業守宮選育、基因計算工具與特寵醫療地圖。' },
@@ -39,7 +44,8 @@ useHead({
         }
       })
     }
-  ]
+  ],
+  link: [{ rel: 'canonical', href: 'https://www.genckobreeding.com/home' }]
 })
 
 // 透過 Pinia Store 取得資料
