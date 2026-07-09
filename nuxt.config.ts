@@ -285,6 +285,10 @@ export default defineNuxtConfig({
         { charset: 'utf-8' },
         { name: 'viewport', content: 'width=device-width, initial-scale=1.0, viewport-fit=cover' },
         {
+          name: 'google-site-verification',
+          content: '_RPwv-IS560bfhmF6F7-XKJ4I4p5ZxMD6ELO-lN8Cns'
+        },
+        {
           name: 'description',
           content:
             'Gencko Breeding Studio 台灣豹紋守宮專業繁育工作室，提供特殊基因品系個體選購、基因計算機、新手飼養教學、健康評估、特寵醫院查詢與線上競標。從基因到飼養的一站式服務。'
