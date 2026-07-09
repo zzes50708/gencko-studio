@@ -1,4 +1,4 @@
-<script setup>
+<script setup lang="ts">
 import { ref, computed } from 'vue'
 import { useHead } from '#imports'
 import { FAQ_CATEGORIES, FAQ_DATA } from '~/utils/faq'
@@ -17,7 +17,7 @@ const faqDesc =
   'Gencko Breeding Studio 常見問題整理：豹紋守宮與肥尾守宮飼養知識、健康判讀、基因與品系說明、官網功能使用、購買流程與售後保障，新手入手前必讀。'
 
 // FAQ 答案：去 HTML 標籤、合併換行
-const stripFaq = (s) =>
+const stripFaq = (s: string) =>
   String(s || '')
     .replace(/<[^>]+>/g, '')
     .replace(/\s+/g, ' ')
@@ -65,22 +65,22 @@ useHead({
   ],
   link: [{ rel: 'canonical', href: faqUrl }],
   script: [
-    { type: 'application/ld+json', children: JSON.stringify(faqWebPageLd) },
-    { type: 'application/ld+json', children: JSON.stringify(faqBreadcrumbLd) }
+    { type: 'application/ld+json', innerHTML: JSON.stringify(faqWebPageLd) },
+    { type: 'application/ld+json', innerHTML: JSON.stringify(faqBreadcrumbLd) }
   ]
 })
 
 const activeCategory = ref('gecko')
-const activeIndex = ref(null) // 格式：'catId-qIdx'
+const activeIndex = ref<string | null>(null) // 格式：'catId-qIdx'
 
 const currentCategory = computed(() => FAQ_CATEGORIES.find((c) => c.id === activeCategory.value))
 
-const switchCategory = (id) => {
+const switchCategory = (id: string) => {
   activeCategory.value = id
   activeIndex.value = null
 }
 
-const toggleQ = (key) => {
+const toggleQ = (key: string) => {
   activeIndex.value = activeIndex.value === key ? null : key
 }
 </script>
@@ -112,7 +112,7 @@ const toggleQ = (key) => {
       <!-- 問題列表 -->
       <div class="faq-list">
         <div
-          v-for="(q, idx) in currentCategory.questions"
+          v-for="(q, idx) in currentCategory?.questions"
           :key="idx"
           class="faq-item"
           :class="{ active: activeIndex === `${activeCategory}-${idx}` }"

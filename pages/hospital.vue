@@ -285,8 +285,8 @@ const siteData = computed(() => {
     title,
     desc,
     script: [
-      { type: 'application/ld+json', children: JSON.stringify(webPageLd) },
-      { type: 'application/ld+json', children: JSON.stringify(hospBreadcrumbLd) }
+      { type: 'application/ld+json', innerHTML: JSON.stringify(webPageLd) },
+      { type: 'application/ld+json', innerHTML: JSON.stringify(hospBreadcrumbLd) }
     ]
   }
 })

@@ -174,8 +174,8 @@ useHead({
   ],
   link: [{ rel: 'canonical', href: merchUrl }],
   script: computed(() => [
-    { type: 'application/ld+json', children: JSON.stringify(merchWebPageLd.value) },
-    { type: 'application/ld+json', children: JSON.stringify(merchBreadcrumbLd) }
+    { type: 'application/ld+json', innerHTML: JSON.stringify(merchWebPageLd.value) },
+    { type: 'application/ld+json', innerHTML: JSON.stringify(merchBreadcrumbLd) }
   ])
 })
 </script>

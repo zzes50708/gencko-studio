@@ -168,8 +168,8 @@ useHead({
   ],
   link: [{ rel: 'canonical', href: cmpUrl }],
   script: [
-    { type: 'application/ld+json', children: JSON.stringify(cmpWebPageLd) },
-    { type: 'application/ld+json', children: JSON.stringify(cmpBreadcrumbLd) }
+    { type: 'application/ld+json', innerHTML: JSON.stringify(cmpWebPageLd) },
+    { type: 'application/ld+json', innerHTML: JSON.stringify(cmpBreadcrumbLd) }
   ]
 })
 

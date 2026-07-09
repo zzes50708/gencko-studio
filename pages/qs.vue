@@ -188,8 +188,8 @@ useHead({
   ],
   link: [{ rel: 'canonical', href: qsUrl }],
   script: [
-    { type: 'application/ld+json', children: JSON.stringify(qsWebPageLd) },
-    { type: 'application/ld+json', children: JSON.stringify(qsBreadcrumbLd) }
+    { type: 'application/ld+json', innerHTML: JSON.stringify(qsWebPageLd) },
+    { type: 'application/ld+json', innerHTML: JSON.stringify(qsBreadcrumbLd) }
   ]
 })
 

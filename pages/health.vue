@@ -215,8 +215,8 @@ useHead({
   ],
   link: [{ rel: 'canonical', href: hUrl }],
   script: [
-    { type: 'application/ld+json', children: JSON.stringify(hWebPageLd) },
-    { type: 'application/ld+json', children: JSON.stringify(hBreadcrumbLd) }
+    { type: 'application/ld+json', innerHTML: JSON.stringify(hWebPageLd) },
+    { type: 'application/ld+json', innerHTML: JSON.stringify(hBreadcrumbLd) }
   ]
 })
 

@@ -59,7 +59,7 @@ useHead({
     // WebSite + SearchAction：依 Google 規範必須放在網站根目錄 `/`
     {
       type: 'application/ld+json',
-      children: JSON.stringify({
+      innerHTML: JSON.stringify({
         '@context': 'https://schema.org',
         '@type': 'WebSite',
         name: 'Gencko Breeding Studio',

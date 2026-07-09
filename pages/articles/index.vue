@@ -285,8 +285,8 @@ useHead({
     }
   ],
   script: computed(() => [
-    { type: 'application/ld+json', children: JSON.stringify(artsWebPageLd.value) },
-    { type: 'application/ld+json', children: JSON.stringify(artsBreadcrumbLd) }
+    { type: 'application/ld+json', innerHTML: JSON.stringify(artsWebPageLd.value) },
+    { type: 'application/ld+json', innerHTML: JSON.stringify(artsBreadcrumbLd) }
   ])
 })
 

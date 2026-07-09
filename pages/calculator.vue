@@ -249,8 +249,8 @@ useHead({
   ],
   link: [{ rel: 'canonical', href: calcUrl }],
   script: [
-    { type: 'application/ld+json', children: JSON.stringify(calcWebPageLd) },
-    { type: 'application/ld+json', children: JSON.stringify(calcBreadcrumbLd) }
+    { type: 'application/ld+json', innerHTML: JSON.stringify(calcWebPageLd) },
+    { type: 'application/ld+json', innerHTML: JSON.stringify(calcBreadcrumbLd) }
   ]
 })
 

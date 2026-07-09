@@ -192,8 +192,8 @@ useHead({
   ],
   link: [{ rel: 'canonical', href: breedersUrl }],
   script: computed(() => [
-    { type: 'application/ld+json', children: JSON.stringify(breedersWebPageLd.value) },
-    { type: 'application/ld+json', children: JSON.stringify(breedersBreadcrumbLd) }
+    { type: 'application/ld+json', innerHTML: JSON.stringify(breedersWebPageLd.value) },
+    { type: 'application/ld+json', innerHTML: JSON.stringify(breedersBreadcrumbLd) }
   ])
 })
 </script>

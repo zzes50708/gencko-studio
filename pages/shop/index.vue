@@ -202,8 +202,8 @@ useHead({
   ],
   link: [{ rel: 'canonical', href: shopUrl }],
   script: computed(() => [
-    { type: 'application/ld+json', children: JSON.stringify(shopWebPageLd.value) },
-    { type: 'application/ld+json', children: JSON.stringify(shopBreadcrumbLd) }
+    { type: 'application/ld+json', innerHTML: JSON.stringify(shopWebPageLd.value) },
+    { type: 'application/ld+json', innerHTML: JSON.stringify(shopBreadcrumbLd) }
   ])
 })
 

@@ -166,8 +166,8 @@ useHead({
   ],
   link: [{ rel: 'canonical', href: genesUrl }],
   script: computed(() => [
-    { type: 'application/ld+json', children: JSON.stringify(genesWebPageLd.value) },
-    { type: 'application/ld+json', children: JSON.stringify(genesBreadcrumbLd) }
+    { type: 'application/ld+json', innerHTML: JSON.stringify(genesWebPageLd.value) },
+    { type: 'application/ld+json', innerHTML: JSON.stringify(genesBreadcrumbLd) }
   ])
 })
 </script>

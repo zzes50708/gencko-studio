@@ -250,8 +250,8 @@ const siteData = computed(() => {
       img,
       url,
       script: [
-        { type: 'application/ld+json', children: JSON.stringify(webPageLd) },
-        { type: 'application/ld+json', children: JSON.stringify(breadcrumb) }
+        { type: 'application/ld+json', innerHTML: JSON.stringify(webPageLd) },
+        { type: 'application/ld+json', innerHTML: JSON.stringify(breadcrumb) }
       ]
     }
   }

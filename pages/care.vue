@@ -263,7 +263,7 @@ useHead({
   link: [{ rel: 'canonical', href: 'https://www.genckobreeding.com/care' }],
   script: [
     { type: 'application/ld+json', children: computed(() => JSON.stringify(webPageLd.value)) },
-    { type: 'application/ld+json', children: JSON.stringify(breadcrumbLd) }
+    { type: 'application/ld+json', innerHTML: JSON.stringify(breadcrumbLd) }
   ]
 })
 

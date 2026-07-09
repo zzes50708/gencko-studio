@@ -215,8 +215,8 @@ useHead({
   ],
   link: [{ rel: 'canonical', href: auctionUrl }],
   script: computed(() => [
-    { type: 'application/ld+json', children: JSON.stringify(auctionWebPageLd.value) },
-    { type: 'application/ld+json', children: JSON.stringify(auctionBreadcrumbLd) }
+    { type: 'application/ld+json', innerHTML: JSON.stringify(auctionWebPageLd.value) },
+    { type: 'application/ld+json', innerHTML: JSON.stringify(auctionBreadcrumbLd) }
   ])
 })
 
