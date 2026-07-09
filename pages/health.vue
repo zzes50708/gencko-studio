@@ -81,6 +81,47 @@ const hHowToLd = {
   ]
 }
 
+const hInterpretHowToLd = {
+  '@type': 'HowTo',
+  '@id': `${hUrl}#interpret-health`,
+  name: '如何判讀守宮健康狀態',
+  description: '從精神、體態、進食排泄到異常警訊，快速建立守宮日常健康判讀順序。',
+  image: hImg,
+  totalTime: 'PT5M',
+  step: [
+    {
+      '@type': 'HowToStep',
+      position: 1,
+      name: '先看精神與活動力',
+      text: '先觀察守宮是否能正常睜眼、抬頭、移動與對外界有反應。若明顯虛弱、無力、翻身困難或持續閉眼不動，應提高警覺。'
+    },
+    {
+      '@type': 'HowToStep',
+      position: 2,
+      name: '再看體態與外觀',
+      text: '檢查尾巴是否持續消瘦、四肢是否無力、脫皮是否卡在腳趾或眼周，並留意嘴角、鼻孔、腹部與泄殖腔附近是否有分泌物、腫脹或傷口。'
+    },
+    {
+      '@type': 'HowToStep',
+      position: 3,
+      name: '核對進食與排泄',
+      text: '把進食頻率、拒食天數、排便型態與體重變化一起看，而不是只看單一症狀。短期不吃不一定是疾病，但若合併明顯消瘦或排便異常，就要盡快處理。'
+    },
+    {
+      '@type': 'HowToStep',
+      position: 4,
+      name: '確認環境是否先出問題',
+      text: '回頭檢查溫度、濕度、躲避點、底材與最近是否有搬動、驚嚇或新環境壓力。很多看似健康異常的狀況，實際上先是環境管理失衡。'
+    },
+    {
+      '@type': 'HowToStep',
+      position: 5,
+      name: '分辨觀察與就醫界線',
+      text: '若出現長期拒食、快速消瘦、神經症狀、呼吸異常、持續腹瀉、明顯外傷或無法站立翻身，應直接尋求特寵醫院，而不是只靠線上資訊自行判斷。'
+    }
+  ]
+}
+
 // FAQPage：健康相關常見問題
 const hFaqLd = {
   '@type': 'FAQPage',
@@ -177,7 +218,7 @@ const hWebPageLd = {
     { '@type': 'MedicalAudience', audienceType: 'Caregiver' }
   ],
   mentions: hMedicalConditions,
-  hasPart: [hHowToLd, hFaqLd]
+  hasPart: [hHowToLd, hInterpretHowToLd, hFaqLd]
 }
 
 useHead({
@@ -727,6 +768,40 @@ const copied = ref(false)
       <div class="h-entry-foot">
         <p>⚠️ 本工具僅供觀察參考，無法取代獸醫診斷。若守宮狀態急速惡化，請直接就醫。</p>
       </div>
+
+      <section class="h-entry-guide" aria-labelledby="health-guide-title">
+        <h2 id="health-guide-title" class="h-section-title">🩺 如何判讀守宮健康</h2>
+        <ol class="h-guide-steps">
+          <li class="h-guide-step">
+            <span class="h-guide-step-no">1</span>
+            <div>
+              <strong>先看精神與活動力</strong>
+              <p>先確認是否睜眼、抬頭、移動正常，有沒有持續無力、閉眼或反應變慢。</p>
+            </div>
+          </li>
+          <li class="h-guide-step">
+            <span class="h-guide-step-no">2</span>
+            <div>
+              <strong>再看體態與外觀</strong>
+              <p>留意尾巴是否快速變瘦、脫皮是否卡住、嘴角鼻孔與泄殖腔附近是否有異常。</p>
+            </div>
+          </li>
+          <li class="h-guide-step">
+            <span class="h-guide-step-no">3</span>
+            <div>
+              <strong>把進食和排泄一起看</strong>
+              <p>不要只看有沒有吃，還要一起比對體重、排便與拒食持續時間。</p>
+            </div>
+          </li>
+          <li class="h-guide-step">
+            <span class="h-guide-step-no">4</span>
+            <div>
+              <strong>最後分辨是否該就醫</strong>
+              <p>若有快速惡化、神經症狀、呼吸異常、無法站立翻身或外傷，直接找特寵醫院。</p>
+            </div>
+          </li>
+        </ol>
+      </section>
 
       <div class="h-card-grid">
         <button class="h-entry-card h-entry-card--urgent" @click="startMode('triage')">
@@ -1336,6 +1411,47 @@ const copied = ref(false)
 }
 
 /* ============ 問卷階段 ============ */
+.h-entry-guide {
+  margin: 0 0 20px;
+  padding: 18px 20px;
+  background: rgba(128, 128, 128, 0.04);
+  border: 1px solid var(--bd);
+  border-radius: 16px;
+}
+
+.h-guide-steps {
+  list-style: none;
+  padding: 0;
+  margin: 14px 0 0;
+  display: grid;
+  gap: 12px;
+}
+
+.h-guide-step {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr);
+  gap: 12px;
+  align-items: start;
+}
+
+.h-guide-step-no {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  background: rgba(232, 68, 10, 0.12);
+  color: var(--pri);
+  font-weight: 900;
+}
+
+.h-guide-step p {
+  margin: 4px 0 0;
+  color: var(--txt-muted);
+  line-height: 1.6;
+}
+
 .h-quiz-head,
 .h-result-head {
   display: flex;
@@ -2341,6 +2457,33 @@ const copied = ref(false)
   }
 
   /* 問卷頁 sticky 標題 + 卡片填滿視窗 + scroll-snap */
+  .h-entry-guide {
+    margin: 0 0 8px;
+    padding: 10px;
+    border-radius: 12px;
+  }
+  .h-guide-steps {
+    margin-top: 10px;
+    gap: 8px;
+  }
+  .h-guide-step {
+    grid-template-columns: 26px minmax(0, 1fr);
+    gap: 8px;
+  }
+  .h-guide-step-no {
+    width: 26px;
+    height: 26px;
+    font-size: 0.72rem;
+  }
+  .h-guide-step strong {
+    font-size: 0.72rem;
+    line-height: 1.25;
+  }
+  .h-guide-step p {
+    font-size: 0.64rem;
+    line-height: 1.35;
+    margin-top: 2px;
+  }
   .health-container--quiz {
     padding: 0 0 env(safe-area-inset-bottom, 0px);
   }
