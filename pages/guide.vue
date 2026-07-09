@@ -23,6 +23,34 @@ const nextActions = [
   { label: '進入商店', to: '/shop', primary: true }
 ]
 
+// 如何開始養守宮（新手四步；給 AI Overview HowTo 引用）
+const startSteps = [
+  {
+    title: '先準備環境與設備',
+    body: '加熱、躲避屋、濕區、鈣粉與維他命，趁牠還沒到家就先備好。',
+    to: '/care',
+    linkLabel: '看飼養指南'
+  },
+  {
+    title: '做飼養前評估',
+    body: '確認自己有時間、預算與心理準備，別衝動入手。',
+    to: '/qs',
+    linkLabel: '飼養前評估'
+  },
+  {
+    title: '挑選健康個體',
+    body: '看清楚個體資料、問狀態，挑穩定進食、精神好的。',
+    to: '/shop',
+    linkLabel: '選購守宮'
+  },
+  {
+    title: '到家先靜養',
+    body: '頭幾天少干擾，觀察牠吃不吃、排不排便、精神好不好。',
+    to: '/start-here',
+    linkLabel: '新手入門'
+  }
+]
+
 // 定義型 FAQ（給 AI Overview / 語音搜尋引用）
 const faqs = [
   {
@@ -78,6 +106,21 @@ const faqLd = {
   }))
 }
 
+const howToLd = {
+  '@context': 'https://schema.org',
+  '@type': 'HowTo',
+  name: '如何開始養守宮（新手四步）',
+  description: '第一次養守宮的四個步驟：準備環境設備、做飼養前評估、挑選健康個體、到家先靜養。',
+  inLanguage: 'zh-TW',
+  step: startSteps.map((s, i) => ({
+    '@type': 'HowToStep',
+    position: i + 1,
+    name: s.title,
+    text: s.body,
+    url: `${pageUrl}#step-${i + 1}`
+  }))
+}
+
 const breadcrumbLd = getBreadcrumb([
   { name: '首頁', url: '/' },
   { name: '守宮入門', url: '/guide' }
@@ -109,6 +152,7 @@ useHead({
   link: [{ rel: 'canonical', href: pageUrl }],
   script: [
     { type: 'application/ld+json', innerHTML: JSON.stringify(webPageLd) },
+    { type: 'application/ld+json', innerHTML: JSON.stringify(howToLd) },
     { type: 'application/ld+json', innerHTML: JSON.stringify(faqLd) },
     { type: 'application/ld+json', innerHTML: JSON.stringify(breadcrumbLd) }
   ]
@@ -167,6 +211,20 @@ useHead({
         <NuxtLink to="/calculator" class="guide-inline-link">基因計算機</NuxtLink>
         。
       </p>
+    </section>
+
+    <section class="guide-sec card">
+      <h2 class="sec-title">如何開始養守宮（新手四步）</h2>
+      <ol class="step-list">
+        <li v-for="(s, i) in startSteps" :id="`step-${i + 1}`" :key="s.title" class="step-item">
+          <span class="step-no">{{ i + 1 }}</span>
+          <div class="step-copy">
+            <h3 class="step-title">{{ s.title }}</h3>
+            <p class="guide-sec-body">{{ s.body }}</p>
+            <NuxtLink :to="s.to" class="guide-inline-link">{{ s.linkLabel }} →</NuxtLink>
+          </div>
+        </li>
+      </ol>
     </section>
 
     <section class="guide-sec card">
@@ -230,6 +288,43 @@ useHead({
 }
 .guide-inline-link:hover {
   text-decoration: underline;
+}
+
+/* 步驟 */
+.step-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 12px;
+}
+.step-item {
+  display: grid;
+  grid-template-columns: 34px 1fr;
+  gap: 12px;
+  align-items: start;
+}
+.step-no {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  border: 2px solid rgba(232, 68, 10, 0.28);
+  background: rgba(232, 68, 10, 0.06);
+  color: var(--pri);
+  font-weight: 900;
+}
+.step-copy {
+  display: grid;
+  gap: 4px;
+}
+.step-title {
+  margin: 0;
+  color: var(--txt);
+  font-weight: 900;
+  font-size: 1rem;
 }
 
 /* 對照表 */
