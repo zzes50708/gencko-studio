@@ -42,7 +42,6 @@ export const ROUTES = {
   home: '/',
   about: '/about',
   care: '/care',
-  hognose: '/hognose',
   articles: '/articles',
   genes: '/genes',
   shop: '/shop',
