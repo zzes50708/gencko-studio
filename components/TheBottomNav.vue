@@ -122,7 +122,7 @@ watch(
 
         <div class="sheet-body">
           <div v-if="activeSheet === 'articles'" class="sheet-list">
-            <NuxtLink to="/guide" class="sheet-item">守宮入門</NuxtLink>
+            <NuxtLink to="/guide" class="sheet-item">守宮介紹</NuxtLink>
             <NuxtLink to="/start-here" class="sheet-item">新手入門</NuxtLink>
             <NuxtLink to="/care" class="sheet-item">飼養指南</NuxtLink>
             <NuxtLink to="/articles" class="sheet-item">文章列表</NuxtLink>

@@ -9,7 +9,7 @@ const pageUrl = absUrl('/guide')
 const compareRows = [
   { dim: '體型', leopard: '較修長，成體約 20cm', fat: '較壯，尾巴肥厚儲脂' },
   { dim: '濕度', leopard: '偏乾，濕區局部保濕', fat: '稍需一點濕度' },
-  { dim: '個性', leopard: '溫馴、好上手', fat: '同樣溫和、較內斂' },
+  { dim: '個性', leopard: '活潑好動', fat: '溫馴、較內斂' },
   { dim: '品系', leopard: '顏色花紋品系最多', fat: '品系較少但有特色' }
 ]
 
@@ -123,7 +123,7 @@ const howToLd = {
 
 const breadcrumbLd = getBreadcrumb([
   { name: '首頁', url: '/' },
-  { name: '守宮入門', url: '/guide' }
+  { name: '守宮介紹', url: '/guide' }
 ])
 
 useHead({
@@ -163,7 +163,7 @@ useHead({
   <div class="guide-page">
     <PageHero
       layout="stack"
-      kicker="守宮入門"
+      kicker="守宮介紹"
       title="守宮是什麼？第一次養守宮先看這頁"
       lead="守宮是壁虎的一類、屬於蜥蜴。寵物市場最常見的是豹紋守宮和肥尾守宮——體型小、好照顧、不用遛，是很多人入門爬蟲的第一隻。"
     />

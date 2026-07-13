@@ -74,7 +74,7 @@ const navLogoUrl = computed(() => (store.logoUrl ? getCleanUrl(store.logoUrl, 72
             </NuxtLink>
             ▾
             <div class="dt-dropdown">
-              <NuxtLink to="/guide">守宮入門</NuxtLink>
+              <NuxtLink to="/guide">守宮介紹</NuxtLink>
               <NuxtLink to="/start-here">新手入門</NuxtLink>
               <NuxtLink to="/care">飼養指南</NuxtLink>
               <NuxtLink to="/articles">文章列表</NuxtLink>
