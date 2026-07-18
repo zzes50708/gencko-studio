@@ -27,13 +27,38 @@ export function getProbFraction(prob: number): string {
 }
 
 const getGeneBaseName = (geneDef: any): string => (geneDef ? geneDef.name.split(' (')[0] : '')
+const isAftZeroGene = (geneId: string): boolean => geneId === 'aft_zero'
+
+const getGeneDisplayNameByZygosity = (geneDef: any, zygosity: string): string => {
+  if (!geneDef) return ''
+  if (isAftZeroGene(geneDef.id)) {
+    if (zygosity === ZYG.HET) return '零'
+    if (zygosity === ZYG.VIS) return '無紋'
+  }
+  return getGeneBaseName(geneDef)
+}
 
 const formatHetLabel = (label: string, genes: string[]): string => {
   if (!genes.length) return ''
-  if (label === 'Het') return `Het ${genes.join(' ')}`
-  if (label === '66% Poss Het') return `66% Het ${genes.join(' ')}`
-  if (label === '50% Poss Het') return `50% Het ${genes.join(' ')}`
-  return `${label.replace('Poss Het', 'Het')} ${genes.join(' ')}`
+  const zeroGenes = genes.filter((gene) => gene === '零')
+  const normalGenes = genes.filter((gene) => gene !== '零')
+  const parts: string[] = []
+
+  if (zeroGenes.length) {
+    if (label === 'Het') parts.push('零')
+    else if (label === '66% Poss Het') parts.push('66% Het 無紋')
+    else if (label === '50% Poss Het') parts.push('50% Het 無紋')
+    else parts.push(`${label.replace('Poss Het', 'Het')} 無紋`)
+  }
+
+  if (normalGenes.length) {
+    if (label === 'Het') parts.push(`Het ${normalGenes.join(' ')}`)
+    else if (label === '66% Poss Het') parts.push(`66% Het ${normalGenes.join(' ')}`)
+    else if (label === '50% Poss Het') parts.push(`50% Het ${normalGenes.join(' ')}`)
+    else parts.push(`${label.replace('Poss Het', 'Het')} ${normalGenes.join(' ')}`)
+  }
+
+  return parts.join(' ')
 }
 
 export function calculateGenetics(
@@ -102,6 +127,10 @@ export function calculateGenetics(
   if (checks.validateGhostFemale) {
     const ghostCheck = checks.validateGhostFemale(femaleGenes)
     if (ghostCheck?.hasWarning) warning += ghostCheck.warning
+  }
+
+  if (allGenes.some((gene) => gene.geneId === 'aft_zero')) {
+    warning += '零指的是帶無紋且有零表現的個體；超級零 = 無紋。\n'
   }
 
   const allIds = new Set([
@@ -237,7 +266,7 @@ export function calculateGenetics(
       if (consumed.has(gene.geneId)) return
       const def = defs.find((item: any) => item.id === gene.geneId)
       if (!def) return
-      const geneDisplayName = getGeneBaseName(def)
+      const geneDisplayName = getGeneDisplayNameByZygosity(def, gene.zygosity)
 
       if (def.type === CALC_TYPES.CODOM && gene.zygosity === ZYG.SUP) {
         descParts.push(`超級${geneDisplayName}`)
@@ -291,11 +320,12 @@ export function calculateGenetics(
       })
 
       const geneDef = defs.find((gene: any) => gene.id === id)
-      const geneName = getGeneBaseName(geneDef)
+      const hetGeneName = getGeneDisplayNameByZygosity(geneDef, ZYG.HET)
+      const visualGeneName = getGeneDisplayNameByZygosity(geneDef, ZYG.VIS)
 
       if (
         isVisualInThisGroup &&
-        name.includes(geneName) &&
+        (name.includes(hetGeneName) || name.includes(visualGeneName)) &&
         geneDef.type !== CALC_TYPES.POLY &&
         geneDef.type !== CALC_TYPES.BLOOD
       ) {
@@ -325,7 +355,7 @@ export function calculateGenetics(
     Object.keys(hetStats).forEach((id) => {
       const label = hetStats[id]
       const def = defs.find((gene: any) => gene.id === id)
-      const geneName = getGeneBaseName(def) || id
+      const geneName = getGeneDisplayNameByZygosity(def, ZYG.HET) || id
       if (!groupedHets[label]) groupedHets[label] = []
       groupedHets[label].push(geneName)
     })
