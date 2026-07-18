@@ -17,7 +17,7 @@ export const AFT_GECKO_GENES = [
   { id: 'aft_patternless', name: '無紋', type: CALC_TYPES.REC, category: 'recessive' },
   { id: 'aft_caramel', name: '焦糖', type: CALC_TYPES.REC, category: 'recessive' },
   { id: 'aft_whiteout', name: '立可白', type: CALC_TYPES.CODOM, category: 'codominant' },
-  { id: 'aft_zero', name: '零', type: CALC_TYPES.CODOM, category: 'codominant' },
+  { id: 'aft_zero', name: '零', type: CALC_TYPES.REC, category: 'recessive' },
   { id: 'aft_straight', name: '直線', type: CALC_TYPES.DOM, category: 'dominant' }
 ]
 

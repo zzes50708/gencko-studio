@@ -13,6 +13,9 @@ const supabase = useSupabaseClient()
 
 // 從路由參數取得要顯示的基因名稱，並進行解碼
 const geneName = decodeURIComponent(route.params.id)
+const zeroGeneNote = computed(() =>
+  geneName === '零' ? '備註：零 = het 無紋；超級零 = 無紋。' : ''
+)
 
 // [SEO] 為了在 SSR 期間取得資料，我們使用 useAsyncData。
 // 若 Store 中已經存在該筆資料，則直接拿來用；否則向資料庫查詢。
@@ -58,6 +61,11 @@ const toPlainText = (s) => {
 if (viewingGene.value && import.meta.client) {
   store.viewingGene = viewingGene.value
 }
+
+const geneWarningText = computed(() => {
+  const parts = [viewingGene.value?.Warning, zeroGeneNote.value].filter(Boolean)
+  return parts.join('\n')
+})
 
 const siteData = computed(() => {
   if (viewingGene.value) {
@@ -271,9 +279,9 @@ useHead({
       <div class="content-card">
         <h1 class="gene-title">{{ viewingGene.Name }}</h1>
 
-        <div v-if="viewingGene.Warning" class="warn-box">
+        <div v-if="geneWarningText" class="warn-box">
           <span style="font-size: 1.2rem; margin-right: 5px">⚠️</span>
-          {{ viewingGene.Warning }}
+          {{ geneWarningText }}
         </div>
 
         <div class="gene-layout">

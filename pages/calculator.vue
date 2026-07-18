@@ -769,6 +769,9 @@ const calcReturnToReverse = () => {
 }
 
 const calcIsShowingRecommended = computed(() => Boolean(calcReverseMatchBackup.value))
+const calcSpeciesNote = computed(() =>
+  calcSp.value === '肥尾守宮' ? '備註：零 = het 無紋；超級零 = 無紋。' : ''
+)
 
 const formatResultText = (text) => text || ''
 
@@ -841,6 +844,10 @@ const formatWarningText = (text) => {
             </div>
           </div>
         </div>
+      </div>
+
+      <div v-if="calcSpeciesNote" class="calc-species-note">
+        {{ calcSpeciesNote }}
       </div>
 
       <div class="calc-helper-btns">
@@ -1335,6 +1342,13 @@ const formatWarningText = (text) => {
   flex-direction: column;
   gap: 12px;
   margin: 20px 0 16px;
+}
+.calc-species-note {
+  margin: 0 0 16px;
+  color: var(--pri);
+  font-size: 0.92rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
 }
 .calc-species-row {
   display: grid;
@@ -2008,6 +2022,11 @@ const formatWarningText = (text) => {
   .calc-selector-menu-item {
     font-size: 0.8rem;
     padding: 8px 10px;
+  }
+  .calc-species-note {
+    font-size: 0.84rem;
+    line-height: 1.6;
+    margin-bottom: 12px;
   }
 
   .calc-helper-btns {
