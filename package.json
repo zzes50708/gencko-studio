@@ -33,6 +33,7 @@
     "@supabase/supabase-js": "^2.105.3",
     "@tresjs/cientos": "^5.7.1",
     "@tresjs/nuxt": "^5.6.1",
+    "@tresjs/post-processing": "^3.7.2",
     "@vite-pwa/nuxt": "^0.6.0",
     "@vueuse/nuxt": "^12.0.0",
     "atropos": "^2.0.2",

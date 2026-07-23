@@ -42,3 +42,6 @@ dev*.err.log
 # Supabase CLI 本機暫存
 supabase/.branches
 supabase/.temp
+
+# Playwright CLI 除錯輸出（日誌/截圖，勿追蹤）
+.playwright-cli/
