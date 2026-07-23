@@ -1,12 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue'
-import { useMediaQuery } from '@vueuse/core'
 import DnaGeckoParticles from '@/components/DnaGeckoParticles.vue'
-
-const canUseHeavyPost = useMediaQuery('(min-width: 768px) and (hover: hover) and (pointer: fine)')
-const prefersReducedMotion = useMediaQuery('(prefers-reduced-motion: reduce)')
-
-const enableBloom = computed(() => canUseHeavyPost.value && !prefersReducedMotion.value)
 </script>
 
 <template>
@@ -23,7 +16,7 @@ const enableBloom = computed(() => canUseHeavyPost.value && !prefersReducedMotio
       </div>
 
       <div class="intro-meta">
-        <p class="intro-meta__label">FOUNDED IN 2015</p>
+        <p class="intro-meta__label">FOUNDED IN 2025</p>
         <p>
           We are a professional leopard gecko breeding team. Taking a scientific approach, we record
           the genetic data of each generation, and through precise daily nutritional management,
@@ -43,15 +36,15 @@ const enableBloom = computed(() => canUseHeavyPost.value && !prefersReducedMotio
     </div>
 
     <div class="hero-canvas-shell">
-      <TresCanvas class="hero-canvas" clear-color="#07080a" :alpha="false" :dpr="[1, 1.35]">
+      <TresCanvas class="hero-canvas" clear-color="#07080a" :alpha="false" :dpr="[1, 2]">
         <TresPerspectiveCamera :position="[0, 0, 7]" :fov="55" />
         <TresAmbientLight :intensity="0.5" />
         <TresDirectionalLight :position="[2.2, 3.6, 4.4]" :intensity="1.05" color="#ffd2a2" />
 
         <DnaGeckoParticles />
 
-        <EffectComposer v-if="enableBloom">
-          <UnrealBloom :strength="0.46" :radius="0.32" :threshold="0.52" />
+        <EffectComposer>
+          <UnrealBloom :strength="0.46" :radius="0.42" :threshold="0.48" />
         </EffectComposer>
       </TresCanvas>
     </div>
