@@ -1,5 +1,12 @@
 <script setup lang="ts">
+import { ref } from 'vue'
 import DnaGeckoParticles from '@/components/DnaGeckoParticles.vue'
+
+const bottomRenderMode = ref<'always' | 'manual'>('always')
+
+function setBottomRenderMode(mode: 'always' | 'manual') {
+  if (bottomRenderMode.value !== mode) bottomRenderMode.value = mode
+}
 </script>
 
 <template>
@@ -36,15 +43,21 @@ import DnaGeckoParticles from '@/components/DnaGeckoParticles.vue'
     </div>
 
     <div class="hero-canvas-shell">
-      <TresCanvas class="hero-canvas" clear-color="#07080a" :alpha="false" :dpr="[1, 2]">
+      <TresCanvas
+        class="hero-canvas"
+        clear-color="#07080a"
+        :alpha="false"
+        :dpr="[1, 1.5]"
+        :render-mode="bottomRenderMode"
+      >
         <TresPerspectiveCamera :position="[0, 0, 7]" :fov="55" />
         <TresAmbientLight :intensity="0.5" />
         <TresDirectionalLight :position="[2.2, 3.6, 4.4]" :intensity="1.05" color="#ffd2a2" />
 
-        <DnaGeckoParticles />
+        <DnaGeckoParticles @bottom-render-mode="setBottomRenderMode" />
 
         <EffectComposer>
-          <UnrealBloom :strength="0.46" :radius="0.42" :threshold="0.48" />
+          <UnrealBloom :strength="0.18" :radius="0.18" :threshold="0.95" />
         </EffectComposer>
       </TresCanvas>
     </div>

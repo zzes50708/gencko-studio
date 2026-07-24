@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onBeforeUnmount, onMounted, ref, withDefaults } from 'vue'
+import { onBeforeUnmount, onMounted, ref } from 'vue'
 import * as THREE from 'three'
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js'
 
@@ -12,6 +12,7 @@ const canvas = ref<HTMLCanvasElement | null>(null)
 let renderer: THREE.WebGLRenderer | null = null
 let raf = 0
 let onResize: (() => void) | null = null
+let styleObserver: MutationObserver | null = null
 const disposables: { dispose(): void }[] = []
 
 const KEY = {
@@ -62,7 +63,7 @@ onMounted(() => {
   let h = parent?.clientHeight || 360
 
   renderer = new THREE.WebGLRenderer({ canvas: el, alpha: true, antialias: true })
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2))
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5))
   renderer.setSize(w, h, false)
   renderer.outputColorSpace = THREE.SRGBColorSpace
   renderer.toneMapping = THREE.ACESFilmicToneMapping
@@ -156,6 +157,7 @@ onMounted(() => {
       face.position.z = halfT + 0.012
       face.renderOrder = 1
       group.add(face)
+      requestRender()
     },
     undefined,
     () => console.warn('[HeroLogoDisc] 無法載入 logo PNG:', props.src)
@@ -163,9 +165,15 @@ onMounted(() => {
 
   const root = document.documentElement
   let currentSpin = 0
+  let lastExitProgress = Number.NaN
+  let lastRotateProgress = Number.NaN
 
-  const animate = () => {
-    raf = requestAnimationFrame(animate)
+  const requestRender = () => {
+    if (!raf) raf = requestAnimationFrame(renderOnce)
+  }
+
+  const renderOnce = () => {
+    raf = 0
 
     const exitProgress = parseFloat(root.style.getPropertyValue('--hero-exit-progress')) || 0
     const rotateProgress =
@@ -178,8 +186,20 @@ onMounted(() => {
     group.rotation.y = currentSpin
     group.rotation.x = 0.05
     renderer?.render(scene, camera)
+
+    const spinSettled = Math.abs(targetSpin - currentSpin) < 0.0008
+    const progressStable =
+      Math.abs(exitProgress - lastExitProgress) < 0.0002 &&
+      Math.abs(rotateProgress - lastRotateProgress) < 0.0002
+    lastExitProgress = exitProgress
+    lastRotateProgress = rotateProgress
+
+    if (!spinSettled || !progressStable) requestRender()
   }
-  animate()
+
+  styleObserver = new MutationObserver(requestRender)
+  styleObserver.observe(root, { attributes: true, attributeFilter: ['style'] })
+  requestRender()
 
   onResize = () => {
     if (!renderer || !parent) return
@@ -188,12 +208,16 @@ onMounted(() => {
     renderer.setSize(w, h, false)
     camera.aspect = w / h
     camera.updateProjectionMatrix()
+    requestRender()
   }
   window.addEventListener('resize', onResize)
 })
 
 onBeforeUnmount(() => {
   cancelAnimationFrame(raf)
+  raf = 0
+  styleObserver?.disconnect()
+  styleObserver = null
   if (onResize) window.removeEventListener('resize', onResize)
   disposables.forEach((d) => d.dispose())
   renderer?.dispose()
