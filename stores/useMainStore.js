@@ -92,7 +92,7 @@ export const useMainStore = defineStore('main', () => {
             supabase
               .from('animals')
               .select(
-                'id, source, species, morph, genes, gender_type, gender_value, birthday, listing_price, sold_price, status, note, image_url, is_hot, created_at'
+                'id, source, species, morph, genes, gender_type, gender_value, birthday, listing_price, sold_price, status, note, image_url, is_hot, created_at, photo_updated_at'
               )
               .order('created_at', { ascending: false }),
           { label: 'animals' }
@@ -126,7 +126,8 @@ export const useMainStore = defineStore('main', () => {
         ImageURL: i.image_url,
         // is_hot 是純 boolean（CLAUDE.md 確認）
         IsHot: i.is_hot === true,
-        CreatedDate: i.created_at || new Date().toISOString()
+        CreatedDate: i.created_at || new Date().toISOString(),
+        PhotoUpdatedAt: i.photo_updated_at || i.created_at || null
       }))
 
       hotList.value = inv.value.filter((i) => i.IsHot === true)

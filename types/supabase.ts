@@ -98,6 +98,7 @@ export type Database = {
           note: string
           parent_female_id: string | null
           parent_male_id: string | null
+          photo_updated_at: string | null
           ship_carrier: string | null
           shipped_at: string | null
           sold_price: number | null
@@ -127,6 +128,7 @@ export type Database = {
           note?: string
           parent_female_id?: string | null
           parent_male_id?: string | null
+          photo_updated_at?: string | null
           ship_carrier?: string | null
           shipped_at?: string | null
           sold_price?: number | null
@@ -156,6 +158,7 @@ export type Database = {
           note?: string
           parent_female_id?: string | null
           parent_male_id?: string | null
+          photo_updated_at?: string | null
           ship_carrier?: string | null
           shipped_at?: string | null
           sold_price?: number | null

@@ -44,6 +44,7 @@ const fil = ref({
   maxP: '',
   sexM: true,
   sexF: true,
+  years: [],
   genes: [],
   beginner: false
 })
@@ -220,6 +221,7 @@ onMounted(() => {
   if (q.sexM !== undefined) fil.value.sexM = q.sexM === 'true'
   if (q.sexF !== undefined) fil.value.sexF = q.sexF === 'true'
   if (q.beginner !== undefined) fil.value.beginner = q.beginner === 'true'
+  if (q.years) fil.value.years = Array.isArray(q.years) ? q.years : q.years.split(',')
   if (q.genes) fil.value.genes = Array.isArray(q.genes) ? q.genes : q.genes.split(',')
   if (q.sort) sortOrder.value = q.sort
 
@@ -241,6 +243,7 @@ watch(
     if (!fil.value.sexM) query.sexM = 'false'
     if (!fil.value.sexF) query.sexF = 'false'
     if (fil.value.beginner) query.beginner = 'true'
+    if (fil.value.years.length) query.years = fil.value.years.join(',')
     if (fil.value.genes.length) query.genes = fil.value.genes.join(',')
     if (sortOrder.value !== 'price_desc') query.sort = sortOrder.value
 
@@ -292,6 +295,24 @@ const availableGenes = computed(() => {
 
 const isGeneAvail = (g) => availableGenes.value.includes(g)
 
+// 從 Birthday（日期字串）取出 4 位數年份，取不到則回傳空字串
+const getItemYear = (item) => {
+  const m = String(item?.Birthday || '').match(/\d{4}/)
+  return m ? m[0] : ''
+}
+
+const availableYears = computed(() => {
+  const s = new Set()
+  const targetStatus = fil.value.sold ? ['ForSale', 'Auction', 'Sold'] : ['ForSale', 'Auction']
+  ;(store.inv || [])
+    .filter((i) => i.Species === sp.value && targetStatus.includes(getEffectiveStatus(i)))
+    .forEach((i) => {
+      const y = getItemYear(i)
+      if (y) s.add(y)
+    })
+  return Array.from(s).sort((a, b) => Number(b) - Number(a))
+})
+
 const getSortedGenes = (list) => {
   return [...list].sort((a, b) => (isGeneAvail(b) ? 1 : 0) - (isGeneAvail(a) ? 1 : 0))
 }
@@ -314,6 +335,8 @@ const shopList = computed(() => {
     const isF = sexText.includes('Female') || sexText.includes('母')
     if (!fil.value.sexM && isM) return false
     if (!fil.value.sexF && isF) return false
+
+    if (fil.value.years.length > 0 && !fil.value.years.includes(getItemYear(i))) return false
 
     if (fil.value.beginner && (!i.Note || !String(i.Note).includes('新手'))) return false
 
@@ -384,6 +407,7 @@ const resetFilters = () => {
     maxP: '',
     sexM: true,
     sexF: true,
+    years: [],
     genes: [],
     beginner: false
   }
@@ -422,6 +446,7 @@ const activeFilterCount = computed(() => {
   if (!fil.value.sexM) n++
   if (!fil.value.sexF) n++
   if (fil.value.beginner) n++
+  n += fil.value.years.length
   n += fil.value.genes.length
   return n
 })
@@ -434,6 +459,14 @@ const activeFilterCount = computed(() => {
       <h1 class="sr-only">線上選購守宮｜豹紋與肥尾守宮在售個體 - Gencko Breeding Studio</h1>
       <!-- 視覺主標保留為 div（桌機可見、手機隱藏） -->
       <div class="page-title dt-only" aria-hidden="true">選購守宮</div>
+
+      <!-- 發色/照片時效警語（列表頁最上方，全裝置顯示） -->
+      <div class="shop-photo-notice" role="note">
+        <span class="notice-icon" aria-hidden="true">📷</span>
+        <span>
+          守宮發色以當下狀態為主；個體數量眾多，線上照片無法隨時更新，購買前歡迎私訊索取最新照片。
+        </span>
+      </div>
 
       <div class="shop-layout">
         <!-- 手機篩選遮罩 -->
@@ -517,6 +550,13 @@ const activeFilterCount = computed(() => {
             <label class="f-check">
               <input type="checkbox" v-model="fil.sexF" />
               母
+            </label>
+          </div>
+          <div v-if="availableYears.length" class="f-group">
+            <div class="f-label">年份</div>
+            <label v-for="y in availableYears" :key="y" class="f-check">
+              <input type="checkbox" :value="y" v-model="fil.years" />
+              {{ y }} 年
             </label>
           </div>
           <div class="f-group" style="padding-bottom: 30px">
@@ -751,6 +791,34 @@ const activeFilterCount = computed(() => {
   display: flex;
   gap: 20px;
   align-items: flex-start;
+}
+
+.shop-photo-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-bottom: 16px;
+  padding: 10px 14px;
+  border: 1px solid var(--bd);
+  border-left: 3px solid var(--pri);
+  border-radius: 8px;
+  background: var(--card-bg);
+  color: var(--txt);
+  opacity: 0.9;
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+.shop-photo-notice .notice-icon {
+  flex-shrink: 0;
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+@media (max-width: 768px) {
+  .shop-photo-notice {
+    margin: 6px 0 12px;
+    font-size: 0.78rem;
+    padding: 9px 12px;
+  }
 }
 
 .dt-only {

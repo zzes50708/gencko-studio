@@ -3,8 +3,9 @@ import { onBeforeUnmount, onMounted, ref } from 'vue'
 import * as THREE from 'three'
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js'
 
-const props = withDefaults(defineProps<{ src?: string }>(), {
-  src: '/logo.png'
+const props = withDefaults(defineProps<{ src?: string; flip?: boolean }>(), {
+  src: '/logo.png',
+  flip: false
 })
 
 const canvas = ref<HTMLCanvasElement | null>(null)
@@ -16,10 +17,11 @@ let styleObserver: MutationObserver | null = null
 const disposables: { dispose(): void }[] = []
 
 const KEY = {
-  lumLo: 0.6,
-  lumHi: 0.82,
+  lumLo: 0.76,
+  lumHi: 0.96,
   satLo: 0.1,
-  satHi: 0.26
+  satHi: 0.24,
+  maxBgAlphaLoss: 0.9
 }
 
 function smoothstep(a: number, b: number, x: number) {
@@ -47,7 +49,7 @@ function keyOutBackground(img: HTMLImageElement): HTMLCanvasElement {
     const bright = smoothstep(KEY.lumLo, KEY.lumHi, lum)
     const desat = 1 - smoothstep(KEY.satLo, KEY.satHi, sat)
     const bgness = bright * desat
-    d[i + 3] = Math.round(d[i + 3] * (1 - bgness))
+    d[i + 3] = Math.round(d[i + 3] * (1 - bgness * KEY.maxBgAlphaLoss))
   }
 
   ctx.putImageData(id, 0, 0)
@@ -154,7 +156,8 @@ onMounted(() => {
       disposables.push(faceMat)
 
       const face = new THREE.Mesh(faceGeo, faceMat)
-      face.position.z = halfT + 0.012
+      face.position.z = props.flip ? -halfT - 0.012 : halfT + 0.012
+      if (props.flip) face.rotation.y = Math.PI
       face.renderOrder = 1
       group.add(face)
       requestRender()
@@ -167,6 +170,7 @@ onMounted(() => {
   let currentSpin = 0
   let lastExitProgress = Number.NaN
   let lastRotateProgress = Number.NaN
+  let lastSpinRad = Number.NaN
 
   const requestRender = () => {
     if (!raf) raf = requestAnimationFrame(renderOnce)
@@ -176,13 +180,19 @@ onMounted(() => {
     raf = 0
 
     const exitProgress = parseFloat(root.style.getPropertyValue('--hero-exit-progress')) || 0
-    const rotateProgress =
-      parseFloat(root.style.getPropertyValue('--hero-logo-rotate-progress')) || 0
+    const rawRotateProgress = parseFloat(root.style.getPropertyValue('--hero-logo-rotate-progress'))
+    const rotateProgress = Number.isFinite(rawRotateProgress) ? rawRotateProgress : 0.5
+    const rawSpinRad = parseFloat(root.style.getPropertyValue('--hero-logo-spin-rad'))
+    const hasLinkedSpin = Number.isFinite(rawSpinRad)
     if (exitProgress < -1) return
 
     // rotate 0=面向左、0.5=正面、1=面向右（單調連續，對應 T1 左→正、T2 正→右）
-    const targetSpin = THREE.MathUtils.degToRad(THREE.MathUtils.lerp(-90, 90, rotateProgress))
-    currentSpin += (targetSpin - currentSpin) * 0.12
+    const targetSpinBase = hasLinkedSpin
+      ? rawSpinRad
+      : THREE.MathUtils.degToRad(THREE.MathUtils.lerp(-90, 90, rotateProgress))
+    const targetSpin = targetSpinBase + (props.flip ? Math.PI : 0)
+    // 起始 Logo 直接跟隨 DNA 已阻尼後的旋轉角；斜帶 Logo 才使用自己的視覺阻尼。
+    currentSpin = targetSpin
     group.rotation.y = currentSpin
     group.rotation.x = 0.05
     renderer?.render(scene, camera)
@@ -190,9 +200,11 @@ onMounted(() => {
     const spinSettled = Math.abs(targetSpin - currentSpin) < 0.0008
     const progressStable =
       Math.abs(exitProgress - lastExitProgress) < 0.0002 &&
-      Math.abs(rotateProgress - lastRotateProgress) < 0.0002
+      Math.abs(rotateProgress - lastRotateProgress) < 0.0002 &&
+      (hasLinkedSpin ? Math.abs(rawSpinRad - lastSpinRad) < 0.0002 : !Number.isFinite(lastSpinRad))
     lastExitProgress = exitProgress
     lastRotateProgress = rotateProgress
+    lastSpinRad = hasLinkedSpin ? rawSpinRad : Number.NaN
 
     if (!spinSettled || !progressStable) requestRender()
   }

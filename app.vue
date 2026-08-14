@@ -12,14 +12,15 @@ const router = useRouter()
 const { $pwa } = useNuxtApp()
 const nuxtApp = useNuxtApp()
 
-// ── 全域 Lenis Smooth Scroll（非 /about 頁使用）────────────────────────────
-// /about 頁由 BrandServiceScrollScene 自帶私有 Lenis，此處必須讓路
+// ── 全域 Lenis Smooth Scroll（非自訂 scroll-driven 場景使用）────────────────
+// /about 與 /hero-lab 都有自己的滾動/時間軸系統，此處必須讓路
 let globalLenis = null
 let globalLenisTicker = null
 let gsapLib = null
 
-// `/` 現在也是 about 動畫頁（不改網址），因此也要視為 about，避免全域 Lenis 介入造成導覽列閃動/版面跳動
-const isAboutPage = computed(() => route.path === '/' || route.path.startsWith('/about'))
+const isCustomScrollPage = computed(
+  () => route.path === '/' || route.path.startsWith('/about') || route.path.startsWith('/hero-lab')
+)
 
 const handleLenisScroll = ({ scroll }) => {
   const st = Math.max(0, scroll)
@@ -59,13 +60,13 @@ const destroyGlobalLenis = () => {
 }
 
 const initGlobalLenis = async () => {
-  if (!import.meta.client || isAboutPage.value) return
+  if (!import.meta.client || isCustomScrollPage.value) return
   destroyGlobalLenis()
   // 動態載入，避免 ~528KB 進入初始關鍵路徑（#U6）
   const [{ default: Lenis }, gsapMod] = await Promise.all([import('lenis'), import('gsap')])
   gsapLib = gsapMod.gsap
-  // 競態保護：載入期間若切到 about 頁或已被銷毀，就不啟用
-  if (isAboutPage.value) return
+  // 競態保護：載入期間若切到自訂 scroll 頁或已被銷毀，就不啟用
+  if (isCustomScrollPage.value) return
   globalLenis = new Lenis({
     duration: 1.2,
     easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)), // expo ease-out
@@ -84,10 +85,10 @@ const initGlobalLenis = async () => {
   window.__lenis = globalLenis
 }
 
-// /about ↔ 其他頁切換時：啟停全域 Lenis
-watch(isAboutPage, (isAbout) => {
+// 自訂 scroll 頁 ↔ 其他頁切換時：啟停全域 Lenis
+watch(isCustomScrollPage, (isCustomScrollPageNow) => {
   if (!import.meta.client) return
-  if (isAbout) destroyGlobalLenis()
+  if (isCustomScrollPageNow) destroyGlobalLenis()
   else initGlobalLenis()
 })
 

@@ -34,7 +34,7 @@ const { data: currentProduct, pending } = await useAsyncData(`product-${productI
     const { data, error } = await supabase
       .from('animals')
       .select(
-        'id, species, morph, genes, gender_type, gender_value, birthday, listing_price, sold_price, status, note, image_url'
+        'id, species, morph, genes, gender_type, gender_value, birthday, listing_price, sold_price, status, note, image_url, created_at, photo_updated_at'
       )
       .eq('id', productId)
       .single()
@@ -56,13 +56,21 @@ const { data: currentProduct, pending } = await useAsyncData(`product-${productI
       SoldPrice: data.sold_price,
       Status: data.status,
       Note: data.note,
-      ImageURL: data.image_url
+      ImageURL: data.image_url,
+      CreatedDate: data.created_at,
+      PhotoUpdatedAt: data.photo_updated_at || data.created_at
     }
   } catch (e) {
     console.error('[product] 載入失敗:', e)
     return null
   }
 })
+
+// 將日期／時間字串統一顯示為 YYYY-MM-DD（取不到則回傳空字串）
+const fmtDate = (v) => {
+  const m = String(v || '').match(/\d{4}-\d{2}-\d{2}/)
+  return m ? m[0] : ''
+}
 
 const productModules = computed(() => {
   const p = currentProduct.value
@@ -76,6 +84,7 @@ const productModules = computed(() => {
       gender: p.GenderType,
       genderValue: p.GenderValue,
       birth: p.Birthday || '未登錄',
+      uploadedAt: fmtDate(p.PhotoUpdatedAt || p.CreatedDate),
       note: p.Note || ''
     },
     visuals: {
@@ -545,6 +554,9 @@ const generatePromo = async () => {
                 </span>
                 <span class="birth-val">{{ productModules.identity.birth }} 出生</span>
               </div>
+              <div v-if="productModules.identity.uploadedAt" class="upload-row">
+                📷 照片上傳：{{ productModules.identity.uploadedAt }}
+              </div>
             </div>
             <div class="prod-price-area">
               <template v-if="productModules.transaction.status === 'Sold'">
@@ -796,6 +808,12 @@ const generatePromo = async () => {
   color: var(--txt);
   opacity: 0.6;
   font-size: 1rem;
+}
+.upload-row {
+  margin-top: 6px;
+  color: var(--txt);
+  opacity: 0.55;
+  font-size: 0.85rem;
 }
 
 .gene-tag-row {
@@ -1093,6 +1111,10 @@ const generatePromo = async () => {
   }
   .birth-val {
     font-size: 0.8rem;
+  }
+  .upload-row {
+    font-size: 0.72rem;
+    margin-top: 4px;
   }
   .prod-price-area {
     margin-bottom: 10px;

@@ -50,6 +50,12 @@ const birthdayText = computed(() => {
   return b || '未登錄'
 })
 
+const uploadedText = computed(() => {
+  const raw = props.item?.PhotoUpdatedAt || props.item?.CreatedDate || ''
+  const m = String(raw).match(/\d{4}-\d{2}-\d{2}/)
+  return m ? m[0] : ''
+})
+
 const priceText = computed(() => {
   if (store.isExhibitionMode) return store.exhibitionNote
   if (props.item?.Status === 'Sold') return '售出'
@@ -190,6 +196,10 @@ const onImgLoad = () => {
           <div class="flip-back-row">
             <span class="k">生日</span>
             <span class="v">{{ birthdayText }}</span>
+          </div>
+          <div v-if="uploadedText" class="flip-back-row">
+            <span class="k">上傳</span>
+            <span class="v">{{ uploadedText }}</span>
           </div>
           <div v-if="showBackPrice" class="flip-back-row">
             <span class="k">價格</span>
