@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import { useHead } from '#imports'
 import { onBeforeUnmount, onMounted } from 'vue'
+import { onBeforeRouteLeave } from 'vue-router'
+
+definePageMeta({ pageTransition: false, layoutTransition: false })
 
 let prevScrollRestoration: ScrollRestoration | '' = ''
 let prevHtmlOverflow = ''
@@ -13,6 +16,7 @@ let prevScrollbarWidthVar = ''
 let resetScrollFrame = 0
 let resetScrollTimers: number[] = []
 let resetScrollUntil = 0
+let heroDocumentStateRestored = false
 
 const HERO_FORCE_START_EVENT = 'hero-lab:force-start'
 
@@ -66,6 +70,7 @@ useHead({
 })
 
 onMounted(() => {
+  heroDocumentStateRestored = false
   prevScrollRestoration = window.history.scrollRestoration
   window.history.scrollRestoration = 'manual'
 
@@ -93,7 +98,10 @@ onMounted(() => {
   window.addEventListener('pageshow', scheduleInitialScrollReset)
 })
 
-onBeforeUnmount(() => {
+function restoreHeroDocumentState() {
+  if (heroDocumentStateRestored) return
+  heroDocumentStateRestored = true
+
   clearScheduledScrollResets()
   window.removeEventListener('pageshow', scheduleInitialScrollReset)
   if (prevScrollRestoration) window.history.scrollRestoration = prevScrollRestoration
@@ -106,6 +114,15 @@ onBeforeUnmount(() => {
   document.documentElement.style.overscrollBehavior = prevHtmlOverscroll
   document.body.style.overscrollBehavior = prevBodyOverscroll
   document.documentElement.style.setProperty('--hero-native-scrollbar-width', prevScrollbarWidthVar)
+}
+
+// 先於 Nuxt 頁面轉場清理，避免固定滿版場景的滾動鎖定殘留到下一頁。
+onBeforeRouteLeave(() => {
+  restoreHeroDocumentState()
+})
+
+onBeforeUnmount(() => {
+  restoreHeroDocumentState()
 })
 </script>
 
@@ -125,6 +142,7 @@ onBeforeUnmount(() => {
   z-index: 3000;
   width: auto;
   height: 100vh;
+  height: 100svh;
   height: 100dvh;
   background: #07080a;
   overflow: hidden;
@@ -138,8 +156,22 @@ onBeforeUnmount(() => {
 
 .hero-lab-scroll-space {
   /* 拉長原生捲動旅程，讓同一格滾輪帶來更細的場景位移。 */
-  height: 2160vh;
+  /* 終章分到更多 journey 比例後，總長一併加長，讓前段場景維持原本捲動距離、終章多出來的距離是「淨增加」。 */
+  height: 3000vh;
+  height: 3000svh;
   pointer-events: none;
+}
+
+@media (hover: none), (pointer: coarse) {
+  .hero-lab {
+    height: 100svh;
+    height: 100dvh;
+  }
+
+  /* 使用 svh 固定滾動總長，避免 iOS 網址列伸縮時改變 scrollHeight 造成跳動。 */
+  .hero-lab-scroll-space {
+    height: 3000svh;
+  }
 }
 
 :global(html.hero-lab-active-root),

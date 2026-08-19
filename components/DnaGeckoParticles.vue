@@ -5,12 +5,19 @@ import * as THREE from 'three'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import { ConvexGeometry } from 'three/examples/jsm/geometries/ConvexGeometry.js'
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js'
+import { FontLoader, type FontData } from 'three/examples/jsm/loaders/FontLoader.js'
+import { TextGeometry } from 'three/examples/jsm/geometries/TextGeometry.js'
+import helvetikerFont from 'three/examples/fonts/helvetiker_regular.typeface.json'
+import { LineSegments2 } from 'three/examples/jsm/lines/LineSegments2.js'
+import { LineSegmentsGeometry } from 'three/examples/jsm/lines/LineSegmentsGeometry.js'
+import { LineMaterial } from 'three/examples/jsm/lines/LineMaterial.js'
 
 const emit = defineEmits<{
   'bottom-render-mode': [mode: 'always' | 'manual']
   'card-focus': [card: HeroCard | null]
   'card-hitbox': [hitbox: HeroCardHitbox | null]
   'card-select': [card: HeroCard]
+  'finale-action': [to: string]
   // 進度條：整段旅程正規化為 0→1 的單一進度，以及各場景在進度上的邊界。
   'journey-progress': [value: number]
   'journey-segments': [segments: { key: string; end: number }[]]
@@ -37,7 +44,7 @@ const CFG = {
     z: -1.65
   },
   gecko: {
-    targetSize: 4.25,
+    targetSize: 5.2,
     y: 0.6,
     z: 0.55
   },
@@ -74,10 +81,13 @@ const uniforms = {
   // 螢幕座標雙斜縫（d = screenUV.x + screenUV.y ∈[0,2]，TL–BR 對角線為 d=1）
   // Scene01 保留 d>uSeamA（右上）；Scene03 保留 d<uSeamB（左下）；中間為 Logo 斜帶
   uResolution: { value: new THREE.Vector2(1, 1) },
+  // 終章 wipe 專用解析度（與斜帶 uResolution 解耦）：設成 (超大, H/2) → sd≈2·(y/H)
+  // = 水平線掃描（由下往上），前面斜帶維持斜向不受影響。
+  uEggRes: { value: new THREE.Vector2(1, 1) },
   uSeamA: { value: 0 }, // 起始 0 = 全顯示
   uSeamB: { value: 0 }, // 起始 0 = 骨幹全隱藏
   uIntroSeam: { value: 0.18 }, // DNA 入場專用：由下往上顯示
-  uEggReveal: { value: 0 } // 終章 wipe：0→1 由下往上，蛋/背景出現、骨幹/卡片退場（共享同一邊界）
+  uEggReveal: { value: 0 } // 終章水平 wipe：0→1 沿螢幕 y 揭露，蛋/背景出現、骨幹/卡片退場
 }
 
 const screenEdgeNoiseGlsl = /* glsl */ `
@@ -113,8 +123,8 @@ const screenEdgeNoiseGlsl = /* glsl */ `
 
   float perturbScreenD(vec2 fragCoord, vec2 resolution, float time, float amplitude) {
     float d = fragCoord.x / resolution.x + fragCoord.y / resolution.y;
-    float n = screenEdgeFbm(fragCoord * 0.08 + vec2(time * 0.28, -time * 0.21));
-    return d + (n - 0.5) * amplitude;
+    // 斜帶邊界必須和 DOM clip 使用同一條直線；小方塊雜訊只留給終章 wipe。
+    return d;
   }
 `
 
@@ -188,7 +198,7 @@ function makeGlass(
       ...(enableFinaleWipe
         ? {
             uEggReveal: uniforms.uEggReveal,
-            uEggRes: uniforms.uResolution
+            uEggRes: uniforms.uEggRes
           }
         : {})
     },
@@ -258,10 +268,10 @@ function makeGlass(
         ${
           enableFinaleWipe
             ? /* glsl */ `
-        // 終章退場 wipe（與蛋入場同一道邊界、反向）：邊界以下 discard → 由下往上消失。
-        float _fwSy = gl_FragCoord.y / max(1.0, uEggRes.y);
+        // 終章退場 wipe（與蛋入場同一道斜向邊界、反向）。
+        float _fwSd = gl_FragCoord.x / max(1.0, uEggRes.x) + gl_FragCoord.y / max(1.0, uEggRes.y);
         float _fwD = fract(sin(dot(floor(gl_FragCoord.xy / 7.0), vec2(12.9898, 78.233))) * 43758.5453);
-        if (_fwSy < uEggReveal * 1.24 - 0.12 + _fwD * 0.085) discard;
+        if (_fwSd < uEggReveal * 2.24 - 0.12 + _fwD * 0.085) discard;
         `
             : ''
         }
@@ -777,7 +787,7 @@ const geckoAssemblyPointsMat = new THREE.ShaderMaterial({
       float core = 1.0 - smoothstep(0.16, 0.84, gridEdge);
       float spark = pow(core, 1.7);
       float appear = smoothstep(0.0, 0.08, uIntroReveal);
-      float mergeDim = mix(1.0, 0.48, vShellBlend);
+      float mergeDim = mix(1.0, 0.72, vShellBlend);
       vec3 color = mix(toLinearColor(uColorA), toLinearColor(uColorB), vSeed);
       color = mix(color, toLinearColor(uColorC), spark * 0.58);
       // 外圍點雲剛出現時最亮，收束到守宮表面時逐步退回正常亮度。
@@ -945,7 +955,7 @@ const spinalCordMat = new THREE.ShaderMaterial({
     uColorHot: { value: new THREE.Color('#ffb15a') },
     uColorEdge: { value: new THREE.Color('#ff741f') },
     uEggReveal: uniforms.uEggReveal,
-    uEggRes: uniforms.uResolution
+    uEggRes: uniforms.uEggRes
   },
   transparent: true,
   side: THREE.DoubleSide,
@@ -976,10 +986,10 @@ const spinalCordMat = new THREE.ShaderMaterial({
     varying vec3 vV;
     ${screenEdgeNoiseGlsl}
     void main() {
-      // 終章退場 wipe（與蛋入場同一道邊界、反向）：邊界以下 discard → 由下往上消失。
-      float _fwSy = gl_FragCoord.y / max(1.0, uEggRes.y);
+      // 終章退場 wipe（與蛋入場同一道斜向邊界、反向）。
+      float _fwSd = gl_FragCoord.x / max(1.0, uEggRes.x) + gl_FragCoord.y / max(1.0, uEggRes.y);
       float _fwD = fract(sin(dot(floor(gl_FragCoord.xy / 7.0), vec2(12.9898, 78.233))) * 43758.5453);
-      if (_fwSy < uEggReveal * 1.24 - 0.12 + _fwD * 0.085) discard;
+      if (_fwSd < uEggReveal * 2.24 - 0.12 + _fwD * 0.085) discard;
       float _sd = perturbScreenD(gl_FragCoord.xy, uResolution, uTime, 0.014);
       if (_sd > uSeamB) discard;
       // 穩定發光，不隨時間閃爍：中心亮、邊緣 rim 提亮。
@@ -999,7 +1009,7 @@ const spinalVolumeMat = new THREE.ShaderMaterial({
     uColorEdge: { value: new THREE.Color('#f05e18') },
     uAlpha: { value: 0.18 },
     uEggReveal: uniforms.uEggReveal,
-    uEggRes: uniforms.uResolution
+    uEggRes: uniforms.uEggRes
   },
   transparent: true,
   side: THREE.DoubleSide,
@@ -1031,10 +1041,10 @@ const spinalVolumeMat = new THREE.ShaderMaterial({
     varying vec3 vV;
     ${screenEdgeNoiseGlsl}
     void main() {
-      // 終章退場 wipe（與蛋入場同一道邊界、反向）：邊界以下 discard → 由下往上消失。
-      float _fwSy = gl_FragCoord.y / max(1.0, uEggRes.y);
+      // 終章退場 wipe（與蛋入場同一道斜向邊界、反向）。
+      float _fwSd = gl_FragCoord.x / max(1.0, uEggRes.x) + gl_FragCoord.y / max(1.0, uEggRes.y);
       float _fwD = fract(sin(dot(floor(gl_FragCoord.xy / 7.0), vec2(12.9898, 78.233))) * 43758.5453);
-      if (_fwSy < uEggReveal * 1.24 - 0.12 + _fwD * 0.085) discard;
+      if (_fwSd < uEggReveal * 2.24 - 0.12 + _fwD * 0.085) discard;
       float _sd = perturbScreenD(gl_FragCoord.xy, uResolution, uTime, 0.014);
       if (_sd > uSeamB) discard;
       float facing = abs(dot(normalize(vN), normalize(vV)));
@@ -1192,7 +1202,7 @@ const eggUniforms = {
   // 蛋在 canvas 內的螢幕座標 wipe 揭露（0=全隱藏、1=全顯示），跟斜帶同機制。
   // 與骨幹/卡片退場共用同一個邊界（shared uniforms.uEggReveal）。
   uEggReveal: uniforms.uEggReveal,
-  uEggRes: uniforms.uResolution
+  uEggRes: uniforms.uEggRes
 }
 let eggRotationY = 0
 
@@ -1375,11 +1385,11 @@ eggShellMat.onBeforeCompile = (shader) => {
   shader.fragmentShader = shader.fragmentShader.replace(
     '#include <opaque_fragment>',
     /* glsl */ `
-      // 蛋揭露 wipe（跟斜帶同機制）：由下往上的螢幕座標掃描 + 像素抖動邊，
-      // uEggReveal 0→1 時邊界從畫面底掃到頂，蛋在前面被揭露出來。
-      float _egSy = gl_FragCoord.y / max(1.0, uEggRes.y);
+      // 蛋揭露 wipe（跟斜帶同機制）：沿 screenD 對角掃描 + 像素抖動邊。
+      // uEggReveal 0→1 時邊界完整通過畫面，蛋在前面被揭露出來。
+      float _egSd = gl_FragCoord.x / max(1.0, uEggRes.x) + gl_FragCoord.y / max(1.0, uEggRes.y);
       float _egDither = eggHash31(vec3(floor(gl_FragCoord.xy / 7.0), 3.1));
-      if (_egSy > uEggReveal * 1.24 - 0.12 + _egDither * 0.085) discard;
+      if (_egSd > uEggReveal * 2.24 - 0.12 + _egDither * 0.085) discard;
       float eggYNorm = clamp(vEggLocalPos.y / 1.05 * 0.5 + 0.5, 0.0, 1.0);
       // 裂縫發光時序改由「轉場 wipe(uEggReveal)」驅動 → 蛋一被揭露就已有裂縫發光。
       float crackPhase = mix(0.55, 1.0, smoothstep(0.0, 0.5, uEggReveal));
@@ -1429,32 +1439,58 @@ const embryoMat = new THREE.MeshStandardMaterial({
   roughness: 0.3,
   envMapIntensity: 1.0,
   emissive: new THREE.Color('#ff5a1e'), // 心跳暖脈動用
-  emissiveIntensity: 0.0
+  emissiveIntensity: 0.0,
+  transparent: true, // 全息階段需要 alpha
+  depthWrite: false
 })
 const embryoUniforms = {
   uEggReveal: eggUniforms.uEggReveal,
-  uEggRes: eggUniforms.uEggRes
+  uEggRes: eggUniforms.uEggRes,
+  uHologram: { value: 0 }, // 0=金屬，1=菲涅爾橘色全息
+  uTime: uniforms.uTime,
+  uFade: { value: 1 } // 消失階段整體淡出
 }
 embryoMat.onBeforeCompile = (shader) => {
   shader.uniforms.uEggReveal = embryoUniforms.uEggReveal
   shader.uniforms.uEggRes = embryoUniforms.uEggRes
+  shader.uniforms.uHologram = embryoUniforms.uHologram
+  shader.uniforms.uTime = embryoUniforms.uTime
+  shader.uniforms.uFade = embryoUniforms.uFade
   shader.fragmentShader = shader.fragmentShader
     .replace(
       '#include <common>',
       `#include <common>
       uniform float uEggReveal;
-      uniform vec2 uEggRes;`
+      uniform vec2 uEggRes;
+      uniform float uHologram;
+      uniform float uTime;
+      uniform float uFade;`
     )
     .replace(
       '#include <clipping_planes_fragment>',
       `#include <clipping_planes_fragment>
-      // 與蛋殼同一道 wipe 揭露（由下往上）。
-      float _emSy = gl_FragCoord.y / max(1.0, uEggRes.y);
+      // 與蛋殼同一道斜向 wipe 揭露。
+      float _emSd = gl_FragCoord.x / max(1.0, uEggRes.x) + gl_FragCoord.y / max(1.0, uEggRes.y);
       float _emD = fract(sin(dot(floor(gl_FragCoord.xy / 7.0), vec2(12.9898, 78.233))) * 43758.5453);
-      if (_emSy > uEggReveal * 1.24 - 0.12 + _emD * 0.085) discard;`
+      if (_emSd > uEggReveal * 2.24 - 0.12 + _emD * 0.085) discard;`
+    )
+    .replace(
+      '#include <opaque_fragment>',
+      `// 菲涅爾橘色全息 + 電子感（掃描線 + flicker）+ 自體發光（白底也看得見）。
+      float _emFres = pow(1.0 - clamp(abs(dot(normalize(normal), normalize(vViewPosition))), 0.0, 1.0), 2.4);
+      float _emScan = 0.5 + 0.5 * sin(gl_FragCoord.y * 1.5 - uTime * 9.0); // 掃描線（電子感）
+      float _emFlick = 0.82 + 0.18 * sin(uTime * 26.0); // 微閃爍
+      vec3 _emHolo = vec3(1.0, 0.42, 0.12); // 橘
+      // 邊緣強光 + 全身微亮（不只細邊）+ 掃描線明暗（在白底上保有對比）。
+      float _emStruct = (_emFres * 1.7 + 0.3) * mix(0.5, 1.0, _emScan) * _emFlick;
+      vec3 _emGlow = _emHolo * (_emStruct * 2.6) + vec3(1.0, 0.72, 0.4) * pow(_emFres, 3.0) * 1.3;
+      outgoingLight = mix(outgoingLight, _emGlow, uHologram);
+      float _emAlpha = clamp(_emStruct * 1.05 + _emFres * 0.5 + 0.24, 0.0, 1.0); // 更不透明
+      diffuseColor.a = mix(diffuseColor.a, _emAlpha, uHologram) * uFade;
+      #include <opaque_fragment>`
     )
 }
-embryoMat.customProgramCacheKey = () => 'gencko-embryo-metal-v1'
+embryoMat.customProgramCacheKey = () => 'gencko-embryo-metal-holo-v1'
 
 const pyramidEdgeMat = new THREE.LineBasicMaterial({
   color: new THREE.Color('#ffa64d'),
@@ -1803,7 +1839,8 @@ const gravityWellLiquidMetalMat = new THREE.ShaderMaterial({
     }
   `
 })
-// Inception ??蝬脫嚗???Ｘ窒?憫敺憭拍征?脰絲?????剝?
+// DNA 折回牆面向相機前移；水平段保持原位。
+const DNA_WALL_FORWARD = 1.2
 const gridMat = new THREE.ShaderMaterial({
   uniforms: {
     uTime: uniforms.uTime,
@@ -1813,7 +1850,8 @@ const gridMat = new THREE.ShaderMaterial({
     uReveal: { value: 0 },
     uScroll: { value: 0 },
     uResolution: uniforms.uResolution,
-    uSeamA: uniforms.uSeamA
+    uSeamA: uniforms.uSeamA,
+    uWallForward: { value: DNA_WALL_FORWARD }
   },
   transparent: true,
   side: THREE.DoubleSide,
@@ -1822,6 +1860,7 @@ const gridMat = new THREE.ShaderMaterial({
   extensions: { derivatives: true } as unknown as THREE.ShaderMaterialParameters['extensions'],
   vertexShader: /* glsl */ `
     uniform float uTime;
+    uniform float uWallForward;
     varying vec3 vWorld;
     varying vec2 vUv;
     varying float vFold;
@@ -1833,12 +1872,19 @@ const gridMat = new THREE.ShaderMaterial({
     void main() {
       vUv = uv;
       vec3 p = position;
+      // 底部網格只加低幅度波動，讓骨幹下方地面有呼吸感，但不改整體折回輪廓。
+      float waveZone = 1.0 - smoothstep(FOLD_START - 5.6, FOLD_START + 0.8, p.y);
+      float waveA = sin(p.x * 0.24 + uTime * 0.74);
+      float waveB = sin(p.y * 0.33 - uTime * 0.88);
+      float waveC = sin((p.x + p.y) * 0.14 - uTime * 0.52);
+      p.z += (waveA * 0.18 + waveB * 0.12 + waveC * 0.08) * waveZone;
       float s = p.y - FOLD_START;
       float fold = 0.0;
       if (s > 0.0) {
         float ang = min(s / FOLD_RADIUS, PI * 1.12);
         p.z = FOLD_RADIUS * (1.0 - cos(ang));
         p.y = FOLD_START + FOLD_RADIUS * sin(ang);
+        p.y -= uWallForward * smoothstep(0.0, 4.0, s);
         fold = clamp(ang / (PI * 0.5), 0.0, 1.4);
       }
       vFold = fold;
@@ -1896,7 +1942,7 @@ const gridMat = new THREE.ShaderMaterial({
 
       // 隞?UV ?Ｙ?蝑??潛?嚗?蝬脫蝝啣??⊿?嚗???隞雁??潘?
       // uScroll 霈楛摨行???潛?敺?豢??孵?瘚? ???脫?
-      vec2 cells = vec2(16.0, 28.0);
+      vec2 cells = vec2(160.0, 112.0);
       vec2 uv = vUv * cells;
       uv.y += uScroll;
       vec2 gw = fwidth(uv);
@@ -2121,8 +2167,6 @@ const worldVerticalAxis = new THREE.Vector3(0, 1, 0)
 const GECKO_GROUP_Y_OFFSET = -0.32
 let targetRotationY = 0
 let currentRotationY = 0
-let geckoRotationAnchorY = 0
-let geckoRotationAnchorLocked = false
 let currentGridReveal = 0
 let targetTimeline = 0
 let currentTimeline = 0
@@ -2142,18 +2186,23 @@ let cssLastUnderlayMode = -1
 let cssLastIntroLogo = -1
 let cssLastLogoDnaProgress = -1
 let cssLastLogoSpin = Number.NaN
+// 斜縫權重也要納入 cssDirty：手機網址列伸縮會改變 aspect → 權重變動，
+// 若此時 sweep 沒變（滾動暫停），DOM clip 不重算就會與 canvas 斜縫脫開（沒對齊）。
+let cssLastSeamWeightX = -1
+let cssLastSeamWeightY = -1
 let lastBottomRenderMode: 'always' | 'manual' = 'always'
 let lastTouchY = 0
 const cardOrbitSpeed = 0.0006
 const cardOrbitSettleEpsilon = 0.003
-const nextSceneSpeed = 0.00007
+const nextSceneSpeed = 0.00005 // 調小=骨幹退場+wipe 分到更多捲動距離（原 0.00007）
 const nextSceneSettleEpsilon = 0.002
 // 卡片只保留很小的視覺慣性；數值高於骨幹 damping，代表比骨幹更快收斂、慣性更小。
 const cardOrbitDamping = 0.16
-const nextSceneDamping = 0.16
-const nativeScrollInputPull = 0.09
-const nativeScrollCardInputPull = 0.22
-const nativeScrollNextInputPull = 0.07
+// 終章阻尼調緊：讓 wipe/蛋隨捲動貼近前進，不再落後半秒 → 捲到底就轉完（修「沒完整轉/會卡」）。
+const nextSceneDamping = 0.3
+const nativeScrollInputPull = 0.16
+const nativeScrollCardInputPull = 0.24
+const nativeScrollNextInputPull = 0.2
 const cardCount = 8
 const cardStep = 1.1 // 相鄰卡片的環繞相位間距（弧度）
 const cardEntranceAngle = 0 // 第一張卡起始相位（正面中間）
@@ -2171,12 +2220,11 @@ const DNA_SCROLL_ROTATION_FACTOR = 0.18
 // 守宮本體 + 金字塔（投影底座）共用同一轉速，鎖在一起轉。
 // 調小即整組少轉幾圈（不影響 DNA / 粒子）。調大 = 進斜帶前就轉更多圈。
 const geckoPyramidSpinFactor = 0.48
-// 守宮定角：成形完成時落在參考圖的 3/4 前上方視角，之後隨捲動連續微轉。
+// 守宮定角：成形完成時落在參考圖的 3/4 前上方視角，成形後保持固定。
 // 可用 window.__hero.geckoRot(y, x, z) 即時試角，定案後把數值寫回這裡。
 let GECKO_REST_ROT_Y = -1.18
 let GECKO_REST_ROT_X = 0.36
 let GECKO_REST_ROT_Z = -0.42
-const GECKO_SCROLL_TURN_FACTOR = -0.026
 // 網格沿自身形狀往背景上方延伸方向的流速（依滾動進度驅動）。
 // 負號 = 往背景（vUv.y 增大方向）流；若方向相反改正號。調大 = 流更快。
 const gridFlowRate = 0.002
@@ -2186,8 +2234,8 @@ const firstExitMax = 1
 const finalEnterMax = 1
 const exitBodyMax = 1
 const introRevealSpan = (introRevealMax / 0.00042) * scene01SpanScale
-const geckoRevealStart = introRevealSpan * 0.04
-const geckoRevealSpan = introRevealSpan * 3.7
+const geckoRevealStart = introRevealSpan * 0.0
+const geckoRevealSpan = introRevealSpan * 1.8
 const gridRevealSpan = (introRevealMax / 0.00024) * scene01SpanScale
 const gridRevealStart = 0
 const scene01IntroVisualEnd = Math.max(
@@ -2217,7 +2265,7 @@ const cardOrbitStartWheelLen = cardOrbitInputStart / timelineWheelScale
 const timelineWheelLen = scene3HoldTimeline / timelineWheelScale
 const cardWheelLen = cardOrbitMax / cardOrbitSpeed
 const nextSceneWheelLen = 1 / nextSceneSpeed
-const placeholderSceneWheelLen = nextSceneWheelLen * 1.2
+const placeholderSceneWheelLen = nextSceneWheelLen * 2.0 // 終章蛋生命週期分到更多捲動距離（原 1.2）
 const placeholderSceneSpeed = 1 / placeholderSceneWheelLen
 const cardsEndWheelLen = cardOrbitStartWheelLen + cardWheelLen
 const nextSceneEndWheelLen = cardsEndWheelLen + nextSceneWheelLen
@@ -3202,7 +3250,7 @@ function makeScreenRevealTitleMaterial(
       uResolution: uniforms.uResolution,
       uSeamB: uniforms.uSeamB,
       uEggReveal: uniforms.uEggReveal,
-      uEggRes: uniforms.uResolution,
+      uEggRes: uniforms.uEggRes,
       uMap: { value: map },
       uTint: { value: new THREE.Color(tint) },
       uAlpha: { value: alpha },
@@ -3240,9 +3288,9 @@ function makeScreenRevealTitleMaterial(
       varying vec3 vViewDir;
       ${screenEdgeNoiseGlsl}
       void main() {
-        float _fwSy = gl_FragCoord.y / max(1.0, uEggRes.y);
-        float _fwD = fract(sin(dot(floor(gl_FragCoord.xy / 7.0), vec2(12.9898, 78.233))) * 43758.5453);
-        if (_fwSy < uEggReveal * 1.24 - 0.12 + _fwD * 0.085) discard;
+      float _fwSd = gl_FragCoord.x / max(1.0, uEggRes.x) + gl_FragCoord.y / max(1.0, uEggRes.y);
+      float _fwD = fract(sin(dot(floor(gl_FragCoord.xy / 7.0), vec2(12.9898, 78.233))) * 43758.5453);
+      if (_fwSd < uEggReveal * 2.24 - 0.12 + _fwD * 0.085) discard;
         float _sd = perturbScreenD(gl_FragCoord.xy, uResolution, uTime, 0.014);
         float revealBand = smoothstep(uSeamB + 0.035, uSeamB - 0.01, _sd);
         if (revealBand <= 0.001) discard;
@@ -3444,7 +3492,7 @@ function makeProjectionCardVideoMaterial(color: string, accent: string) {
       uResolution: uniforms.uResolution,
       uSeamB: uniforms.uSeamB,
       uEggReveal: uniforms.uEggReveal,
-      uEggRes: uniforms.uResolution,
+      uEggRes: uniforms.uEggRes,
       uVideo: { value: cardPreviewTexture },
       uColor: { value: new THREE.Color(color) },
       uAccent: { value: new THREE.Color(accent) }
@@ -3479,9 +3527,9 @@ function makeProjectionCardVideoMaterial(color: string, accent: string) {
       ${screenEdgeNoiseGlsl}
 
       void main() {
-        float _fwSy = gl_FragCoord.y / max(1.0, uEggRes.y);
-        float _fwD = fract(sin(dot(floor(gl_FragCoord.xy / 7.0), vec2(12.9898, 78.233))) * 43758.5453);
-        if (_fwSy < uEggReveal * 1.24 - 0.12 + _fwD * 0.085) discard;
+      float _fwSd = gl_FragCoord.x / max(1.0, uEggRes.x) + gl_FragCoord.y / max(1.0, uEggRes.y);
+      float _fwD = fract(sin(dot(floor(gl_FragCoord.xy / 7.0), vec2(12.9898, 78.233))) * 43758.5453);
+      if (_fwSd < uEggReveal * 2.24 - 0.12 + _fwD * 0.085) discard;
         float reveal = smoothstep(uSeamB + 0.035, uSeamB - 0.01, perturbScreenD(gl_FragCoord.xy, uResolution, uTime, 0.014));
         if (reveal <= 0.001) discard;
 
@@ -3678,18 +3726,20 @@ eggShardMat.onBeforeCompile = (shader) => {
     )
     .replace(
       '#include <opaque_fragment>',
-      `float _egSy = gl_FragCoord.y / max(1.0, uEggRes.y);
+      `float _egSd = gl_FragCoord.x / max(1.0, uEggRes.x) + gl_FragCoord.y / max(1.0, uEggRes.y);
       float _egDither = eggShardHash21(floor(gl_FragCoord.xy / 7.0));
-      if (_egSy > uEggReveal * 1.24 - 0.12 + _egDither * 0.085) discard;
+      if (_egSd > uEggReveal * 2.24 - 0.12 + _egDither * 0.085) discard;
       // 保留裂縫的光：碎片飛散後，用原始位置的 cell 縫在碎片邊緣續發橘光。
       float _shardVe = eggVoronoiEdge(vShardOrig * 4.2);
-      float _shardSeam = 1.0 - smoothstep(0.02, 0.1, _shardVe);
+      float _shardSeam = 1.0 - smoothstep(0.02, 0.12, _shardVe); // 稍寬
       vec3 _shardCrackLin = pow(vec3(1.0, 0.478, 0.0), vec3(2.2));
-      outgoingLight += _shardCrackLin * _shardSeam * 1.1;
       // 菲涅爾暗邊（加重）：白背景下透明玻璃靠「掠射角變暗 + 邊緣變不透明」才看得出輪廓。
       float _shFres = pow(1.0 - clamp(abs(dot(normalize(normal), normalize(vViewPosition))), 0.0, 1.0), 1.6);
       outgoingLight = mix(outgoingLight, vec3(0.05, 0.07, 0.12), _shFres * 0.95);
       diffuseColor.a = max(diffuseColor.a, _shFres * 0.9);
+      // 蛋碎裂縫發光加強（放在暗邊之後 → 不被壓掉）。
+      outgoingLight += _shardCrackLin * _shardSeam * 2.8;
+      diffuseColor.a = max(diffuseColor.a, _shardSeam * 0.6);
       #include <opaque_fragment>`
     )
 }
@@ -3964,6 +4014,8 @@ function loadEmbryoModel() {
     holder.scale.setScalar(baseScale * EMBRYO_SCALE_MUL)
     embryoModelHolder = holder
     embryoGroup.add(holder)
+    // GLB 這才進場景 → 補一輪預熱，讓金屬胚胎 shader 也提前編譯（否則轉場首見時卡頓）。
+    if (envDone) finalePrewarmFrames = 0
     // GLB 成功 → 隱藏程序化 fallback。
     for (const m of proceduralEmbryoMeshes) m.visible = false
   })
@@ -4001,10 +4053,15 @@ const finaleBackdropMat = new THREE.ShaderMaterial({
     uniform float uOccludeBackbone;
     varying vec2 vUv;
     void main() {
-      float sy = gl_FragCoord.y / max(1.0, uEggRes.y);
+      float sd = gl_FragCoord.x / max(1.0, uEggRes.x) + gl_FragCoord.y / max(1.0, uEggRes.y);
       float dither = fract(sin(dot(floor(gl_FragCoord.xy / 7.0), vec2(12.9898, 78.233))) * 43758.5453);
+      float boundary = uEggReveal * 2.24 - 0.12 + dither * 0.085;
+      if (uOccludeBackbone > 0.5 && sd > boundary) {
+        gl_FragColor = vec4(vec3(0.025, 0.028, 0.034), 1.0);
+        return;
+      }
       // 格狀遮罩仍負責蛋的揭露；一旦進入終章，底層先完整遮住骨幹。
-      if (uOccludeBackbone < 0.5 && sy > uEggReveal * 1.24 - 0.12 + dither * 0.085) discard;
+      if (uOccludeBackbone < 0.5 && sd > boundary) discard;
       // ===== 暖調孵化室：一點透視房間（地板 + 左右牆 + 後牆 + 天花）=====
       vec2 uv = vUv;
       vec2 vp = vec2(0.5, 0.52);       // 消失點（約在蛋的位置）
@@ -4056,9 +4113,8 @@ const finaleBackdropMat = new THREE.ShaderMaterial({
       room *= mix(0.6, 1.0, vig);
       vec3 col = room;
       // 保留橘→暖灰的轉場邊界帶（亮度沿用先前調暗值 0.68）
-      float boundary = uEggReveal * 1.24 - 0.12 + dither * 0.085;
-      float edgeBand = 1.0 - smoothstep(0.0, 0.11, abs(sy - boundary));
-      float edgeRamp = clamp((sy - boundary) * 7.5 + 0.5, 0.0, 1.0);
+      float edgeBand = 1.0 - smoothstep(0.0, 0.11, abs(sd - boundary));
+      float edgeRamp = clamp((sd - boundary) * 7.5 + 0.5, 0.0, 1.0);
       vec3 edgeOrange = vec3(0.92, 0.42, 0.14);
       vec3 edgeGray = vec3(0.5, 0.4, 0.32);
       col += mix(edgeOrange, edgeGray, edgeRamp) * edgeBand * 0.68;
@@ -4068,14 +4124,14 @@ const finaleBackdropMat = new THREE.ShaderMaterial({
 })
 const finaleBackdropMesh = new THREE.Mesh(finaleBackdropGeo, finaleBackdropMat)
 finaleBackdropMesh.frustumCulled = false
-finaleBackdropMesh.renderOrder = 38
+finaleBackdropMesh.renderOrder = 28
 finaleBackdropMesh.visible = false
 
 // ===== 終章：真正的 3D 攝影棚房間（Box 內殼）取代 2D quad 假透視 =====
 // 相機在 z=7、蛋在 z≈1.82；房間中心 z=1、深 17 → 相機在盒內、後牆在蛋後方。
 const ROOM_W = 20
 const ROOM_H = 13
-const ROOM_D = 17
+const ROOM_D = 26
 // 細分較高只增加少量頂點（不影響 fill 效能），讓烘焙的燈光/AO 漸層平滑。
 const roomGeo = new THREE.BoxGeometry(ROOM_W, ROOM_H, ROOM_D, 10, 10, 10)
 {
@@ -4146,7 +4202,7 @@ const roomMat = new THREE.MeshBasicMaterial({
   side: THREE.BackSide // 只看房間內側
   // 不透明：才會進 transmission buffer，讓蛋殼碎片折射得到房間而可見。
 })
-// 房間與蛋共用同一道 wipe：螢幕座標由下往上揭露，並在邊界畫出橘色轉場帶。
+// 房間與蛋共用同一道斜向 wipe，並在邊界畫出橘色轉場帶。
 roomMat.onBeforeCompile = (shader) => {
   shader.uniforms.uEggReveal = eggUniforms.uEggReveal
   shader.uniforms.uEggRes = eggUniforms.uEggRes
@@ -4160,16 +4216,16 @@ roomMat.onBeforeCompile = (shader) => {
     .replace(
       '#include <clipping_planes_fragment>',
       `#include <clipping_planes_fragment>
-      float _sy = gl_FragCoord.y / max(1.0, uEggRes.y);
+      float _sd = gl_FragCoord.x / max(1.0, uEggRes.x) + gl_FragCoord.y / max(1.0, uEggRes.y);
       float _dith = fract(sin(dot(floor(gl_FragCoord.xy / 7.0), vec2(12.9898, 78.233))) * 43758.5453);
-      float _bnd = uEggReveal * 1.24 - 0.12 + _dith * 0.085;
-      if (_sy > _bnd) discard;`
+      float _bnd = uEggReveal * 2.24 - 0.12 + _dith * 0.085;
+      if (_sd > _bnd) discard;`
     )
     .replace(
       '#include <opaque_fragment>',
       `#include <opaque_fragment>
-      float _eb = 1.0 - smoothstep(0.0, 0.11, abs(_sy - _bnd));
-      float _er = clamp((_sy - _bnd) * 7.5 + 0.5, 0.0, 1.0);
+      float _eb = 1.0 - smoothstep(0.0, 0.11, abs(_sd - _bnd));
+      float _er = clamp((_sd - _bnd) * 7.5 + 0.5, 0.0, 1.0);
       vec3 _eo = vec3(0.92, 0.42, 0.14);
       vec3 _eg = vec3(0.5, 0.4, 0.32);
       gl_FragColor.rgb += mix(_eo, _eg, _er) * _eb * 0.68;`
@@ -4181,10 +4237,560 @@ roomMesh.position.set(0, 0.2, 1.0)
 roomMesh.renderOrder = 30
 roomMesh.frustumCulled = false
 roomMesh.visible = false
+
+// 房間表面網格：每個平面各自貼合房間內側，不延伸到任何前景物件。
+const wallGridGeo = new THREE.PlaneGeometry(ROOM_W - 0.36, ROOM_H - 0.36)
+const wallGridMat = new THREE.ShaderMaterial({
+  uniforms: {
+    uColor: { value: new THREE.Color('#ff7638') },
+    uOpacity: { value: 0.72 },
+    uCells: { value: new THREE.Vector2(18, 12) },
+    uTime: uniforms.uTime,
+    uEggReveal: eggUniforms.uEggReveal,
+    uEggRes: eggUniforms.uEggRes
+  },
+  transparent: true,
+  depthWrite: false,
+  depthTest: true,
+  side: THREE.FrontSide,
+  blending: THREE.AdditiveBlending,
+  extensions: { derivatives: true } as unknown as THREE.ShaderMaterialParameters['extensions'],
+  vertexShader: /* glsl */ `
+    varying vec2 vUv;
+    void main() {
+      vUv = uv;
+      gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+    }
+  `,
+  fragmentShader: /* glsl */ `
+    uniform vec3 uColor;
+    uniform float uOpacity;
+    uniform vec2 uCells;
+    uniform float uTime;
+    uniform float uEggReveal;
+    uniform vec2 uEggRes;
+    varying vec2 vUv;
+    void main() {
+      float sd = gl_FragCoord.x / max(1.0, uEggRes.x) + gl_FragCoord.y / max(1.0, uEggRes.y);
+      vec2 tile = floor(gl_FragCoord.xy / 7.0);
+      float dith = fract(sin(dot(tile, vec2(12.9898, 78.233))) * 43758.5453);
+      float boundary = uEggReveal * 2.24 - 0.12 + dith * 0.085;
+      if (sd > boundary) discard;
+      vec2 cells = vUv * uCells;
+      vec2 lineDist = abs(fract(cells - 0.5) - 0.5) / (fwidth(cells) * 2.25);
+      float line = 1.0 - min(min(lineDist.x, lineDist.y), 1.0);
+      float scan = 0.78 + 0.22 * (0.5 + 0.5 * sin(uTime * 0.72 + vUv.x * 8.0 + vUv.y * 6.0));
+      float alpha = line * uOpacity * scan;
+      if (alpha < 0.002) discard;
+      gl_FragColor = vec4(uColor * (1.02 + line * 0.78 + scan * 0.16), alpha);
+    }
+  `
+})
+const wallGridMesh = new THREE.Mesh(wallGridGeo, wallGridMat)
+wallGridMesh.position.set(0, roomMesh.position.y, roomMesh.position.z - ROOM_D / 2 + 0.028)
+wallGridMesh.renderOrder = 31
+wallGridMesh.frustumCulled = false
+wallGridMesh.visible = false
+const sideGridGeo = new THREE.PlaneGeometry(ROOM_D - 0.36, ROOM_H - 0.36)
+const leftWallGridMesh = new THREE.Mesh(sideGridGeo, wallGridMat)
+leftWallGridMesh.position.set(
+  roomMesh.position.x - ROOM_W / 2 + 0.028,
+  roomMesh.position.y,
+  roomMesh.position.z
+)
+leftWallGridMesh.rotation.y = Math.PI / 2
+leftWallGridMesh.renderOrder = 31
+leftWallGridMesh.frustumCulled = false
+leftWallGridMesh.visible = false
+const rightWallGridMesh = new THREE.Mesh(sideGridGeo, wallGridMat)
+rightWallGridMesh.position.set(
+  roomMesh.position.x + ROOM_W / 2 - 0.028,
+  roomMesh.position.y,
+  roomMesh.position.z
+)
+rightWallGridMesh.rotation.y = -Math.PI / 2
+rightWallGridMesh.renderOrder = 31
+rightWallGridMesh.frustumCulled = false
+rightWallGridMesh.visible = false
+const floorGridGeo = new THREE.PlaneGeometry(ROOM_W - 0.36, ROOM_D - 0.36)
+const floorGridMesh = new THREE.Mesh(floorGridGeo, wallGridMat)
+floorGridMesh.position.set(
+  roomMesh.position.x,
+  roomMesh.position.y - ROOM_H / 2 + 0.028,
+  roomMesh.position.z
+)
+floorGridMesh.rotation.x = -Math.PI / 2
+floorGridMesh.renderOrder = 31
+floorGridMesh.frustumCulled = false
+floorGridMesh.visible = false
+const ceilingGridGeo = new THREE.PlaneGeometry(ROOM_W - 0.36, ROOM_D - 0.36)
+const ceilingGridMesh = new THREE.Mesh(ceilingGridGeo, wallGridMat)
+ceilingGridMesh.position.set(
+  roomMesh.position.x,
+  roomMesh.position.y + ROOM_H / 2 - 0.028,
+  roomMesh.position.z
+)
+ceilingGridMesh.rotation.x = Math.PI / 2
+ceilingGridMesh.renderOrder = 31
+ceilingGridMesh.frustumCulled = false
+ceilingGridMesh.visible = false
+const roomGridMeshes = [
+  wallGridMesh,
+  leftWallGridMesh,
+  rightWallGridMesh,
+  floorGridMesh,
+  ceilingGridMesh
+]
+wallGridMat.side = THREE.DoubleSide
+disposables.push(wallGridGeo, sideGridGeo, floorGridGeo, ceilingGridGeo, wallGridMat)
+
+// 終章後牆的立體 GENCKO 招牌：只保留有厚度與 bevel 的文字，不放底板遮住蛋。
+const logoSignGroup = new THREE.Group()
+const logoSignY = 4.15
+const logoSignZ = 1.0 - ROOM_D / 2 + 0.035
+const logoFont = new FontLoader().parse(helvetikerFont as unknown as FontData)
+const logoTextGeo = new TextGeometry('GENCKO', {
+  font: logoFont,
+  size: 2.5,
+  depth: 0.5,
+  curveSegments: 8,
+  bevelEnabled: true,
+  bevelThickness: 0.09,
+  bevelSize: 0.06,
+  bevelSegments: 3
+})
+logoTextGeo.computeBoundingBox()
+logoTextGeo.center()
+const logoTextWidth = logoTextGeo.boundingBox
+  ? logoTextGeo.boundingBox.max.x - logoTextGeo.boundingBox.min.x
+  : 1
+logoTextGeo.scale((ROOM_W * 0.86) / Math.max(logoTextWidth, 0.001), 1, 1)
+const logoTextMat = new THREE.MeshStandardMaterial({
+  color: new THREE.Color('#ff7b32'),
+  metalness: 0.72,
+  roughness: 0.2,
+  emissive: new THREE.Color('#d94e18'),
+  emissiveIntensity: 1.25,
+  toneMapped: false
+})
+const logoTextMesh = new THREE.Mesh(logoTextGeo, logoTextMat)
+logoTextMesh.position.z = 0.055
+logoTextMesh.renderOrder = 33
+logoSignGroup.add(logoTextMesh)
+
+const logoLightStripGeo = new THREE.BoxGeometry(17.4, 0.045, 0.06)
+const logoLightStripVerticalGeo = new THREE.BoxGeometry(0.045, 2.8, 0.06)
+const logoLightStripMat = new THREE.MeshBasicMaterial({
+  color: new THREE.Color('#ff6c2a'),
+  transparent: true,
+  opacity: 0.88,
+  blending: THREE.AdditiveBlending,
+  depthWrite: false,
+  toneMapped: false
+})
+
+function applyLogoSquareReveal(material: THREE.Material, cacheKey: string) {
+  material.onBeforeCompile = (shader) => {
+    shader.uniforms.uEggReveal = eggUniforms.uEggReveal
+    shader.uniforms.uEggRes = eggUniforms.uEggRes
+    shader.fragmentShader = shader.fragmentShader
+      .replace(
+        '#include <common>',
+        `#include <common>
+        uniform float uEggReveal;
+        uniform vec2 uEggRes;`
+      )
+      .replace(
+        '#include <clipping_planes_fragment>',
+        `#include <clipping_planes_fragment>
+        float _logoSd = gl_FragCoord.x / max(1.0, uEggRes.x) + gl_FragCoord.y / max(1.0, uEggRes.y);
+        vec2 _logoTile = floor(gl_FragCoord.xy / 7.0);
+        float _logoDith = fract(sin(dot(_logoTile, vec2(12.9898, 78.233))) * 43758.5453);
+        float _logoBnd = uEggReveal * 2.24 - 0.12 + _logoDith * 0.085;
+        if (_logoSd > _logoBnd) discard;`
+      )
+  }
+  material.customProgramCacheKey = () => cacheKey
+}
+applyLogoSquareReveal(logoTextMat, 'gencko-sign-text-square-v1')
+applyLogoSquareReveal(logoLightStripMat, 'gencko-sign-light-square-v1')
+for (const y of [-1.62, 1.62]) {
+  const strip = new THREE.Mesh(logoLightStripGeo, logoLightStripMat)
+  strip.position.set(0, y, 0.025)
+  logoSignGroup.add(strip)
+}
+for (const x of [-8.7, 8.7]) {
+  const strip = new THREE.Mesh(logoLightStripVerticalGeo, logoLightStripMat)
+  strip.position.set(x, 0, 0.025)
+  logoSignGroup.add(strip)
+}
+logoSignGroup.position.set(0, logoSignY, logoSignZ)
+logoSignGroup.renderOrder = 33
+logoSignGroup.frustumCulled = false
+logoSignGroup.visible = false
+disposables.push(
+  logoTextGeo,
+  logoTextMat,
+  logoLightStripGeo,
+  logoLightStripVerticalGeo,
+  logoLightStripMat
+)
+
+// 終章導覽柱體：四個獨立 3D 柱子從地板長出，後排較高、前排較低。
+const finaleButtonGroup = new THREE.Group()
+const finaleFloorY = roomMesh.position.y - ROOM_H / 2 + 0.04
+const finaleColumnWidth = 9.3
+const finaleColumnDepth = 1.42
+const finaleColumnGap = 0.12
+const finaleColumnXs = [
+  -(finaleColumnWidth / 2 + finaleColumnGap / 2),
+  finaleColumnWidth / 2 + finaleColumnGap / 2
+]
+const finaleFrontZ = -0.45
+const finaleBackZ = -2.0
+const finaleTopSlopeRise = 1.42
+const finaleFrontTopNear = 0.96
+// 前後柱子的頂面使用同一條斜率，兩排會落在同一個連續斜面上。
+const finaleBackTopNear = finaleFrontTopNear + (finaleFrontZ - finaleBackZ)
+const finaleFrontTopFar = finaleFrontTopNear + finaleTopSlopeRise
+const finaleBackTopFar = finaleBackTopNear + finaleTopSlopeRise
+
+function createFinaleColumnGeo(nearTop: number, farTop: number, extra = 0) {
+  const halfWidth = finaleColumnWidth / 2 + extra
+  const halfDepth = finaleColumnDepth / 2 + extra
+  const bottom = extra > 0 ? 0.012 : 0
+  return new ConvexGeometry([
+    new THREE.Vector3(-halfWidth, bottom, halfDepth),
+    new THREE.Vector3(halfWidth, bottom, halfDepth),
+    new THREE.Vector3(-halfWidth, bottom, -halfDepth),
+    new THREE.Vector3(halfWidth, bottom, -halfDepth),
+    new THREE.Vector3(-halfWidth, nearTop + extra, halfDepth),
+    new THREE.Vector3(halfWidth, nearTop + extra, halfDepth),
+    new THREE.Vector3(-halfWidth, farTop + extra, -halfDepth),
+    new THREE.Vector3(halfWidth, farTop + extra, -halfDepth)
+  ])
+}
+
+function addFinaleColumnGridUvs(
+  geometry: THREE.BufferGeometry,
+  width: number,
+  depth: number,
+  height: number
+) {
+  const positions = geometry.attributes.position
+  const normals = geometry.attributes.normal
+  const uvs = new Float32Array(positions.count * 2)
+  for (let i = 0; i < positions.count; i++) {
+    const x = positions.getX(i)
+    const y = positions.getY(i)
+    const z = positions.getZ(i)
+    const nx = Math.abs(normals.getX(i))
+    const ny = Math.abs(normals.getY(i))
+    const nz = Math.abs(normals.getZ(i))
+    let u = x / width + 0.5
+    let v = y / height
+    if (ny >= nx && ny >= nz) {
+      u = x / width + 0.5
+      v = z / depth + 0.5
+    } else if (nz >= nx) {
+      u = x / width + 0.5
+      v = y / height
+    } else {
+      u = z / depth + 0.5
+      v = y / height
+    }
+    uvs[i * 2] = u
+    uvs[i * 2 + 1] = v
+  }
+  geometry.setAttribute('uv', new THREE.BufferAttribute(uvs, 2))
+}
+
+const finaleColumnFrontGeo = createFinaleColumnGeo(finaleFrontTopNear, finaleFrontTopFar)
+const finaleColumnBackGeo = createFinaleColumnGeo(finaleBackTopNear, finaleBackTopFar)
+const finaleColumnGridFrontGeo = createFinaleColumnGeo(finaleFrontTopNear, finaleFrontTopFar, 0.035)
+const finaleColumnGridBackGeo = createFinaleColumnGeo(finaleBackTopNear, finaleBackTopFar, 0.035)
+addFinaleColumnGridUvs(
+  finaleColumnGridFrontGeo,
+  finaleColumnWidth + 0.07,
+  finaleColumnDepth + 0.07,
+  finaleFrontTopFar + 0.035
+)
+addFinaleColumnGridUvs(
+  finaleColumnGridBackGeo,
+  finaleColumnWidth + 0.07,
+  finaleColumnDepth + 0.07,
+  finaleBackTopFar + 0.035
+)
+// 牆面每格約 1.1 世界單位；柱面使用相同尺度，而不是把整個柱面硬切成 18×12。
+const finaleColumnGridMat = wallGridMat.clone()
+finaleColumnGridMat.uniforms.uColor = wallGridMat.uniforms.uColor
+finaleColumnGridMat.uniforms.uOpacity = wallGridMat.uniforms.uOpacity
+finaleColumnGridMat.uniforms.uTime = uniforms.uTime
+finaleColumnGridMat.uniforms.uEggReveal = eggUniforms.uEggReveal
+finaleColumnGridMat.uniforms.uEggRes = eggUniforms.uEggRes
+finaleColumnGridMat.uniforms.uCells.value.set(8.5, 2)
+// 直接複用房間牆壁的材質與 wipe shader，柱體會跟牆面維持同樣的白色質感。
+const finaleColumnMat = roomMat.clone()
+finaleColumnMat.side = THREE.DoubleSide
+finaleColumnMat.vertexColors = false
+finaleColumnMat.color.set('#ffffff')
+finaleColumnMat.transparent = false
+finaleColumnMat.opacity = 1
+finaleColumnMat.depthWrite = true
+finaleColumnMat.depthTest = true
+applyLogoSquareReveal(finaleColumnMat, 'gencko-finale-column-square-v1')
+const finaleButtonEdgeMat = new THREE.LineBasicMaterial({
+  color: new THREE.Color('#9ca5a8'),
+  transparent: true,
+  opacity: 0.3,
+  depthWrite: false
+})
+applyLogoSquareReveal(finaleButtonEdgeMat, 'gencko-finale-button-edge-v1')
+const finaleColumnFrontEdgeGeo = new THREE.EdgesGeometry(finaleColumnFrontGeo)
+const finaleColumnBackEdgeGeo = new THREE.EdgesGeometry(finaleColumnBackGeo)
+type FinaleActionItem = {
+  to: string
+  hitMesh: THREE.Mesh
+  objects: THREE.Object3D[]
+  hoverScale: number
+  labelMesh?: THREE.Mesh
+  labelBaseY?: number
+}
+const finaleActionItems: FinaleActionItem[] = []
+const finaleActionHitMeshes: THREE.Mesh[] = []
+const finaleActionByMesh = new WeakMap<THREE.Object3D, FinaleActionItem>()
+const finaleActionTo = {
+  backLeft: '/start-here',
+  backRight: '/shop',
+  frontLeft: '/hospital',
+  frontRight: '/calculator'
+}
+
+for (const x of finaleColumnXs) {
+  const frontColumn = new THREE.Mesh(finaleColumnFrontGeo, finaleColumnMat)
+  frontColumn.position.set(x, finaleFloorY, finaleFrontZ)
+  frontColumn.renderOrder = 34
+  frontColumn.frustumCulled = false
+  finaleButtonGroup.add(frontColumn)
+
+  const backColumn = new THREE.Mesh(finaleColumnBackGeo, finaleColumnMat)
+  backColumn.position.set(x, finaleFloorY, finaleBackZ)
+  backColumn.renderOrder = 34
+  backColumn.frustumCulled = false
+  finaleButtonGroup.add(backColumn)
+
+  const frontGrid = new THREE.Mesh(finaleColumnGridFrontGeo, finaleColumnGridMat)
+  frontGrid.position.copy(frontColumn.position)
+  frontGrid.renderOrder = 36
+  frontGrid.frustumCulled = false
+  finaleButtonGroup.add(frontGrid)
+
+  const backGrid = new THREE.Mesh(finaleColumnGridBackGeo, finaleColumnGridMat)
+  backGrid.position.copy(backColumn.position)
+  backGrid.renderOrder = 36
+  backGrid.frustumCulled = false
+  finaleButtonGroup.add(backGrid)
+
+  const frontEdges = new THREE.LineSegments(finaleColumnFrontEdgeGeo, finaleButtonEdgeMat)
+  frontEdges.position.copy(frontColumn.position)
+  frontEdges.renderOrder = 35
+  frontEdges.frustumCulled = false
+  finaleButtonGroup.add(frontEdges)
+
+  const backEdges = new THREE.LineSegments(finaleColumnBackEdgeGeo, finaleButtonEdgeMat)
+  backEdges.position.copy(backColumn.position)
+  backEdges.renderOrder = 35
+  backEdges.frustumCulled = false
+  finaleButtonGroup.add(backEdges)
+
+  const frontAction: FinaleActionItem = {
+    to: x === finaleColumnXs[0] ? finaleActionTo.frontLeft : finaleActionTo.frontRight,
+    hitMesh: frontColumn,
+    objects: [frontColumn, frontGrid, frontEdges],
+    hoverScale: 1
+  }
+  const backAction: FinaleActionItem = {
+    to: x === finaleColumnXs[0] ? finaleActionTo.backLeft : finaleActionTo.backRight,
+    hitMesh: backColumn,
+    objects: [backColumn, backGrid, backEdges],
+    hoverScale: 1
+  }
+  finaleActionItems.push(frontAction, backAction)
+  finaleActionHitMeshes.push(frontColumn, backColumn)
+  finaleActionByMesh.set(frontColumn, frontAction)
+  finaleActionByMesh.set(backColumn, backAction)
+}
+
+const finaleLabelData = [
+  {
+    label: '新手入門',
+    english: 'START HERE',
+    x: finaleColumnXs[0],
+    z: finaleBackZ,
+    y: finaleFloorY + (finaleBackTopNear + finaleBackTopFar) / 2,
+    rotation: -Math.atan2(finaleColumnDepth, finaleTopSlopeRise),
+    to: finaleActionTo.backLeft
+  },
+  {
+    label: '選購守宮',
+    english: 'SHOP GECKOS',
+    x: finaleColumnXs[1],
+    z: finaleBackZ,
+    y: finaleFloorY + (finaleBackTopNear + finaleBackTopFar) / 2,
+    rotation: -Math.atan2(finaleColumnDepth, finaleTopSlopeRise),
+    to: finaleActionTo.backRight
+  },
+  {
+    label: '特寵醫院',
+    english: 'EXOTIC VET',
+    x: finaleColumnXs[0],
+    z: finaleFrontZ,
+    y: finaleFloorY + (finaleFrontTopNear + finaleFrontTopFar) / 2,
+    rotation: -Math.atan2(finaleColumnDepth, finaleTopSlopeRise),
+    to: finaleActionTo.frontLeft
+  },
+  {
+    label: '基因計算',
+    english: 'GENETICS LAB',
+    x: finaleColumnXs[1],
+    z: finaleFrontZ,
+    y: finaleFloorY + (finaleFrontTopNear + finaleFrontTopFar) / 2,
+    rotation: -Math.atan2(finaleColumnDepth, finaleTopSlopeRise),
+    to: finaleActionTo.frontRight
+  }
+]
+const finaleLabelGeo = new THREE.PlaneGeometry(9.05, 1.72)
+const finaleLabelMaterials: THREE.MeshBasicMaterial[] = []
+const finaleLabelTextures: THREE.CanvasTexture[] = []
+const finaleLabelStreams: {
+  canvas: HTMLCanvasElement
+  context: CanvasRenderingContext2D
+  label: string
+  english: string
+  seed: number
+}[] = []
+
+function drawFinaleStreamText(stream: (typeof finaleLabelStreams)[number], time: number) {
+  const { canvas, context: ctx, label, english, seed } = stream
+  const width = canvas.width
+  const height = canvas.height
+  const sweepX = ((time * 0.18 + seed) % 1) * width
+  ctx.clearRect(0, 0, width, height)
+
+  // 流動的水平資料帶，保持透明背景只留下文字與掃描痕跡。
+  ctx.fillStyle = 'rgba(86, 101, 106, 0.12)'
+  for (let y = 24; y < height; y += 20) {
+    const drift = Math.sin(time * 1.7 + y * 0.035 + seed * 8.0) * 18
+    ctx.fillRect(drift, y, width * 0.7, 2)
+  }
+
+  ctx.textAlign = 'center'
+  ctx.textBaseline = 'middle'
+  ctx.font = '700 190px "Microsoft JhengHei", "Noto Sans TC", sans-serif'
+  ctx.fillStyle = 'rgba(36, 45, 49, 0.96)'
+  ctx.fillText(label, width / 2, 100)
+  ctx.font = '700 46px "Courier New", monospace'
+  ctx.fillStyle = 'rgba(61, 71, 75, 0.82)'
+  ctx.fillText(english, width / 2, 198)
+
+  // 以切片重繪製造 STREAM 的資料流錯位與拖影。
+  ctx.save()
+  ctx.globalCompositeOperation = 'source-atop'
+  for (let band = 0; band < 8; band++) {
+    const y = band * 22
+    const offset = Math.sin(time * 2.3 + band * 0.95 + seed * 5.0) * 7
+    ctx.save()
+    ctx.beginPath()
+    ctx.rect(0, y, width, 22)
+    ctx.clip()
+    ctx.translate(offset, 0)
+    ctx.globalAlpha = 0.24
+    ctx.fillStyle = 'rgba(215, 231, 235, 0.9)'
+    ctx.fillText(label, width / 2, 100)
+    ctx.globalAlpha = 0.13
+    ctx.fillText(english, width / 2, 198)
+    ctx.restore()
+  }
+
+  const sweep = ctx.createLinearGradient(sweepX - 100, 0, sweepX + 100, 0)
+  sweep.addColorStop(0, 'rgba(255, 255, 255, 0)')
+  sweep.addColorStop(0.5, 'rgba(255, 255, 255, 0.72)')
+  sweep.addColorStop(1, 'rgba(255, 255, 255, 0)')
+  ctx.fillStyle = sweep
+  ctx.fillRect(sweepX - 100, 0, 200, height)
+  ctx.restore()
+
+  ctx.fillStyle = 'rgba(233, 243, 245, 0.34)'
+  ctx.fillRect(sweepX, 18, 2, height - 36)
+}
+
+if (typeof document !== 'undefined') {
+  for (const item of finaleLabelData) {
+    const canvas = document.createElement('canvas')
+    canvas.width = 1024
+    canvas.height = 260
+    const ctx = canvas.getContext('2d')
+    if (!ctx) continue
+    const stream = {
+      canvas,
+      context: ctx,
+      label: item.label,
+      english: item.english,
+      seed: finaleLabelStreams.length * 0.19
+    }
+    drawFinaleStreamText(stream, 0)
+    const texture = new THREE.CanvasTexture(canvas)
+    texture.colorSpace = THREE.SRGBColorSpace
+    texture.minFilter = THREE.LinearFilter
+    texture.magFilter = THREE.LinearFilter
+    const material = new THREE.MeshBasicMaterial({
+      map: texture,
+      transparent: true,
+      opacity: 0.96,
+      depthWrite: false,
+      toneMapped: false
+    })
+    const labelMesh = new THREE.Mesh(finaleLabelGeo, material)
+    labelMesh.position.set(item.x, item.y + 0.06, item.z)
+    labelMesh.rotation.x = item.rotation
+    labelMesh.renderOrder = 37
+    labelMesh.frustumCulled = false
+    const owner = finaleActionItems.find((action) => action.to === item.to)
+    if (owner) {
+      owner.objects.push(labelMesh)
+      owner.labelMesh = labelMesh
+      owner.labelBaseY = item.y + 0.06
+    }
+    finaleButtonGroup.add(labelMesh)
+    finaleLabelMaterials.push(material)
+    finaleLabelTextures.push(texture)
+    finaleLabelStreams.push(stream)
+  }
+}
+
+finaleButtonGroup.renderOrder = 34
+finaleButtonGroup.frustumCulled = false
+// 往後牆移動，讓底座底部完整進入鏡頭。
+finaleButtonGroup.position.z = -7.5
+finaleButtonGroup.visible = false
+disposables.push(
+  finaleColumnFrontGeo,
+  finaleColumnBackGeo,
+  finaleColumnGridFrontGeo,
+  finaleColumnGridBackGeo,
+  finaleColumnFrontEdgeGeo,
+  finaleColumnBackEdgeGeo,
+  finaleColumnMat,
+  finaleColumnGridMat,
+  finaleButtonEdgeMat,
+  finaleLabelGeo,
+  ...finaleLabelTextures,
+  ...finaleLabelMaterials
+)
 // 開場前幾幀強制繪製一次，讓房間 shader 提前編譯（避免揭露轉場那一瞬的編譯頓）。
 let roomPrewarmFrames = 0
 
-// 終章滑鼠視差狀態（只在蛋出現時作用，前面場景不受影響）。
+// 全頁滑鼠視差狀態：DNA、骨幹與終章共用同一組平滑相機偏移。
 const parallaxPointer = { x: 0, y: 0 }
 const parallaxCam = { x: 0, y: 0 }
 function onParallaxPointerMove(e: PointerEvent) {
@@ -4219,55 +4825,17 @@ const neuralBgMat = new THREE.ShaderMaterial({
     uniform float uOpacity;
     uniform vec3 uColor;
 
-    vec2 rot(vec2 p, float a) {
-      float c = cos(a), s = sin(a);
-      return mat2(c, s, -s, c) * p;
-    }
-
-    // 神經雜訊：逐層旋轉 + 正弦堆疊 → 流動的網狀光絲。
-    float neuro(vec2 uv, float t) {
-      vec2 acc = vec2(0.0);
-      vec2 res = vec2(0.0);
-      uv *= 4.2;
-      float scale = 8.0;
-      for (int j = 0; j < 15; j++) {
-        uv = rot(uv, 1.0);
-        acc = rot(acc, 1.0);
-        vec2 layer = uv * scale + float(j) + acc - t;
-        acc += sin(layer);
-        res += (0.5 + 0.5 * cos(layer)) / scale;
-        scale *= 1.2;
-      }
-      return res.x + res.y;
-    }
-
     void main() {
-      vec2 uv = (gl_FragCoord.xy - 0.5 * uResolution) / max(1.0, uResolution.y);
-      float n = neuro(uv, uTime * 0.5);
-      float strands = 0.92 * pow(n, 3.6);
-      float hotspots = 0.16 * pow(n, 9.5);
-      float glowField = 0.68 * pow(n, 1.42);
-      n = max(0.0, strands + hotspots - 0.62);
       vec2 sc = gl_FragCoord.xy / max(vec2(1.0), uResolution);
-      float vig = 1.0 - smoothstep(0.35, 1.15, length(sc - 0.5) * 1.6);
-      n *= vig * 1.08;
-      glowField = max(0.0, glowField - 0.1) * vig * 0.72;
-      // 科技色只放在骨幹下方，且作為神經亮絲的「後景底層」，
-      // 不再把整張畫面染灰，避免看起來像前景上又蓋了一層顏色。
-      float fade = clamp(uOpacity, 0.0, 1.0) * 0.58;
-      // 場景漸變：DNA/早期(骨幹揭露進度低)維持黑；骨幹場景(進度高)才轉淺灰。
       float sceneMix = smoothstep(0.2, 0.6, clamp(uOpacity, 0.0, 1.0));
-      vec3 baseDark = vec3(0.02, 0.025, 0.035); // DNA 場景黑底
-      vec3 baseBlack = mix(baseDark, vec3(0.82, 0.82, 0.84), sceneMix); // 黑 → 淺灰
-      vec3 techGray = mix(baseDark, vec3(0.88, 0.87, 0.86), sceneMix); // 底部：黑 → 淺灰
-      float lowerMask = 1.0 - smoothstep(0.34, 0.66, sc.y);
-      float centerMask = 1.0 - smoothstep(0.28, 0.92, abs(sc.x - 0.5) * 1.35);
-      float backboneFloor = lowerMask * centerMask;
-      vec3 bgCol = mix(baseBlack, techGray, backboneFloor);
-      // 淺灰底上用「混色」而非相加：橘色線混進灰 → 橘比灰暗 → 清楚的橘色神經紋路。
-      // 大幅拉高混色強度，細絲才看得出來（先前太弱像消失）。
-      float strandAmt = clamp((n + glowField) * fade * 3.4, 0.0, 1.0);
-      vec3 col = mix(bgCol, uColor, strandAmt);
+      vec3 baseDark = vec3(0.02, 0.025, 0.035);
+      vec3 baseBlack = mix(baseDark, vec3(0.024, 0.028, 0.036), sceneMix);
+      vec3 techGray = mix(baseDark, vec3(0.035, 0.038, 0.046), sceneMix);
+      float lowerMask = 1.0 - smoothstep(0.34, 0.7, sc.y);
+      float centerMask = 1.0 - smoothstep(0.32, 0.98, abs(sc.x - 0.5) * 1.26);
+      float vignette = 1.0 - smoothstep(0.28, 0.96, length(sc - 0.5) * 1.34);
+      vec3 col = mix(baseBlack, techGray, lowerMask * centerMask * 0.42);
+      col *= 0.92 + vignette * 0.08;
       gl_FragColor = vec4(col, 1.0);
     }
   `
@@ -4277,7 +4845,677 @@ neuralBgMesh.frustumCulled = false
 neuralBgMesh.renderOrder = -100
 neuralBgMesh.visible = false
 
+// ===== 骨幹背景橘色線網：恢復為繞 Y 軸的環繞網格，節點保留自動閃爍 =====
+const PLEX_RINGS = 26
+const PLEX_PER = 34
+const PLEX_R = 13.0
+const PLEX_H = 32.0
+const plexPts: THREE.Vector3[][] = []
+for (let ri = 0; ri < PLEX_RINGS; ri++) {
+  const row: THREE.Vector3[] = []
+  const y = -PLEX_H / 2 + (ri / (PLEX_RINGS - 1)) * PLEX_H
+  for (let k = 0; k < PLEX_PER; k++) {
+    const theta = (k / PLEX_PER) * Math.PI * 2 + ri * 0.08
+    const r = PLEX_R + (Math.random() - 0.5) * 2.4
+    const yj = y + (Math.random() - 0.5) * 0.9
+    row.push(new THREE.Vector3(Math.cos(theta) * r, yj, Math.sin(theta) * r))
+  }
+  plexPts.push(row)
+}
+const plexNodePos: number[] = []
+for (const row of plexPts) for (const p of row) plexNodePos.push(p.x, p.y, p.z)
+const plexLinePos: number[] = []
+for (let ri = 0; ri < PLEX_RINGS; ri++) {
+  for (let k = 0; k < PLEX_PER; k++) {
+    const a = plexPts[ri][k]
+    const b = plexPts[ri][(k + 1) % PLEX_PER] // 環向連線（水平）
+    plexLinePos.push(a.x, a.y, a.z, b.x, b.y, b.z)
+    if (ri < PLEX_RINGS - 1) {
+      const c = plexPts[ri + 1][k] // 縱向連線（垂直）→ 幾何直角格
+      plexLinePos.push(a.x, a.y, a.z, c.x, c.y, c.z)
+    }
+  }
+}
+const plexNodeGeo = new THREE.BufferGeometry()
+plexNodeGeo.setAttribute('position', new THREE.Float32BufferAttribute(plexNodePos, 3))
+const plexLineGeo = new LineSegmentsGeometry()
+plexLineGeo.setPositions(plexLinePos)
+{
+  // 依深度烘焙頂點色：近亮遠暗（plexus 靜態、相機靜態 → 各點距離固定）。
+  const _lc = Math.cos(0.12)
+  const _ls = Math.sin(0.12)
+  const plexLineColors: number[] = []
+  for (let i = 0; i < plexLinePos.length; i += 3) {
+    const y = plexLinePos[i + 1]
+    const z = plexLinePos[i + 2]
+    const worldZ = y * _ls + z * _lc // 繞 X 軸 0.12 後的世界 Z
+    const viewDepth = 7 - worldZ // 相機在 z=7 看 -z
+    const b = THREE.MathUtils.clamp(1.0 - (viewDepth - 5) / 20, 0.22, 1.0)
+    plexLineColors.push(1.7 * b, 0.72 * b, 0.24 * b) // 亮橘 × 深度亮度(>1 → bloom 發光)
+  }
+  plexLineGeo.setColors(plexLineColors)
+}
+const plexCellPos: number[] = []
+const plexCellUv: number[] = []
+const plexCellSeed: number[] = []
+for (let ri = 0; ri < PLEX_RINGS - 1; ri++) {
+  for (let k = 0; k < PLEX_PER; k++) {
+    const a = plexPts[ri][k]
+    const b = plexPts[ri][(k + 1) % PLEX_PER]
+    const c = plexPts[ri + 1][(k + 1) % PLEX_PER]
+    const d = plexPts[ri + 1][k]
+    const center = new THREE.Vector3().add(a).add(b).add(c).add(d).multiplyScalar(0.25)
+    const cover = -0.024
+    const qa = a.clone().lerp(center, cover)
+    const qb = b.clone().lerp(center, cover)
+    const qc = c.clone().lerp(center, cover)
+    const qd = d.clone().lerp(center, cover)
+    const seed = Math.random()
+    plexCellPos.push(
+      qa.x,
+      qa.y,
+      qa.z,
+      qb.x,
+      qb.y,
+      qb.z,
+      qc.x,
+      qc.y,
+      qc.z,
+      qa.x,
+      qa.y,
+      qa.z,
+      qc.x,
+      qc.y,
+      qc.z,
+      qd.x,
+      qd.y,
+      qd.z
+    )
+    plexCellUv.push(0, 0, 1, 0, 1, 1, 0, 0, 1, 1, 0, 1)
+    for (let i = 0; i < 6; i++) plexCellSeed.push(seed)
+  }
+}
+const plexCellGeo = new THREE.BufferGeometry()
+plexCellGeo.setAttribute('position', new THREE.Float32BufferAttribute(plexCellPos, 3))
+plexCellGeo.setAttribute('uv', new THREE.Float32BufferAttribute(plexCellUv, 2))
+plexCellGeo.setAttribute('aSeed', new THREE.Float32BufferAttribute(plexCellSeed, 1))
+const plexUniforms = {
+  uOpacity: { value: 0 },
+  uColor: { value: new THREE.Color('#ff6a1e') },
+  uTime: uniforms.uTime
+}
+const plexNodeMat = new THREE.ShaderMaterial({
+  uniforms: {
+    uOpacity: plexUniforms.uOpacity,
+    uColor: plexUniforms.uColor,
+    uTime: plexUniforms.uTime,
+    uEggReveal: eggUniforms.uEggReveal, // 退場用終章 wipe（與骨幹同一道）
+    uEggRes: eggUniforms.uEggRes,
+    uSize: { value: 210.0 }
+  },
+  transparent: true,
+  depthWrite: false,
+  depthTest: true, // 讓卡片/骨幹(有寫深度)能遮住後面的節點 → 節點不擋前景
+  blending: THREE.AdditiveBlending, // 相加發光（跟原本神經背景一致）
+  vertexShader: /* glsl */ `
+    uniform float uSize;
+    uniform float uTime;
+    varying float vDepth;
+    varying float vPulse;
+    void main() {
+      vec4 world = modelMatrix * vec4(position, 1.0);
+      float seed = fract(sin(dot(floor(world.xy * 1.7), vec2(12.9898, 78.233))) * 43758.5453);
+      float speed = mix(0.55, 1.2, fract(seed * 17.31));
+      float phase = seed * 6.2831853 + world.x * 0.11 + world.y * 0.07;
+      float wave = 0.5 + 0.5 * sin(uTime * speed + phase);
+      vPulse = smoothstep(0.82, 0.98, wave) * step(0.68, seed);
+      vec4 mv = modelViewMatrix * vec4(position, 1.0);
+      vDepth = -mv.z;
+      gl_Position = projectionMatrix * mv;
+      gl_PointSize = uSize / max(0.5, -mv.z);
+    }
+  `,
+  fragmentShader: /* glsl */ `
+    uniform float uOpacity;
+    uniform vec3 uColor;
+    uniform float uTime;
+    uniform float uEggReveal;
+    uniform vec2 uEggRes;
+    varying float vDepth;
+    varying float vPulse;
+    void main() {
+      // 退場：與骨幹同一道終章 wipe（7px 像素格、由下往上消失）。
+      float _fwSd = gl_FragCoord.x / max(1.0, uEggRes.x) + gl_FragCoord.y / max(1.0, uEggRes.y);
+      float _fwD = fract(sin(dot(floor(gl_FragCoord.xy / 7.0), vec2(12.9898, 78.233))) * 43758.5453);
+      if (_fwSd < uEggReveal * 2.24 - 0.12 + _fwD * 0.085) discard;
+      vec2 pc = gl_PointCoord - 0.5;
+      float d = length(pc);
+      float halo = exp(-d * 3.4); // 大範圍柔和光暈（直接畫，不依賴 bloom）
+      vec2 q = abs(pc);
+      float core = 1.0 - smoothstep(0.10, 0.19, max(q.x, q.y)); // 方形亮核
+      float depthFade = clamp(1.0 - (vDepth - 8.0) / 28.0, 0.18, 1.0);
+      float bright = 0.85 + vPulse * 1.25;
+      vec3 c = uColor * bright * (halo * 1.35 + core * (2.0 + vPulse * 1.8)); // 光暈 + 發光亮核
+      float a = uOpacity * depthFade * clamp(halo * 0.7 + core * (0.72 + vPulse), 0.0, 1.0);
+      gl_FragColor = vec4(c, a);
+    }
+  `
+})
+// 真.粗線：LineMaterial（可設線寬）+ 相加發光；顏色/深度由頂點色控制。
+const plexLineMat = new LineMaterial({
+  color: 0xffffff, // 交給頂點色（依深度烘焙）
+  linewidth: 2.8, // 螢幕像素寬
+  vertexColors: true,
+  transparent: true,
+  depthWrite: false,
+  depthTest: true,
+  blending: THREE.AdditiveBlending,
+  worldUnits: false,
+  dashed: false
+})
+plexLineMat.resolution.set(
+  typeof window !== 'undefined' ? window.innerWidth : 1920,
+  typeof window !== 'undefined' ? window.innerHeight : 1080
+)
+// 退場：與骨幹同一道終章 wipe（7px 像素格、由下往上消失）。
+plexLineMat.onBeforeCompile = (shader) => {
+  shader.uniforms.uEggReveal = eggUniforms.uEggReveal
+  shader.uniforms.uEggRes = eggUniforms.uEggRes
+  shader.fragmentShader = shader.fragmentShader
+    .replace(
+      'uniform vec3 diffuse;',
+      `uniform vec3 diffuse;
+      uniform float uEggReveal;
+      uniform vec2 uEggRes;`
+    )
+    .replace(
+      '#include <clipping_planes_fragment>',
+      `#include <clipping_planes_fragment>
+      float _fwSd = gl_FragCoord.x / max(1.0, uEggRes.x) + gl_FragCoord.y / max(1.0, uEggRes.y);
+      float _fwD = fract(sin(dot(floor(gl_FragCoord.xy / 7.0), vec2(12.9898, 78.233))) * 43758.5453);
+      if (_fwSd < uEggReveal * 2.24 - 0.12 + _fwD * 0.085) discard;`
+    )
+}
+const plexCellMat = new THREE.ShaderMaterial({
+  uniforms: {
+    uOpacity: plexUniforms.uOpacity,
+    uColor: plexUniforms.uColor,
+    uTime: plexUniforms.uTime,
+    uEggReveal: eggUniforms.uEggReveal,
+    uEggRes: eggUniforms.uEggRes
+  },
+  transparent: true,
+  depthWrite: false,
+  depthTest: true,
+  side: THREE.DoubleSide,
+  blending: THREE.NormalBlending,
+  vertexShader: /* glsl */ `
+    uniform float uTime;
+    varying float vDepth;
+    varying float vBlink;
+    varying float vSeed;
+    varying vec2 vUv;
+    attribute float aSeed;
+    void main() {
+      vec4 world = modelMatrix * vec4(position, 1.0);
+      float seed = aSeed;
+      float speed = mix(0.18, 0.48, fract(seed * 13.37));
+      float phase = seed * 6.2831853 + world.x * 0.09 + world.y * 0.05;
+      float wave = 0.5 + 0.5 * sin(uTime * speed + phase);
+      vBlink = smoothstep(0.88, 0.992, wave) * step(0.68, seed);
+      vSeed = seed;
+      vUv = uv;
+      vec4 mv = modelViewMatrix * vec4(position, 1.0);
+      vDepth = -mv.z;
+      gl_Position = projectionMatrix * mv;
+    }
+  `,
+  fragmentShader: /* glsl */ `
+    uniform float uOpacity;
+    uniform vec3 uColor;
+    uniform float uEggReveal;
+    uniform vec2 uEggRes;
+    varying float vDepth;
+    varying float vBlink;
+    varying float vSeed;
+    varying vec2 vUv;
+    void main() {
+      float _fwSd = gl_FragCoord.x / max(1.0, uEggRes.x) + gl_FragCoord.y / max(1.0, uEggRes.y);
+      float _fwD = fract(sin(dot(floor(gl_FragCoord.xy / 7.0), vec2(12.9898, 78.233))) * 43758.5453);
+      if (_fwSd < uEggReveal * 2.24 - 0.12 + _fwD * 0.085) discard;
+      if (vBlink <= 0.001) discard;
+      vec2 pc = vUv - 0.5;
+      vec2 ap = abs(pc);
+      float edge = max(ap.x, ap.y);
+      float square = 1.0 - smoothstep(0.497, 0.5, edge);
+      float inner = 1.0 - smoothstep(0.02, 0.499, edge);
+      float bevel = smoothstep(0.04, 0.5, edge);
+      vec2 lightDir = normalize(vec2(-0.72, -0.58));
+      float directional = clamp(dot(pc, lightDir) * -1.15 + 0.56, 0.0, 1.0);
+      float rimGlow = smoothstep(0.36, 0.5, edge) * (1.0 - smoothstep(0.5, 0.535, edge));
+      float depthFade = clamp(1.0 - (vDepth - 8.0) / 28.0, 0.16, 1.0);
+      vec3 deepOrange = uColor * 1.02;
+      vec3 lightOrange = vec3(1.0, 0.74, 0.44);
+      vec3 base = mix(deepOrange, lightOrange, directional * 0.52 + inner * 0.22);
+      vec3 highlight = vec3(1.0, 0.9, 0.62) * (directional * 0.26 + rimGlow * 0.15);
+      vec3 shadow = uColor * 0.06 * (1.0 - directional) * bevel * 0.24;
+      vec3 c = base + highlight - shadow;
+      float a = uOpacity * depthFade * vBlink * clamp(square * (0.42 + inner * 0.22), 0.0, 1.0);
+      gl_FragColor = vec4(c, a);
+    }
+  `
+})
+// （已移除「發光點疊線」爛招，改用真.粗線 LineSegments2 + LineMaterial）
+const plexNodes = new THREE.Points(plexNodeGeo, plexNodeMat)
+const plexLines = new LineSegments2(plexLineGeo, plexLineMat)
+const plexCellMesh = new THREE.Mesh(plexCellGeo, plexCellMat)
+plexNodes.frustumCulled = false
+plexLines.frustumCulled = false
+plexCellMesh.frustumCulled = false
+plexNodes.visible = false
+const plexusGroup = new THREE.Group()
+plexusGroup.add(plexCellMesh)
+plexusGroup.add(plexLines)
+plexusGroup.rotation.x = 0.12
+plexusGroup.renderOrder = -90
+plexusGroup.visible = false
+
+// ===== 骨幹背景：暖橘色水平網格（#FF5500）+ 向遠處自然淡出 =====
+const boneGridGeo = new THREE.PlaneGeometry(160, 160, 80, 80)
+const BONE_GRID_Y = -3.4
+const BONE_GRID_TILT_X = THREE.MathUtils.degToRad(14)
+const boneGridMat = new THREE.ShaderMaterial({
+  uniforms: {
+    uTime: uniforms.uTime,
+    uOpacity: { value: 0 },
+    uColor: { value: new THREE.Color('#ff5500') },
+    uCell: { value: 0.6 }, // 再將單格長寬各縮半，面積為目前的 1/4
+    uFadeStart: { value: 10.0 },
+    uFadeEnd: { value: 55.0 },
+    uEggReveal: eggUniforms.uEggReveal,
+    uEggRes: eggUniforms.uEggRes
+  },
+  transparent: true,
+  depthWrite: false,
+  depthTest: true,
+  blending: THREE.AdditiveBlending,
+  vertexShader: /* glsl */ `
+    uniform float uTime;
+    varying vec3 vWorld;
+    void main() {
+      vec3 p = position;
+      // 讓底部骨幹網格本體也跟著慢速起伏；local y 經過 -PI/2 旋轉後會映射到 world z，
+      // 所以線條本身也會一起波動，而不只是上面的格子 tile 在動。
+      float waveZone = 1.0 - smoothstep(3.2, 18.0, length(p.xy));
+      float waveA = sin(p.x * 0.28 + uTime * 0.72);
+      float waveB = sin(p.y * 0.34 - uTime * 0.86);
+      float waveC = sin((p.x + p.y) * 0.18 - uTime * 0.48);
+      p.z += (waveA * 0.22 + waveB * 0.14 + waveC * 0.08) * waveZone;
+      vec4 w = modelMatrix * vec4(p, 1.0);
+      vWorld = w.xyz;
+      gl_Position = projectionMatrix * viewMatrix * w;
+    }
+  `,
+  fragmentShader: /* glsl */ `
+    uniform float uOpacity;
+    uniform vec3 uColor;
+    uniform float uCell;
+    uniform float uFadeStart;
+    uniform float uFadeEnd;
+    uniform float uEggReveal;
+    uniform vec2 uEggRes;
+    varying vec3 vWorld;
+    void main() {
+      // 與其他背景一致的終章退場 wipe。
+      float _fwSd = gl_FragCoord.x / max(1.0, uEggRes.x) + gl_FragCoord.y / max(1.0, uEggRes.y);
+      float _fwD = fract(sin(dot(floor(gl_FragCoord.xy / 7.0), vec2(12.9898, 78.233))) * 43758.5453);
+      if (_fwSd < uEggReveal * 2.24 - 0.12 + _fwD * 0.085) discard;
+      // 抗鋸齒網格線
+      vec2 g = vWorld.xz / uCell;
+      vec2 gd = abs(fract(g - 0.5) - 0.5) / fwidth(g);
+      float line = 1.0 - min(min(gd.x, gd.y), 1.0);
+      // 向遠處(半徑)自然淡出 → 邊緣融進背景
+      float dist = length(vWorld.xz);
+      float fade = 1.0 - smoothstep(uFadeStart, uFadeEnd, dist);
+      float a = line * fade * uOpacity;
+      if (a < 0.002) discard;
+      gl_FragColor = vec4(uColor * (0.8 + line * 0.7), a);
+    }
+  `
+})
+const boneGridMesh = new THREE.Mesh(boneGridGeo, boneGridMat)
+boneGridMesh.rotation.x = -Math.PI / 2 + BONE_GRID_TILT_X // 向鏡頭方向微傾，讓平面更接近鏡頭方向
+boneGridMesh.position.set(0, BONE_GRID_Y, 0) // 骨幹下方地板，上移一點
+boneGridMesh.renderOrder = -80
+boneGridMesh.frustumCulled = false
+boneGridMesh.visible = false
+
+// ===== 網格「滑鼠經過會浮起的格子」=====
+const BONE_TILE_CELL = 0.6 // 再將單格長寬各縮半，面積為目前的 1/4
+const BONE_TILES_N = 160
+const BONE_TILE_THICKNESS = 0.16
+const boneTileGeo = new THREE.BoxGeometry(
+  BONE_TILE_CELL * 0.86,
+  BONE_TILE_THICKNESS,
+  BONE_TILE_CELL * 0.86
+)
+boneTileGeo.translate(0, BONE_TILE_THICKNESS * 0.5, 0) // 底面貼在原網格，方塊由底部向上長
+const boneTileLift = new Float32Array(BONE_TILES_N * BONE_TILES_N)
+const boneTileLiftAttr = new THREE.InstancedBufferAttribute(boneTileLift, 1)
+boneTileGeo.setAttribute('aLift', boneTileLiftAttr)
+const boneTilesMat = new THREE.ShaderMaterial({
+  uniforms: {
+    uOpacity: { value: 0 },
+    uColor: { value: new THREE.Color('#ff5500') },
+    uMouse: { value: new THREE.Vector3(9999, 9999, 9999) },
+    uHoverRadius: { value: 0.8 },
+    uTileThickness: { value: BONE_TILE_THICKNESS },
+    uEggReveal: eggUniforms.uEggReveal,
+    uEggRes: eggUniforms.uEggRes
+  },
+  transparent: true,
+  depthWrite: false,
+  depthTest: true,
+  blending: THREE.AdditiveBlending,
+  vertexShader: /* glsl */ `
+    attribute float aLift;
+    uniform float uTileThickness;
+    varying float vLift;
+    varying vec3 vNormal;
+    void main() {
+      float lift = aLift;
+      vLift = lift;
+      vec4 world = modelMatrix * instanceMatrix * vec4(position, 1.0);
+      float grow = smoothstep(0.0, uTileThickness, position.y);
+      vec3 worldNormal = normalize(mat3(modelMatrix) * mat3(instanceMatrix) * vec3(0.0, 1.0, 0.0));
+      world.xyz += worldNormal * (lift * grow);
+      vNormal = normalize(normalMatrix * mat3(instanceMatrix) * normal);
+      gl_Position = projectionMatrix * viewMatrix * world;
+    }
+  `,
+  fragmentShader: /* glsl */ `
+    uniform float uOpacity;
+    uniform vec3 uColor;
+    uniform float uEggReveal;
+    uniform vec2 uEggRes;
+    varying float vLift;
+    varying vec3 vNormal;
+    void main() {
+      float _fwSd = gl_FragCoord.x / max(1.0, uEggRes.x) + gl_FragCoord.y / max(1.0, uEggRes.y);
+      float _fwD = fract(sin(dot(floor(gl_FragCoord.xy / 7.0), vec2(12.9898, 78.233))) * 43758.5453);
+      if (_fwSd < uEggReveal * 2.24 - 0.12 + _fwD * 0.085) discard;
+      float a = uOpacity * smoothstep(0.05, 0.28, vLift) * 0.55; // 小範圍、低亮度拖曳
+      if (a < 0.002) discard;
+      float faceLight = 0.55 + 0.45 * max(dot(normalize(vNormal), normalize(vec3(-0.35, 0.8, 0.45))), 0.0);
+      gl_FragColor = vec4(uColor * faceLight * (0.62 + vLift * 0.28), a);
+    }
+  `
+})
+const boneTiles = new THREE.InstancedMesh(boneTileGeo, boneTilesMat, BONE_TILES_N * BONE_TILES_N)
+{
+  const _tm = new THREE.Matrix4()
+  let ti = 0
+  for (let ix = 0; ix < BONE_TILES_N; ix++) {
+    for (let iz = 0; iz < BONE_TILES_N; iz++) {
+      const x = (ix - BONE_TILES_N / 2 + 0.5) * BONE_TILE_CELL
+      const z = (iz - BONE_TILES_N / 2 + 0.5) * BONE_TILE_CELL
+      _tm.makeTranslation(x, 0, z)
+      boneTiles.setMatrixAt(ti++, _tm)
+    }
+  }
+  boneTiles.instanceMatrix.needsUpdate = true
+}
+boneTiles.position.set(0, BONE_GRID_Y, 0)
+boneTiles.rotation.x = BONE_GRID_TILT_X // 方塊厚度法線與底網格保持一致
+boneTiles.renderOrder = -79
+boneTiles.frustumCulled = false
+boneTiles.visible = false
+
+// ===== DNA 場景網格：水平段同步加入滑鼠經過浮起的厚方塊 =====
+// DNA 網格密度與浮起方塊共用同一組 160 x 112 的細格。
+const DNA_GRID_Y = CFG.projector.y + 0.08
+const DNA_GRID_Z = -6
+const DNA_GRID_CELL_X = 120 / 160
+const DNA_GRID_CELL_Z = 56 / 112
+const DNA_GRID_COLUMNS = 160
+const DNA_GRID_ROWS = 112
+const dnaTileGeo = new THREE.BoxGeometry(
+  DNA_GRID_CELL_X * 0.82,
+  BONE_TILE_THICKNESS,
+  DNA_GRID_CELL_Z * 0.82
+)
+dnaTileGeo.translate(0, BONE_TILE_THICKNESS * 0.5, 0)
+const dnaTileLift = new Float32Array(DNA_GRID_COLUMNS * DNA_GRID_ROWS)
+const dnaTileLiftAttr = new THREE.InstancedBufferAttribute(dnaTileLift, 1)
+dnaTileGeo.setAttribute('aLift', dnaTileLiftAttr)
+const dnaTilesMat = boneTilesMat.clone()
+dnaTilesMat.uniforms.uEggReveal = eggUniforms.uEggReveal
+dnaTilesMat.uniforms.uEggRes = eggUniforms.uEggRes
+dnaTilesMat.uniforms.uHoverRadius.value = 0.75
+const dnaTiles = new THREE.InstancedMesh(dnaTileGeo, dnaTilesMat, DNA_GRID_COLUMNS * DNA_GRID_ROWS)
+const dnaTileCenters = new Float32Array(DNA_GRID_COLUMNS * DNA_GRID_ROWS * 3)
+{
+  const _dtm = new THREE.Matrix4()
+  let dti = 0
+  for (let ix = 0; ix < DNA_GRID_COLUMNS; ix++) {
+    for (let iz = 0; iz < DNA_GRID_ROWS; iz++) {
+      const x = (ix - DNA_GRID_COLUMNS / 2 + 0.5) * DNA_GRID_CELL_X
+      const localY = -56 / 2 + (iz + 0.5) * DNA_GRID_CELL_Z
+      let surfaceY = localY
+      let surfaceZ = 0
+      let foldAngle = 0
+      if (localY > 4.0) {
+        foldAngle = Math.min((localY - 4.0) / 13.0, Math.PI * 1.12)
+        surfaceY = 4.0 + 13.0 * Math.sin(foldAngle)
+        surfaceZ = 13.0 * (1.0 - Math.cos(foldAngle))
+        surfaceY -= DNA_WALL_FORWARD * Math.min((localY - 4.0) / 4.0, 1.0)
+      }
+      _dtm.makeRotationX(foldAngle)
+      _dtm.setPosition(x, surfaceZ, -surfaceY)
+      const centerOffset = dti * 3
+      dnaTileCenters[centerOffset] = x
+      dnaTileCenters[centerOffset + 1] = surfaceZ
+      dnaTileCenters[centerOffset + 2] = -surfaceY
+      dnaTiles.setMatrixAt(dti++, _dtm)
+    }
+  }
+  dnaTiles.instanceMatrix.needsUpdate = true
+}
+dnaTiles.position.set(0, DNA_GRID_Y, DNA_GRID_Z)
+dnaTiles.frustumCulled = false
+dnaTiles.renderOrder = 1
+dnaTiles.visible = false
+
+// 透明折面代理只用來做滑鼠 raycast，座標與 gridMat 的折回公式一致。
+const dnaHoverSurfacePositions: number[] = []
+const dnaHoverSurfaceIndices: number[] = []
+for (let iz = 0; iz <= DNA_GRID_ROWS; iz++) {
+  const localY = -56 / 2 + iz * DNA_GRID_CELL_Z
+  let surfaceY = localY
+  let surfaceZ = 0
+  if (localY > 4.0) {
+    const foldAngle = Math.min((localY - 4.0) / 13.0, Math.PI * 1.12)
+    surfaceY = 4.0 + 13.0 * Math.sin(foldAngle)
+    surfaceZ = 13.0 * (1.0 - Math.cos(foldAngle))
+    surfaceY -= DNA_WALL_FORWARD * Math.min((localY - 4.0) / 4.0, 1.0)
+  }
+  for (let ix = 0; ix <= DNA_GRID_COLUMNS; ix++) {
+    const x = -60 + ix * DNA_GRID_CELL_X
+    dnaHoverSurfacePositions.push(x, surfaceY, surfaceZ)
+  }
+}
+for (let iz = 0; iz < DNA_GRID_ROWS; iz++) {
+  for (let ix = 0; ix < DNA_GRID_COLUMNS; ix++) {
+    const a = iz * (DNA_GRID_COLUMNS + 1) + ix
+    const b = a + 1
+    const c = a + DNA_GRID_COLUMNS + 1
+    const d = c + 1
+    dnaHoverSurfaceIndices.push(a, c, b, b, c, d)
+  }
+}
+const dnaHoverSurfaceGeo = new THREE.BufferGeometry()
+dnaHoverSurfaceGeo.setAttribute(
+  'position',
+  new THREE.Float32BufferAttribute(dnaHoverSurfacePositions, 3)
+)
+dnaHoverSurfaceGeo.setIndex(dnaHoverSurfaceIndices)
+const dnaHoverSurfaceMat = new THREE.MeshBasicMaterial({
+  transparent: true,
+  opacity: 0,
+  depthWrite: false,
+  side: THREE.DoubleSide
+})
+const dnaHoverSurface = new THREE.Mesh(dnaHoverSurfaceGeo, dnaHoverSurfaceMat)
+dnaHoverSurface.position.set(0, DNA_GRID_Y, DNA_GRID_Z)
+dnaHoverSurface.rotation.x = -Math.PI / 2
+dnaHoverSurface.frustumCulled = false
+dnaHoverSurface.visible = true
+
+// 把滑鼠投影到與底網格相同的傾斜平面
+const boneGridRaycaster = new THREE.Raycaster()
+const boneGridPlane = new THREE.Plane()
+boneGridPlane.setFromNormalAndCoplanarPoint(
+  new THREE.Vector3(0, Math.cos(BONE_GRID_TILT_X), Math.sin(BONE_GRID_TILT_X)),
+  new THREE.Vector3(0, BONE_GRID_Y, 0)
+)
+const boneGridHit = new THREE.Vector3()
+const boneGridNdc = new THREE.Vector2()
+const boneGridMouseTarget = new THREE.Vector3(9999, 9999, 9999)
+const dnaGridRaycaster = new THREE.Raycaster()
+const dnaGridIntersections: THREE.Intersection[] = []
+const dnaGridPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -DNA_GRID_Y)
+const dnaGridHit = new THREE.Vector3()
+const dnaGridMouseTarget = new THREE.Vector3(9999, 9999, 9999)
+const HOVER_FAST_FOLLOW = 0.2
+const HOVER_FALL_FOLLOW = 0.045
+
+function updateBoneTileLifts(dt: number) {
+  const radius = boneTilesMat.uniforms.uHoverRadius.value as number
+  const sinTilt = Math.sin(BONE_GRID_TILT_X)
+  const cosTilt = Math.cos(BONE_GRID_TILT_X)
+  const localTargetX = boneGridMouseTarget.x
+  const localTargetZ =
+    -sinTilt * (boneGridMouseTarget.y - BONE_GRID_Y) + cosTilt * boneGridMouseTarget.z
+  const followRise = fpsSmooth(HOVER_FAST_FOLLOW, dt)
+  const followFall = fpsSmooth(HOVER_FALL_FOLLOW, dt)
+
+  for (let ix = 0, i = 0; ix < BONE_TILES_N; ix++) {
+    const x = (ix - BONE_TILES_N / 2 + 0.5) * BONE_TILE_CELL
+    for (let iz = 0; iz < BONE_TILES_N; iz++, i++) {
+      const z = (iz - BONE_TILES_N / 2 + 0.5) * BONE_TILE_CELL
+      const targetLift =
+        THREE.MathUtils.smoothstep(radius, 0, Math.hypot(localTargetX - x, localTargetZ - z)) * 0.5
+      const follow = targetLift > boneTileLift[i] ? followRise : followFall
+      boneTileLift[i] += (targetLift - boneTileLift[i]) * follow
+    }
+  }
+  boneTileLiftAttr.needsUpdate = true
+}
+
+function updateDnaTileLifts(dt: number) {
+  const radius = dnaTilesMat.uniforms.uHoverRadius.value as number
+  const followRise = fpsSmooth(HOVER_FAST_FOLLOW, dt)
+  const followFall = fpsSmooth(HOVER_FALL_FOLLOW, dt)
+
+  for (let i = 0; i < dnaTileLift.length; i++) {
+    const offset = i * 3
+    const centerX = dnaTileCenters[offset]
+    const centerY = dnaTileCenters[offset + 1] + DNA_GRID_Y
+    const centerZ = dnaTileCenters[offset + 2] + DNA_GRID_Z
+    const targetLift =
+      THREE.MathUtils.smoothstep(
+        radius,
+        0,
+        Math.hypot(
+          centerX - dnaGridMouseTarget.x,
+          centerY - dnaGridMouseTarget.y,
+          centerZ - dnaGridMouseTarget.z
+        )
+      ) * 0.5
+    const follow = targetLift > dnaTileLift[i] ? followRise : followFall
+    dnaTileLift[i] += (targetLift - dnaTileLift[i]) * follow
+  }
+  dnaTileLiftAttr.needsUpdate = true
+}
+
+// ===== 縮成點的爆發特效：collapse 完成瞬間，中心閃光 + 火花外射（相加發光）。=====
+const BURST_N = 70
+const burstPosArr: number[] = []
+const burstDirArr: number[] = []
+const burstSeedArr: number[] = []
+for (let i = 0; i < BURST_N; i++) {
+  const dir = new THREE.Vector3(
+    Math.random() - 0.5,
+    Math.random() - 0.5,
+    Math.random() - 0.5
+  ).normalize()
+  burstPosArr.push(0, 0, 0)
+  burstDirArr.push(dir.x, dir.y, dir.z)
+  burstSeedArr.push(Math.random())
+}
+const burstGeo = new THREE.BufferGeometry()
+burstGeo.setAttribute('position', new THREE.Float32BufferAttribute(burstPosArr, 3))
+burstGeo.setAttribute('aDir', new THREE.Float32BufferAttribute(burstDirArr, 3))
+burstGeo.setAttribute('aSeed', new THREE.Float32BufferAttribute(burstSeedArr, 1))
+const burstMat = new THREE.ShaderMaterial({
+  uniforms: { uBurst: { value: 0 }, uColor: { value: new THREE.Color('#ff7a2e') } },
+  transparent: true,
+  depthWrite: false,
+  depthTest: false,
+  blending: THREE.AdditiveBlending,
+  vertexShader: /* glsl */ `
+    attribute vec3 aDir;
+    attribute float aSeed;
+    uniform float uBurst;
+    varying float vSeed;
+    void main() {
+      float t = uBurst;
+      vec3 p = position + aDir * (t * (1.2 + aSeed * 2.4)); // 外射
+      vSeed = aSeed;
+      vec4 mv = modelViewMatrix * vec4(p, 1.0);
+      gl_Position = projectionMatrix * mv;
+      float grow = mix(2.4, 0.35, smoothstep(0.0, 0.5, t)); // 初期大(閃光) → 之後小(火花)
+      gl_PointSize = (170.0 * grow) / max(0.5, -mv.z);
+    }
+  `,
+  fragmentShader: /* glsl */ `
+    uniform float uBurst;
+    uniform vec3 uColor;
+    varying float vSeed;
+    void main() {
+      float d = length(gl_PointCoord - 0.5);
+      float glow = exp(-d * 5.5);
+      float life = smoothstep(0.0, 0.06, uBurst) * (1.0 - smoothstep(0.22, 1.0, uBurst)); // 快閃→衰減
+      vec3 c = mix(vec3(1.0, 0.92, 0.72), uColor, vSeed * 0.75); // 白熱 → 橘
+      gl_FragColor = vec4(c * glow * (1.6 + vSeed), glow * life);
+    }
+  `
+})
+const burstPoints = new THREE.Points(burstGeo, burstMat)
+burstPoints.frustumCulled = false
+const burstGroup = new THREE.Group()
+burstGroup.add(burstPoints)
+burstGroup.position.set(0, 0.01, 1.82) // 蛋中心
+burstGroup.renderOrder = 60
+burstGroup.visible = false
+
 disposables.push(
+  plexNodeGeo,
+  plexLineGeo,
+  plexCellGeo,
+  burstGeo,
+  burstMat,
+  boneGridGeo,
+  boneGridMat,
+  boneTileGeo,
+  boneTilesMat,
+  dnaTileGeo,
+  dnaTilesMat,
+  dnaHoverSurfaceGeo,
+  dnaHoverSurfaceMat,
+  plexNodeMat,
+  plexLineMat,
+  plexCellMat,
   neuralBgGeo,
   neuralBgMat,
   eggShellGeo,
@@ -4304,9 +5542,18 @@ group.add(backboneSampleGroup)
 group.add(geckoGroup)
 group.add(heroCardsGroup)
 group.add(neuralBgMesh)
+group.add(plexusGroup)
+group.add(boneGridMesh)
+group.add(boneTiles)
+group.add(dnaHoverSurface)
+group.add(dnaTiles)
 group.add(finaleBackdropMesh)
 group.add(roomMesh)
+for (const roomGridMesh of roomGridMeshes) group.add(roomGridMesh)
+group.add(logoSignGroup)
+group.add(finaleButtonGroup)
 group.add(eggGroup)
+group.add(burstGroup)
 loadGeckoModel()
 loadBackboneModel()
 
@@ -4318,21 +5565,87 @@ let envRT: THREE.WebGLRenderTarget | null = null
 let roomEnvRT: THREE.WebGLRenderTarget | null = null
 let envDone = false
 let rendererRef: THREE.WebGLRenderer | null = null
+// 終章材質預熱：蛋殼碎片(反射玻璃)、金屬胚胎等 shader 較重，若等到轉場當下才首次繪製，
+// GPU 會即時編譯造成 ~100ms 卡頓（轉場「不順」）。envMap 就緒後的前幾幀先強制繪製一次
+// （此時 uEggReveal≈0 → 全 discard 不可見），把 shader 提前編譯掉。胚胎 GLB 載入後再補一輪。
+const FINALE_PREWARM_FRAMES = 6
+let finalePrewarmFrames = FINALE_PREWARM_FRAMES // 初始為滿=不預熱，envDone 時歸零啟動
 const tmpRes = new THREE.Vector2()
+let responsiveViewportWidth = 0
+let responsiveViewportHeight = 0
+let responsiveSceneScale = 1
+let responsiveIsCompact = false
+// 斜縫/終章 wipe 的對角座標權重（a2,b2；a2+b2=2，桌機為 1,1）。
+// d = a2·(x/W) + b2·(y/H) 仍落在 [0,2]，但可調整常數-d 線在直向手機上的視覺斜角。
+// 手機直向時把 y 權重加大、x 權重縮小，使斜角壓回接近桌機（不再接近垂直）。
+let seamWeightX = 1
+let seamWeightY = 1
+// 目標斜率量值（|dy/dx|）；natural 斜率 1/aspect 超過此值（直向）才校正。
+// 0.45 ≈ 24°（比桌機再平一點，直向手機看起來更順、不再接近垂直）。調小=更平、調大=更陡。
+const SEAM_TARGET_SLOPE = 0.45
 const cardRaycaster = new THREE.Raycaster()
 const cardPointerNdc = new THREE.Vector2()
 const cardIntersections: THREE.Intersection[] = []
+const finaleRaycaster = new THREE.Raycaster()
+const finalePointerNdc = new THREE.Vector2()
+const finaleIntersections: THREE.Intersection[] = []
 let cardClickCanvas: HTMLCanvasElement | null = null
 let lastCardPointerAt = 0
 let cardInteractionReady = false
+let finaleActionInteractionReady = false
 let hoveredHeroCardTitle = ''
+let hoveredFinaleActionTo = ''
+
+function syncResponsiveSceneLayout() {
+  if (typeof window === 'undefined') return
+  const canvas =
+    rendererRef?.domElement ?? document.querySelector<HTMLCanvasElement>('.hero-canvas')
+  const rect = canvas?.getBoundingClientRect()
+  const width = Math.max(1, Math.round(rect?.width || window.innerWidth))
+  const height = Math.max(1, Math.round(rect?.height || window.innerHeight))
+  if (width === responsiveViewportWidth && height === responsiveViewportHeight) return
+
+  responsiveViewportWidth = width
+  responsiveViewportHeight = height
+  const aspect = width / height
+  const compact = window.matchMedia('(hover: none), (pointer: coarse)').matches
+  // 直向與接近平方的手機都需要縮小構圖；手機橫向寬畫面則保留原本比例。
+  const narrowMobile = compact && aspect < 1.2
+
+  // 以實際畫布比例計算，不依賴特定手機型號；窄直向螢幕縮放場景並拉寬視野，避免兩側裁切。
+  const nextScale = narrowMobile ? THREE.MathUtils.clamp(0.58 + aspect * 0.27, 0.68, 0.92) : 1
+  const nextFov = narrowMobile ? THREE.MathUtils.clamp(55 + (1.3 - aspect) * 28, 58, 72) : 55
+  const camera = resolvePerspectiveCamera(tres.camera)
+  if (camera && Math.abs(camera.fov - nextFov) > 0.01) {
+    camera.fov = nextFov
+    camera.updateProjectionMatrix()
+  }
+
+  responsiveSceneScale = nextScale
+  responsiveIsCompact = compact
+  // 直向手機斜縫 aspect 校正：只有在自然斜率(1/aspect)比目標更陡時才壓平；
+  // 桌機/寬螢幕 1/aspect <= 目標 → 權重維持 1,1（完全不動桌機）。
+  const naturalSlope = height / width // = 1/aspect
+  if (compact && naturalSlope > SEAM_TARGET_SLOPE) {
+    const ratio = SEAM_TARGET_SLOPE * aspect // a2/b2，使 slope = (a2/b2)/aspect = 目標
+    seamWeightX = (2 * ratio) / (1 + ratio)
+    seamWeightY = 2 / (1 + ratio)
+  } else {
+    seamWeightX = 1
+    seamWeightY = 1
+  }
+  group.scale.setScalar(responsiveSceneScale)
+  plexLineMat.resolution.set(width, height)
+}
 let cardPointerEventsBound = false
-const SEAM_BAND = 0.85 // Logo 斜帶在 d 座標的寬度（越小越窄）
+const SEAM_BAND = 0.85 // Logo 斜帶在 d 座標的寬度（越小越窄，桌機用）
+const COMPACT_SEAM_BAND = 0.3 // 手機直向的 Logo 斜帶寬度（原 0.34，收窄成更俐落的斜帶；越小越窄）
 type ClipPoint = { x: number; y: number }
 
 function pointBandValue(p: ClipPoint) {
   // CSS y 軸向下；shader y 軸向上，所以 d = x + (1 - y)。
-  return p.x + 1 - p.y
+  // 乘上與 canvas 相同的斜縫權重(a2,b2)，讓 DOM clip 與 canvas 對角在直向手機上仍完全對齊。
+  return seamWeightX * p.x + seamWeightY * (1 - p.y)
 }
 
 function clipPolygonByBand(poly: ClipPoint[], seam: number, keepAbove: boolean) {
@@ -4488,15 +5801,64 @@ function setHoveredHeroCard(card: HeroCardItem | null) {
   wakeBottomRender()
 }
 
+function getFinaleActionUnderPointer(event: MouseEvent | PointerEvent) {
+  if (!finaleActionInteractionReady || !finaleButtonGroup.visible) return null
+  const camera = resolveCamera(tres.camera)
+  if (!camera) return null
+  const canvas = cardClickCanvas ?? rendererRef?.domElement
+  if (!canvas) return null
+  const rect = canvas.getBoundingClientRect()
+  if (
+    event.clientX < rect.left ||
+    event.clientX > rect.right ||
+    event.clientY < rect.top ||
+    event.clientY > rect.bottom
+  ) {
+    return null
+  }
+  finalePointerNdc.set(
+    ((event.clientX - rect.left) / rect.width) * 2 - 1,
+    -((event.clientY - rect.top) / rect.height) * 2 + 1
+  )
+  finaleRaycaster.setFromCamera(finalePointerNdc, camera)
+  finaleIntersections.length = 0
+  finaleRaycaster.intersectObjects(finaleActionHitMeshes, false, finaleIntersections)
+  for (const intersection of finaleIntersections) {
+    const action = finaleActionByMesh.get(intersection.object)
+    if (action) return action
+  }
+  return null
+}
+
+function setHoveredFinaleAction(action: FinaleActionItem | null) {
+  const nextTo = action?.to ?? ''
+  if (nextTo === hoveredFinaleActionTo) return
+  hoveredFinaleActionTo = nextTo
+  if (cardClickCanvas) cardClickCanvas.style.cursor = nextTo ? 'pointer' : ''
+  if (typeof document !== 'undefined') document.body.style.cursor = nextTo ? 'pointer' : ''
+  wakeBottomRender()
+}
+
 function onCardPointerMove(event: PointerEvent) {
   if (document.querySelector('.gallery-scene')) {
+    setHoveredFinaleAction(null)
     setHoveredHeroCard(null)
     return
   }
+  if (
+    finaleActionInteractionReady &&
+    window.matchMedia('(hover: hover) and (pointer: fine)').matches
+  ) {
+    setHoveredFinaleAction(getFinaleActionUnderPointer(event))
+    setHoveredHeroCard(null)
+    return
+  }
+  setHoveredFinaleAction(null)
   setHoveredHeroCard(getHeroCardUnderPointer(event))
 }
 
 function onCardPointerLeave() {
+  setHoveredFinaleAction(null)
   setHoveredHeroCard(null)
 }
 
@@ -4504,6 +5866,14 @@ function onCardClick(event: MouseEvent | PointerEvent) {
   if (document.querySelector('.gallery-scene')) return
   const now = performance.now()
   if (now - lastCardPointerAt < 180) return
+  const finaleAction = getFinaleActionUnderPointer(event)
+  if (finaleAction) {
+    event.preventDefault()
+    lastCardPointerAt = now
+    wakeBottomRender()
+    emit('finale-action', finaleAction.to)
+    return
+  }
   const card = getHeroCardUnderPointer(event)
   if (!card) return
 
@@ -4513,16 +5883,25 @@ function onCardClick(event: MouseEvent | PointerEvent) {
   emit('card-select', card.card)
 }
 
+function hasFinePointer() {
+  return (
+    typeof window !== 'undefined' && window.matchMedia('(hover: hover) and (pointer: fine)').matches
+  )
+}
+
 function bindCardClickCanvas(canvas: HTMLCanvasElement) {
   if (cardClickCanvas === canvas) return
   cardClickCanvas = canvas
   if (cardPointerEventsBound) return
   cardPointerEventsBound = true
   window.addEventListener('click', onCardClick, true)
-  window.addEventListener('pointermove', onCardPointerMove, true)
-  window.addEventListener('pointerleave', onCardPointerLeave, true)
-  window.addEventListener('pointercancel', onCardPointerLeave, true)
-  window.addEventListener('blur', onCardPointerLeave, true)
+  // 觸控裝置只保留 click 觸發，避免把 hover/pointermove 綁到手機造成耗電與誤觸。
+  if (hasFinePointer()) {
+    window.addEventListener('pointermove', onCardPointerMove, true)
+    window.addEventListener('pointerleave', onCardPointerLeave, true)
+    window.addEventListener('pointercancel', onCardPointerLeave, true)
+    window.addEventListener('blur', onCardPointerLeave, true)
+  }
 }
 
 function resolveCamera(x: unknown): THREE.Camera | null {
@@ -4613,15 +5992,20 @@ function initEnvMap() {
     item.coreMat.needsUpdate = true
   }
   pmrem.dispose()
+  // envMap 已就緒（最終 shader 定案）→ 啟動終章材質預熱。
+  finalePrewarmFrames = 0
 }
 
 onBeforeRender(({ elapsed, delta }) => {
   uniforms.uTime.value = elapsed
   if (!envDone) initEnvMap()
+  syncResponsiveSceneLayout()
   // 卡住/切回分頁時 delta 會爆大，夾住上限避免一次跳太多
   const dt = Math.min(delta, 0.05)
   currentRotationY += (targetRotationY - currentRotationY) * fpsSmooth(CFG.wheel.damping, dt)
-  currentTimeline += (targetTimeline - currentTimeline) * fpsSmooth(0.078, dt)
+  // 觸控拖曳輸入更密集，手機提高一點追蹤速度，避免轉場落後手指太多。
+  const timelineDamping = responsiveIsCompact ? 0.18 : 0.14 // 調緊：骨幹揭露隨捲動貼近，不落後（修「骨幹沒完整揭露」）
+  currentTimeline += (targetTimeline - currentTimeline) * fpsSmooth(timelineDamping, dt)
   const introReveal = stageValue(currentTimeline, 0, introRevealSpan, introRevealMax)
   const gridReveal = stageValue(currentTimeline, gridRevealStart, gridRevealSpan, introRevealMax)
   const firstExit = stageValue(
@@ -4644,8 +6028,10 @@ onBeforeRender(({ elapsed, delta }) => {
   )
   // ── 雙斜縫連續掃描：單一 sweep 進度驅動 seamA/seamB ──
   const sweep = THREE.MathUtils.clamp(0.5 * firstExit + 0.5 * finalEnter, 0, 1)
-  const seamA = THREE.MathUtils.clamp(sweep * (2 + SEAM_BAND), 0, 2) // Scene01 保留 d>seamA（右上）
-  const seamB = THREE.MathUtils.clamp(sweep * (2 + SEAM_BAND) - SEAM_BAND, 0, 2) // Scene03 保留 d<seamB（左下）
+  // 手機斜帶縮窄，避免直向畫面被黑色轉場面積切掉過半；桌面維持原本寬度。
+  const activeSeamBand = responsiveIsCompact ? COMPACT_SEAM_BAND : SEAM_BAND
+  const seamA = THREE.MathUtils.clamp(sweep * (2 + activeSeamBand), 0, 2) // Scene01 保留 d>seamA（右上）
+  const seamB = THREE.MathUtils.clamp(sweep * (2 + activeSeamBand) - activeSeamBand, 0, 2) // Scene03 保留 d<seamB（左下）
   const introSeamProgress = THREE.MathUtils.clamp(Math.pow(introReveal, 0.58), 0, 1)
   const introSeam = THREE.MathUtils.lerp(0.18, 2.16, introSeamProgress)
   uniforms.uSeamA.value = seamA
@@ -4653,7 +6039,11 @@ onBeforeRender(({ elapsed, delta }) => {
   uniforms.uIntroSeam.value = introSeam
   if (rendererRef) {
     rendererRef.getDrawingBufferSize(tmpRes)
-    uniforms.uResolution.value.set(tmpRes.x, tmpRes.y)
+    // 前面斜帶（uResolution）：餵入「有效解析度」= (W/a2, H/b2)，讓 d = a2·x/W + b2·y/H
+    // 一次壓平斜縫的對角斜角（桌機權重 1,1 → 等同原值）。
+    uniforms.uResolution.value.set(tmpRes.x / seamWeightX, tmpRes.y / seamWeightY)
+    // 終章 wipe（uEggRes，已解耦）：x 設超大 → x 貢獻≈0，sd ≈ 2·(y/H) → 水平線由下往上掃。
+    uniforms.uEggRes.value.set(1e7, tmpRes.y / 2)
   }
   // Logo 盤旋轉：橫跨 T1+T2 的單一單調曲線。
   // 直接對線性 sweep（0→1 已單調跨越 T1+T2）套「一次」smoothstep：
@@ -4677,8 +6067,8 @@ onBeforeRender(({ elapsed, delta }) => {
   )
   const geckoRevealCutProgress = THREE.MathUtils.smoothstep(geckoRevealTimeline, 0.02, 1.0)
   const geckoPointPresence = THREE.MathUtils.smoothstep(geckoRevealTimeline, 0.0, 0.045)
-  const geckoAssemblyProgress = THREE.MathUtils.smoothstep(geckoRevealTimeline, 0.12, 0.82)
-  const geckoShellProgress = THREE.MathUtils.smoothstep(geckoRevealTimeline, 0.84, 1.0)
+  const geckoAssemblyProgress = THREE.MathUtils.smoothstep(geckoRevealTimeline, 0.08, 0.72)
+  const geckoShellProgress = THREE.MathUtils.smoothstep(geckoRevealTimeline, 0.68, 0.9)
   const geckoRevealProgress = Math.pow(geckoRevealCutProgress, 1.08)
   const scene01Active = sweep < scene01ExitSweep // 起始頁 DNA 直接可見；後續由 seamA 斜帶退場
   const logoDnaPhaseActive = scene01Active && sweep < 0.995
@@ -4705,19 +6095,8 @@ onBeforeRender(({ elapsed, delta }) => {
   // Logo 與 DNA 共用完全相同的捲動旋轉係數，視覺上保持鎖定同步。
   initialLogoGroup.rotation.y = currentRotationY * DNA_SCROLL_ROTATION_FACTOR
   backboneSampleGroup.rotation.y = currentRotationY * 0.12
-  // 成形瞬間鎖住目前的捲動角度；後續改用平滑後的實際捲動值，
-  // 即使 timeline 被後段場景鎖定，守宮仍會持續而均勻地微轉。
-  if (geckoRevealProgress < 0.99) {
-    geckoRotationAnchorY = currentRotationY
-    geckoRotationAnchorLocked = false
-  } else if (!geckoRotationAnchorLocked) {
-    geckoRotationAnchorY = currentRotationY
-    geckoRotationAnchorLocked = true
-  }
-  const geckoTurnInfluence = THREE.MathUtils.smoothstep(geckoRevealProgress, 0.84, 1)
-  const geckoScrollTurn =
-    (currentRotationY - geckoRotationAnchorY) * GECKO_SCROLL_TURN_FACTOR * geckoTurnInfluence
-  geckoGroup.rotation.y = GECKO_REST_ROT_Y * geckoRevealProgress + geckoScrollTurn
+  // 守宮完成定角後固定，不再跟著滾動條旋轉。
+  geckoGroup.rotation.y = GECKO_REST_ROT_Y * geckoRevealProgress
   geckoGroup.rotation.x = GECKO_REST_ROT_X * geckoRevealProgress
   geckoGroup.rotation.z = GECKO_REST_ROT_Z * geckoRevealProgress
   dnaGroup.scale.setScalar(DNA_LOGO_SCALE)
@@ -4743,21 +6122,51 @@ onBeforeRender(({ elapsed, delta }) => {
   geckoGroup.position.z = CFG.gecko.z
   dnaGroup.visible = scene01Active
   initialLogoGroup.visible = initialLogoActive
-  geckoGroup.visible = projectorActive && projFade > 0.01
+  // 守宮點雲從起始頁就在（散開），隨捲動連續組裝成守宮（同一團、不消失/不重接）。
+  geckoGroup.visible = scene01Active || (projectorActive && projFade > 0.01)
   groundGrid.visible = scene01GridActive
-  geckoMat.uniforms.uAlpha.value = 0.42
+  dnaTiles.visible = groundGrid.visible
+  dnaTilesMat.uniforms.uOpacity.value = gridIntroProgress
+  if (dnaTiles.visible) {
+    const _dcam = resolvePerspectiveCamera(tres.camera)
+    if (_dcam) {
+      dnaHoverSurface.updateMatrixWorld(true)
+      boneGridNdc.set(parallaxPointer.x, parallaxPointer.y)
+      dnaGridRaycaster.setFromCamera(boneGridNdc, _dcam)
+      dnaGridIntersections.length = 0
+      dnaGridRaycaster.intersectObject(dnaHoverSurface, false, dnaGridIntersections)
+      if (dnaGridIntersections.length > 0) {
+        dnaGridHit.copy(dnaGridIntersections[0].point)
+        dnaGridMouseTarget.copy(dnaGridHit)
+      } else if (dnaGridRaycaster.ray.intersectPlane(dnaGridPlane, dnaGridHit)) {
+        dnaGridMouseTarget.copy(dnaGridHit)
+      } else {
+        dnaGridMouseTarget.set(0, DNA_GRID_Y, DNA_GRID_Z)
+      }
+    }
+    updateDnaTileLifts(dt)
+  }
+  geckoMat.uniforms.uAlpha.value = 0.58
   // 本體以碎化揭露驅動（逐格碎片成形）；uOpacityMul 只做整體 gating 與極短安全淡入，
   // 避免與碎片 alpha 雙重變暗，讓碎片清楚一格一格拼出。
   geckoMat.uniforms.uReveal.value = geckoShellProgress
   geckoMat.uniforms.uOpacityMul.value = projectorActive
     ? THREE.MathUtils.smoothstep(geckoShellProgress, 0.0, 0.08)
     : 0
-  geckoAssemblyPointsMat.uniforms.uIntroReveal.value = projectorActive ? geckoRevealTimeline : 0
-  geckoAssemblyPointsMat.uniforms.uAlpha.value = projectorActive
-    ? 0.28 * geckoPointPresence +
-      THREE.MathUtils.smoothstep(geckoShellProgress, 0.58, 0.9) *
-        (0.065 + 0.024 * (0.5 + 0.5 * Math.sin(elapsed * 6.4)))
-    : 0
+  // 起始頁給底值 0.26（散開可見）→ 隨 geckoRevealTimeline 連續組裝到 1（不跳）。
+  geckoAssemblyPointsMat.uniforms.uIntroReveal.value = Math.max(
+    scene01Active ? 0.26 : 0,
+    geckoRevealTimeline
+  )
+  // alpha：起始頁的散開星雲底值（隨組裝淡出）與投影段的原本 alpha 取大 → 連續交接。
+  geckoAssemblyPointsMat.uniforms.uAlpha.value = Math.max(
+    scene01Active ? 0.3 * (1 - geckoAssemblyProgress) : 0,
+    projectorActive
+      ? 0.28 * geckoPointPresence +
+          THREE.MathUtils.smoothstep(geckoShellProgress, 0.58, 0.9) *
+            (0.095 + 0.02 * (0.5 + 0.5 * Math.sin(elapsed * 6.4)))
+      : 0
+  )
   // 投影金字塔/底座在斜帶掃過後直接關掉，不殘留到 Scene3 揭露完成後。
   pyramidGlassMat.visible = projectorActive
   pyramidEdgeMat.visible = projectorActive
@@ -4767,10 +6176,10 @@ onBeforeRender(({ elapsed, delta }) => {
   pyramidEdgeMat.opacity = 0.95 * projFade
   ringMat.opacity = 0.22 * projFade
   plateMetalMat.opacity = projFade
-  // 骨幹（Scene03）：seamB>0 才顯示，材質內以 seamB 由左下 discard 露出
-  // 骨幹退場改由「終章 wipe」（uEggReveal）由下往上掃掉，與蛋入場同一道邊界 —
-  // 不再用 visible 瞬間關掉（那會「瞬間消失」）。完全掃掉後才關以省效能。
-  const finaleWipeDone = uniforms.uEggReveal.value >= 0.995
+  // 骨幹（Scene03）：seamB>0 才顯示，材質內以 seamB 由左下 discard 露出。
+  // 骨幹/網格改由 shader 的斜向 wipe（uEggReveal，含 7px 小方塊）逐格掃掉，掃過整個畫面後才隱藏（省效能）。
+  // 不再一進轉場就 visible=false（那會瞬間消失，與蛋場景的方格 wipe 脫節 → Issue 3）。
+  const finaleWipeDone = uniforms.uEggReveal.value >= 0.985
   backboneSampleGroup.visible = seamB > 0.001 && !finaleWipeDone
   backboneSampleGroup.scale.setScalar(BACKBONE_SCALE)
   backboneSampleMat.uniforms.uAlpha.value = 0.85 + backboneReveal * 0.08
@@ -4798,15 +6207,16 @@ onBeforeRender(({ elapsed, delta }) => {
   const finalePreReveal = THREE.MathUtils.smoothstep(finaleReveal, 0.001, 0.04)
   eggUniforms.uFinaleReveal.value = finaleReveal
 
-  // ── 蛋在 canvas 內以螢幕座標 wipe 揭露（跟斜帶同機制）──
-  // 在骨幹退場的 next 段，蛋一邊被 wipe 由下往上揭露、骨幹一邊上滑退場（一進一出交接）。
-  // placeholder 一開始即 uEggReveal=1（完全露出），之後才進裂/破/蛋液生命週期。
-  // 轉場：wipe 邊界早升（緊貼卡片下緣）但貫穿整段轉場才完成 → 蛋隨轉場一路揭露，
-  // 不會在轉場過半就整顆先出來（修「蛋比轉場先出來」）。
+  // ── 蛋場景 wipe：在 canvas 內以螢幕座標斜向揭露（跟斜帶同機制）──
+  // 「單調連續」掃滿：骨幹退場(nextScene)段 0→1 一路把房間掃滿，骨幹沿同一道斜縫逐格被掃掉
+  // （一進一出交接）；進入終章(placeholder)後保持滿，蛋在完整房間內孵化。
+  // 修：先前「掃到 0.7 凍住、等 placeholder 才續掃」→ 電腦版滾動會「卡住、再滾才繼續」；
+  //     現在整段連續前進、不留中段凍結，收尾直接掃滿（右上角不再留黑）。
+  const nextWipeP = Math.max(currentNextSceneProgress, targetNextSceneProgress)
+  const placeholderWipeP = Math.max(currentPlaceholderProgress, targetPlaceholderProgress)
   const eggWipeReveal = Math.max(
-    THREE.MathUtils.smoothstep(currentNextSceneProgress, 0.0, 0.88),
-    THREE.MathUtils.smoothstep(targetNextSceneProgress, 0.0, 0.88),
-    currentPlaceholderProgress > stageEpsilon || targetPlaceholderProgress > stageEpsilon ? 1 : 0
+    THREE.MathUtils.smoothstep(nextWipeP, 0.0, 0.85), // 骨幹退場段連續掃到滿
+    placeholderWipeP > stageEpsilon ? 1 : 0 // 進終章後保持滿
   )
   eggUniforms.uEggReveal.value = eggWipeReveal
   const eggTransitionShow = eggWipeReveal > 0.001
@@ -4824,10 +6234,14 @@ onBeforeRender(({ elapsed, delta }) => {
     eggTransitionShow
   const eggSolidReveal = eggShouldShow ? 1 : THREE.MathUtils.smoothstep(finaleReveal, 0.0, 0.03)
   eggGroup.visible = eggShouldShow
-  // 終章背景：與蛋一起顯示，用同一道 wipe 揭露、蓋住骨幹（給蛋自己的場景背景）。
-  // 停用舊的 2D quad 假透視背景，改用真正的 3D 房間（roomMesh）。
+  // 終章背景改用真正的 3D 房間（roomMesh）。停用舊的 2D quad 假透視背景 —
+  // 其 occludeBackbone 會用不透明黑填滿「未揭露側」，把正在退場的骨幹整片蓋掉，
+  // 使骨幹看起來瞬間消失、與蛋場景的方格 wipe 脫節（Issue 3）。改為完全關閉，
+  // 讓未揭露側維持骨幹本體，交由各材質自己的斜向 wipe 逐格掃掉（房間則從已揭露側掃入）。
   finaleBackdropMesh.visible = false
-  // 房間不透明、靠 shader 的 wipe discard 由下往上揭露（與蛋、骨幹同一道邊界）。
+  finaleBackdropMat.uniforms.uOpacity.value = 0
+  finaleBackdropMat.uniforms.uOccludeBackbone.value = 0
+  // 房間不透明、靠 shader 的斜向 wipe discard 揭露（與蛋、骨幹同一道邊界）。
   // 前 3 幀強制繪製一次做 shader 預熱（此時 uEggReveal≈0 → 全數 discard、不可見）。
   if (roomPrewarmFrames < 3) {
     roomMesh.visible = true
@@ -4835,26 +6249,100 @@ onBeforeRender(({ elapsed, delta }) => {
   } else {
     roomMesh.visible = eggShouldShow
   }
-  // 終章滑鼠視差：只在蛋出現時位移相機，前面場景 eggPresence=0 → 完全無作用。
+  for (const roomGridMesh of roomGridMeshes) roomGridMesh.visible = roomMesh.visible
+  logoSignGroup.visible = roomMesh.visible
+  finaleButtonGroup.visible = roomMesh.visible
+  finaleActionInteractionReady = finaleButtonGroup.visible && finaleReveal > 0.78
+  if (!finaleActionInteractionReady) setHoveredFinaleAction(null)
+  for (const finaleAction of finaleActionItems) {
+    const hoverTarget = hoveredFinaleActionTo === finaleAction.to ? 1.045 : 1
+    finaleAction.hoverScale += (hoverTarget - finaleAction.hoverScale) * fpsSmooth(0.18, dt)
+    for (const object of finaleAction.objects) {
+      object.scale.setScalar(finaleAction.hoverScale)
+    }
+    if (finaleAction.labelMesh && finaleAction.labelBaseY !== undefined) {
+      // 文字比柱體多抬一點，避免斜面放大時把文字邊緣吃掉。
+      finaleAction.labelMesh.position.y =
+        finaleAction.labelBaseY + (finaleAction.hoverScale - 1) * 3.2
+    }
+  }
+  // 柱體與網格只由轉場 shader 的方格 wipe 揭露，不做整體 opacity 漸入。
+  finaleColumnMat.opacity = 1
+  finaleButtonEdgeMat.opacity = 0.3
+  const finaleLabelReveal = THREE.MathUtils.smoothstep(finaleReveal, 0.84, 1.0)
+  if (finaleButtonGroup.visible) {
+    for (const finaleLabelStream of finaleLabelStreams) {
+      drawFinaleStreamText(finaleLabelStream, uniforms.uTime.value)
+    }
+    for (const finaleLabelTexture of finaleLabelTextures) {
+      finaleLabelTexture.needsUpdate = true
+    }
+  }
+  for (const finaleLabelMaterial of finaleLabelMaterials) {
+    finaleLabelMaterial.opacity = 0.96 * finaleLabelReveal
+  }
+  // 全頁滑鼠視差：不再只由蛋殼出現進度 gating，所有場景都平滑跟隨游標。
   const parallaxCamRef = resolvePerspectiveCamera(tres.camera)
   if (parallaxCamRef) {
-    const s = eggPresence
-    // 幅度略降、跟手係數提高 → 更順、不鬆散（fpsSmooth 已與更新率無關）。
-    const tx = parallaxPointer.x * 0.32 * s
-    const ty = parallaxPointer.y * 0.2 * s
+    const tx = parallaxPointer.x * 0.32
+    const ty = parallaxPointer.y * 0.2
     const k = fpsSmooth(0.1, dt)
     parallaxCam.x += (tx - parallaxCam.x) * k
     parallaxCam.y += (ty - parallaxCam.y) * k
     parallaxCamRef.position.x = parallaxCam.x
+    // 相機只跟隨全頁視差，不能在終章切換時再改變 Y 座標，避免滾動跨段瞬間跳動。
     parallaxCamRef.position.y = parallaxCam.y
   }
   // 骨幹/卡片場景神經背景：backbone 顯示時淡入，進終章淡出（終章由 finaleBackdrop 接手）。
   const neuralBgOpacity = backboneReveal * (1 - THREE.MathUtils.smoothstep(finaleReveal, 0.0, 0.12))
-  neuralBgMesh.visible = neuralBgOpacity > 0.003 && !finaleWipeDone
+  // 骨幹場景背景全刪：neuralBg 只在骨幹/卡片顯示，關掉即「僅限骨幹場景背景全空」。
+  // （DNA 用畫布底色、終章用房間，皆不受影響。）
+  neuralBgMesh.visible = false
   neuralBgMat.uniforms.uOpacity.value = neuralBgOpacity
+  // 3D Plexus 神經網：不旋轉；退場完全跟隨終章 wipe（在 shader 內用 uEggReveal，與骨幹同步）。
+  // opacity 用 backboneReveal（不含終章淡出），讓像素格 wipe 完整負責退場。
+  // 骨幹背景 plexus 已停用（整組隱藏；程式保留可還原）。
+  plexUniforms.uOpacity.value = backboneReveal
+  plexusGroup.visible = false
+  // 骨幹背景：暖橘水平網格（僅限骨幹場景；退場交給 shader wipe）。
+  boneGridMesh.visible = backboneReveal > 0.003 && !finaleWipeDone
+  boneGridMat.uniforms.uOpacity.value = backboneReveal
+  // 網格浮起格子：raycast 指標到地板平面(y=-4) → 近滑鼠的格子浮起發光。
+  boneTiles.visible = boneGridMesh.visible
+  boneTilesMat.uniforms.uOpacity.value = backboneReveal
+  if (boneTiles.visible) {
+    const _gcam = resolvePerspectiveCamera(tres.camera)
+    if (_gcam) {
+      boneGridNdc.set(parallaxPointer.x, parallaxPointer.y)
+      boneGridRaycaster.setFromCamera(boneGridNdc, _gcam)
+      if (boneGridRaycaster.ray.intersectPlane(boneGridPlane, boneGridHit)) {
+        boneGridMouseTarget.copy(boneGridHit)
+      } else {
+        boneGridMouseTarget.set(0, BONE_GRID_Y, 0)
+      }
+    }
+    updateBoneTileLifts(dt)
+  }
+  // ===== 終章延伸 =====
+  // 胚胎 → 菲涅爾橘色全息（0.4→0.58）；蛋殼碎+胚胎聚攏成一點並消失（0.6→0.84）。
+  const holoProg = THREE.MathUtils.smoothstep(finaleReveal, 0.4, 0.58)
+  // 玻璃先收回原本蛋型(uShatter 回 0)，再跟胚胎一起淡出消失。
+  const reassembleProg = THREE.MathUtils.smoothstep(finaleReveal, 0.57, 0.71) // 收回速度（區間中間值）
+  const vanishProg = THREE.MathUtils.smoothstep(finaleReveal, 0.72, 0.88)
+  embryoUniforms.uHologram.value = holoProg
+  embryoUniforms.uFade.value = 1.0 - vanishProg
+  const convScale = 1.0 - vanishProg // 回蛋型後整個蛋+胚胎一起縮小到點並消失
+  // 縮成點後的爆發特效（中心閃光 + 火花外射）。
+  const burstT = THREE.MathUtils.clamp((finaleReveal - 0.86) / 0.14, 0.0, 1.0)
+  burstGroup.visible = burstT > 0.001 && burstT < 0.999
+  burstMat.uniforms.uBurst.value = burstT
   if (eggGroup.visible) {
-    // 蛋自建立起即使用最終顯示尺寸，不再在首幀發生放大/縮放落差。
-    eggGroup.scale.set(EGG_DISPLAY_SCALE, EGG_Y_STRETCH * EGG_DISPLAY_SCALE, EGG_DISPLAY_SCALE)
+    // 蛋自建立起即使用最終顯示尺寸；聚攏階段整組縮到 0（碎片+胚胎收束成一點）。
+    eggGroup.scale.set(
+      EGG_DISPLAY_SCALE * convScale,
+      EGG_Y_STRETCH * EGG_DISPLAY_SCALE * convScale,
+      EGG_DISPLAY_SCALE * convScale
+    )
     eggGroup.position.set(0, 0.01, 1.82)
     const eggRotationTarget = currentRotationY * 0.028 + finaleReveal * 0.42
     eggRotationY += (eggRotationTarget - eggRotationY) * fpsSmooth(0.08, dt)
@@ -4897,14 +6385,15 @@ onBeforeRender(({ elapsed, delta }) => {
   }
   heartLight.intensity = heartbeat * 0.045
 
-  // 全程用碎片蛋殼：從轉場揭露就顯示（組合成蛋形，靠 shader wipe discard 由下往上揭露），
+  // 全程用碎片蛋殼：從轉場揭露就顯示（組合成蛋形，靠 shader 斜向 wipe discard 揭露），
   // 炸開時序不變（仍由 shatterProg 驅動，揭露到炸開前 uShatter≈0 → 保持組合）。
-  const shatterProg = THREE.MathUtils.smoothstep(finaleReveal, 0.18, 0.4)
+  const shatterProg = THREE.MathUtils.smoothstep(finaleReveal, 0.16, 0.42) // 炸開速度（區間中間值）
   eggShardMesh.visible = eggGroup.visible
   if (eggShardMesh.visible) {
-    eggShardMat.opacity = eggPresence * 0.32
-    // 飛散全由 vertex shader 依每片 aCentroid/aAxis/aSeed 驅動；這裡只給 0→1 進度。
-    eggShardUniforms.uShatter.value = shatterProg * shatterProg * (3.0 - 2.0 * shatterProg)
+    eggShardMat.opacity = eggPresence * 0.32 * (1.0 - vanishProg) // 消失階段淡出
+    // uShatter：先飛散(shatterProg)，聚攏階段再回到 0 → 碎片收回原本蛋型。
+    eggShardUniforms.uShatter.value =
+      shatterProg * shatterProg * (3.0 - 2.0 * shatterProg) * (1.0 - reassembleProg)
   }
 
   // 進度條：以平滑後的 timeline + 卡片環繞換算單一旅程進度，數值變動才 emit。
@@ -5052,7 +6541,9 @@ onBeforeRender(({ elapsed, delta }) => {
     (Number.isFinite(linkedLogoSpin)
       ? Math.abs(linkedLogoSpin - cssLastLogoSpin) > 0.0008
       : Number.isFinite(cssLastLogoSpin)) ||
-    underlayMode !== cssLastUnderlayMode
+    underlayMode !== cssLastUnderlayMode ||
+    Math.abs(seamWeightX - cssLastSeamWeightX) > 0.0004 ||
+    Math.abs(seamWeightY - cssLastSeamWeightY) > 0.0004
   if (cssDirty && typeof document !== 'undefined') {
     cssLastSweep = sweep
     cssLastScrollHint = scrollHintProgress
@@ -5061,6 +6552,8 @@ onBeforeRender(({ elapsed, delta }) => {
     cssLastLogoDnaProgress = logoDnaProgress
     cssLastLogoSpin = linkedLogoSpin
     cssLastUnderlayMode = underlayMode
+    cssLastSeamWeightX = seamWeightX
+    cssLastSeamWeightY = seamWeightY
     const el = document.documentElement.style
     el.setProperty('--hero-scroll-progress', String(scrollHintProgress))
     el.setProperty('--hero-exit-progress', String(sweep))
@@ -5083,7 +6576,13 @@ onBeforeRender(({ elapsed, delta }) => {
     )
     el.setProperty(
       '--hero-underlay-bg-opacity',
-      bandActive ? '1' : initialLogoActive ? logoDnaUnderlayBgOpacity.toFixed(4) : '0'
+      bandActive
+        ? responsiveIsCompact
+          ? '0.82'
+          : '1'
+        : initialLogoActive
+          ? logoDnaUnderlayBgOpacity.toFixed(4)
+          : '0'
     )
     el.setProperty(
       '--hero-logo-backdrop-opacity',
@@ -5106,13 +6605,14 @@ onBeforeRender(({ elapsed, delta }) => {
       const canvas = rendererRef?.domElement
       const vw = canvas?.clientWidth || window.innerWidth || 1
       const vh = canvas?.clientHeight || window.innerHeight || 1
-      const ang = ((Math.atan2(vh, vw) * 180) / Math.PI).toFixed(2)
+      // 漸層軸沿 d 增加方向；權重納入後角度 = atan2(a2·H, b2·W)，與壓平後的斜縫垂直對齊。
+      const ang = ((Math.atan2(seamWeightX * vh, seamWeightY * vw) * 180) / Math.PI).toFixed(2)
       const pB = (seamB / 2) * 100
       const pA = (seamA / 2) * 100
-      const edgeCore = 0.18
-      const edgeFade = 1.35
-      const HI_CORE = 'rgba(255,176,96,0.82)'
-      const HI_SOFT = 'rgba(226,87,30,0.28)'
+      const edgeCore = responsiveIsCompact ? 0.07 : 0.18
+      const edgeFade = responsiveIsCompact ? 0.36 : 1.35
+      const HI_CORE = responsiveIsCompact ? 'rgba(255,176,96,0.52)' : 'rgba(255,176,96,0.82)'
+      const HI_SOFT = responsiveIsCompact ? 'rgba(226,87,30,0.14)' : 'rgba(226,87,30,0.28)'
       const f = (n: number) => n.toFixed(2)
       el.setProperty(
         '--hero-underlay-shade-hi',
@@ -5123,6 +6623,21 @@ onBeforeRender(({ elapsed, delta }) => {
       el.setProperty('--hero-underlay-shade-hi', 'none')
       el.setProperty('--hero-underlay-shade-lo', 'none')
     }
+  }
+
+  // 終章材質預熱（見宣告處說明）：載入早期前幾幀強制繪製終章 mesh 一次，把重的 shader
+  // （反射玻璃碎殼、金屬胚胎、房間 wipe…）提前編譯掉；此時 uEggReveal≈0 → 全 discard 不顯示。
+  // 放在所有可見性指派之後 → 這幾幀的強制可見會覆蓋常規邏輯，之後自動交還。
+  if (finalePrewarmFrames < FINALE_PREWARM_FRAMES && uniforms.uEggReveal.value < 0.001) {
+    finalePrewarmFrames++
+    eggGroup.visible = true
+    eggShardMesh.visible = true
+    embryoGroup.visible = true
+    roomMesh.visible = true
+    for (const roomGridMesh of roomGridMeshes) roomGridMesh.visible = true
+    logoSignGroup.visible = true
+    finaleButtonGroup.visible = true
+    wakeBottomRender()
   }
 })
 
@@ -5261,7 +6776,9 @@ onMounted(() => {
   }
   emit('journey-segments', journeySegments)
   emit('next-scene-progress', 0)
-  window.addEventListener('pointermove', onParallaxPointerMove, { passive: true })
+  if (hasFinePointer()) {
+    window.addEventListener('pointermove', onParallaxPointerMove, { passive: true })
+  }
   requestAnimationFrame(() => {
     const canvas = document.querySelector<HTMLCanvasElement>('.hero-canvas')
     if (canvas) bindCardClickCanvas(canvas)
@@ -5273,6 +6790,11 @@ onMounted(() => {
   window.addEventListener('focus', forceWakeRender)
   window.addEventListener('pageshow', forceWakeRender)
   // Debug：瞬間跳關（僅供 hero-lab 驗證用）
+  // 版本標記：在 Console 打 window.__heroBuild 可確認瀏覽器跑的是不是最新模組（排除 HMR/快取殘留）。
+  ;(window as unknown as { __heroBuild?: string }).__heroBuild =
+    'horizontal-wipe+finale-distance2x+tighter-damping @2026-08-18c'
+  // eslint-disable-next-line no-console
+  console.log('[hero-build]', (window as unknown as { __heroBuild?: string }).__heroBuild)
   ;(window as unknown as { __hero?: unknown }).__hero = {
     jump(t: number, c = 0) {
       wakeBottomRender()
