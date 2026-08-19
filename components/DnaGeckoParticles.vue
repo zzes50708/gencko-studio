@@ -2192,6 +2192,11 @@ let cssLastSeamWeightX = -1
 let cssLastSeamWeightY = -1
 let lastBottomRenderMode: 'always' | 'manual' = 'always'
 let lastTouchY = 0
+// 手機保底捲動：固定覆蓋層會吃掉觸控、原生捲動失效，改由 touchmove 手動驅動 window.scrollBy，
+// 放開手指後以慣性衰減續捲（模擬原生 momentum）。
+let lastTouchT = 0
+let touchScrollVel = 0 // px/ms
+let touchMomentumRaf = 0
 const cardOrbitSpeed = 0.0006
 const cardOrbitSettleEpsilon = 0.003
 const nextSceneSpeed = 0.00005 // 調小=骨幹退場+wipe 分到更多捲動距離（原 0.00007）
@@ -2461,10 +2466,29 @@ function onWheel(event: WheelEvent) {
 function onTouchStart(event: TouchEvent) {
   wakeBottomRender()
   lastTouchY = event.touches[0]?.clientY ?? 0
+  lastTouchT = performance.now()
+  touchScrollVel = 0
+  if (touchMomentumRaf) {
+    window.cancelAnimationFrame(touchMomentumRaf)
+    touchMomentumRaf = 0
+  }
 }
 
 function onTouchMove(event: TouchEvent) {
   if (document.body.classList.contains('hero-lab-active')) {
+    // 原生捲動在固定覆蓋層上失效 → 手動用手指位移驅動 window.scrollBy（1:1 跟手），
+    // 由此觸發 scroll 事件 → 既有 native 同步把 3D 跟上。
+    const y = event.touches[0]?.clientY ?? lastTouchY
+    const now = performance.now()
+    const dy = lastTouchY - y
+    const dt = Math.max(1, now - lastTouchT)
+    lastTouchY = y
+    lastTouchT = now
+    if (dy !== 0) {
+      window.scrollBy(0, dy)
+      touchScrollVel = dy / dt
+      if (event.cancelable) event.preventDefault()
+    }
     wakeBottomRender()
     return
   }
@@ -2474,6 +2498,32 @@ function onTouchMove(event: TouchEvent) {
   if (event.cancelable) event.preventDefault()
   wakeBottomRender()
   applyScrollDelta(deltaY)
+}
+
+function onTouchEnd() {
+  if (typeof document === 'undefined') return
+  if (!document.body.classList.contains('hero-lab-active')) return
+  if (touchMomentumRaf) {
+    window.cancelAnimationFrame(touchMomentumRaf)
+    touchMomentumRaf = 0
+  }
+  let vel = touchScrollVel // px/ms
+  if (Math.abs(vel) < 0.03) return // 太輕的觸碰不啟動慣性
+  let prev = performance.now()
+  const step = () => {
+    const now = performance.now()
+    const frameDt = Math.min(48, now - prev)
+    prev = now
+    window.scrollBy(0, vel * frameDt)
+    wakeBottomRender()
+    vel *= Math.pow(0.94, frameDt / 16) // 每 ~16ms 衰減 6%
+    if (Math.abs(vel) > 0.012) {
+      touchMomentumRaf = window.requestAnimationFrame(step)
+    } else {
+      touchMomentumRaf = 0
+    }
+  }
+  touchMomentumRaf = window.requestAnimationFrame(step)
 }
 
 function stageValue(progress: number, start: number, span: number, max: number) {
@@ -6786,13 +6836,15 @@ onMounted(() => {
   window.addEventListener('wheel', onWheel, { passive: true })
   window.addEventListener('touchstart', onTouchStart, { passive: true })
   window.addEventListener('touchmove', onTouchMove, { passive: false })
+  window.addEventListener('touchend', onTouchEnd, { passive: true })
+  window.addEventListener('touchcancel', onTouchEnd, { passive: true })
   document.addEventListener('visibilitychange', onVisibilityChange)
   window.addEventListener('focus', forceWakeRender)
   window.addEventListener('pageshow', forceWakeRender)
   // Debug：瞬間跳關（僅供 hero-lab 驗證用）
   // 版本標記：在 Console 打 window.__heroBuild 可確認瀏覽器跑的是不是最新模組（排除 HMR/快取殘留）。
   ;(window as unknown as { __heroBuild?: string }).__heroBuild =
-    'horizontal-wipe+finale-distance2x+tighter-damping @2026-08-18c'
+    'manual-touch-scroll+momentum @2026-08-18d'
   // eslint-disable-next-line no-console
   console.log('[hero-build]', (window as unknown as { __heroBuild?: string }).__heroBuild)
   ;(window as unknown as { __hero?: unknown }).__hero = {
@@ -6913,6 +6965,9 @@ onUnmounted(() => {
   window.removeEventListener('wheel', onWheel)
   window.removeEventListener('touchstart', onTouchStart)
   window.removeEventListener('touchmove', onTouchMove)
+  window.removeEventListener('touchend', onTouchEnd)
+  window.removeEventListener('touchcancel', onTouchEnd)
+  if (touchMomentumRaf) window.cancelAnimationFrame(touchMomentumRaf)
   document.removeEventListener('visibilitychange', onVisibilityChange)
   window.removeEventListener('focus', forceWakeRender)
   window.removeEventListener('pageshow', forceWakeRender)
