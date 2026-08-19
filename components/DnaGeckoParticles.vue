@@ -5623,6 +5623,7 @@ let rendererRef: THREE.WebGLRenderer | null = null
 // （此時 uEggReveal≈0 → 全 discard 不可見），把 shader 提前編譯掉。胚胎 GLB 載入後再補一輪。
 const FINALE_PREWARM_FRAMES = 6
 let finalePrewarmFrames = FINALE_PREWARM_FRAMES // 初始為滿=不預熱，envDone 時歸零啟動
+let debugHudEl: HTMLDivElement | null = null // 網址 ?debug=1 顯示的即時數值面板（診斷真機捲動用）
 const tmpRes = new THREE.Vector2()
 let responsiveViewportWidth = 0
 let responsiveViewportHeight = 0
@@ -5666,8 +5667,8 @@ function syncResponsiveSceneLayout() {
   const narrowMobile = compact && aspect < 1.2
 
   // 以實際畫布比例計算，不依賴特定手機型號；窄直向螢幕縮放場景並拉寬視野，避免兩側裁切。
-  const nextScale = narrowMobile ? THREE.MathUtils.clamp(0.58 + aspect * 0.27, 0.68, 0.92) : 1
-  const nextFov = narrowMobile ? THREE.MathUtils.clamp(55 + (1.3 - aspect) * 28, 58, 72) : 55
+  const nextScale = narrowMobile ? THREE.MathUtils.clamp(0.44 + aspect * 0.26, 0.52, 0.8) : 1
+  const nextFov = narrowMobile ? THREE.MathUtils.clamp(60 + (1.3 - aspect) * 32, 64, 82) : 55
   const camera = resolvePerspectiveCamera(tres.camera)
   if (camera && Math.abs(camera.fov - nextFov) > 0.01) {
     camera.fov = nextFov
@@ -5692,7 +5693,7 @@ function syncResponsiveSceneLayout() {
 }
 let cardPointerEventsBound = false
 const SEAM_BAND = 0.85 // Logo 斜帶在 d 座標的寬度（越小越窄，桌機用）
-const COMPACT_SEAM_BAND = 0.3 // 手機直向的 Logo 斜帶寬度（原 0.34，收窄成更俐落的斜帶；越小越窄）
+const COMPACT_SEAM_BAND = 0.26 // 手機直向收窄黑色斜帶，避免骨幹揭露區被過寬遮罩壓縮
 type ClipPoint = { x: number; y: number }
 
 function pointBandValue(p: ClipPoint) {
@@ -6131,16 +6132,22 @@ onBeforeRender(({ elapsed, delta }) => {
   const logoDnaBackdropOpacity = 0
   const logoDnaUnderlayBgOpacity = 0
   const gridIntroProgress = THREE.MathUtils.smoothstep(gridReveal, 0.0, 0.18)
-  const scene3RevealActive = seamB > 0.012 || finalDna > stageEpsilon
-  const cardsShouldRender =
-    scene3RevealActive ||
-    targetCardOrbit > cardOrbitSettleEpsilon ||
-    currentCardOrbit > cardOrbitSettleEpsilon
+  const scene3RevealThreshold = responsiveIsCompact ? 0.04 : 0.012
+  const scene3RevealActive = seamB > scene3RevealThreshold || finalDna > stageEpsilon
+  // 手機先完整露出骨幹，再開始卡片環繞；否則卡片會在斜帶中段偷跑，與骨幹揭露交疊。
+  const cardsShouldRender = responsiveIsCompact
+    ? targetCardOrbit > cardOrbitSettleEpsilon || currentCardOrbit > cardOrbitSettleEpsilon
+    : scene3RevealActive ||
+      targetCardOrbit > cardOrbitSettleEpsilon ||
+      currentCardOrbit > cardOrbitSettleEpsilon
   const scene01GeckoActive = scene01Active && geckoPointPresence > 0.001
   const scene01GridActive = scene01Active && gridIntroProgress > 0.001
   const projectorActive = scene01GeckoActive && sweep < 0.995
   const projFade = projectorActive ? Math.max(geckoPointPresence * 0.28, geckoShellProgress) : 0
-  const backboneReveal = Math.max(THREE.MathUtils.smoothstep(sweep, 0.35, 1.0), finalDna)
+  // 手機骨幹與斜帶共用 seamB；原本用 sweep 會讓斜帶先走、網格與骨幹亮度稍後才跟上。
+  const backboneReveal = responsiveIsCompact
+    ? Math.max(THREE.MathUtils.smoothstep(seamB, 0.08, 0.72), finalDna)
+    : Math.max(THREE.MathUtils.smoothstep(sweep, 0.35, 1.0), finalDna)
   const scene3Active = scene3RevealActive
   const revealPlaneOffset = THREE.MathUtils.lerp(-8.9, 4.2, geckoRevealProgress)
   group.rotation.y = 0
@@ -6267,8 +6274,10 @@ onBeforeRender(({ elapsed, delta }) => {
   //     現在整段連續前進、不留中段凍結，收尾直接掃滿（右上角不再留黑）。
   const nextWipeP = Math.max(currentNextSceneProgress, targetNextSceneProgress)
   const placeholderWipeP = Math.max(currentPlaceholderProgress, targetPlaceholderProgress)
+  // 手機的 nextScene 實際可視捲動距離較短；0.74 仍會在切到終章時留下半屏未掃完。
+  const eggWipeEnd = responsiveIsCompact ? 0.44 : 0.85
   const eggWipeReveal = Math.max(
-    THREE.MathUtils.smoothstep(nextWipeP, 0.0, 0.85), // 骨幹退場段連續掃到滿
+    THREE.MathUtils.smoothstep(nextWipeP, 0.0, eggWipeEnd), // 骨幹退場段連續掃到滿；手機提早收尾避免黑頂殘留
     placeholderWipeP > stageEpsilon ? 1 : 0 // 進終章後保持滿
   )
   eggUniforms.uEggReveal.value = eggWipeReveal
@@ -6488,9 +6497,11 @@ onBeforeRender(({ elapsed, delta }) => {
   const sceneExitWheelDistance =
     currentNextSceneProgress * nextSceneWheelLen +
     currentPlaceholderProgress * placeholderSceneWheelLen
+  // 直向手機壓低骨幹在卡片段的上移量，讓完整骨幹保留在視窗內直到方塊轉場接手。
+  const backboneSceneRise = BACKBONE_SCROLL_RISE * (responsiveIsCompact ? 0.38 : 1)
   backboneSampleGroup.position.y =
     BACKBONE_BASE_Y +
-    BACKBONE_SCROLL_RISE * scene3Scroll +
+    backboneSceneRise * scene3Scroll +
     BACKBONE_NEXT_SCENE_RISE * sceneExitProgress
   spineLight.intensity = finaleActive ? 0 : backboneReveal * 0.85
   const cardFitScale = getMobileCardFitScale()
@@ -6692,6 +6703,32 @@ onBeforeRender(({ elapsed, delta }) => {
     finaleButtonGroup.visible = true
     wakeBottomRender()
   }
+
+  // 除錯 HUD：網址加 ?debug=1 才顯示即時數值，讓真機截一張圖就能定位捲動/進度問題。
+  if (typeof document !== 'undefined' && /[?&]debug/.test(window.location.search)) {
+    if (!debugHudEl) {
+      debugHudEl = document.createElement('div')
+      debugHudEl.style.cssText =
+        'position:fixed;left:6px;top:6px;z-index:99999;font:12px/1.4 monospace;color:#0f0;background:rgba(0,0,0,.72);padding:6px 8px;white-space:pre;pointer-events:none;border-radius:4px'
+      document.body.appendChild(debugHudEl)
+    }
+    const _maxS = Math.max(1, document.documentElement.scrollHeight - window.innerHeight)
+    debugHudEl.textContent =
+      'pct   ' +
+      (window.scrollY / _maxS).toFixed(3) +
+      '\nsweep ' +
+      sweep.toFixed(2) +
+      '\nnext  ' +
+      currentNextSceneProgress.toFixed(2) +
+      ' / ' +
+      targetNextSceneProgress.toFixed(2) +
+      '\nph    ' +
+      currentPlaceholderProgress.toFixed(2) +
+      ' / ' +
+      targetPlaceholderProgress.toFixed(2) +
+      '\nwipe  ' +
+      eggWipeReveal.toFixed(2)
+  }
 })
 
 // 進度條拖曳與原生 scrollbar 共用映射：
@@ -6846,8 +6883,7 @@ onMounted(() => {
   window.addEventListener('pageshow', forceWakeRender)
   // Debug：瞬間跳關（僅供 hero-lab 驗證用）
   // 版本標記：在 Console 打 window.__heroBuild 可確認瀏覽器跑的是不是最新模組（排除 HMR/快取殘留）。
-  ;(window as unknown as { __heroBuild?: string }).__heroBuild =
-    'reachable-finale+touch-gain1.9+page1500vh @2026-08-18e'
+  ;(window as unknown as { __heroBuild?: string }).__heroBuild = 'debug-hud @2026-08-18f'
   // eslint-disable-next-line no-console
   console.log('[hero-build]', (window as unknown as { __heroBuild?: string }).__heroBuild)
   ;(window as unknown as { __hero?: unknown }).__hero = {
@@ -6971,6 +7007,10 @@ onUnmounted(() => {
   window.removeEventListener('touchend', onTouchEnd)
   window.removeEventListener('touchcancel', onTouchEnd)
   if (touchMomentumRaf) window.cancelAnimationFrame(touchMomentumRaf)
+  if (debugHudEl) {
+    debugHudEl.remove()
+    debugHudEl = null
+  }
   document.removeEventListener('visibilitychange', onVisibilityChange)
   window.removeEventListener('focus', forceWakeRender)
   window.removeEventListener('pageshow', forceWakeRender)
