@@ -146,6 +146,8 @@ onBeforeUnmount(() => {
   height: 100dvh;
   background: #07080a;
   overflow: hidden;
+  /* 手機：固定覆蓋層預設會把觸控拖曳吃掉、頁面捲不動。明確允許垂直平移(捲動)，點按仍可用。 */
+  touch-action: pan-y;
 }
 
 .full-bleed {

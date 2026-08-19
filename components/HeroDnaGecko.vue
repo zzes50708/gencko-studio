@@ -368,6 +368,8 @@ onBeforeUnmount(() => {
   height: 100vh;
   overflow: hidden;
   background: #07080a;
+  /* 手機觸控可捲動（canvas 為最上層觸控目標，需明確允許垂直平移）。 */
+  touch-action: pan-y;
 }
 
 .hero-underlay,
@@ -426,6 +428,8 @@ onBeforeUnmount(() => {
   width: 100%;
   height: 100%;
   display: block;
+  /* 觸控在 canvas 上拖曳仍可捲動頁面（否則手機捲不動）。 */
+  touch-action: pan-y;
 }
 
 .scroll-cue {
