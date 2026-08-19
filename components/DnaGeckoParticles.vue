@@ -2197,9 +2197,11 @@ let lastTouchY = 0
 let lastTouchT = 0
 let touchScrollVel = 0 // px/ms
 let touchMomentumRaf = 0
+// 手動觸控捲動力道：頁面很長，1:1 跟手要滑太多次才到終章。加倍率讓每次滑動走更遠（近似原生慣性）。
+const TOUCH_SCROLL_GAIN = 1.9
 const cardOrbitSpeed = 0.0006
 const cardOrbitSettleEpsilon = 0.003
-const nextSceneSpeed = 0.00005 // 調小=骨幹退場+wipe 分到更多捲動距離（原 0.00007）
+const nextSceneSpeed = 0.00007 // 骨幹退場+wipe 的捲動距離（還原：加距離反而讓終章更難滾到）
 const nextSceneSettleEpsilon = 0.002
 // 卡片只保留很小的視覺慣性；數值高於骨幹 damping，代表比骨幹更快收斂、慣性更小。
 const cardOrbitDamping = 0.16
@@ -2270,7 +2272,7 @@ const cardOrbitStartWheelLen = cardOrbitInputStart / timelineWheelScale
 const timelineWheelLen = scene3HoldTimeline / timelineWheelScale
 const cardWheelLen = cardOrbitMax / cardOrbitSpeed
 const nextSceneWheelLen = 1 / nextSceneSpeed
-const placeholderSceneWheelLen = nextSceneWheelLen * 2.0 // 終章蛋生命週期分到更多捲動距離（原 1.2）
+const placeholderSceneWheelLen = nextSceneWheelLen * 1.2 // 終章蛋生命週期的捲動距離（還原）
 const placeholderSceneSpeed = 1 / placeholderSceneWheelLen
 const cardsEndWheelLen = cardOrbitStartWheelLen + cardWheelLen
 const nextSceneEndWheelLen = cardsEndWheelLen + nextSceneWheelLen
@@ -2485,8 +2487,9 @@ function onTouchMove(event: TouchEvent) {
     lastTouchY = y
     lastTouchT = now
     if (dy !== 0) {
-      window.scrollBy(0, dy)
-      touchScrollVel = dy / dt
+      const move = dy * TOUCH_SCROLL_GAIN
+      window.scrollBy(0, move)
+      touchScrollVel = move / dt
       if (event.cancelable) event.preventDefault()
     }
     wakeBottomRender()
@@ -2516,7 +2519,7 @@ function onTouchEnd() {
     prev = now
     window.scrollBy(0, vel * frameDt)
     wakeBottomRender()
-    vel *= Math.pow(0.94, frameDt / 16) // 每 ~16ms 衰減 6%
+    vel *= Math.pow(0.975, frameDt / 16) // 每 ~16ms 衰減 2.5% → 甩一下滑更遠
     if (Math.abs(vel) > 0.012) {
       touchMomentumRaf = window.requestAnimationFrame(step)
     } else {
@@ -6844,7 +6847,7 @@ onMounted(() => {
   // Debug：瞬間跳關（僅供 hero-lab 驗證用）
   // 版本標記：在 Console 打 window.__heroBuild 可確認瀏覽器跑的是不是最新模組（排除 HMR/快取殘留）。
   ;(window as unknown as { __heroBuild?: string }).__heroBuild =
-    'manual-touch-scroll+momentum @2026-08-18d'
+    'reachable-finale+touch-gain1.9+page1500vh @2026-08-18e'
   // eslint-disable-next-line no-console
   console.log('[hero-build]', (window as unknown as { __heroBuild?: string }).__heroBuild)
   ;(window as unknown as { __hero?: unknown }).__hero = {

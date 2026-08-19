@@ -158,9 +158,9 @@ onBeforeUnmount(() => {
 
 .hero-lab-scroll-space {
   /* 拉長原生捲動旅程，讓同一格滾輪帶來更細的場景位移。 */
-  /* 終章分到更多 journey 比例後，總長一併加長，讓前段場景維持原本捲動距離、終章多出來的距離是「淨增加」。 */
-  height: 3000vh;
-  height: 3000svh;
+  /* 頁面總長：改短讓真機觸控能輕鬆滑到終章結尾（3000vh 太長、根本滑不到底）。 */
+  height: 1500vh;
+  height: 1500svh;
   pointer-events: none;
 }
 
@@ -172,7 +172,7 @@ onBeforeUnmount(() => {
 
   /* 使用 svh 固定滾動總長，避免 iOS 網址列伸縮時改變 scrollHeight 造成跳動。 */
   .hero-lab-scroll-space {
-    height: 3000svh;
+    height: 1500svh;
   }
 }
 
