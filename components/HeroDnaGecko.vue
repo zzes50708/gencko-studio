@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { onBeforeRouteLeave } from 'vue-router'
 import DnaGeckoParticles from '@/components/DnaGeckoParticles.vue'
 import GalleryGlitchScreen from '@/components/GalleryGlitchScreen.vue'
 import HeroScrollProgress from '@/components/HeroScrollProgress.vue'
@@ -16,6 +17,8 @@ interface HeroGalleryCard {
 }
 
 const bottomRenderMode = ref<'always' | 'manual'>('always')
+const compactViewport = ref(false)
+const canvasDpr = computed<[number, number]>(() => (compactViewport.value ? [1, 1.2] : [1, 1.5]))
 const particlesRef = ref<{ scrubTo: (progress: number, immediate?: boolean) => void } | null>(null)
 const journeyProgress = ref(0)
 // 終章揭露進度：白實驗室 + 玻璃蛋易觸發 Bloom，終章時把 Bloom 平滑壓下來（其他場景不動）。
@@ -23,8 +26,12 @@ const finaleReveal = ref(0)
 function setFinaleReveal(v: number) {
   finaleReveal.value = v
 }
-const bloomStrength = computed(() => 0.18 * (1 - 0.88 * finaleReveal.value)) // 0.18 → ~0.022
-const bloomThreshold = computed(() => 0.9 + 0.1 * finaleReveal.value) // 0.9 → 1.0（終章幾乎不發光暈）
+const bloomStrength = computed(
+  () => (compactViewport.value ? 0.08 : 0.18) * (1 - 0.88 * finaleReveal.value)
+) // 手機降低 Bloom，避免窄畫面高亮溢出；桌面維持原值。
+const bloomThreshold = computed(
+  () => (compactViewport.value ? 1.08 : 0.9) + 0.1 * finaleReveal.value
+) // 手機只保留高亮邊緣，桌面維持原本閾值。
 const journeySegments = ref<{ key: string; end: number }[]>([])
 const nativeHeroProgress = ref(0)
 const nextSceneProgress = ref(0)
@@ -36,6 +43,8 @@ let nativeScrollFrame = 0
 let initialStartClampFrame = 0
 let initialStartClampTimer: number | null = null
 let initialStartClampUntil = 0
+let finaleNavigationPending = false
+let compactViewportMedia: MediaQueryList | null = null
 
 const HERO_FORCE_START_EVENT = 'hero-lab:force-start'
 
@@ -153,6 +162,11 @@ function setNextSceneProgress(value: number) {
   nextSceneProgress.value = Math.max(0, Math.min(1, value))
 }
 
+function syncCompactViewport() {
+  if (typeof window === 'undefined') return
+  compactViewport.value = window.matchMedia('(hover: none), (pointer: coarse)').matches
+}
+
 function selectHeroCard(card: HeroGalleryCard) {
   if (closeGalleryTimer) {
     clearTimeout(closeGalleryTimer)
@@ -181,48 +195,34 @@ function onGalleryWheel(event: WheelEvent) {
   if (event.deltaY < 0) closeGalleryScene(true)
 }
 
-const nextSegmentEnd = computed(
-  () => journeySegments.value.find((item) => item.key === 'next')?.end ?? 1
-)
-const placeholderSegmentEnd = computed(
-  () => journeySegments.value.find((item) => item.key === 'placeholder')?.end ?? 1
-)
-const nativePlaceholderProgress = computed(() => {
-  const start = nextSegmentEnd.value
-  const end = placeholderSegmentEnd.value
-  return Math.max(0, Math.min(1, (nativeHeroProgress.value - start) / Math.max(0.001, end - start)))
-})
-
-const finaleRevealProgress = computed(() => nativePlaceholderProgress.value)
-
-const shopButtonProgress = computed(() => {
-  const p = Math.max(0, Math.min(1, finaleRevealProgress.value))
-  const t = Math.max(0, Math.min(1, (p - 0.82) / 0.12))
-  return t * t * (3 - 2 * t)
-})
-
-const shopButtonStyle = computed(() => ({
-  '--shop-progress': shopButtonProgress.value.toFixed(4)
-}))
-
-const finaleActions = [
-  { label: '新手入門', english: 'Start Here', to: '/start-here' },
-  { label: '選購守宮', english: 'Shop Geckos', to: '/shop' },
-  { label: '特寵醫院', english: 'Exotic Vet', to: '/hospital' },
-  { label: '基因計算', english: 'Genetics Lab', to: '/calculator' }
-]
-
-function goFinaleAction(to: string) {
-  navigateTo(to)
+async function goFinaleAction(to: string) {
+  if (finaleNavigationPending) return
+  finaleNavigationPending = true
+  clearInitialStartClamp()
+  try {
+    await navigateTo(to)
+  } finally {
+    finaleNavigationPending = false
+  }
 }
 
+onBeforeRouteLeave(() => {
+  clearInitialStartClamp()
+})
+
 onMounted(() => {
+  syncCompactViewport()
+  compactViewportMedia = window.matchMedia('(hover: none), (pointer: coarse)')
+  compactViewportMedia.addEventListener?.('change', syncCompactViewport)
+  window.addEventListener('resize', syncCompactViewport, { passive: true })
   forceInitialHeroStart()
   window.addEventListener(HERO_FORCE_START_EVENT, forceInitialHeroStart)
   window.addEventListener('scroll', queueNativeHeroScrollSync, { passive: true })
 })
 
 onBeforeUnmount(() => {
+  compactViewportMedia?.removeEventListener?.('change', syncCompactViewport)
+  window.removeEventListener('resize', syncCompactViewport)
   if (closeGalleryTimer) clearTimeout(closeGalleryTimer)
   clearInitialStartClamp()
   window.removeEventListener(HERO_FORCE_START_EVENT, forceInitialHeroStart)
@@ -269,7 +269,7 @@ onBeforeUnmount(() => {
         class="hero-canvas"
         clear-color="#07080a"
         :alpha="true"
-        :dpr="[1, 1.5]"
+        :dpr="canvasDpr"
         :render-mode="bottomRenderMode"
       >
         <TresPerspectiveCamera :position="[0, 0, 7]" :fov="55" />
@@ -285,6 +285,7 @@ onBeforeUnmount(() => {
           @journey-segments="setJourneySegments"
           @next-scene-progress="setNextSceneProgress"
           @finale-reveal="setFinaleReveal"
+          @finale-action="goFinaleAction"
         />
 
         <EffectComposer>
@@ -305,23 +306,6 @@ onBeforeUnmount(() => {
       @scrub="onScrub"
     />
 
-    <div
-      v-if="shopButtonProgress > 0.001"
-      class="finale-action-grid"
-      :class="{ 'finale-action-grid--active': shopButtonProgress > 0.5 }"
-      :style="shopButtonStyle"
-    >
-      <button
-        v-for="action in finaleActions"
-        :key="action.to"
-        class="finale-shop-button"
-        type="button"
-        @click="goFinaleAction(action.to)"
-      >
-        <span>{{ action.label }}</span>
-        <small>{{ action.english }}</small>
-      </button>
-    </div>
     <Transition name="gallery">
       <div
         v-if="selectedCard"
@@ -478,15 +462,18 @@ onBeforeUnmount(() => {
 .finale-action-grid {
   position: fixed;
   left: 50%;
-  bottom: max(1.5rem, calc(7vh - min(3vh, 28px)));
+  bottom: clamp(4rem, 8vh, 6rem);
   z-index: 6650;
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: clamp(0.45rem, 0.75vw, 0.8rem);
-  width: min(54vw, 600px);
+  width: min(60vw, 900px);
   opacity: var(--shop-progress, 0);
   pointer-events: none;
-  transform: translate(-50%, calc(22px * (1 - var(--shop-progress, 0))))
+  transform-origin: center bottom;
+  transform-style: preserve-3d;
+  transform: translateX(-50%) perspective(900px) rotateX(45deg)
+    translateY(calc(22px * (1 - var(--shop-progress, 0))))
     scale(calc(0.92 + var(--shop-progress, 0) * 0.08));
   transition:
     opacity 180ms ease,
@@ -507,33 +494,22 @@ onBeforeUnmount(() => {
   box-sizing: border-box;
   width: 100%;
   min-width: 0;
-  height: clamp(58px, 7.5vh, 74px);
+  height: clamp(88px, 11vh, 112px);
   padding: 0 1rem;
   color: rgba(255, 246, 232, 0.96);
   font-family: 'Courier New', Courier, monospace;
   letter-spacing: 0.22em;
   text-transform: uppercase;
-  background:
-    linear-gradient(
-      180deg,
-      rgba(255, 255, 255, 0.14),
-      rgba(255, 255, 255, 0.02) 34%,
-      rgba(11, 8, 5, 0.12) 100%
-    ),
-    linear-gradient(
-      135deg,
-      rgba(255, 233, 205, 0.08),
-      rgba(255, 255, 255, 0) 46%,
-      rgba(255, 211, 154, 0.08)
-    );
-  border: 1px solid rgba(255, 230, 196, 0.32);
-  border-radius: min(4.05vh, 34px);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.26),
-    inset 0 0 18px rgba(255, 244, 223, 0.06),
-    0 0 18px rgba(255, 169, 82, 0.08),
-    0 12px 34px rgba(0, 0, 0, 0.26);
-  backdrop-filter: blur(6px);
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  clip-path: none;
+  transform-style: preserve-3d;
+  backface-visibility: hidden;
+  --button-rise: 8px;
+  transform: none;
+  box-shadow: none;
+  backdrop-filter: none;
   transition:
     filter 160ms ease,
     border-color 160ms ease,
@@ -550,51 +526,41 @@ onBeforeUnmount(() => {
   pointer-events: none;
 }
 
+/* 後排離相機較遠，抬高後與前排連成一個向牆面上升的整體斜面。 */
+.finale-shop-button:nth-child(-n + 2) {
+  --button-rise: 34px;
+}
+
 .finale-shop-button::before {
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.28), rgba(255, 255, 255, 0) 34%),
-    linear-gradient(
-      90deg,
-      rgba(255, 255, 255, 0.12),
-      rgba(255, 255, 255, 0) 24%,
-      rgba(255, 255, 255, 0.08) 52%,
-      rgba(255, 255, 255, 0) 74%
-    );
-  mix-blend-mode: screen;
+  display: none;
 }
 
 .finale-shop-button::after {
-  inset: 1px;
-  border-radius: inherit;
-  border: 1px solid rgba(255, 248, 235, 0.14);
-  box-shadow: inset 0 0 12px rgba(255, 247, 227, 0.06);
+  display: none;
 }
 
 .finale-shop-button span {
   font-size: clamp(1rem, 1.8vw, 1.55rem);
+  color: transparent;
+  transform: none;
 }
 
 .finale-shop-button small {
-  color: rgba(255, 230, 198, 0.8);
+  color: transparent;
   font-size: 0.72rem;
   letter-spacing: 0.34em;
-  text-shadow: 0 1px 10px rgba(53, 27, 10, 0.24);
+  text-shadow: none;
+  transform: none;
 }
 
 @media (hover: hover) and (pointer: fine) {
   .finale-shop-button:hover {
-    border-color: rgba(255, 235, 198, 0.56);
     filter: brightness(1.08) saturate(1.08);
-    transform: translateY(-2px) scale(1.018);
-    box-shadow:
-      inset 0 1px 0 rgba(255, 255, 255, 0.32),
-      inset 0 0 18px rgba(255, 240, 218, 0.08),
-      0 0 24px rgba(255, 139, 46, 0.18),
-      0 18px 44px rgba(0, 0, 0, 0.34);
+    transform: scale(1.018);
   }
 }
 
-@media (max-width: 767px), (hover: none) {
+@media (hover: none), (pointer: coarse) {
   .finale-action-grid {
     bottom: max(1rem, 4vh);
     width: min(88vw, 480px);
@@ -1259,9 +1225,16 @@ onBeforeUnmount(() => {
   }
 }
 
-@media (max-width: 767px), (hover: none), (pointer: coarse) {
+@media (hover: none), (pointer: coarse) {
+  .hero-composite {
+    height: 100svh;
+    height: 100dvh;
+    min-height: 100svh;
+  }
+
   .hero-underlay {
-    padding: 2.5rem 1.2rem 4rem;
+    padding: max(1.4rem, env(safe-area-inset-top)) max(1rem, env(safe-area-inset-right))
+      max(2rem, env(safe-area-inset-bottom)) max(1rem, env(safe-area-inset-left));
     gap: 2rem;
   }
 
@@ -1277,6 +1250,88 @@ onBeforeUnmount(() => {
 
   .intro-logo-rig {
     width: min(54vw, 240px);
+  }
+
+  .intro-copy,
+  .intro-meta {
+    width: min(100%, 34rem);
+  }
+
+  .scroll-cue {
+    top: calc(50% - var(--hero-logo-dna-lift, 0vh) - clamp(5rem, 11vh, 7rem));
+    gap: 0.55rem;
+  }
+
+  .scroll-cue__line {
+    height: clamp(2.4rem, 8vh, 4rem);
+  }
+
+  .scroll-cue__text {
+    font-size: clamp(0.7rem, 2.6vw, 0.9rem);
+    letter-spacing: 0.24em;
+  }
+
+  .gallery-projector {
+    left: 50%;
+    top: 31%;
+    width: min(92vw, 34rem);
+    transform: translate(-50%, -50%) perspective(900px) rotateY(-3deg) rotateX(1deg);
+  }
+
+  .gallery-screen {
+    padding: clamp(0.3rem, 1.6vw, 0.55rem);
+  }
+
+  .gallery-copy {
+    left: max(1rem, env(safe-area-inset-left));
+    right: max(1rem, env(safe-area-inset-right));
+    bottom: max(1rem, env(safe-area-inset-bottom));
+    width: auto;
+    max-width: none;
+    padding: 0.85rem 0.9rem;
+    background: linear-gradient(180deg, rgba(5, 7, 8, 0), rgba(5, 7, 8, 0.84) 24%);
+  }
+
+  .gallery-kicker {
+    margin-bottom: 0.55rem;
+    font-size: 0.66rem;
+    letter-spacing: 0.16em;
+  }
+
+  .gallery-copy h3 {
+    margin-bottom: 0.45rem;
+    font-size: clamp(1rem, 5vw, 1.35rem);
+  }
+
+  .gallery-meta {
+    margin-bottom: 0.45rem;
+    font-size: 0.7rem;
+    line-height: 1.45;
+  }
+
+  .gallery-desc {
+    display: -webkit-box;
+    max-width: 42rem;
+    margin-bottom: 0.65rem;
+    overflow: hidden;
+    font-size: 0.74rem;
+    line-height: 1.48;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
+
+  .gallery-close {
+    min-height: 2.75rem;
+    font-size: 0.72rem;
+  }
+
+  .gallery-transition-canvas {
+    animation-duration: 0.68s;
+  }
+
+  .gallery-enter-active,
+  .gallery-leave-active {
+    transition-duration: 0.34s;
   }
 }
 </style>
