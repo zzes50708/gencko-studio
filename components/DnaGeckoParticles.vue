@@ -1,5 +1,5 @@
 ﻿<script setup lang="ts">
-import { shallowRef, onMounted, onUnmounted } from 'vue'
+import { nextTick, shallowRef, onMounted, onUnmounted } from 'vue'
 import { useLoop, useTresContext } from '@tresjs/core'
 import * as THREE from 'three'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
@@ -30,6 +30,7 @@ const MODEL_URL = '/models/gecko-tripo.glb'
 const BACKBONE_MODEL_URL = '/models/scene03-main-rig.glb'
 const EMBRYO_MODEL_URL = '/models/gecko-embryo.glb'
 const LOGO_TEXTURE_URL = '/logo.png'
+const PORTRAIT_SPINE_WIPE_Y_MAX = 6
 
 const CFG = {
   dna: {
@@ -86,6 +87,8 @@ const uniforms = {
   uEggRes: { value: new THREE.Vector2(1, 1) },
   uSeamA: { value: 0 }, // 起始 0 = 全顯示
   uSeamB: { value: 0 }, // 起始 0 = 骨幹全隱藏
+  uSpineWipeYMax: { value: PORTRAIT_SPINE_WIPE_Y_MAX },
+  uSpineWipeProgress: { value: 0 },
   uIntroSeam: { value: 0.18 }, // DNA 入場專用：由下往上顯示
   uEggReveal: { value: 0 } // 終章水平 wipe：0→1 沿螢幕 y 揭露，蛋/背景出現、骨幹/卡片退場
 }
@@ -161,7 +164,8 @@ function makeGlass(
   clipMode: 'scene3' | 'scene1' = 'scene3',
   enableTopDissolve = false,
   enableFinaleWipe = false,
-  alphaCap?: number
+  alphaCap?: number,
+  useFixedSpineWipe = false
 ) {
   const baseGlow = bloomSafe ? '0.1' : '0.18'
   const fresnelGlow = bloomSafe ? '0.16' : '0.38'
@@ -188,6 +192,12 @@ function makeGlass(
       uResolution: uniforms.uResolution,
       uSeamA: uniforms.uSeamA,
       uSeamB: uniforms.uSeamB,
+      ...(useFixedSpineWipe
+        ? {
+            uSpineWipeYMax: uniforms.uSpineWipeYMax,
+            uSpineWipeProgress: uniforms.uSpineWipeProgress
+          }
+        : {}),
       ...(enableTopDissolve
         ? {
             uDissolveStart: { value: -999 },
@@ -237,6 +247,8 @@ function makeGlass(
       uniform vec2 uResolution;
       uniform float uSeamA;
       uniform float uSeamB;
+      ${useFixedSpineWipe ? 'uniform float uSpineWipeYMax;' : ''}
+      ${useFixedSpineWipe ? 'uniform float uSpineWipeProgress;' : ''}
       varying vec3 vN;
       varying vec3 vV;
       varying vec2 vUv;
@@ -277,7 +289,19 @@ function makeGlass(
         }
         // scene3: 保留 d<seamB（Scene03 揭露）；scene1: 保留 d>=seamA（起始 DNA 可見、斜帶退場）。
         float _sd = perturbScreenD(gl_FragCoord.xy, uResolution, uTime, 0.018);
-        ${clipMode === 'scene1' ? 'if (_sd < uSeamA) discard;' : 'if (_sd > uSeamB) discard;'}
+        ${
+          clipMode === 'scene1'
+            ? 'if (_sd < uSeamA) discard;'
+            : useFixedSpineWipe
+              ? /* glsl */ `
+        // gl_FragCoord 可能因 DPR／瀏覽器縮放短暫超出預期解析度；先正規化，
+        // 確保 progress=1 時裁切線必定越過整個畫面，不會殘留頂部缺口。
+        float _spineScanY = clamp(_sd / 2.0, 0.0, 1.0) * uSpineWipeYMax;
+        float _spineCutY = clamp(uSpineWipeProgress, 0.0, 1.0) * uSpineWipeYMax;
+        if (_spineScanY > _spineCutY) discard;
+        `
+              : 'if (_sd > uSeamB) discard;'
+        }
         vec3 N = normalize(vN);
         vec3 V = normalize(vV);
         vec3 colorA = toLinearColor(uColorA);
@@ -344,7 +368,7 @@ function makeGlass(
         a += seamEdge * ${enterAlpha};
         `
             : /* glsl */ `
-        float seamEdge = 1.0 - smoothstep(0.0, 0.16, uSeamB - _sd);
+        float seamEdge = 1.0 - smoothstep(0.0, 0.16, ${useFixedSpineWipe ? 'uSpineWipeProgress * 2.0' : 'uSeamB'} - _sd);
         col += colorB * seamEdge * ${enterGlowA};
         col += colorC * pow(seamEdge, 2.2) * ${enterGlowB};
         a += seamEdge * ${enterAlpha};
@@ -874,7 +898,8 @@ const backboneSampleMat = makeGlass(
   'scene3',
   false,
   true,
-  0.92 // alphaCap：骨幹可到 ~92% 不透明（其他玻璃材質不受影響）
+  0.92, // alphaCap：骨幹可到 ~92% 不透明（其他玻璃材質不受影響）
+  true
 )
 backboneSampleMat.depthWrite = true
 backboneSampleMat.depthTest = true
@@ -951,6 +976,8 @@ const spinalCordMat = new THREE.ShaderMaterial({
   uniforms: {
     uTime: uniforms.uTime,
     uSeamB: uniforms.uSeamB,
+    uSpineWipeYMax: uniforms.uSpineWipeYMax,
+    uSpineWipeProgress: uniforms.uSpineWipeProgress,
     uResolution: uniforms.uResolution,
     uColorHot: { value: new THREE.Color('#ffb15a') },
     uColorEdge: { value: new THREE.Color('#ff741f') },
@@ -976,6 +1003,8 @@ const spinalCordMat = new THREE.ShaderMaterial({
   fragmentShader: /* glsl */ `
     uniform float uTime;
     uniform float uSeamB;
+    uniform float uSpineWipeYMax;
+    uniform float uSpineWipeProgress;
     uniform vec2 uResolution;
     uniform vec3 uColorHot;
     uniform vec3 uColorEdge;
@@ -986,12 +1015,10 @@ const spinalCordMat = new THREE.ShaderMaterial({
     varying vec3 vV;
     ${screenEdgeNoiseGlsl}
     void main() {
-      // 終章退場 wipe（與蛋入場同一道斜向邊界、反向）。
-      float _fwSd = gl_FragCoord.x / max(1.0, uEggRes.x) + gl_FragCoord.y / max(1.0, uEggRes.y);
-      float _fwD = fract(sin(dot(floor(gl_FragCoord.xy / 7.0), vec2(12.9898, 78.233))) * 43758.5453);
-      if (_fwSd < uEggReveal * 2.24 - 0.12 + _fwD * 0.085) discard;
       float _sd = perturbScreenD(gl_FragCoord.xy, uResolution, uTime, 0.014);
-      if (_sd > uSeamB) discard;
+      float _spineScanY = clamp(_sd / 2.0, 0.0, 1.0) * uSpineWipeYMax;
+      float _spineCutY = clamp(uSpineWipeProgress, 0.0, 1.0) * uSpineWipeYMax;
+      if (_spineScanY > _spineCutY) discard;
       // 穩定發光，不隨時間閃爍：中心亮、邊緣 rim 提亮。
       float rim = pow(1.0 - abs(dot(normalize(vN), normalize(vV))), 1.2);
       vec3 col = mix(uColorEdge, uColorHot, 0.55 + rim * 0.45);
@@ -1004,6 +1031,8 @@ const spinalVolumeMat = new THREE.ShaderMaterial({
   uniforms: {
     uTime: uniforms.uTime,
     uSeamB: uniforms.uSeamB,
+    uSpineWipeYMax: uniforms.uSpineWipeYMax,
+    uSpineWipeProgress: uniforms.uSpineWipeProgress,
     uResolution: uniforms.uResolution,
     uColorHot: { value: new THREE.Color('#ff9a36') },
     uColorEdge: { value: new THREE.Color('#f05e18') },
@@ -1030,6 +1059,8 @@ const spinalVolumeMat = new THREE.ShaderMaterial({
   fragmentShader: /* glsl */ `
     uniform float uTime;
     uniform float uSeamB;
+    uniform float uSpineWipeYMax;
+    uniform float uSpineWipeProgress;
     uniform vec2 uResolution;
     uniform vec3 uColorHot;
     uniform vec3 uColorEdge;
@@ -1041,12 +1072,10 @@ const spinalVolumeMat = new THREE.ShaderMaterial({
     varying vec3 vV;
     ${screenEdgeNoiseGlsl}
     void main() {
-      // 終章退場 wipe（與蛋入場同一道斜向邊界、反向）。
-      float _fwSd = gl_FragCoord.x / max(1.0, uEggRes.x) + gl_FragCoord.y / max(1.0, uEggRes.y);
-      float _fwD = fract(sin(dot(floor(gl_FragCoord.xy / 7.0), vec2(12.9898, 78.233))) * 43758.5453);
-      if (_fwSd < uEggReveal * 2.24 - 0.12 + _fwD * 0.085) discard;
       float _sd = perturbScreenD(gl_FragCoord.xy, uResolution, uTime, 0.014);
-      if (_sd > uSeamB) discard;
+      float _spineScanY = clamp(_sd / 2.0, 0.0, 1.0) * uSpineWipeYMax;
+      float _spineCutY = clamp(uSpineWipeProgress, 0.0, 1.0) * uSpineWipeYMax;
+      if (_spineScanY > _spineCutY) discard;
       float facing = abs(dot(normalize(vN), normalize(vV)));
       float softBody = pow(clamp(facing, 0.0, 1.0), 1.35);
       float axial = smoothstep(0.0, 0.18, vUv.y) * (1.0 - smoothstep(0.82, 1.0, vUv.y));
@@ -1389,7 +1418,7 @@ eggShellMat.onBeforeCompile = (shader) => {
       // uEggReveal 0→1 時邊界完整通過畫面，蛋在前面被揭露出來。
       float _egSd = gl_FragCoord.x / max(1.0, uEggRes.x) + gl_FragCoord.y / max(1.0, uEggRes.y);
       float _egDither = eggHash31(vec3(floor(gl_FragCoord.xy / 7.0), 3.1));
-      if (_egSd > uEggReveal * 2.24 - 0.12 + _egDither * 0.085) discard;
+      if (uEggReveal < 0.985 && _egSd > uEggReveal * 2.24 - 0.12 + _egDither * 0.085) discard;
       float eggYNorm = clamp(vEggLocalPos.y / 1.05 * 0.5 + 0.5, 0.0, 1.0);
       // 裂縫發光時序改由「轉場 wipe(uEggReveal)」驅動 → 蛋一被揭露就已有裂縫發光。
       float crackPhase = mix(0.55, 1.0, smoothstep(0.0, 0.5, uEggReveal));
@@ -1430,7 +1459,7 @@ eggShellMat.onBeforeCompile = (shader) => {
     `
   )
 }
-eggShellMat.customProgramCacheKey = () => 'gencko-finale-egg-v14-shard-edge-glow'
+eggShellMat.customProgramCacheKey = () => 'gencko-finale-egg-v15-wipe-complete'
 // 胚胎改金屬材質：MeshStandard(metalness=1) + envMap 反射；保留與蛋殼同一道 wipe 揭露，
 // 心跳改由 emissiveIntensity 微脈動（見迴圈）。envMap 於 initEnvMap 指定。
 const embryoMat = new THREE.MeshStandardMaterial({
@@ -1472,7 +1501,7 @@ embryoMat.onBeforeCompile = (shader) => {
       // 與蛋殼同一道斜向 wipe 揭露。
       float _emSd = gl_FragCoord.x / max(1.0, uEggRes.x) + gl_FragCoord.y / max(1.0, uEggRes.y);
       float _emD = fract(sin(dot(floor(gl_FragCoord.xy / 7.0), vec2(12.9898, 78.233))) * 43758.5453);
-      if (_emSd > uEggReveal * 2.24 - 0.12 + _emD * 0.085) discard;`
+      if (uEggReveal < 0.985 && _emSd > uEggReveal * 2.24 - 0.12 + _emD * 0.085) discard;`
     )
     .replace(
       '#include <opaque_fragment>',
@@ -1490,7 +1519,7 @@ embryoMat.onBeforeCompile = (shader) => {
       #include <opaque_fragment>`
     )
 }
-embryoMat.customProgramCacheKey = () => 'gencko-embryo-metal-holo-v1'
+embryoMat.customProgramCacheKey = () => 'gencko-embryo-metal-holo-v2-wipe-complete'
 
 const pyramidEdgeMat = new THREE.LineBasicMaterial({
   color: new THREE.Color('#ffa64d'),
@@ -2191,14 +2220,8 @@ let cssLastLogoSpin = Number.NaN
 let cssLastSeamWeightX = -1
 let cssLastSeamWeightY = -1
 let lastBottomRenderMode: 'always' | 'manual' = 'always'
+// 非 Hero Lab 的元件內觸控拖曳狀態。
 let lastTouchY = 0
-// 手機保底捲動：固定覆蓋層會吃掉觸控、原生捲動失效，改由 touchmove 手動驅動 window.scrollBy，
-// 放開手指後以慣性衰減續捲（模擬原生 momentum）。
-let lastTouchT = 0
-let touchScrollVel = 0 // px/ms
-let touchMomentumRaf = 0
-// 手動觸控捲動力道：頁面很長，1:1 跟手要滑太多次才到終章。加倍率讓每次滑動走更遠（近似原生慣性）。
-const TOUCH_SCROLL_GAIN = 1.9
 const cardOrbitSpeed = 0.0006
 const cardOrbitSettleEpsilon = 0.003
 const nextSceneSpeed = 0.00007 // 骨幹退場+wipe 的捲動距離（還原：加距離反而讓終章更難滾到）
@@ -2207,7 +2230,6 @@ const nextSceneSettleEpsilon = 0.002
 const cardOrbitDamping = 0.16
 // 終章阻尼調緊：讓 wipe/蛋隨捲動貼近前進，不再落後半秒 → 捲到底就轉完（修「沒完整轉/會卡」）。
 const nextSceneDamping = 0.3
-const nativeScrollInputPull = 0.16
 const nativeScrollCardInputPull = 0.24
 const nativeScrollNextInputPull = 0.2
 const cardCount = 8
@@ -2291,13 +2313,15 @@ const journeySegments: { key: string; end: number }[] = [
   { key: 'next', end: nextSceneEndWheelLen / totalJourneyWheelLen },
   { key: 'placeholder', end: 1 }
 ]
+const transitionSectionStart = journeySegments[0]?.end ?? 0
+const transitionSectionEnd = journeySegments[1]?.end ?? 1
 let lastJourneyEmit = -1
 let lastFinaleEmit = -1
 let lastNextSceneEmit = -1
-// 骨幹隨 Scene3 捲動沿 +Y 上移（脊椎上升）。
+let currentHeroScrollProgress = 0
+// 骨幹只在下一場景切換時沿 +Y 上移，完整揭露與卡片段保持置中。
 const BACKBONE_BASE_Y = 0
 const BACKBONE_SCALE = 0.96
-const BACKBONE_SCROLL_RISE = 1.7
 const BACKBONE_NEXT_SCENE_RISE = 1.6
 // 起始頁 DNA 必須維持原始比例，只整組等比例放大到兩側主鏈接近 Logo 盤寬度。
 const DNA_LOGO_SCALE = 2.45
@@ -2468,31 +2492,11 @@ function onWheel(event: WheelEvent) {
 function onTouchStart(event: TouchEvent) {
   wakeBottomRender()
   lastTouchY = event.touches[0]?.clientY ?? 0
-  lastTouchT = performance.now()
-  touchScrollVel = 0
-  if (touchMomentumRaf) {
-    window.cancelAnimationFrame(touchMomentumRaf)
-    touchMomentumRaf = 0
-  }
 }
 
 function onTouchMove(event: TouchEvent) {
   if (document.body.classList.contains('hero-lab-active')) {
-    // 原生捲動在固定覆蓋層上失效 → 手動用手指位移驅動 window.scrollBy（1:1 跟手），
-    // 由此觸發 scroll 事件 → 既有 native 同步把 3D 跟上。
-    const y = event.touches[0]?.clientY ?? lastTouchY
-    const now = performance.now()
-    const dy = lastTouchY - y
-    const dt = Math.max(1, now - lastTouchT)
-    lastTouchY = y
-    lastTouchT = now
-    if (dy !== 0) {
-      const move = dy * TOUCH_SCROLL_GAIN
-      window.scrollBy(0, move)
-      touchScrollVel = move / dt
-      if (event.cancelable) event.preventDefault()
-    }
-    wakeBottomRender()
+    // 與桌機共用瀏覽器原生捲動和單一 scroll 時間軸，不攔截成第二套慣性。
     return
   }
   const y = event.touches[0]?.clientY ?? lastTouchY
@@ -2504,33 +2508,16 @@ function onTouchMove(event: TouchEvent) {
 }
 
 function onTouchEnd() {
-  if (typeof document === 'undefined') return
-  if (!document.body.classList.contains('hero-lab-active')) return
-  if (touchMomentumRaf) {
-    window.cancelAnimationFrame(touchMomentumRaf)
-    touchMomentumRaf = 0
-  }
-  let vel = touchScrollVel // px/ms
-  if (Math.abs(vel) < 0.03) return // 太輕的觸碰不啟動慣性
-  let prev = performance.now()
-  const step = () => {
-    const now = performance.now()
-    const frameDt = Math.min(48, now - prev)
-    prev = now
-    window.scrollBy(0, vel * frameDt)
-    wakeBottomRender()
-    vel *= Math.pow(0.975, frameDt / 16) // 每 ~16ms 衰減 2.5% → 甩一下滑更遠
-    if (Math.abs(vel) > 0.012) {
-      touchMomentumRaf = window.requestAnimationFrame(step)
-    } else {
-      touchMomentumRaf = 0
-    }
-  }
-  touchMomentumRaf = window.requestAnimationFrame(step)
+  // Hero Lab 的慣性完全由瀏覽器處理。
 }
 
 function stageValue(progress: number, start: number, span: number, max: number) {
   return THREE.MathUtils.clamp((progress - start) / span, 0, 1) * max
+}
+
+function inverseLerpClamped(value: number, start: number, end: number) {
+  if (Math.abs(end - start) < 1e-6) return 0
+  return THREE.MathUtils.clamp((value - start) / (end - start), 0, 1)
 }
 
 // 幀率無關指數平滑：base 為「以 60fps 為基準的每幀收斂係數」。
@@ -2667,7 +2654,6 @@ function normalizeBackboneModel(root: THREE.Object3D) {
 
   const maxAxis = Math.max(size.x, size.y, size.z) || 1
   const scale = 23.2 / maxAxis
-
   root.position.sub(center)
   root.scale.setScalar(scale)
   root.rotation.set(0, 0, 0)
@@ -3265,7 +3251,11 @@ function makeScreenRevealCardCoreMaterial(color: string, accent: string, alpha =
       varying vec3 vViewDir;
       ${screenEdgeNoiseGlsl}
       void main() {
-        float _sd = perturbScreenD(gl_FragCoord.xy, uResolution, uTime, 0.014);
+        float _sd = clamp(
+          perturbScreenD(gl_FragCoord.xy, uResolution, uTime, 0.014),
+          0.0,
+          2.0
+        );
         float revealBand = smoothstep(uSeamB + 0.035, uSeamB - 0.01, _sd);
         if (revealBand <= 0.001) discard;
         float radius = 0.1;
@@ -3341,10 +3331,12 @@ function makeScreenRevealTitleMaterial(
       varying vec3 vViewDir;
       ${screenEdgeNoiseGlsl}
       void main() {
-      float _fwSd = gl_FragCoord.x / max(1.0, uEggRes.x) + gl_FragCoord.y / max(1.0, uEggRes.y);
-      float _fwD = fract(sin(dot(floor(gl_FragCoord.xy / 7.0), vec2(12.9898, 78.233))) * 43758.5453);
-      if (_fwSd < uEggReveal * 2.24 - 0.12 + _fwD * 0.085) discard;
-        float _sd = perturbScreenD(gl_FragCoord.xy, uResolution, uTime, 0.014);
+      // Scene03 卡片標題不再用 shader wipe 抹除；只保留斜帶 mesh 與 screen reveal。
+        float _sd = clamp(
+          perturbScreenD(gl_FragCoord.xy, uResolution, uTime, 0.014),
+          0.0,
+          2.0
+        );
         float revealBand = smoothstep(uSeamB + 0.035, uSeamB - 0.01, _sd);
         if (revealBand <= 0.001) discard;
         vec2 uv = vUv;
@@ -3383,7 +3375,11 @@ function applyScreenRevealDiscard(material: THREE.Material) {
       uniform float uSeamB;
       ${screenEdgeNoiseGlsl}
       void main() {
-        float _screenRevealSd = perturbScreenD(gl_FragCoord.xy, uResolution, uTime, 0.014);
+        float _screenRevealSd = clamp(
+          perturbScreenD(gl_FragCoord.xy, uResolution, uTime, 0.014),
+          0.0,
+          2.0
+        );
         if (_screenRevealSd > uSeamB) discard;
       `
     )
@@ -3548,8 +3544,10 @@ function makeProjectionCardVideoMaterial(color: string, accent: string) {
       uEggRes: uniforms.uEggRes,
       uVideo: { value: cardPreviewTexture },
       uColor: { value: new THREE.Color(color) },
-      uAccent: { value: new THREE.Color(accent) }
+      uAccent: { value: new THREE.Color(accent) },
+      uOpacity: { value: 1 }
     },
+    transparent: true,
     depthWrite: true,
     depthTest: true,
     side: THREE.DoubleSide,
@@ -3574,16 +3572,20 @@ function makeProjectionCardVideoMaterial(color: string, accent: string) {
       uniform sampler2D uVideo;
       uniform vec3 uColor;
       uniform vec3 uAccent;
+      uniform float uOpacity;
       varying vec2 vUv;
       varying vec3 vNormal;
       varying vec3 vViewDir;
       ${screenEdgeNoiseGlsl}
 
       void main() {
-      float _fwSd = gl_FragCoord.x / max(1.0, uEggRes.x) + gl_FragCoord.y / max(1.0, uEggRes.y);
-      float _fwD = fract(sin(dot(floor(gl_FragCoord.xy / 7.0), vec2(12.9898, 78.233))) * 43758.5453);
-      if (_fwSd < uEggReveal * 2.24 - 0.12 + _fwD * 0.085) discard;
-        float reveal = smoothstep(uSeamB + 0.035, uSeamB - 0.01, perturbScreenD(gl_FragCoord.xy, uResolution, uTime, 0.014));
+      // Scene03 卡片本體不再用 shader wipe 抹除；只保留斜帶 mesh 與 screen reveal。
+        float cardScreenD = clamp(
+          perturbScreenD(gl_FragCoord.xy, uResolution, uTime, 0.014),
+          0.0,
+          2.0
+        );
+        float reveal = smoothstep(uSeamB + 0.035, uSeamB - 0.01, cardScreenD);
         if (reveal <= 0.001) discard;
 
         vec2 px = vec2(1.0 / 960.0, 1.0 / 540.0) * 8.0;
@@ -3608,7 +3610,7 @@ function makeProjectionCardVideoMaterial(color: string, accent: string) {
         // 影片直接覆蓋整個有厚度的卡片；邊與側面以入射角染光，保留立體層次。
         frame *= scan * (0.42 + vignette * 0.58) * (0.52 + facing * 0.48);
         frame += mix(uColor, uAccent, 0.5) * edgeGlow * 0.46;
-        gl_FragColor = vec4(frame, 1.0);
+        gl_FragColor = vec4(frame, uOpacity);
       }
     `
   })
@@ -3781,7 +3783,7 @@ eggShardMat.onBeforeCompile = (shader) => {
       '#include <opaque_fragment>',
       `float _egSd = gl_FragCoord.x / max(1.0, uEggRes.x) + gl_FragCoord.y / max(1.0, uEggRes.y);
       float _egDither = eggShardHash21(floor(gl_FragCoord.xy / 7.0));
-      if (_egSd > uEggReveal * 2.24 - 0.12 + _egDither * 0.085) discard;
+      if (uEggReveal < 0.985 && _egSd > uEggReveal * 2.24 - 0.12 + _egDither * 0.085) discard;
       // 保留裂縫的光：碎片飛散後，用原始位置的 cell 縫在碎片邊緣續發橘光。
       float _shardVe = eggVoronoiEdge(vShardOrig * 4.2);
       float _shardSeam = 1.0 - smoothstep(0.02, 0.12, _shardVe); // 稍寬
@@ -3796,7 +3798,7 @@ eggShardMat.onBeforeCompile = (shader) => {
       #include <opaque_fragment>`
     )
 }
-eggShardMat.customProgramCacheKey = () => 'gencko-egg-shard-fracture-v3-reflective-crackglow'
+eggShardMat.customProgramCacheKey = () => 'gencko-egg-shard-fracture-v4-wipe-complete'
 
 // 把球面碎裂成密鋪的三角/四邊形厚殼片。回傳含 aCentroid/aAxis/aSeed 的 BufferGeometry。
 function buildFracturedEggShell(radius: number, thickness: number, seedCount: number) {
@@ -4272,7 +4274,8 @@ roomMat.onBeforeCompile = (shader) => {
       float _sd = gl_FragCoord.x / max(1.0, uEggRes.x) + gl_FragCoord.y / max(1.0, uEggRes.y);
       float _dith = fract(sin(dot(floor(gl_FragCoord.xy / 7.0), vec2(12.9898, 78.233))) * 43758.5453);
       float _bnd = uEggReveal * 2.24 - 0.12 + _dith * 0.085;
-      if (_sd > _bnd) discard;`
+      // uEggReveal 到終點時，不能再讓任何房間像素被裁切；這是終章的明確完成態。
+      if (uEggReveal < 0.985 && _sd > _bnd) discard;`
     )
     .replace(
       '#include <opaque_fragment>',
@@ -4284,7 +4287,7 @@ roomMat.onBeforeCompile = (shader) => {
       gl_FragColor.rgb += mix(_eo, _eg, _er) * _eb * 0.68;`
     )
 }
-roomMat.customProgramCacheKey = () => 'gencko-finale-room-wipe-v1'
+roomMat.customProgramCacheKey = () => 'gencko-finale-room-wipe-v2-complete'
 const roomMesh = new THREE.Mesh(roomGeo, roomMat)
 roomMesh.position.set(0, 0.2, 1.0)
 roomMesh.renderOrder = 30
@@ -4328,7 +4331,7 @@ const wallGridMat = new THREE.ShaderMaterial({
       vec2 tile = floor(gl_FragCoord.xy / 7.0);
       float dith = fract(sin(dot(tile, vec2(12.9898, 78.233))) * 43758.5453);
       float boundary = uEggReveal * 2.24 - 0.12 + dith * 0.085;
-      if (sd > boundary) discard;
+      if (uEggReveal < 0.985 && sd > boundary) discard;
       vec2 cells = vUv * uCells;
       vec2 lineDist = abs(fract(cells - 0.5) - 0.5) / (fwidth(cells) * 2.25);
       float line = 1.0 - min(min(lineDist.x, lineDist.y), 1.0);
@@ -4460,13 +4463,14 @@ function applyLogoSquareReveal(material: THREE.Material, cacheKey: string) {
         vec2 _logoTile = floor(gl_FragCoord.xy / 7.0);
         float _logoDith = fract(sin(dot(_logoTile, vec2(12.9898, 78.233))) * 43758.5453);
         float _logoBnd = uEggReveal * 2.24 - 0.12 + _logoDith * 0.085;
-        if (_logoSd > _logoBnd) discard;`
+        // 招牌和房間共用完成態，避免 wipe 已停在 1 時仍留下黑幕或缺字。
+        if (uEggReveal < 0.985 && _logoSd > _logoBnd) discard;`
       )
   }
   material.customProgramCacheKey = () => cacheKey
 }
-applyLogoSquareReveal(logoTextMat, 'gencko-sign-text-square-v1')
-applyLogoSquareReveal(logoLightStripMat, 'gencko-sign-light-square-v1')
+applyLogoSquareReveal(logoTextMat, 'gencko-sign-text-square-v2-complete')
+applyLogoSquareReveal(logoLightStripMat, 'gencko-sign-light-square-v2-complete')
 for (const y of [-1.62, 1.62]) {
   const strip = new THREE.Mesh(logoLightStripGeo, logoLightStripMat)
   strip.position.set(0, y, 0.025)
@@ -4847,8 +4851,10 @@ let roomPrewarmFrames = 0
 const parallaxPointer = { x: 0, y: 0 }
 const parallaxCam = { x: 0, y: 0 }
 function onParallaxPointerMove(e: PointerEvent) {
-  parallaxPointer.x = (e.clientX / Math.max(1, window.innerWidth)) * 2 - 1
-  parallaxPointer.y = -((e.clientY / Math.max(1, window.innerHeight)) * 2 - 1)
+  const rect = getHeroCanvasRect()
+  if (!rect) return
+  parallaxPointer.x = ((e.clientX - rect.left) / Math.max(1, rect.width)) * 2 - 1
+  parallaxPointer.y = -(((e.clientY - rect.top) / Math.max(1, rect.height)) * 2 - 1)
 }
 
 // 骨幹/卡片場景背景：橘色神經光絲。畫布經 EffectComposer(bloom) 合成後不透明，
@@ -5066,10 +5072,7 @@ const plexLineMat = new LineMaterial({
   worldUnits: false,
   dashed: false
 })
-plexLineMat.resolution.set(
-  typeof window !== 'undefined' ? window.innerWidth : 1920,
-  typeof window !== 'undefined' ? window.innerHeight : 1080
-)
+plexLineMat.resolution.set(1, 1)
 // 退場：與骨幹同一道終章 wipe（7px 像素格、由下往上消失）。
 plexLineMat.onBeforeCompile = (shader) => {
   shader.uniforms.uEggReveal = eggUniforms.uEggReveal
@@ -5219,10 +5222,7 @@ const boneGridMat = new THREE.ShaderMaterial({
     uniform vec2 uEggRes;
     varying vec3 vWorld;
     void main() {
-      // 與其他背景一致的終章退場 wipe。
-      float _fwSd = gl_FragCoord.x / max(1.0, uEggRes.x) + gl_FragCoord.y / max(1.0, uEggRes.y);
-      float _fwD = fract(sin(dot(floor(gl_FragCoord.xy / 7.0), vec2(12.9898, 78.233))) * 43758.5453);
-      if (_fwSd < uEggReveal * 2.24 - 0.12 + _fwD * 0.085) discard;
+      // Scene03 骨幹地板網格不再用 shader wipe 抹除；只保留實體斜帶 mesh 遮罩。
       // 抗鋸齒網格線
       vec2 g = vWorld.xz / uCell;
       vec2 gd = abs(fract(g - 0.5) - 0.5) / fwidth(g);
@@ -5294,9 +5294,7 @@ const boneTilesMat = new THREE.ShaderMaterial({
     varying float vLift;
     varying vec3 vNormal;
     void main() {
-      float _fwSd = gl_FragCoord.x / max(1.0, uEggRes.x) + gl_FragCoord.y / max(1.0, uEggRes.y);
-      float _fwD = fract(sin(dot(floor(gl_FragCoord.xy / 7.0), vec2(12.9898, 78.233))) * 43758.5453);
-      if (_fwSd < uEggReveal * 2.24 - 0.12 + _fwD * 0.085) discard;
+      // Scene03 浮起格子不再用 shader wipe 抹除；只保留實體斜帶 mesh 遮罩。
       float a = uOpacity * smoothstep(0.05, 0.28, vLift) * 0.55; // 小範圍、低亮度拖曳
       if (a < 0.002) discard;
       float faceLight = 0.55 + 0.45 * max(dot(normalize(vNormal), normalize(vec3(-0.35, 0.8, 0.45))), 0.0);
@@ -5345,6 +5343,8 @@ const dnaTilesMat = boneTilesMat.clone()
 dnaTilesMat.uniforms.uEggReveal = eggUniforms.uEggReveal
 dnaTilesMat.uniforms.uEggRes = eggUniforms.uEggRes
 dnaTilesMat.uniforms.uHoverRadius.value = 0.75
+// 起始 DNA 格子與守宮共用 Scene01 的退場邊界；否則格子會在黑色斜帶後方殘留。
+applyScene01ExitDiscard(dnaTilesMat)
 const dnaTiles = new THREE.InstancedMesh(dnaTileGeo, dnaTilesMat, DNA_GRID_COLUMNS * DNA_GRID_ROWS)
 const dnaTileCenters = new Float32Array(DNA_GRID_COLUMNS * DNA_GRID_ROWS * 3)
 {
@@ -5551,6 +5551,19 @@ burstGroup.add(burstPoints)
 burstGroup.position.set(0, 0.01, 1.82) // 蛋中心
 burstGroup.renderOrder = 60
 burstGroup.visible = false
+const transitionBandGeo = new THREE.PlaneGeometry(1, 1)
+const transitionBandMat = new THREE.MeshBasicMaterial({
+  color: 0x07080a,
+  side: THREE.DoubleSide,
+  depthTest: false,
+  depthWrite: false,
+  toneMapped: false,
+  transparent: false
+})
+const transitionBandMesh = new THREE.Mesh(transitionBandGeo, transitionBandMat)
+transitionBandMesh.frustumCulled = false
+transitionBandMesh.renderOrder = 120
+transitionBandMesh.visible = false
 
 disposables.push(
   plexNodeGeo,
@@ -5558,6 +5571,8 @@ disposables.push(
   plexCellGeo,
   burstGeo,
   burstMat,
+  transitionBandGeo,
+  transitionBandMat,
   boneGridGeo,
   boneGridMat,
   boneTileGeo,
@@ -5587,7 +5602,6 @@ disposables.push(
 
 const groundGrid = buildGroundGrid()
 const backboneSampleGroup = buildBackboneSample()
-
 group.add(groundGrid)
 group.add(dnaGroup)
 group.add(initialLogoGroup)
@@ -5607,6 +5621,7 @@ group.add(logoSignGroup)
 group.add(finaleButtonGroup)
 group.add(eggGroup)
 group.add(burstGroup)
+group.add(transitionBandMesh)
 loadGeckoModel()
 loadBackboneModel()
 
@@ -5627,16 +5642,35 @@ let debugHudEl: HTMLDivElement | null = null // 網址 ?debug=1 顯示的即時�
 const tmpRes = new THREE.Vector2()
 let responsiveViewportWidth = 0
 let responsiveViewportHeight = 0
-let responsiveSceneScale = 1
 let responsiveIsCompact = false
-// 斜縫/終章 wipe 的對角座標權重（a2,b2；a2+b2=2，桌機為 1,1）。
-// d = a2·(x/W) + b2·(y/H) 仍落在 [0,2]，但可調整常數-d 線在直向手機上的視覺斜角。
-// 手機直向時把 y 權重加大、x 權重縮小，使斜角壓回接近桌機（不再接近垂直）。
+let responsiveTouchViewport = false
+let responsiveAspect = 1
+let responsivePortraitFactor = 0
+let lastTransitionBandLogProgress = Number.NaN
+let lastTransitionBandLogY = Number.NaN
+let lastTransitionBandLogScale = Number.NaN
+let lastGeckoLogY = Number.NaN
+let lastSpineLogY = Number.NaN
+let lastSpineLogProgress = Number.NaN
+let lastSpineClipSeam = Number.NaN
+type CanvasViewportRect = {
+  width: number
+  height: number
+  left: number
+  top: number
+}
+let canvasResizeObserver: ResizeObserver | null = null
+let responsiveInitFrame = 0
+let responsiveResizeFrame = 0
+let pendingResponsiveRect: CanvasViewportRect | null = null
+let parallaxPointerEventsBound = false
+// 斜縫的對角座標權重（a2,b2；a2+b2=2）。CSS clip 與所有 shader 都用它，
+// 讓真機的直向畫面保留與桌機相同的實體斜角。
 let seamWeightX = 1
 let seamWeightY = 1
-// 目標斜率量值（|dy/dx|）；natural 斜率 1/aspect 超過此值（直向）才校正。
-// 0.45 ≈ 24°（比桌機再平一點，直向手機看起來更順、不再接近垂直）。調小=更平、調大=更陡。
-const SEAM_TARGET_SLOPE = 0.45
+// 桌機 1914x884 的原始斜帶約為 24 度；直向觸控畫面要以權重補償比例，
+// 否則 d=x/W+y/H 會變成約 50 度，黑帶無法遮住守宮退場和骨幹入場。
+const TOUCH_SEAM_TARGET_SLOPE = 0.462
 const cardRaycaster = new THREE.Raycaster()
 const cardPointerNdc = new THREE.Vector2()
 const cardIntersections: THREE.Intersection[] = []
@@ -5650,24 +5684,169 @@ let finaleActionInteractionReady = false
 let hoveredHeroCardTitle = ''
 let hoveredFinaleActionTo = ''
 
-function syncResponsiveSceneLayout() {
+function getHeroCanvasElement() {
+  return rendererRef?.domElement ?? document.querySelector<HTMLCanvasElement>('.hero-canvas')
+}
+
+function getHeroCanvasHostElement() {
+  return (
+    getHeroCanvasElement()?.parentElement ??
+    document.querySelector<HTMLElement>('.hero-canvas-shell')
+  )
+}
+
+function getHeroCanvasRect(): CanvasViewportRect | null {
+  const host = getHeroCanvasHostElement()
+  if (!host) return null
+  const rect = host.getBoundingClientRect()
+  if (rect.width < 1 || rect.height < 1) return null
+  return {
+    width: rect.width,
+    height: rect.height,
+    left: rect.left,
+    top: rect.top
+  }
+}
+
+function getStableViewportRect() {
+  const rect = getHeroCanvasRect()
+  if (rect) return rect
+  if (responsiveViewportWidth > 0 && responsiveViewportHeight > 0) {
+    return {
+      width: responsiveViewportWidth,
+      height: responsiveViewportHeight,
+      left: 0,
+      top: 0
+    }
+  }
+  return null
+}
+
+function getCurrentTransitionProgress() {
+  return inverseLerpClamped(currentHeroScrollProgress, transitionSectionStart, transitionSectionEnd)
+}
+
+function refreshScrollTriggerCache() {
+  const maybeScrollTrigger = (
+    globalThis as { ScrollTrigger?: { refresh: (force?: boolean) => void } }
+  ).ScrollTrigger
+  maybeScrollTrigger?.refresh?.(true)
+}
+
+function syncParallaxPointerBinding() {
   if (typeof window === 'undefined') return
-  const canvas =
-    rendererRef?.domElement ?? document.querySelector<HTMLCanvasElement>('.hero-canvas')
-  const rect = canvas?.getBoundingClientRect()
-  const width = Math.max(1, Math.round(rect?.width || window.innerWidth))
-  const height = Math.max(1, Math.round(rect?.height || window.innerHeight))
-  if (width === responsiveViewportWidth && height === responsiveViewportHeight) return
+  const shouldBind = hasFinePointer()
+  if (shouldBind && !parallaxPointerEventsBound) {
+    window.addEventListener('pointermove', onParallaxPointerMove, { passive: true })
+    parallaxPointerEventsBound = true
+    return
+  }
+  if (!shouldBind && parallaxPointerEventsBound) {
+    window.removeEventListener('pointermove', onParallaxPointerMove)
+    parallaxPointerEventsBound = false
+  }
+}
+
+function applyResponsiveSceneState(
+  rect: CanvasViewportRect,
+  options: { log?: boolean; force?: boolean } = {}
+) {
+  if (options.log) {
+    console.log('3D 實質初始化尺寸:', rect.width, 'x', rect.height)
+  }
+  syncResponsiveSceneLayout(rect, options.force ?? false)
+  syncTransitionBandMesh(getCurrentTransitionProgress())
+  if (rendererRef) {
+    rendererRef.getDrawingBufferSize(tmpRes)
+    uniforms.uResolution.value.set(tmpRes.x / seamWeightX, tmpRes.y / seamWeightY)
+    uniforms.uEggRes.value.set(1e7, tmpRes.y / 2)
+  }
+  forceWakeRender()
+}
+
+function queueResponsiveSceneState(
+  rect: CanvasViewportRect | null = null,
+  options: { log?: boolean; force?: boolean; refreshScrollTrigger?: boolean } = {}
+) {
+  pendingResponsiveRect = rect ?? pendingResponsiveRect
+  if (responsiveResizeFrame) return
+  responsiveResizeFrame = window.requestAnimationFrame(() => {
+    responsiveResizeFrame = 0
+    const nextRect = pendingResponsiveRect ?? getHeroCanvasRect()
+    pendingResponsiveRect = null
+    if (!nextRect) return
+    applyResponsiveSceneState(nextRect, options)
+    if (options.refreshScrollTrigger !== false) refreshScrollTriggerCache()
+  })
+}
+
+async function initializeResponsiveSceneState() {
+  await nextTick()
+  await new Promise<void>((resolve) => {
+    responsiveInitFrame = window.requestAnimationFrame(() => {
+      responsiveInitFrame = 0
+      resolve()
+    })
+  })
+  const rect = getHeroCanvasRect()
+  if (!rect) return
+  applyResponsiveSceneState(rect, { log: true, force: true })
+  refreshScrollTriggerCache()
+}
+
+function onResponsiveViewportResize() {
+  const rect = getHeroCanvasRect()
+  if (!rect) return
+  queueResponsiveSceneState(rect, { force: true, refreshScrollTrigger: true })
+  syncParallaxPointerBinding()
+}
+
+function bindResponsiveCanvasObserver() {
+  if (typeof ResizeObserver === 'undefined') return
+  const host = getHeroCanvasHostElement()
+  if (!host) return
+  canvasResizeObserver?.disconnect()
+  canvasResizeObserver = new ResizeObserver(() => {
+    const rect = getHeroCanvasRect()
+    if (!rect) return
+    queueResponsiveSceneState(rect, { force: true, refreshScrollTrigger: true })
+  })
+  canvasResizeObserver.observe(host)
+}
+
+function syncResponsiveSceneLayout(
+  measuredRect: Pick<CanvasViewportRect, 'width' | 'height'> | null = null,
+  force = false
+) {
+  if (typeof window === 'undefined') return
+  const rect = measuredRect ?? getStableViewportRect()
+  if (!rect) return
+  const width = Math.max(1, Math.round(rect.width))
+  const height = Math.max(1, Math.round(rect.height))
+  const touchViewport = window.matchMedia('(hover: none), (pointer: coarse)').matches
+  if (
+    !force &&
+    width === responsiveViewportWidth &&
+    height === responsiveViewportHeight &&
+    touchViewport === responsiveTouchViewport
+  ) {
+    return
+  }
 
   responsiveViewportWidth = width
   responsiveViewportHeight = height
+  responsiveTouchViewport = touchViewport
   const aspect = width / height
-  const compact = window.matchMedia('(hover: none), (pointer: coarse)').matches
+  responsiveAspect = aspect
+  // 窄視窗的裝置模擬器仍可能回報 fine pointer；依專案規則，低於 md 也必須走手機構圖。
+  const compact = width < 768 || touchViewport
+  responsivePortraitFactor =
+    compact && aspect < 1 ? THREE.MathUtils.clamp((1 - aspect) / 0.5, 0, 1) : 0
   // 直向與接近平方的手機都需要縮小構圖；手機橫向寬畫面則保留原本比例。
   const narrowMobile = compact && aspect < 1.2
 
-  // 以實際畫布比例計算，不依賴特定手機型號；窄直向螢幕縮放場景並拉寬視野，避免兩側裁切。
-  const nextScale = narrowMobile ? THREE.MathUtils.clamp(0.44 + aspect * 0.26, 0.52, 0.8) : 1
+  // 終章房間需要手機廣角才能完整留在視窗內；骨幹對齊必須在各自場景處理，
+  // 不能改動全域相機投影，否則會讓房間超出左右邊界。
   const nextFov = narrowMobile ? THREE.MathUtils.clamp(60 + (1.3 - aspect) * 32, 64, 82) : 55
   const camera = resolvePerspectiveCamera(tres.camera)
   if (camera && Math.abs(camera.fov - nextFov) > 0.01) {
@@ -5675,25 +5854,24 @@ function syncResponsiveSceneLayout() {
     camera.updateProjectionMatrix()
   }
 
-  responsiveSceneScale = nextScale
   responsiveIsCompact = compact
-  // 直向手機斜縫 aspect 校正：只有在自然斜率(1/aspect)比目標更陡時才壓平；
-  // 桌機/寬螢幕 1/aspect <= 目標 → 權重維持 1,1（完全不動桌機）。
-  const naturalSlope = height / width // = 1/aspect
-  if (compact && naturalSlope > SEAM_TARGET_SLOPE) {
-    const ratio = SEAM_TARGET_SLOPE * aspect // a2/b2，使 slope = (a2/b2)/aspect = 目標
+  // F12 手機模擬未必回報 coarse pointer，但視覺上仍應走手機斜帶幾何；
+  // 因此只要進入 compact 版型，就套用同一組斜角補償，讓桌機手機模擬與真手機一致。
+  // CSS clip-path 及 shader 的 uResolution 都會讀取同一組權重。
+  const naturalSlope = height / width
+  if (compact && naturalSlope > TOUCH_SEAM_TARGET_SLOPE) {
+    const ratio = TOUCH_SEAM_TARGET_SLOPE * (width / height)
     seamWeightX = (2 * ratio) / (1 + ratio)
     seamWeightY = 2 / (1 + ratio)
   } else {
     seamWeightX = 1
     seamWeightY = 1
   }
-  group.scale.setScalar(responsiveSceneScale)
+  group.scale.setScalar(1)
   plexLineMat.resolution.set(width, height)
 }
 let cardPointerEventsBound = false
-const SEAM_BAND = 0.85 // Logo 斜帶在 d 座標的寬度（越小越窄，桌機用）
-const COMPACT_SEAM_BAND = 0.26 // 手機直向收窄黑色斜帶，避免骨幹揭露區被過寬遮罩壓縮
+const SEAM_BAND = 0.85 // Logo 斜帶在 d 座標的寬度（越小越窄）
 type ClipPoint = { x: number; y: number }
 
 function pointBandValue(p: ClipPoint) {
@@ -5751,10 +5929,10 @@ function resolvePerspectiveCamera(x: unknown): THREE.PerspectiveCamera | null {
 }
 
 function getMobileCardFitScale() {
-  if (typeof window === 'undefined') return 1
-  const canvas = rendererRef?.domElement
-  const width = canvas?.clientWidth || window.innerWidth || 1
-  const height = canvas?.clientHeight || window.innerHeight || 1
+  const rect = getStableViewportRect()
+  if (!rect) return 1
+  const width = rect.width
+  const height = rect.height
   if (width >= 768) return 1
   const camera = resolvePerspectiveCamera(tres.camera)
   const fov = camera?.fov ?? 55
@@ -5764,6 +5942,14 @@ function getMobileCardFitScale() {
   const viewHeight = 2 * Math.tan(THREE.MathUtils.degToRad(fov) * 0.5) * distance
   const viewWidth = viewHeight * (width / height)
   return THREE.MathUtils.clamp((viewWidth * 0.84) / CARD_W, 0.24, 1)
+}
+
+function syncTransitionBandMesh(_progress: number, _bandActiveOverride?: boolean) {
+  // 可見斜帶已由 .hero-underlay 的 DOM clip-path 完整負責。
+  // canvas 內再畫一層黑色 Plane 會產生第二條不同步的斜邊，切到骨幹與卡片。
+  transitionBandMesh.visible = false
+  transitionBandMesh.position.set(0, 0, 0)
+  transitionBandMesh.scale.set(1, 1, 1)
 }
 
 function getHeroCardUnderPointer(event: MouseEvent | PointerEvent) {
@@ -6013,6 +6199,14 @@ function initEnvMap() {
   envDone = true
   rendererRef = webgl
   bindCardClickCanvas(webgl.domElement)
+  bindResponsiveCanvasObserver()
+  const initialRect = getHeroCanvasRect()
+  if (initialRect) {
+    queueResponsiveSceneState(initialRect, {
+      force: true,
+      refreshScrollTrigger: true
+    })
+  }
   webgl.localClippingEnabled = true
   webgl.setClearColor(0x07080a, 0)
   const pmrem = new THREE.PMREMGenerator(webgl)
@@ -6057,8 +6251,12 @@ onBeforeRender(({ elapsed, delta }) => {
   // 卡住/切回分頁時 delta 會爆大，夾住上限避免一次跳太多
   const dt = Math.min(delta, 0.05)
   currentRotationY += (targetRotationY - currentRotationY) * fpsSmooth(CFG.wheel.damping, dt)
-  // 觸控拖曳輸入更密集，手機提高一點追蹤速度，避免轉場落後手指太多。
-  const timelineDamping = responsiveIsCompact ? 0.18 : 0.14 // 調緊：骨幹揭露隨捲動貼近，不落後（修「骨幹沒完整揭露」）
+  const nativeScrollMode =
+    typeof document !== 'undefined' && document.body.classList.contains('hero-lab-active')
+  // 真機一次 flick 會跨過數百 px；桌機 wheel 則是細小離散輸入。
+  // 只在 coarse-pointer 的 Hero Lab 拉低追隨率，確保守宮退場、斜帶與骨幹
+  // 會逐幀共用同一條 sweep，而非在一兩個 frame 內直接跳到下一幕。
+  const timelineDamping = 0.14
   currentTimeline += (targetTimeline - currentTimeline) * fpsSmooth(timelineDamping, dt)
   const introReveal = stageValue(currentTimeline, 0, introRevealSpan, introRevealMax)
   const gridReveal = stageValue(currentTimeline, gridRevealStart, gridRevealSpan, introRevealMax)
@@ -6080,16 +6278,36 @@ onBeforeRender(({ elapsed, delta }) => {
     exitBodySpan,
     exitBodyMax
   )
-  // ── 雙斜縫連續掃描：單一 sweep 進度驅動 seamA/seamB ──
-  const sweep = THREE.MathUtils.clamp(0.5 * firstExit + 0.5 * finalEnter, 0, 1)
-  // 手機斜帶縮窄，避免直向畫面被黑色轉場面積切掉過半；桌面維持原本寬度。
-  const activeSeamBand = responsiveIsCompact ? COMPACT_SEAM_BAND : SEAM_BAND
-  const seamA = THREE.MathUtils.clamp(sweep * (2 + activeSeamBand), 0, 2) // Scene01 保留 d>seamA（右上）
-  const seamB = THREE.MathUtils.clamp(sweep * (2 + activeSeamBand) - activeSeamBand, 0, 2) // Scene03 保留 d<seamB（左下）
+  // ── 雙斜縫連續掃描：直接吃 Hero Lab section 的相對滾動百分比 ──
+  // 這裡不能再混入固定 px / window 高度 / cardOrbit 接管時機，
+  // 否則手機直向畫面的同一總滾動百分比會比桌機更早把斜帶推完。
+  const transitionProgress = inverseLerpClamped(
+    currentHeroScrollProgress,
+    transitionSectionStart,
+    transitionSectionEnd
+  )
+  const sweep = transitionProgress
+  // Scene03 的 Shader 揭露獨立於頁面總 px 與 DOM 斜帶長度：
+  // 斜帶進度 0.20→0.65 對應揭露 0→1，0.65 後不再殘留裁切面。
+  const scene3WipeProgress = inverseLerpClamped(sweep, 0.2, 0.65)
+  // 手機直向畫面需要更寬的黑色斜帶，並把 travel range 拉長，
+  // 才不會在骨幹剛揭露時露出切面或讓斜帶視覺上上移過快。
+  const activeSeamBand = SEAM_BAND + responsivePortraitFactor * 0.34
+  const seamTravelRange = 2 + activeSeamBand + responsivePortraitFactor * 0.26
+  const scene3ScreenMax = seamWeightX + seamWeightY
+  const isPortraitWipe = responsiveIsCompact && responsiveAspect < 1
+  // uSeamB 只負責 DOM／卡片的螢幕斜帶座標；骨幹的固定 Y-Max 已拆到 uSpineWipeYMax。
+  const seamBMax = scene3ScreenMax + 0.08
+  const seamA = THREE.MathUtils.clamp(sweep * seamTravelRange, 0, 2) // Scene01 保留 d>seamA（右上）
+  const rawSeamB = sweep * seamTravelRange - activeSeamBand
+  const seamBBase = THREE.MathUtils.clamp(rawSeamB, 0, scene3ScreenMax + 0.08)
+  const seamBFinish = THREE.MathUtils.smoothstep(sweep, isPortraitWipe ? 0.96 : 0.9, 1.0)
+  const seamB = THREE.MathUtils.lerp(seamBBase, seamBMax, seamBFinish) // Scene03 保留 d<seamB（左下）
   const introSeamProgress = THREE.MathUtils.clamp(Math.pow(introReveal, 0.58), 0, 1)
   const introSeam = THREE.MathUtils.lerp(0.18, 2.16, introSeamProgress)
   uniforms.uSeamA.value = seamA
-  uniforms.uSeamB.value = seamB
+  // DOM 斜帶仍使用上方 seamB 幾何；所有 Scene03 Shader 改用提前完成的獨立揭露線。
+  uniforms.uSeamB.value = THREE.MathUtils.lerp(0, seamBMax, scene3WipeProgress)
   uniforms.uIntroSeam.value = introSeam
   if (rendererRef) {
     rendererRef.getDrawingBufferSize(tmpRes)
@@ -6132,22 +6350,28 @@ onBeforeRender(({ elapsed, delta }) => {
   const logoDnaBackdropOpacity = 0
   const logoDnaUnderlayBgOpacity = 0
   const gridIntroProgress = THREE.MathUtils.smoothstep(gridReveal, 0.0, 0.18)
-  const scene3RevealThreshold = responsiveIsCompact ? 0.04 : 0.012
-  const scene3RevealActive = seamB > scene3RevealThreshold || finalDna > stageEpsilon
-  // 手機先完整露出骨幹，再開始卡片環繞；否則卡片會在斜帶中段偷跑，與骨幹揭露交疊。
-  const cardsShouldRender = responsiveIsCompact
-    ? targetCardOrbit > cardOrbitSettleEpsilon || currentCardOrbit > cardOrbitSettleEpsilon
-    : scene3RevealActive ||
-      targetCardOrbit > cardOrbitSettleEpsilon ||
-      currentCardOrbit > cardOrbitSettleEpsilon
+  const mobileScene01Opacity = responsiveIsCompact
+    ? 1 - THREE.MathUtils.smoothstep(sweep, 0.2, 0.4)
+    : 1
+  const mobileScene3Opacity = responsiveIsCompact
+    ? THREE.MathUtils.smoothstep(sweep, 0.42, 0.62)
+    : 1
+  const scene3RevealThreshold = 0.012
+  const scene3RevealActive = scene3WipeProgress > scene3RevealThreshold || finalDna > stageEpsilon
+  // 卡片與骨幹共用提前完成的 Shader 揭露；斜帶 0.65 後兩者都必須為 100%。
+  const mobileCardReveal = scene3WipeProgress
+  const cardsShouldRender =
+    (scene3RevealActive && mobileScene3Opacity > 0.003) ||
+    targetCardOrbit > cardOrbitSettleEpsilon ||
+    currentCardOrbit > cardOrbitSettleEpsilon
   const scene01GeckoActive = scene01Active && geckoPointPresence > 0.001
   const scene01GridActive = scene01Active && gridIntroProgress > 0.001
   const projectorActive = scene01GeckoActive && sweep < 0.995
   const projFade = projectorActive ? Math.max(geckoPointPresence * 0.28, geckoShellProgress) : 0
-  // 手機骨幹與斜帶共用 seamB；原本用 sweep 會讓斜帶先走、網格與骨幹亮度稍後才跟上。
-  const backboneReveal = responsiveIsCompact
-    ? Math.max(THREE.MathUtils.smoothstep(seamB, 0.08, 0.72), finalDna)
-    : Math.max(THREE.MathUtils.smoothstep(sweep, 0.35, 1.0), finalDna)
+  const backboneReveal = scene3WipeProgress
+  // 手機直向的裁切天花板從第一幀起固定為 6.0；只有 reveal progress 隨滾動變化。
+  uniforms.uSpineWipeYMax.value = isPortraitWipe ? PORTRAIT_SPINE_WIPE_Y_MAX : 2
+  uniforms.uSpineWipeProgress.value = scene3WipeProgress
   const scene3Active = scene3RevealActive
   const revealPlaneOffset = THREE.MathUtils.lerp(-8.9, 4.2, geckoRevealProgress)
   group.rotation.y = 0
@@ -6180,13 +6404,15 @@ onBeforeRender(({ elapsed, delta }) => {
   backboneSampleGroup.position.set(0, 0, 1.1)
   geckoGroup.position.y = CFG.gecko.y + GECKO_GROUP_Y_OFFSET
   geckoGroup.position.z = CFG.gecko.z
-  dnaGroup.visible = scene01Active
+  dnaGroup.visible = scene01Active && mobileScene01Opacity > 0.003
   initialLogoGroup.visible = initialLogoActive
   // 守宮點雲從起始頁就在（散開），隨捲動連續組裝成守宮（同一團、不消失/不重接）。
-  geckoGroup.visible = scene01Active || (projectorActive && projFade > 0.01)
-  groundGrid.visible = scene01GridActive
+  geckoGroup.visible =
+    (scene01Active && mobileScene01Opacity > 0.003) ||
+    (projectorActive && projFade * mobileScene01Opacity > 0.01)
+  groundGrid.visible = scene01GridActive && mobileScene01Opacity > 0.003
   dnaTiles.visible = groundGrid.visible
-  dnaTilesMat.uniforms.uOpacity.value = gridIntroProgress
+  dnaTilesMat.uniforms.uOpacity.value = gridIntroProgress * mobileScene01Opacity
   if (dnaTiles.visible) {
     const _dcam = resolvePerspectiveCamera(tres.camera)
     if (_dcam) {
@@ -6206,41 +6432,43 @@ onBeforeRender(({ elapsed, delta }) => {
     }
     updateDnaTileLifts(dt)
   }
-  geckoMat.uniforms.uAlpha.value = 0.58
+  geckoMat.uniforms.uAlpha.value = 0.58 * mobileScene01Opacity
   // 本體以碎化揭露驅動（逐格碎片成形）；uOpacityMul 只做整體 gating 與極短安全淡入，
   // 避免與碎片 alpha 雙重變暗，讓碎片清楚一格一格拼出。
   geckoMat.uniforms.uReveal.value = geckoShellProgress
-  geckoMat.uniforms.uOpacityMul.value = projectorActive
-    ? THREE.MathUtils.smoothstep(geckoShellProgress, 0.0, 0.08)
-    : 0
+  geckoMat.uniforms.uOpacityMul.value =
+    (projectorActive ? THREE.MathUtils.smoothstep(geckoShellProgress, 0.0, 0.08) : 0) *
+    mobileScene01Opacity
   // 起始頁給底值 0.26（散開可見）→ 隨 geckoRevealTimeline 連續組裝到 1（不跳）。
   geckoAssemblyPointsMat.uniforms.uIntroReveal.value = Math.max(
     scene01Active ? 0.26 : 0,
     geckoRevealTimeline
   )
   // alpha：起始頁的散開星雲底值（隨組裝淡出）與投影段的原本 alpha 取大 → 連續交接。
-  geckoAssemblyPointsMat.uniforms.uAlpha.value = Math.max(
-    scene01Active ? 0.3 * (1 - geckoAssemblyProgress) : 0,
-    projectorActive
-      ? 0.28 * geckoPointPresence +
-          THREE.MathUtils.smoothstep(geckoShellProgress, 0.58, 0.9) *
-            (0.095 + 0.02 * (0.5 + 0.5 * Math.sin(elapsed * 6.4)))
-      : 0
-  )
+  geckoAssemblyPointsMat.uniforms.uAlpha.value =
+    Math.max(
+      scene01Active ? 0.3 * (1 - geckoAssemblyProgress) : 0,
+      projectorActive
+        ? 0.28 * geckoPointPresence +
+            THREE.MathUtils.smoothstep(geckoShellProgress, 0.58, 0.9) *
+              (0.095 + 0.02 * (0.5 + 0.5 * Math.sin(elapsed * 6.4)))
+        : 0
+    ) * mobileScene01Opacity
   // 投影金字塔/底座在斜帶掃過後直接關掉，不殘留到 Scene3 揭露完成後。
-  pyramidGlassMat.visible = projectorActive
-  pyramidEdgeMat.visible = projectorActive
-  ringMat.visible = projectorActive
-  plateMetalMat.visible = projectorActive
-  pyramidGlassMat.opacity = 0.028 * projFade
-  pyramidEdgeMat.opacity = 0.95 * projFade
-  ringMat.opacity = 0.22 * projFade
-  plateMetalMat.opacity = projFade
+  pyramidGlassMat.visible = projectorActive && mobileScene01Opacity > 0.003
+  pyramidEdgeMat.visible = projectorActive && mobileScene01Opacity > 0.003
+  ringMat.visible = projectorActive && mobileScene01Opacity > 0.003
+  plateMetalMat.visible = projectorActive && mobileScene01Opacity > 0.003
+  pyramidGlassMat.opacity = 0.028 * projFade * mobileScene01Opacity
+  pyramidEdgeMat.opacity = 0.95 * projFade * mobileScene01Opacity
+  ringMat.opacity = 0.22 * projFade * mobileScene01Opacity
+  plateMetalMat.opacity = projFade * mobileScene01Opacity
   // 骨幹（Scene03）：seamB>0 才顯示，材質內以 seamB 由左下 discard 露出。
   // 骨幹/網格改由 shader 的斜向 wipe（uEggReveal，含 7px 小方塊）逐格掃掉，掃過整個畫面後才隱藏（省效能）。
   // 不再一進轉場就 visible=false（那會瞬間消失，與蛋場景的方格 wipe 脫節 → Issue 3）。
   const finaleWipeDone = uniforms.uEggReveal.value >= 0.985
-  backboneSampleGroup.visible = seamB > 0.001 && !finaleWipeDone
+  backboneSampleGroup.visible =
+    seamB > 0.001 && !finaleWipeDone && backboneReveal > 0.003 && mobileScene3Opacity > 0.003
   backboneSampleGroup.scale.setScalar(BACKBONE_SCALE)
   backboneSampleMat.uniforms.uAlpha.value = 0.85 + backboneReveal * 0.08
   // ── Scene3 卡片環繞軸心：與骨幹一起被斜帶揭露，初始為第一張正中、其餘沿右下排隊，
@@ -6354,6 +6582,51 @@ onBeforeRender(({ elapsed, delta }) => {
     parallaxCamRef.position.x = parallaxCam.x
     // 相機只跟隨全頁視差，不能在終章切換時再改變 Y 座標，避免滾動跨段瞬間跳動。
     parallaxCamRef.position.y = parallaxCam.y
+  }
+  // DOM 斜帶與 3D 安全遮罩必須在同一個 seam 區間收合；否則 HUD 已 100% 時，
+  // 仍可看見 3D 平面的下緣斜切骨幹頂部。
+  syncTransitionBandMesh(sweep, seamB < seamA - stageEpsilon)
+  if (import.meta.dev && typeof window !== 'undefined') {
+    const nextLogProgress = Number(sweep.toFixed(4))
+    const nextLogY = Number(transitionBandMesh.position.y.toFixed(4))
+    const nextLogScale = Number(transitionBandMesh.scale.x.toFixed(4))
+    const nextGeckoY = Number(geckoGroup.position.y.toFixed(4))
+    const nextSpineY = Number(backboneSampleGroup.position.y.toFixed(4))
+    const nextSpineProgress = Number(backboneReveal.toFixed(4))
+    const nextSpineClipSeam = Number(uniforms.uSpineWipeYMax.value.toFixed(4))
+    if (
+      nextLogProgress !== lastTransitionBandLogProgress ||
+      nextLogY !== lastTransitionBandLogY ||
+      nextLogScale !== lastTransitionBandLogScale ||
+      nextGeckoY !== lastGeckoLogY ||
+      nextSpineY !== lastSpineLogY ||
+      nextSpineProgress !== lastSpineLogProgress ||
+      nextSpineClipSeam !== lastSpineClipSeam
+    ) {
+      lastTransitionBandLogProgress = nextLogProgress
+      lastTransitionBandLogY = nextLogY
+      lastTransitionBandLogScale = nextLogScale
+      lastGeckoLogY = nextGeckoY
+      lastSpineLogY = nextSpineY
+      lastSpineLogProgress = nextSpineProgress
+      lastSpineClipSeam = nextSpineClipSeam
+      console.log(
+        'HUD:',
+        nextLogProgress,
+        '| 斜帶Y:',
+        nextLogY,
+        '斜帶Scale:',
+        nextLogScale,
+        '| 守宮Y:',
+        nextGeckoY,
+        '| 骨幹Y:',
+        nextSpineY,
+        '骨幹Wipe/Progress:',
+        nextSpineProgress,
+        '骨幹裁切天花板:',
+        nextSpineClipSeam
+      )
+    }
   }
   // 骨幹/卡片場景神經背景：backbone 顯示時淡入，進終章淡出（終章由 finaleBackdrop 接手）。
   const neuralBgOpacity = backboneReveal * (1 - THREE.MathUtils.smoothstep(finaleReveal, 0.0, 0.12))
@@ -6492,17 +6765,13 @@ onBeforeRender(({ elapsed, delta }) => {
     emit('finale-reveal', eggPresence)
   }
   // Scene3 捲動：骨幹沿 +Y 上移；卡片與下一場景共享同一段退場進度。
-  const scene3Scroll = finalDna + (cardOrbitMax > 0 ? currentCardOrbit / cardOrbitMax : 0)
   const sceneExitProgress = currentNextSceneProgress + currentPlaceholderProgress
   const sceneExitWheelDistance =
     currentNextSceneProgress * nextSceneWheelLen +
     currentPlaceholderProgress * placeholderSceneWheelLen
-  // 直向手機壓低骨幹在卡片段的上移量，讓完整骨幹保留在視窗內直到方塊轉場接手。
-  const backboneSceneRise = BACKBONE_SCROLL_RISE * (responsiveIsCompact ? 0.38 : 1)
-  backboneSampleGroup.position.y =
-    BACKBONE_BASE_Y +
-    backboneSceneRise * scene3Scroll +
-    BACKBONE_NEXT_SCENE_RISE * sceneExitProgress
+  // 完整揭露與卡片環繞期間骨幹保持置中；只在進入下一場景時上移，
+  // 避免「骨幹揭露=1」時頂端已經被推離畫面。
+  backboneSampleGroup.position.y = BACKBONE_BASE_Y + BACKBONE_NEXT_SCENE_RISE * sceneExitProgress
   spineLight.intensity = finaleActive ? 0 : backboneReveal * 0.85
   const cardFitScale = getMobileCardFitScale()
   heroCardsGroup.position.y = sceneExitProgress * CARD_NEXT_SCENE_RISE
@@ -6511,8 +6780,9 @@ onBeforeRender(({ elapsed, delta }) => {
     (targetCardOrbit > cardOrbitSettleEpsilon ||
       currentCardOrbit > cardOrbitSettleEpsilon ||
       currentTimeline >= cardOrbitInputStart - stageEpsilon)
-  cardInteractionReady = cardsShouldRender && cardsInteractive
-  heroCardsGroup.visible = cardsShouldRender
+  cardInteractionReady = cardsShouldRender && cardsInteractive && mobileCardReveal >= 0.995
+  // 終章 wipe 完成後，卡片不能殘留任何未被 shader 丟棄的材質碎片。
+  heroCardsGroup.visible = cardsShouldRender && !finaleWipeDone
   if (cardsShouldRender) {
     cardOrbitUnlockedNow =
       (targetTimeline >= cardOrbitInputStart &&
@@ -6529,7 +6799,10 @@ onBeforeRender(({ elapsed, delta }) => {
       it.holder.position.y = cardRingY + wa * cardVerticalSlope
       const front = THREE.MathUtils.clamp(Math.cos(wa), -1, 1)
       it.front = front
-      for (const mat of it.titleMats) mat.uniforms.uAlpha.value = mat === it.titleMat ? 0.9 : 0.2
+      it.coreMat.uniforms.uOpacity.value = mobileCardReveal
+      for (const mat of it.titleMats) {
+        mat.uniforms.uAlpha.value = (mat === it.titleMat ? 0.9 : 0.2) * mobileCardReveal
+      }
       const hoverTarget = hoveredHeroCardTitle === it.card.title ? 1.045 : 1
       it.hoverScale += (hoverTarget - it.hoverScale) * fpsSmooth(0.18, dt)
       it.holder.scale.setScalar(
@@ -6558,13 +6831,18 @@ onBeforeRender(({ elapsed, delta }) => {
       it.pivot.rotation.y = wa
       it.holder.position.y = cardRingY + wa * cardVerticalSlope
       it.front = 0
-      for (const mat of it.titleMats) mat.uniforms.uAlpha.value = mat === it.titleMat ? 0.9 : 0.2
+      it.coreMat.uniforms.uOpacity.value = 0
+      for (const mat of it.titleMats) mat.uniforms.uAlpha.value = 0
       it.hoverScale = 1
       it.holder.scale.setScalar(cardFitScale)
       it.holder.visible = false
     }
     syncActiveHeroCard(null)
     syncActiveHeroCardHitbox(null)
+  }
+  // 完成終章後以最後一道可見性判定覆蓋卡片迴圈，避免同幀更新留下碎片。
+  if (finaleWipeDone) {
+    for (const it of heroCardItems) it.holder.visible = false
   }
   uniforms.uRevealPlaneOffset.value = revealPlaneOffset
   currentGridReveal +=
@@ -6584,8 +6862,6 @@ onBeforeRender(({ elapsed, delta }) => {
   const finaleNeedsRender = finaleActive || heartGate > 0.001 || eggPresence > 0.001
   const logoResting =
     bandActive && sweep > 0.08 && sweep < 0.98 && bottomRenderSettled && !finaleNeedsRender
-  const nativeScrollMode =
-    typeof document !== 'undefined' && document.body.classList.contains('hero-lab-active')
   // 卡片影片預覽需要持續更新 VideoTexture，因此卡片可見時不可切成手動渲染。
   setBottomRenderMode(!nativeScrollMode && logoResting && !cardsShouldRender ? 'manual' : 'always')
   // 只有數值真的變了才寫 CSS（否則每幀配置字串/物件 + 寫 DOM = GC + reflow）
@@ -6639,14 +6915,8 @@ onBeforeRender(({ elapsed, delta }) => {
       bandActive ? '1' : initialLogoActive ? initialLogoOpacity.toFixed(4) : '0'
     )
     el.setProperty(
-      '--hero-underlay-bg-opacity',
-      bandActive
-        ? responsiveIsCompact
-          ? '0.82'
-          : '1'
-        : initialLogoActive
-          ? logoDnaUnderlayBgOpacity.toFixed(4)
-          : '0'
+      '--hero-underlay-fill-opacity',
+      bandActive ? '1' : initialLogoActive ? logoDnaUnderlayBgOpacity.toFixed(4) : '0'
     )
     el.setProperty(
       '--hero-logo-backdrop-opacity',
@@ -6666,9 +6936,9 @@ onBeforeRender(({ elapsed, delta }) => {
     // 斜帶內部凹陷光影：一條垂直於 TL–BR 斜縫的漸層，兩緣白+橘高光、內側微陰影
     // d ∈[0,2] 沿漸層軸線性對應 0→100%，故 pos = d/2*100；角度取 atan(H/W) 使軸線垂直斜縫
     if (bandActive) {
-      const canvas = rendererRef?.domElement
-      const vw = canvas?.clientWidth || window.innerWidth || 1
-      const vh = canvas?.clientHeight || window.innerHeight || 1
+      const rect = getStableViewportRect()
+      const vw = rect?.width || rendererRef?.domElement?.clientWidth || 1
+      const vh = rect?.height || rendererRef?.domElement?.clientHeight || 1
       // 漸層軸沿 d 增加方向；權重納入後角度 = atan2(a2·H, b2·W)，與壓平後的斜縫垂直對齊。
       const ang = ((Math.atan2(seamWeightX * vh, seamWeightY * vw) * 180) / Math.PI).toFixed(2)
       const pB = (seamB / 2) * 100
@@ -6712,22 +6982,25 @@ onBeforeRender(({ elapsed, delta }) => {
         'position:fixed;left:6px;top:6px;z-index:99999;font:12px/1.4 monospace;color:#0f0;background:rgba(0,0,0,.72);padding:6px 8px;white-space:pre;pointer-events:none;border-radius:4px'
       document.body.appendChild(debugHudEl)
     }
-    const _maxS = Math.max(1, document.documentElement.scrollHeight - window.innerHeight)
+    const viewportHeight =
+      document.documentElement.clientHeight || getStableViewportRect()?.height || 1
+    const _maxS = Math.max(1, document.documentElement.scrollHeight - viewportHeight)
     debugHudEl.textContent =
-      'pct   ' +
-      (window.scrollY / _maxS).toFixed(3) +
-      '\nsweep ' +
+      '斜帶上移  ' +
       sweep.toFixed(2) +
-      '\nnext  ' +
-      currentNextSceneProgress.toFixed(2) +
-      ' / ' +
-      targetNextSceneProgress.toFixed(2) +
-      '\nph    ' +
-      currentPlaceholderProgress.toFixed(2) +
-      ' / ' +
-      targetPlaceholderProgress.toFixed(2) +
-      '\nwipe  ' +
-      eggWipeReveal.toFixed(2)
+      '\n骨幹揭露  ' +
+      backboneReveal.toFixed(2) +
+      '\n骨幹裁切  ' +
+      uniforms.uSpineWipeYMax.value.toFixed(2) +
+      '\nwipe      ' +
+      eggWipeReveal.toFixed(2) +
+      '\n總滾動    ' +
+      (window.scrollY / _maxS).toFixed(3) +
+      '/1.000 (' +
+      Math.round(window.scrollY) +
+      '/' +
+      Math.round(_maxS) +
+      'px)'
   }
 })
 
@@ -6737,6 +7010,7 @@ onBeforeRender(({ elapsed, delta }) => {
 function scrubTo(progress: number, immediate = true) {
   wakeBottomRender()
   const clamped = THREE.MathUtils.clamp(progress, 0, 1)
+  currentHeroScrollProgress = clamped
   const targetWheel = clamped * totalJourneyWheelLen
   // 原生 scrollbar 模式不會進 applyScrollDelta；旋轉量必須由絕對進度同步，
   // 否則骨幹/DNA 會只切 timeline 而不轉。
@@ -6755,6 +7029,10 @@ function scrubTo(progress: number, immediate = true) {
     if (immediate) currentPlaceholderProgress = 0
     cardOrbitUnlockedNow = false
   } else if (targetWheel <= cardsEndWheelLen) {
+    // 卡片環繞開始前，斜帶/骨幹揭露仍要沿 timeline 的尾段連續補完；
+    // 若一跨過 cardOrbitStartWheelLen 就直接鎖到 scene3HoldTimeline，
+    // F12 手機版會在 0.38x 這種相鄰 scroll 幀把「斜帶上移 / 骨幹揭露」
+    // 從 ~0.7x 瞬間跳成 1.00。
     const t = THREE.MathUtils.clamp(targetWheel * timelineWheelScale, 0, scene3HoldTimeline)
     targetTimeline = t
     if (immediate) currentTimeline = t
@@ -6799,12 +7077,9 @@ function scrubTo(progress: number, immediate = true) {
   }
 
   if (!immediate) {
-    currentRotationY += (targetRotationY - currentRotationY) * nativeScrollInputPull
-    if (targetWheel > timelineWheelLen) {
-      currentTimeline = scene3HoldTimeline
-    } else {
-      currentTimeline += (targetTimeline - currentTimeline) * nativeScrollInputPull
-    }
+    // 原生觸控 scroll 只更新 target；currentTimeline 一律由 render loop 平滑追上。
+    // 舊版在 scroll callback 先拉一次、onBeforeRender 又拉一次，真機快速滑動會
+    // 跳過斜帶中段，造成守宮退場與骨幹入場像是直接跳出來。
     currentCardOrbit += (targetCardOrbit - currentCardOrbit) * nativeScrollCardInputPull
     currentNextSceneProgress +=
       (targetNextSceneProgress - currentNextSceneProgress) * nativeScrollNextInputPull
@@ -6826,6 +7101,14 @@ function scrubTo(progress: number, immediate = true) {
 }
 
 function syncCardInteractionFromScrollTarget() {
+  if (uniforms.uEggReveal.value >= 0.985) {
+    heroCardsGroup.visible = false
+    cardInteractionReady = false
+    setHoveredHeroCard(null)
+    syncActiveHeroCard(null)
+    syncActiveHeroCardHitbox(null)
+    return
+  }
   const cardFitScale = getMobileCardFitScale()
   const sceneExitWheelDistance =
     currentNextSceneProgress * nextSceneWheelLen +
@@ -6858,7 +7141,7 @@ function syncCardInteractionFromScrollTarget() {
 
 defineExpose({ scrubTo })
 
-onMounted(() => {
+onMounted(async () => {
   if (cardPreviewVideo) {
     cardPreviewVideo.play().catch(() => {
       // 瀏覽器未允許自動播放時，仍可在下一次使用者互動後開始更新預覽。
@@ -6866,11 +7149,11 @@ onMounted(() => {
   }
   emit('journey-segments', journeySegments)
   emit('next-scene-progress', 0)
-  if (hasFinePointer()) {
-    window.addEventListener('pointermove', onParallaxPointerMove, { passive: true })
-  }
+  syncParallaxPointerBinding()
+  await initializeResponsiveSceneState()
+  bindResponsiveCanvasObserver()
   requestAnimationFrame(() => {
-    const canvas = document.querySelector<HTMLCanvasElement>('.hero-canvas')
+    const canvas = getHeroCanvasElement()
     if (canvas) bindCardClickCanvas(canvas)
   })
   window.addEventListener('wheel', onWheel, { passive: true })
@@ -6878,6 +7161,7 @@ onMounted(() => {
   window.addEventListener('touchmove', onTouchMove, { passive: false })
   window.addEventListener('touchend', onTouchEnd, { passive: true })
   window.addEventListener('touchcancel', onTouchEnd, { passive: true })
+  window.addEventListener('resize', onResponsiveViewportResize, { passive: true })
   document.addEventListener('visibilitychange', onVisibilityChange)
   window.addEventListener('focus', forceWakeRender)
   window.addEventListener('pageshow', forceWakeRender)
@@ -7001,12 +7285,16 @@ onMounted(() => {
 
 onUnmounted(() => {
   setBottomRenderMode('always')
+  if (responsiveInitFrame) window.cancelAnimationFrame(responsiveInitFrame)
+  if (responsiveResizeFrame) window.cancelAnimationFrame(responsiveResizeFrame)
+  canvasResizeObserver?.disconnect()
+  canvasResizeObserver = null
   window.removeEventListener('wheel', onWheel)
   window.removeEventListener('touchstart', onTouchStart)
   window.removeEventListener('touchmove', onTouchMove)
   window.removeEventListener('touchend', onTouchEnd)
   window.removeEventListener('touchcancel', onTouchEnd)
-  if (touchMomentumRaf) window.cancelAnimationFrame(touchMomentumRaf)
+  window.removeEventListener('resize', onResponsiveViewportResize)
   if (debugHudEl) {
     debugHudEl.remove()
     debugHudEl = null
@@ -7020,6 +7308,7 @@ onUnmounted(() => {
   window.removeEventListener('pointercancel', onCardPointerLeave, true)
   window.removeEventListener('blur', onCardPointerLeave, true)
   window.removeEventListener('pointermove', onParallaxPointerMove)
+  parallaxPointerEventsBound = false
   cardPointerEventsBound = false
   if (cardPreviewVideo) {
     cardPreviewVideo.pause()
@@ -7071,7 +7360,7 @@ onUnmounted(() => {
     document.documentElement.style.removeProperty('--hero-initial-copy-opacity')
     document.documentElement.style.removeProperty('--hero-scroll-progress')
     document.documentElement.style.removeProperty('--hero-underlay-opacity')
-    document.documentElement.style.removeProperty('--hero-underlay-bg-opacity')
+    document.documentElement.style.removeProperty('--hero-underlay-fill-opacity')
     document.documentElement.style.removeProperty('--hero-logo-backdrop-opacity')
     document.documentElement.style.removeProperty('--hero-underlay-z')
     document.documentElement.style.removeProperty('--hero-underlay-clip')

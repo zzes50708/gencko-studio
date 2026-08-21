@@ -164,7 +164,9 @@ function setNextSceneProgress(value: number) {
 
 function syncCompactViewport() {
   if (typeof window === 'undefined') return
-  compactViewport.value = window.matchMedia('(hover: none), (pointer: coarse)').matches
+  // DevTools 窄視窗不一定模擬 coarse pointer；低於 md 一律使用手機 DPR 與場景配置。
+  compactViewport.value =
+    window.innerWidth < 768 || window.matchMedia('(hover: none), (pointer: coarse)').matches
 }
 
 function selectHeroCard(card: HeroGalleryCard) {
@@ -379,13 +381,18 @@ onBeforeUnmount(() => {
 }
 
 .hero-underlay {
+  --hero-underlay-overscan-x: 0px;
+  --hero-underlay-overscan-y: 0px;
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   align-items: center;
   gap: clamp(1.5rem, 6vw, 6rem);
-  padding: clamp(3rem, 7vw, 6rem) clamp(1.6rem, 5vw, 5rem);
+  inset: calc(var(--hero-underlay-overscan-y) * -1) calc(var(--hero-underlay-overscan-x) * -1);
+  padding: calc(clamp(3rem, 7vw, 6rem) + var(--hero-underlay-overscan-y))
+    calc(clamp(1.6rem, 5vw, 5rem) + var(--hero-underlay-overscan-x));
   isolation: isolate;
-  background: rgba(7, 8, 10, var(--hero-underlay-bg-opacity, 1));
+  /* 使用獨立填色變數，避免 HMR 殘留的舊透明值讓斜帶只剩文字沒有黑底。 */
+  background: rgba(7, 8, 10, var(--hero-underlay-fill-opacity, 1));
   opacity: var(--hero-underlay-opacity, 1);
   z-index: var(--hero-underlay-z, 1);
   clip-path: var(--hero-underlay-clip, polygon(0 0, 100% 0, 100% 100%, 0 100%));
@@ -1237,9 +1244,20 @@ onBeforeUnmount(() => {
   }
 
   .hero-underlay {
-    padding: max(1.4rem, env(safe-area-inset-top)) max(1rem, env(safe-area-inset-right))
-      max(2rem, env(safe-area-inset-bottom)) max(1rem, env(safe-area-inset-left));
-    gap: 2rem;
+    --hero-underlay-overscan-x: clamp(3.5rem, 20vw, 6.5rem);
+    --hero-underlay-overscan-y: clamp(7rem, 24vh, 11rem);
+    grid-template-columns: 1fr;
+    grid-template-rows: minmax(0, 1fr) minmax(0, 1fr);
+    align-items: stretch;
+    align-content: stretch;
+    justify-items: center;
+    min-height: 140svh;
+    min-height: 140dvh;
+    padding: calc(max(1.4rem, env(safe-area-inset-top)) + var(--hero-underlay-overscan-y))
+      calc(max(1rem, env(safe-area-inset-right)) + var(--hero-underlay-overscan-x))
+      calc(max(2.25rem, env(safe-area-inset-bottom)) + var(--hero-underlay-overscan-y))
+      calc(max(1rem, env(safe-area-inset-left)) + var(--hero-underlay-overscan-x));
+    gap: 0;
   }
 
   .intro-title {
@@ -1259,6 +1277,36 @@ onBeforeUnmount(() => {
   .intro-copy,
   .intro-meta {
     width: min(100%, 34rem);
+  }
+
+  .intro-copy {
+    align-self: start;
+    justify-self: center;
+    max-width: min(100%, 19rem);
+    padding-top: clamp(1.2rem, 6vh, 3.5rem);
+    text-align: center;
+  }
+
+  .intro-meta {
+    align-self: end;
+    justify-self: center;
+    max-width: min(100%, 18.5rem);
+    padding-bottom: clamp(5.5rem, 12vh, 8rem);
+    text-align: center;
+  }
+
+  .intro-meta__label {
+    width: 100%;
+    padding-bottom: 0.55rem;
+  }
+
+  .band-logo-stage {
+    top: 46%;
+  }
+
+  .band-logo-rig {
+    width: min(56vw, 248px);
+    transform: scale(1.06);
   }
 
   .scroll-cue {

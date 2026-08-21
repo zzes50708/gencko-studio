@@ -27,7 +27,7 @@ export const LEOPARD_GECKO_GENES = [
   { id: 'whiteandyellow', name: '白黃', type: CALC_TYPES.DOM, category: 'dominant' },
   { id: 'tugsnow', name: '奧本雪花', type: CALC_TYPES.DOM, category: 'dominant' },
   { id: 'gemsnow', name: '寶石雪花', type: CALC_TYPES.DOM, category: 'dominant' },
-  { id: 'pastel', name: '蠟筆', type: CALC_TYPES.DOM, category: 'dominant' },
+  { id: 'pastel', name: '蠟筆', type: CALC_TYPES.POLY, category: 'polygenic' },
 
   { id: 'tangerine', name: '橘化', type: CALC_TYPES.POLY, category: 'polygenic' },
   { id: 'hypo', name: '少斑', type: CALC_TYPES.POLY, category: 'polygenic' },

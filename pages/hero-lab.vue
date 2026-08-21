@@ -161,6 +161,7 @@ onBeforeUnmount(() => {
   /* 頁面總長：改短讓真機觸控能輕鬆滑到終章結尾（3000vh 太長、根本滑不到底）。 */
   height: 1500vh;
   height: 1500svh;
+  height: 1500dvh;
   pointer-events: none;
 }
 
@@ -172,7 +173,8 @@ onBeforeUnmount(() => {
 
   /* 使用 svh 固定滾動總長，避免 iOS 網址列伸縮時改變 scrollHeight 造成跳動。 */
   .hero-lab-scroll-space {
-    height: 1500svh;
+    height: 1800svh;
+    height: 1800dvh;
   }
 }
 

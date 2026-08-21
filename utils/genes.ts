@@ -29,7 +29,7 @@ export const GENE_DEFINITIONS = {
     { id: 'whiteandyellow', name: '白黃', type: CALC_TYPES.DOM },
     { id: 'tugsnow', name: '奧本雪花', type: CALC_TYPES.DOM },
     { id: 'gemsnow', name: '寶石雪花', type: CALC_TYPES.DOM },
-    { id: 'pastel', name: '蠟筆', type: CALC_TYPES.DOM },
+    { id: 'pastel', name: '蠟筆', type: CALC_TYPES.POLY },
     { id: 'tangerine', name: '橘化', type: CALC_TYPES.POLY },
     { id: 'hypo', name: '少斑', type: CALC_TYPES.POLY },
     { id: 'superhypo', name: '超級少斑', type: CALC_TYPES.POLY },
