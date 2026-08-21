@@ -39,7 +39,7 @@ function clearScheduledScrollResets() {
 
 function scheduleInitialScrollReset() {
   clearScheduledScrollResets()
-  resetScrollUntil = performance.now() + 760
+  resetScrollUntil = performance.now() + 240
   resetScrollTop(true)
 
   let frames = 0
@@ -50,7 +50,7 @@ function scheduleInitialScrollReset() {
     }
     resetScrollTop()
     frames += 1
-    if (frames < 10) {
+    if (frames < 4) {
       resetScrollFrame = window.requestAnimationFrame(clampForInitialFrames)
     } else {
       resetScrollFrame = 0
@@ -59,7 +59,7 @@ function scheduleInitialScrollReset() {
   resetScrollFrame = window.requestAnimationFrame(clampForInitialFrames)
 
   // Chrome 可能在 layout / bfcache / 圖片解碼後才套回前次 scroll，這裡補延遲夾制。
-  for (const delay of [80, 180, 360, 700]) {
+  for (const delay of [60, 140, 230]) {
     resetScrollTimers.push(window.setTimeout(resetScrollTop, delay))
   }
 }
@@ -174,7 +174,6 @@ onBeforeUnmount(() => {
   /* 使用 svh 固定滾動總長，避免 iOS 網址列伸縮時改變 scrollHeight 造成跳動。 */
   .hero-lab-scroll-space {
     height: 1800svh;
-    height: 1800dvh;
   }
 }
 

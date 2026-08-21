@@ -27,8 +27,11 @@ const emit = defineEmits<{
 }>()
 
 const MODEL_URL = '/models/gecko-tripo.glb'
+const MODEL_MOBILE_URL = '/models/gecko-tripo-mobile.glb'
 const BACKBONE_MODEL_URL = '/models/scene03-main-rig.glb'
+const BACKBONE_MODEL_MOBILE_URL = '/models/scene03-main-rig-mobile.glb'
 const EMBRYO_MODEL_URL = '/models/gecko-embryo.glb'
+const EMBRYO_MOBILE_MODEL_URL = '/models/gecko-embryo-mobile.glb'
 const LOGO_TEXTURE_URL = '/logo.png'
 const PORTRAIT_SPINE_WIPE_Y_MAX = 6
 
@@ -40,7 +43,7 @@ const CFG = {
     tubeRadius: 0.058,
     rungRadius: 0.03,
     rungs: 28,
-    segments: 500,
+    segments: 360,
     alpha: 0.52,
     z: -1.65
   },
@@ -1015,6 +1018,10 @@ const spinalCordMat = new THREE.ShaderMaterial({
     varying vec3 vV;
     ${screenEdgeNoiseGlsl}
     void main() {
+      // 與骨幹本體共用終章 7px 方塊退場邊界，避免發光脊髓殘留在房間前方。
+      float _fwSd = gl_FragCoord.x / max(1.0, uEggRes.x) + gl_FragCoord.y / max(1.0, uEggRes.y);
+      float _fwD = fract(sin(dot(floor(gl_FragCoord.xy / 7.0), vec2(12.9898, 78.233))) * 43758.5453);
+      if (_fwSd < uEggReveal * 2.24 - 0.12 + _fwD * 0.085) discard;
       float _sd = perturbScreenD(gl_FragCoord.xy, uResolution, uTime, 0.014);
       float _spineScanY = clamp(_sd / 2.0, 0.0, 1.0) * uSpineWipeYMax;
       float _spineCutY = clamp(uSpineWipeProgress, 0.0, 1.0) * uSpineWipeYMax;
@@ -1072,6 +1079,10 @@ const spinalVolumeMat = new THREE.ShaderMaterial({
     varying vec3 vV;
     ${screenEdgeNoiseGlsl}
     void main() {
+      // 外層脊髓體積必須跟核心與骨幹同幀退場，不能穿過終章方塊 wipe。
+      float _fwSd = gl_FragCoord.x / max(1.0, uEggRes.x) + gl_FragCoord.y / max(1.0, uEggRes.y);
+      float _fwD = fract(sin(dot(floor(gl_FragCoord.xy / 7.0), vec2(12.9898, 78.233))) * 43758.5453);
+      if (_fwSd < uEggReveal * 2.24 - 0.12 + _fwD * 0.085) discard;
       float _sd = perturbScreenD(gl_FragCoord.xy, uResolution, uTime, 0.014);
       float _spineScanY = clamp(_sd / 2.0, 0.0, 1.0) * uSpineWipeYMax;
       float _spineCutY = clamp(uSpineWipeProgress, 0.0, 1.0) * uSpineWipeYMax;
@@ -2182,7 +2193,20 @@ function buildProjector() {
 
 let loadedModel: THREE.Object3D | null = null
 let loadedBackboneModel: THREE.Object3D | null = null
+let geckoDesktopModel: THREE.Object3D | null = null
+let geckoMobileModel: THREE.Object3D | null = null
+let geckoDesktopLoading = false
+let geckoMobileLoading = false
+type BackboneVariant = { model: THREE.Object3D; inner: THREE.Object3D | null }
+let backboneDesktopVariant: BackboneVariant | null = null
+let backboneMobileVariant: BackboneVariant | null = null
+let backboneDesktopLoading = false
+let backboneMobileLoading = false
 let embryoModelHolder: THREE.Group | null = null
+let embryoDesktopModelHolder: THREE.Group | null = null
+let embryoMobileModelHolder: THREE.Group | null = null
+let embryoDesktopLoading = false
+let embryoMobileLoading = false
 // 胚胎 GLB 定位微調（可用 __hero.embryo(rx,ry,rz,scaleMul) 即時試，定案寫回這裡）。
 let EMBRYO_ROT_X = 0
 let EMBRYO_ROT_Y = 0
@@ -2230,8 +2254,6 @@ const nextSceneSettleEpsilon = 0.002
 const cardOrbitDamping = 0.16
 // 終章阻尼調緊：讓 wipe/蛋隨捲動貼近前進，不再落後半秒 → 捲到底就轉完（修「沒完整轉/會卡」）。
 const nextSceneDamping = 0.3
-const nativeScrollCardInputPull = 0.24
-const nativeScrollNextInputPull = 0.2
 const cardCount = 8
 const cardStep = 1.1 // 相鄰卡片的環繞相位間距（弧度）
 const cardEntranceAngle = 0 // 第一張卡起始相位（正面中間）
@@ -2247,8 +2269,8 @@ const stageEpsilon = 0.001
 // 原生捲動以同一個總旋轉值同步各場景；DNA 僅取其中一小段，避免每格滾輪轉得過快。
 const DNA_SCROLL_ROTATION_FACTOR = 0.18
 // 守宮本體 + 金字塔（投影底座）共用同一轉速，鎖在一起轉。
-// 調小即整組少轉幾圈（不影響 DNA / 粒子）。調大 = 進斜帶前就轉更多圈。
-const geckoPyramidSpinFactor = 0.48
+// 與前段 DNA／粒子使用完全相同的係數，避免守宮模型接管後突然加速。
+const geckoPyramidSpinFactor = DNA_SCROLL_ROTATION_FACTOR
 // 守宮定角：成形完成時落在參考圖的 3/4 前上方視角，成形後保持固定。
 // 可用 window.__hero.geckoRot(y, x, z) 即時試角，定案後把數值寫回這裡。
 let GECKO_REST_ROT_Y = -1.18
@@ -2318,6 +2340,7 @@ const transitionSectionEnd = journeySegments[1]?.end ?? 1
 let lastJourneyEmit = -1
 let lastFinaleEmit = -1
 let lastNextSceneEmit = -1
+let targetHeroScrollProgress = 0
 let currentHeroScrollProgress = 0
 // 骨幹只在下一場景切換時沿 +Y 上移，完整揭露與卡片段保持置中。
 const BACKBONE_BASE_Y = 0
@@ -2489,6 +2512,14 @@ function onWheel(event: WheelEvent) {
   applyScrollDelta(event.deltaY)
 }
 
+function usesNativeHeroScroll() {
+  return (
+    typeof window !== 'undefined' &&
+    (window.location.pathname === '/hero-lab' ||
+      document.body.classList.contains('hero-lab-active'))
+  )
+}
+
 function onTouchStart(event: TouchEvent) {
   wakeBottomRender()
   lastTouchY = event.touches[0]?.clientY ?? 0
@@ -2616,33 +2647,65 @@ function createGeckoAssemblyPoints(mesh: THREE.Mesh, model: THREE.Object3D, mode
   return points
 }
 
-function loadGeckoModel() {
+function syncGeckoVariantVisibility(compact = responsiveIsCompact) {
+  const activeModel = compact ? geckoMobileModel : geckoDesktopModel
+  loadedModel = activeModel
+  if (geckoDesktopModel) geckoDesktopModel.visible = !compact
+  if (geckoMobileModel) geckoMobileModel.visible = compact
+}
+
+function loadGeckoModel(compact: boolean) {
+  const currentModel = compact ? geckoMobileModel : geckoDesktopModel
+  const loading = compact ? geckoMobileLoading : geckoDesktopLoading
+  if (currentModel || loading) {
+    syncGeckoVariantVisibility()
+    return
+  }
+  if (compact) geckoMobileLoading = true
+  else geckoDesktopLoading = true
+
   const loader = new GLTFLoader()
+  const modelUrl = compact ? MODEL_MOBILE_URL : MODEL_URL
+  loader.load(
+    modelUrl,
+    (gltf) => {
+      const model = gltf.scene
+      const geckoMeshes: THREE.Mesh[] = []
 
-  loader.load(MODEL_URL, (gltf) => {
-    const model = gltf.scene
-    const geckoMeshes: THREE.Mesh[] = []
+      model.traverse((node) => {
+        const mesh = node as THREE.Mesh
+        if (!mesh.isMesh) return
 
-    model.traverse((node) => {
-      const mesh = node as THREE.Mesh
-      if (!mesh.isMesh) return
+        mesh.geometry.computeVertexNormals()
+        disposeMaterial(mesh.material)
+        mesh.material = geckoMat
+        mesh.renderOrder = 8
+        geckoMeshes.push(mesh)
+      })
 
-      mesh.geometry.computeVertexNormals()
-      disposeMaterial(mesh.material)
-      mesh.material = geckoMat
-      mesh.renderOrder = 8
-      geckoMeshes.push(mesh)
-    })
-
-    const modelScale = normalizeModel(model)
-    model.updateMatrixWorld(true)
-    for (const mesh of geckoMeshes) {
-      const points = createGeckoAssemblyPoints(mesh, model, modelScale)
-      if (points) mesh.add(points)
+      const modelScale = normalizeModel(model)
+      model.updateMatrixWorld(true)
+      for (const mesh of geckoMeshes) {
+        const points = createGeckoAssemblyPoints(mesh, model, modelScale)
+        if (points) mesh.add(points)
+      }
+      if (compact) {
+        geckoMobileModel = model
+        geckoMobileLoading = false
+      } else {
+        geckoDesktopModel = model
+        geckoDesktopLoading = false
+      }
+      geckoGroup.add(model)
+      syncGeckoVariantVisibility()
+    },
+    undefined,
+    () => {
+      if (compact) geckoMobileLoading = false
+      else geckoDesktopLoading = false
+      syncGeckoVariantVisibility()
     }
-    loadedModel = model
-    geckoGroup.add(model)
-  })
+  )
 }
 
 function normalizeBackboneModel(root: THREE.Object3D) {
@@ -2745,34 +2808,70 @@ function buildSpineCenterline(model: THREE.Object3D, group: THREE.Object3D) {
   return g
 }
 
-function loadBackboneModel() {
+function syncBackboneVariantVisibility(compact = responsiveIsCompact) {
+  const activeVariant = compact ? backboneMobileVariant : backboneDesktopVariant
+  loadedBackboneModel = activeVariant?.model ?? null
+  loadedBackboneInner = activeVariant?.inner ?? null
+  if (backboneDesktopVariant) {
+    backboneDesktopVariant.model.visible = !compact
+    if (backboneDesktopVariant.inner) backboneDesktopVariant.inner.visible = !compact
+  }
+  if (backboneMobileVariant) {
+    backboneMobileVariant.model.visible = compact
+    if (backboneMobileVariant.inner) backboneMobileVariant.inner.visible = compact
+  }
+}
+
+function loadBackboneModel(compact: boolean) {
+  const currentVariant = compact ? backboneMobileVariant : backboneDesktopVariant
+  const loading = compact ? backboneMobileLoading : backboneDesktopLoading
+  if (currentVariant || loading) {
+    syncBackboneVariantVisibility()
+    return
+  }
+  if (compact) backboneMobileLoading = true
+  else backboneDesktopLoading = true
+
   const loader = new GLTFLoader()
+  const modelUrl = compact ? BACKBONE_MODEL_MOBILE_URL : BACKBONE_MODEL_URL
+  loader.load(
+    modelUrl,
+    (gltf) => {
+      const model = gltf.scene
 
-  loader.load(BACKBONE_MODEL_URL, (gltf) => {
-    const model = gltf.scene
+      model.traverse((node) => {
+        const mesh = node as THREE.Mesh
+        if (!mesh.isMesh) return
 
-    model.traverse((node) => {
-      const mesh = node as THREE.Mesh
-      if (!mesh.isMesh) return
+        mesh.geometry.computeVertexNormals()
+        disposeMaterial(mesh.material)
+        mesh.material = backboneSampleMat
+      })
 
-      mesh.geometry.computeVertexNormals()
-      disposeMaterial(mesh.material)
-      mesh.material = backboneSampleMat
-    })
+      normalizeBackboneModel(model)
+      backboneAxisFixGroup.quaternion.setFromUnitVectors(backboneModelAxis, worldVerticalAxis)
+      backboneAxisFixGroup.add(model)
 
-    normalizeBackboneModel(model)
-    backboneAxisFixGroup.clear()
-    backboneAxisFixGroup.quaternion.setFromUnitVectors(backboneModelAxis, worldVerticalAxis)
-    backboneAxisFixGroup.add(model)
-    loadedBackboneModel = model
-
-    // 脊髓：沿脊椎中心線的一條細發光線，曲度貼合骨幹本身。
-    const inner = buildSpineCenterline(model, backboneAxisFixGroup)
-    if (inner) {
-      backboneAxisFixGroup.add(inner)
-      loadedBackboneInner = inner
+      // 脊髓：沿脊椎中心線的一條細發光線，曲度貼合骨幹本身。
+      const inner = buildSpineCenterline(model, backboneAxisFixGroup)
+      if (inner) backboneAxisFixGroup.add(inner)
+      const variant = { model, inner }
+      if (compact) {
+        backboneMobileVariant = variant
+        backboneMobileLoading = false
+      } else {
+        backboneDesktopVariant = variant
+        backboneDesktopLoading = false
+      }
+      syncBackboneVariantVisibility()
+    },
+    undefined,
+    () => {
+      if (compact) backboneMobileLoading = false
+      else backboneDesktopLoading = false
+      syncBackboneVariantVisibility()
     }
-  })
+  )
 }
 
 const { height: H, radius: R, turns: TURNS, segments: SEG } = CFG.dna
@@ -2915,7 +3014,7 @@ const dnaAuxStrandSpecs: DnaAuxStrandSpec[] = [
 const dnaAuxCurves = dnaAuxStrandSpecs.map((spec) => auxHelixCurve(spec))
 
 for (const curve of dnaMainCurves) {
-  const tube = new THREE.TubeGeometry(curve, SEG, CFG.dna.tubeRadius, 20, false)
+  const tube = new THREE.TubeGeometry(curve, SEG, CFG.dna.tubeRadius, 14, false)
   disposables.push(tube)
   dnaGroup.add(new THREE.Mesh(tube, dnaTubeMat))
 }
@@ -2925,7 +3024,7 @@ for (let i = 0; i < dnaAuxCurves.length; i++) {
     dnaAuxCurves[i],
     SEG,
     dnaAuxStrandSpecs[i].tubeRadius,
-    10,
+    8,
     false
   )
   disposables.push(tube)
@@ -2937,7 +3036,7 @@ for (let k = 0; k < CFG.dna.rungs; k++) {
   const a = dnaMainCurves[0].getPoint(t)
   const b = dnaMainCurves[1].getPoint(t)
   const len = a.distanceTo(b)
-  const rung = new THREE.CylinderGeometry(CFG.dna.rungRadius, CFG.dna.rungRadius, len, 14)
+  const rung = new THREE.CylinderGeometry(CFG.dna.rungRadius, CFG.dna.rungRadius, len, 12)
   disposables.push(rung)
 
   const mid = a.clone().add(b).multiplyScalar(0.5)
@@ -3331,7 +3430,13 @@ function makeScreenRevealTitleMaterial(
       varying vec3 vViewDir;
       ${screenEdgeNoiseGlsl}
       void main() {
-      // Scene03 卡片標題不再用 shader wipe 抹除；只保留斜帶 mesh 與 screen reveal。
+        // 終章房間揭露時，卡片文字與骨幹共用同一道 7px 方塊 wipe 退場。
+        float finaleScreenD = gl_FragCoord.x / max(1.0, uEggRes.x)
+          + gl_FragCoord.y / max(1.0, uEggRes.y);
+        float finaleDither = fract(
+          sin(dot(floor(gl_FragCoord.xy / 7.0), vec2(12.9898, 78.233))) * 43758.5453
+        );
+        if (finaleScreenD < uEggReveal * 2.24 - 0.12 + finaleDither * 0.085) discard;
         float _sd = clamp(
           perturbScreenD(gl_FragCoord.xy, uResolution, uTime, 0.014),
           0.0,
@@ -3579,7 +3684,13 @@ function makeProjectionCardVideoMaterial(color: string, accent: string) {
       ${screenEdgeNoiseGlsl}
 
       void main() {
-      // Scene03 卡片本體不再用 shader wipe 抹除；只保留斜帶 mesh 與 screen reveal。
+        // 終章房間揭露時，卡片本體與骨幹共用同一道 7px 方塊 wipe 退場。
+        float finaleScreenD = gl_FragCoord.x / max(1.0, uEggRes.x)
+          + gl_FragCoord.y / max(1.0, uEggRes.y);
+        float finaleDither = fract(
+          sin(dot(floor(gl_FragCoord.xy / 7.0), vec2(12.9898, 78.233))) * 43758.5453
+        );
+        if (finaleScreenD < uEggReveal * 2.24 - 0.12 + finaleDither * 0.085) discard;
         float cardScreenD = clamp(
           perturbScreenD(gl_FragCoord.xy, uResolution, uTime, 0.014),
           0.0,
@@ -4041,41 +4152,73 @@ function getObjectMaxRadius(root: THREE.Object3D) {
   return Math.sqrt(maxRadiusSq) || 1
 }
 
-function loadEmbryoModel() {
-  const loader = new GLTFLoader()
-  loader.load(EMBRYO_MODEL_URL, (gltf) => {
-    const model = gltf.scene
-    model.traverse((node) => {
-      const mesh = node as THREE.Mesh
-      if (!mesh.isMesh) return
-      mesh.geometry.computeVertexNormals()
-      disposeMaterial(mesh.material)
-      mesh.material = embryoMat
-      mesh.renderOrder = 41
-    })
-    // 置中後以胚胎外接球計算可容納尺寸。
-    const box = new THREE.Box3().setFromObject(model)
-    const center = new THREE.Vector3()
-    box.getCenter(center)
-    model.position.sub(center)
-
-    const holder = new THREE.Group()
-    holder.add(model)
-    holder.rotation.set(EMBRYO_ROT_X, EMBRYO_ROT_Y, EMBRYO_ROT_Z)
-    // 用旋轉後每個實際頂點的最大半徑做精準 fit，避免外接球過度保守造成胚胎偏小。
-    const maxRadius = getObjectMaxRadius(holder)
-    const baseScale = (EGG_BASE_RADIUS * EMBRYO_INTERIOR_FILL) / maxRadius
-    holder.userData.baseScale = baseScale
-    holder.scale.setScalar(baseScale * EMBRYO_SCALE_MUL)
-    embryoModelHolder = holder
-    embryoGroup.add(holder)
-    // GLB 這才進場景 → 補一輪預熱，讓金屬胚胎 shader 也提前編譯（否則轉場首見時卡頓）。
-    if (envDone) finalePrewarmFrames = 0
-    // GLB 成功 → 隱藏程序化 fallback。
-    for (const m of proceduralEmbryoMeshes) m.visible = false
-  })
+function syncEmbryoVariantVisibility(compact = responsiveIsCompact) {
+  const activeHolder = compact ? embryoMobileModelHolder : embryoDesktopModelHolder
+  embryoModelHolder = activeHolder
+  if (embryoDesktopModelHolder) embryoDesktopModelHolder.visible = !compact
+  if (embryoMobileModelHolder) embryoMobileModelHolder.visible = compact
+  for (const mesh of proceduralEmbryoMeshes) mesh.visible = !activeHolder
 }
-loadEmbryoModel()
+
+function loadEmbryoModel(compact: boolean) {
+  const currentHolder = compact ? embryoMobileModelHolder : embryoDesktopModelHolder
+  const loading = compact ? embryoMobileLoading : embryoDesktopLoading
+  if (currentHolder || loading) {
+    syncEmbryoVariantVisibility()
+    return
+  }
+  if (compact) embryoMobileLoading = true
+  else embryoDesktopLoading = true
+
+  const loader = new GLTFLoader()
+  const modelUrl = compact ? EMBRYO_MOBILE_MODEL_URL : EMBRYO_MODEL_URL
+  loader.load(
+    modelUrl,
+    (gltf) => {
+      const model = gltf.scene
+      model.traverse((node) => {
+        const mesh = node as THREE.Mesh
+        if (!mesh.isMesh) return
+        mesh.geometry.computeVertexNormals()
+        disposeMaterial(mesh.material)
+        mesh.material = embryoMat
+        mesh.renderOrder = 41
+      })
+      // 置中後以胚胎外接球計算可容納尺寸。
+      const box = new THREE.Box3().setFromObject(model)
+      const center = new THREE.Vector3()
+      box.getCenter(center)
+      model.position.sub(center)
+
+      const holder = new THREE.Group()
+      holder.add(model)
+      holder.rotation.set(EMBRYO_ROT_X, EMBRYO_ROT_Y, EMBRYO_ROT_Z)
+      // 用旋轉後每個實際頂點的最大半徑做精準 fit，避免外接球過度保守造成胚胎偏小。
+      const maxRadius = getObjectMaxRadius(holder)
+      const baseScale = (EGG_BASE_RADIUS * EMBRYO_INTERIOR_FILL) / maxRadius
+      holder.userData.baseScale = baseScale
+      holder.scale.setScalar(baseScale * EMBRYO_SCALE_MUL)
+      if (compact) {
+        embryoMobileModelHolder = holder
+        embryoMobileLoading = false
+      } else {
+        embryoDesktopModelHolder = holder
+        embryoDesktopLoading = false
+      }
+      embryoGroup.add(holder)
+      // GLB 這才進場景 → 補一輪預熱，讓金屬胚胎 shader 也提前編譯（否則轉場首見時卡頓）。
+      if (envDone) finalePrewarmFrames = 0
+      // 手機使用同一胚胎造型的 8% LOD，桌機維持完整高模；fallback 僅在載入失敗時顯示。
+      syncEmbryoVariantVisibility()
+    },
+    undefined,
+    () => {
+      if (compact) embryoMobileLoading = false
+      else embryoDesktopLoading = false
+      syncEmbryoVariantVisibility()
+    }
+  )
+}
 
 const heartLight = new THREE.PointLight('#ff8a3d', 0, 4.2)
 heartLight.position.set(0, 0, 0.12)
@@ -4187,6 +4330,7 @@ finaleBackdropMesh.visible = false
 const ROOM_W = 20
 const ROOM_H = 13
 const ROOM_D = 26
+const finaleRoomGroup = new THREE.Group()
 // 細分較高只增加少量頂點（不影響 fill 效能），讓烘焙的燈光/AO 漸層平滑。
 const roomGeo = new THREE.BoxGeometry(ROOM_W, ROOM_H, ROOM_D, 10, 10, 10)
 {
@@ -5222,7 +5366,13 @@ const boneGridMat = new THREE.ShaderMaterial({
     uniform vec2 uEggRes;
     varying vec3 vWorld;
     void main() {
-      // Scene03 骨幹地板網格不再用 shader wipe 抹除；只保留實體斜帶 mesh 遮罩。
+      // 終章房間揭露時，地板網格與骨幹共用同一道 7px 方塊 wipe 退場。
+      float finaleScreenD = gl_FragCoord.x / max(1.0, uEggRes.x)
+        + gl_FragCoord.y / max(1.0, uEggRes.y);
+      float finaleDither = fract(
+        sin(dot(floor(gl_FragCoord.xy / 7.0), vec2(12.9898, 78.233))) * 43758.5453
+      );
+      if (finaleScreenD < uEggReveal * 2.24 - 0.12 + finaleDither * 0.085) discard;
       // 抗鋸齒網格線
       vec2 g = vWorld.xz / uCell;
       vec2 gd = abs(fract(g - 0.5) - 0.5) / fwidth(g);
@@ -5294,7 +5444,13 @@ const boneTilesMat = new THREE.ShaderMaterial({
     varying float vLift;
     varying vec3 vNormal;
     void main() {
-      // Scene03 浮起格子不再用 shader wipe 抹除；只保留實體斜帶 mesh 遮罩。
+      // 終章房間揭露時，浮動格子與骨幹共用同一道 7px 方塊 wipe 退場。
+      float finaleScreenD = gl_FragCoord.x / max(1.0, uEggRes.x)
+        + gl_FragCoord.y / max(1.0, uEggRes.y);
+      float finaleDither = fract(
+        sin(dot(floor(gl_FragCoord.xy / 7.0), vec2(12.9898, 78.233))) * 43758.5453
+      );
+      if (finaleScreenD < uEggReveal * 2.24 - 0.12 + finaleDither * 0.085) discard;
       float a = uOpacity * smoothstep(0.05, 0.28, vLift) * 0.55; // 小範圍、低亮度拖曳
       if (a < 0.002) discard;
       float faceLight = 0.55 + 0.45 * max(dot(normalize(vNormal), normalize(vec3(-0.35, 0.8, 0.45))), 0.0);
@@ -5615,15 +5771,14 @@ group.add(boneTiles)
 group.add(dnaHoverSurface)
 group.add(dnaTiles)
 group.add(finaleBackdropMesh)
-group.add(roomMesh)
-for (const roomGridMesh of roomGridMeshes) group.add(roomGridMesh)
-group.add(logoSignGroup)
-group.add(finaleButtonGroup)
+finaleRoomGroup.add(roomMesh)
+for (const roomGridMesh of roomGridMeshes) finaleRoomGroup.add(roomGridMesh)
+finaleRoomGroup.add(logoSignGroup)
+finaleRoomGroup.add(finaleButtonGroup)
+group.add(finaleRoomGroup)
 group.add(eggGroup)
 group.add(burstGroup)
 group.add(transitionBandMesh)
-loadGeckoModel()
-loadBackboneModel()
 
 const groupRef = shallowRef<THREE.Group>(group)
 
@@ -5639,11 +5794,13 @@ let rendererRef: THREE.WebGLRenderer | null = null
 const FINALE_PREWARM_FRAMES = 6
 let finalePrewarmFrames = FINALE_PREWARM_FRAMES // 初始為滿=不預熱，envDone 時歸零啟動
 let debugHudEl: HTMLDivElement | null = null // 網址 ?debug=1 顯示的即時數值面板（診斷真機捲動用）
+let lastDebugHudUpdateAt = -Infinity
 const tmpRes = new THREE.Vector2()
 let responsiveViewportWidth = 0
 let responsiveViewportHeight = 0
 let responsiveIsCompact = false
 let responsiveTouchViewport = false
+let responsiveHoverEffects = false
 let responsiveAspect = 1
 let responsivePortraitFactor = 0
 let lastTransitionBandLogProgress = Number.NaN
@@ -5653,6 +5810,8 @@ let lastGeckoLogY = Number.NaN
 let lastSpineLogY = Number.NaN
 let lastSpineLogProgress = Number.NaN
 let lastSpineClipSeam = Number.NaN
+let lastTransitionBandLogAt = -Infinity
+let lastFinaleLabelDrawAt = -Infinity
 type CanvasViewportRect = {
   width: number
   height: number
@@ -5709,8 +5868,6 @@ function getHeroCanvasRect(): CanvasViewportRect | null {
 }
 
 function getStableViewportRect() {
-  const rect = getHeroCanvasRect()
-  if (rect) return rect
   if (responsiveViewportWidth > 0 && responsiveViewportHeight > 0) {
     return {
       width: responsiveViewportWidth,
@@ -5719,7 +5876,7 @@ function getStableViewportRect() {
       top: 0
     }
   }
-  return null
+  return getHeroCanvasRect()
 }
 
 function getCurrentTransitionProgress() {
@@ -5735,7 +5892,7 @@ function refreshScrollTriggerCache() {
 
 function syncParallaxPointerBinding() {
   if (typeof window === 'undefined') return
-  const shouldBind = hasFinePointer()
+  const shouldBind = responsiveViewportWidth >= 768 && hasFinePointer()
   if (shouldBind && !parallaxPointerEventsBound) {
     window.addEventListener('pointermove', onParallaxPointerMove, { passive: true })
     parallaxPointerEventsBound = true
@@ -5840,6 +5997,7 @@ function syncResponsiveSceneLayout(
   responsiveAspect = aspect
   // 窄視窗的裝置模擬器仍可能回報 fine pointer；依專案規則，低於 md 也必須走手機構圖。
   const compact = width < 768 || touchViewport
+  responsiveHoverEffects = !compact && hasFinePointer()
   responsivePortraitFactor =
     compact && aspect < 1 ? THREE.MathUtils.clamp((1 - aspect) / 0.5, 0, 1) : 0
   // 直向與接近平方的手機都需要縮小構圖；手機橫向寬畫面則保留原本比例。
@@ -5867,10 +6025,25 @@ function syncResponsiveSceneLayout(
     seamWeightX = 1
     seamWeightY = 1
   }
+  // 房間、牆格、招牌與柱體共用世界 X 軸縮放；直向手機縮窄，桌機還原 1。
+  // 蛋不在此父層內，因此不會被壓扁。
+  const finaleRoomScaleX = narrowMobile ? THREE.MathUtils.clamp(aspect / 0.82, 0.72, 1) : 1
+  finaleRoomGroup.scale.set(finaleRoomScaleX, 1, 1)
+  loadGeckoModel(compact)
+  syncGeckoVariantVisibility(compact)
+  loadBackboneModel(compact)
+  syncBackboneVariantVisibility(compact)
+  // 手機載入同造型的低面數 LOD，避免下載及繪製近 190 萬 triangles 的桌機高模。
+  loadEmbryoModel(compact)
+  syncEmbryoVariantVisibility(compact)
+  dnaHoverSurface.visible = responsiveHoverEffects
+  syncParallaxPointerBinding()
+  syncCardHoverBindings()
   group.scale.setScalar(1)
   plexLineMat.resolution.set(width, height)
 }
 let cardPointerEventsBound = false
+let cardHoverEventsBound = false
 const SEAM_BAND = 0.85 // Logo 斜帶在 d 座標的寬度（越小越窄）
 type ClipPoint = { x: number; y: number }
 
@@ -6129,19 +6302,35 @@ function hasFinePointer() {
   )
 }
 
-function bindCardClickCanvas(canvas: HTMLCanvasElement) {
-  if (cardClickCanvas === canvas) return
-  cardClickCanvas = canvas
-  if (cardPointerEventsBound) return
-  cardPointerEventsBound = true
-  window.addEventListener('click', onCardClick, true)
-  // 觸控裝置只保留 click 觸發，避免把 hover/pointermove 綁到手機造成耗電與誤觸。
-  if (hasFinePointer()) {
+function syncCardHoverBindings() {
+  const shouldBind = responsiveViewportWidth >= 768 && hasFinePointer()
+  if (shouldBind && !cardHoverEventsBound) {
     window.addEventListener('pointermove', onCardPointerMove, true)
     window.addEventListener('pointerleave', onCardPointerLeave, true)
     window.addEventListener('pointercancel', onCardPointerLeave, true)
     window.addEventListener('blur', onCardPointerLeave, true)
+    cardHoverEventsBound = true
+    return
   }
+  if (!shouldBind && cardHoverEventsBound) {
+    window.removeEventListener('pointermove', onCardPointerMove, true)
+    window.removeEventListener('pointerleave', onCardPointerLeave, true)
+    window.removeEventListener('pointercancel', onCardPointerLeave, true)
+    window.removeEventListener('blur', onCardPointerLeave, true)
+    cardHoverEventsBound = false
+    onCardPointerLeave()
+  }
+}
+
+function bindCardClickCanvas(canvas: HTMLCanvasElement) {
+  if (cardClickCanvas === canvas) return
+  cardClickCanvas = canvas
+  if (!cardPointerEventsBound) {
+    cardPointerEventsBound = true
+    window.addEventListener('click', onCardClick, true)
+  }
+  // 手機只保留 click/tap；hover raycast 僅在桌機 fine pointer 啟用。
+  syncCardHoverBindings()
 }
 
 function resolveCamera(x: unknown): THREE.Camera | null {
@@ -6253,10 +6442,13 @@ onBeforeRender(({ elapsed, delta }) => {
   currentRotationY += (targetRotationY - currentRotationY) * fpsSmooth(CFG.wheel.damping, dt)
   const nativeScrollMode =
     typeof document !== 'undefined' && document.body.classList.contains('hero-lab-active')
-  // 真機一次 flick 會跨過數百 px；桌機 wheel 則是細小離散輸入。
-  // 只在 coarse-pointer 的 Hero Lab 拉低追隨率，確保守宮退場、斜帶與骨幹
-  // 會逐幀共用同一條 sweep，而非在一兩個 frame 內直接跳到下一幕。
-  const timelineDamping = 0.14
+  const nativeTouchScroll = nativeScrollMode && responsiveTouchViewport
+  // 原生 scroll callback 只更新 target；所有視覺共用 render loop 的 current。
+  // 手機約 0.3～0.5 秒收斂，避免舊版 0.035 造成明顯拖尾，也不會一幀跳段。
+  const heroProgressDamping = nativeTouchScroll ? 0.16 : 0.22
+  currentHeroScrollProgress +=
+    (targetHeroScrollProgress - currentHeroScrollProgress) * fpsSmooth(heroProgressDamping, dt)
+  const timelineDamping = nativeTouchScroll ? 0.1 : 0.14
   currentTimeline += (targetTimeline - currentTimeline) * fpsSmooth(timelineDamping, dt)
   const introReveal = stageValue(currentTimeline, 0, introRevealSpan, introRevealMax)
   const gridReveal = stageValue(currentTimeline, gridRevealStart, gridRevealSpan, introRevealMax)
@@ -6379,8 +6571,9 @@ onBeforeRender(({ elapsed, delta }) => {
   // Logo 與 DNA 共用完全相同的捲動旋轉係數，視覺上保持鎖定同步。
   initialLogoGroup.rotation.y = currentRotationY * DNA_SCROLL_ROTATION_FACTOR
   backboneSampleGroup.rotation.y = currentRotationY * 0.12
-  // 守宮完成定角後固定，不再跟著滾動條旋轉。
-  geckoGroup.rotation.y = GECKO_REST_ROT_Y * geckoRevealProgress
+  // 守宮沿用前段既有的滾動旋轉量；停止捲動就停住，繼續捲動則緩速接續旋轉。
+  geckoGroup.rotation.y =
+    (GECKO_REST_ROT_Y + currentRotationY * geckoPyramidSpinFactor) * geckoRevealProgress
   geckoGroup.rotation.x = GECKO_REST_ROT_X * geckoRevealProgress
   geckoGroup.rotation.z = GECKO_REST_ROT_Z * geckoRevealProgress
   dnaGroup.scale.setScalar(DNA_LOGO_SCALE)
@@ -6411,7 +6604,7 @@ onBeforeRender(({ elapsed, delta }) => {
     (scene01Active && mobileScene01Opacity > 0.003) ||
     (projectorActive && projFade * mobileScene01Opacity > 0.01)
   groundGrid.visible = scene01GridActive && mobileScene01Opacity > 0.003
-  dnaTiles.visible = groundGrid.visible
+  dnaTiles.visible = groundGrid.visible && responsiveHoverEffects
   dnaTilesMat.uniforms.uOpacity.value = gridIntroProgress * mobileScene01Opacity
   if (dnaTiles.visible) {
     const _dcam = resolvePerspectiveCamera(tres.camera)
@@ -6474,17 +6667,19 @@ onBeforeRender(({ elapsed, delta }) => {
   // ── Scene3 卡片環繞軸心：與骨幹一起被斜帶揭露，初始為第一張正中、其餘沿右下排隊，
   //    捲動時依序從右下進中間，再往左上繞到骨幹後側。──
   const cardOrbitDelta = targetCardOrbit - currentCardOrbit
-  currentCardOrbit += cardOrbitDelta * fpsSmooth(cardOrbitDamping, dt)
+  const activeCardOrbitDamping = nativeTouchScroll ? 0.14 : cardOrbitDamping
+  currentCardOrbit += cardOrbitDelta * fpsSmooth(activeCardOrbitDamping, dt)
   if (Math.abs(cardOrbitDelta) < cardOrbitSettleEpsilon) {
     currentCardOrbit = targetCardOrbit
   }
   const nextSceneDelta = targetNextSceneProgress - currentNextSceneProgress
-  currentNextSceneProgress += nextSceneDelta * fpsSmooth(nextSceneDamping, dt)
+  const activeNextSceneDamping = nativeTouchScroll ? 0.12 : nextSceneDamping
+  currentNextSceneProgress += nextSceneDelta * fpsSmooth(activeNextSceneDamping, dt)
   if (Math.abs(nextSceneDelta) < nextSceneSettleEpsilon) {
     currentNextSceneProgress = targetNextSceneProgress
   }
   const placeholderDelta = targetPlaceholderProgress - currentPlaceholderProgress
-  currentPlaceholderProgress += placeholderDelta * fpsSmooth(nextSceneDamping, dt)
+  currentPlaceholderProgress += placeholderDelta * fpsSmooth(activeNextSceneDamping, dt)
   if (Math.abs(placeholderDelta) < nextSceneSettleEpsilon) {
     currentPlaceholderProgress = targetPlaceholderProgress
   }
@@ -6500,14 +6695,9 @@ onBeforeRender(({ elapsed, delta }) => {
   // （一進一出交接）；進入終章(placeholder)後保持滿，蛋在完整房間內孵化。
   // 修：先前「掃到 0.7 凍住、等 placeholder 才續掃」→ 電腦版滾動會「卡住、再滾才繼續」；
   //     現在整段連續前進、不留中段凍結，收尾直接掃滿（右上角不再留黑）。
-  const nextWipeP = Math.max(currentNextSceneProgress, targetNextSceneProgress)
-  const placeholderWipeP = Math.max(currentPlaceholderProgress, targetPlaceholderProgress)
-  // 手機的 nextScene 實際可視捲動距離較短；0.74 仍會在切到終章時留下半屏未掃完。
-  const eggWipeEnd = responsiveIsCompact ? 0.44 : 0.85
-  const eggWipeReveal = Math.max(
-    THREE.MathUtils.smoothstep(nextWipeP, 0.0, eggWipeEnd), // 骨幹退場段連續掃到滿；手機提早收尾避免黑頂殘留
-    placeholderWipeP > stageEpsilon ? 1 : 0 // 進終章後保持滿
-  )
+  // 只採用 render loop 平滑後的 current 值。不可混入 target，也不可在 placeholder
+  // 開始時硬設為 1，否則手機一次觸控捲動就會跳過完整的房間中間態。
+  const eggWipeReveal = THREE.MathUtils.smoothstep(currentNextSceneProgress, 0.0, 1.0)
   eggUniforms.uEggReveal.value = eggWipeReveal
   const eggTransitionShow = eggWipeReveal > 0.001
 
@@ -6560,7 +6750,13 @@ onBeforeRender(({ elapsed, delta }) => {
   finaleColumnMat.opacity = 1
   finaleButtonEdgeMat.opacity = 0.3
   const finaleLabelReveal = THREE.MathUtils.smoothstep(finaleReveal, 0.84, 1.0)
-  if (finaleButtonGroup.visible) {
+  const finaleLabelFrameInterval = responsiveIsCompact ? 1 / 24 : 1 / 30
+  if (
+    finaleButtonGroup.visible &&
+    finaleLabelReveal > stageEpsilon &&
+    elapsed - lastFinaleLabelDrawAt >= finaleLabelFrameInterval
+  ) {
+    lastFinaleLabelDrawAt = elapsed
     for (const finaleLabelStream of finaleLabelStreams) {
       drawFinaleStreamText(finaleLabelStream, uniforms.uTime.value)
     }
@@ -6586,7 +6782,12 @@ onBeforeRender(({ elapsed, delta }) => {
   // DOM 斜帶與 3D 安全遮罩必須在同一個 seam 區間收合；否則 HUD 已 100% 時，
   // 仍可看見 3D 平面的下緣斜切骨幹頂部。
   syncTransitionBandMesh(sweep, seamB < seamA - stageEpsilon)
-  if (import.meta.dev && typeof window !== 'undefined') {
+  if (
+    import.meta.dev &&
+    typeof window !== 'undefined' &&
+    /[?&]debug/.test(window.location.search) &&
+    elapsed - lastTransitionBandLogAt >= 0.08
+  ) {
     const nextLogProgress = Number(sweep.toFixed(4))
     const nextLogY = Number(transitionBandMesh.position.y.toFixed(4))
     const nextLogScale = Number(transitionBandMesh.scale.x.toFixed(4))
@@ -6603,6 +6804,7 @@ onBeforeRender(({ elapsed, delta }) => {
       nextSpineProgress !== lastSpineLogProgress ||
       nextSpineClipSeam !== lastSpineClipSeam
     ) {
+      lastTransitionBandLogAt = elapsed
       lastTransitionBandLogProgress = nextLogProgress
       lastTransitionBandLogY = nextLogY
       lastTransitionBandLogScale = nextLogScale
@@ -6643,7 +6845,7 @@ onBeforeRender(({ elapsed, delta }) => {
   boneGridMesh.visible = backboneReveal > 0.003 && !finaleWipeDone
   boneGridMat.uniforms.uOpacity.value = backboneReveal
   // 網格浮起格子：raycast 指標到地板平面(y=-4) → 近滑鼠的格子浮起發光。
-  boneTiles.visible = boneGridMesh.visible
+  boneTiles.visible = boneGridMesh.visible && responsiveHoverEffects
   boneTilesMat.uniforms.uOpacity.value = backboneReveal
   if (boneTiles.visible) {
     const _gcam = resolvePerspectiveCamera(tres.camera)
@@ -6863,7 +7065,7 @@ onBeforeRender(({ elapsed, delta }) => {
   const logoResting =
     bandActive && sweep > 0.08 && sweep < 0.98 && bottomRenderSettled && !finaleNeedsRender
   // 卡片影片預覽需要持續更新 VideoTexture，因此卡片可見時不可切成手動渲染。
-  setBottomRenderMode(!nativeScrollMode && logoResting && !cardsShouldRender ? 'manual' : 'always')
+  setBottomRenderMode(logoResting && !cardsShouldRender ? 'manual' : 'always')
   // 只有數值真的變了才寫 CSS（否則每幀配置字串/物件 + 寫 DOM = GC + reflow）
   const initialLogoProgress = logoDnaProgress
   const initialLogoOpacity = initialLogoActive ? 1 : 0
@@ -6975,7 +7177,12 @@ onBeforeRender(({ elapsed, delta }) => {
   }
 
   // 除錯 HUD：網址加 ?debug=1 才顯示即時數值，讓真機截一張圖就能定位捲動/進度問題。
-  if (typeof document !== 'undefined' && /[?&]debug/.test(window.location.search)) {
+  if (
+    typeof document !== 'undefined' &&
+    /[?&]debug/.test(window.location.search) &&
+    elapsed - lastDebugHudUpdateAt >= 0.08
+  ) {
+    lastDebugHudUpdateAt = elapsed
     if (!debugHudEl) {
       debugHudEl = document.createElement('div')
       debugHudEl.style.cssText =
@@ -7010,7 +7217,8 @@ onBeforeRender(({ elapsed, delta }) => {
 function scrubTo(progress: number, immediate = true) {
   wakeBottomRender()
   const clamped = THREE.MathUtils.clamp(progress, 0, 1)
-  currentHeroScrollProgress = clamped
+  targetHeroScrollProgress = clamped
+  if (immediate) currentHeroScrollProgress = clamped
   const targetWheel = clamped * totalJourneyWheelLen
   // 原生 scrollbar 模式不會進 applyScrollDelta；旋轉量必須由絕對進度同步，
   // 否則骨幹/DNA 會只切 timeline 而不轉。
@@ -7074,17 +7282,6 @@ function scrubTo(progress: number, immediate = true) {
     targetPlaceholderProgress = p
     if (immediate) currentPlaceholderProgress = p
     cardOrbitUnlockedNow = true
-  }
-
-  if (!immediate) {
-    // 原生觸控 scroll 只更新 target；currentTimeline 一律由 render loop 平滑追上。
-    // 舊版在 scroll callback 先拉一次、onBeforeRender 又拉一次，真機快速滑動會
-    // 跳過斜帶中段，造成守宮退場與骨幹入場像是直接跳出來。
-    currentCardOrbit += (targetCardOrbit - currentCardOrbit) * nativeScrollCardInputPull
-    currentNextSceneProgress +=
-      (targetNextSceneProgress - currentNextSceneProgress) * nativeScrollNextInputPull
-    currentPlaceholderProgress +=
-      (targetPlaceholderProgress - currentPlaceholderProgress) * nativeScrollNextInputPull
   }
 
   if (
@@ -7156,11 +7353,15 @@ onMounted(async () => {
     const canvas = getHeroCanvasElement()
     if (canvas) bindCardClickCanvas(canvas)
   })
-  window.addEventListener('wheel', onWheel, { passive: true })
-  window.addEventListener('touchstart', onTouchStart, { passive: true })
-  window.addEventListener('touchmove', onTouchMove, { passive: false })
-  window.addEventListener('touchend', onTouchEnd, { passive: true })
-  window.addEventListener('touchcancel', onTouchEnd, { passive: true })
+  // Hero Lab 使用瀏覽器原生 scroll；不可再掛 passive:false touchmove 阻塞 compositor。
+  // 其他嵌入此元件的頁面才保留自訂 wheel/touch 時間軸。
+  if (!usesNativeHeroScroll()) {
+    window.addEventListener('wheel', onWheel, { passive: true })
+    window.addEventListener('touchstart', onTouchStart, { passive: true })
+    window.addEventListener('touchmove', onTouchMove, { passive: false })
+    window.addEventListener('touchend', onTouchEnd, { passive: true })
+    window.addEventListener('touchcancel', onTouchEnd, { passive: true })
+  }
   window.addEventListener('resize', onResponsiveViewportResize, { passive: true })
   document.addEventListener('visibilitychange', onVisibilityChange)
   window.addEventListener('focus', forceWakeRender)
@@ -7189,10 +7390,11 @@ onMounted(async () => {
       if (typeof ry === 'number') EMBRYO_ROT_Y = ry
       if (typeof rz === 'number') EMBRYO_ROT_Z = rz
       if (typeof s === 'number') EMBRYO_SCALE_MUL = s
-      if (embryoModelHolder) {
-        embryoModelHolder.rotation.set(EMBRYO_ROT_X, EMBRYO_ROT_Y, EMBRYO_ROT_Z)
-        const base = embryoModelHolder.userData.baseScale || 1
-        embryoModelHolder.scale.setScalar(base * EMBRYO_SCALE_MUL)
+      for (const holder of [embryoDesktopModelHolder, embryoMobileModelHolder]) {
+        if (!holder) continue
+        holder.rotation.set(EMBRYO_ROT_X, EMBRYO_ROT_Y, EMBRYO_ROT_Z)
+        const base = holder.userData.baseScale || 1
+        holder.scale.setScalar(base * EMBRYO_SCALE_MUL)
       }
       return { rx: EMBRYO_ROT_X, ry: EMBRYO_ROT_Y, rz: EMBRYO_ROT_Z, s: EMBRYO_SCALE_MUL }
     },
@@ -7236,7 +7438,32 @@ onMounted(async () => {
           }
         : null
     },
+    costs: () => {
+      const rows: { name: string; type: string; triangles: number }[] = []
+      group.traverse((object) => {
+        const drawable = object as THREE.Mesh & { count?: number }
+        if (!drawable.geometry) return
+        let ancestor: THREE.Object3D | null = drawable
+        while (ancestor) {
+          if (!ancestor.visible) return
+          ancestor = ancestor.parent
+        }
+        const geometry = drawable.geometry as THREE.BufferGeometry
+        const triangleCount = geometry.index
+          ? geometry.index.count / 3
+          : (geometry.getAttribute('position')?.count ?? 0) / 3
+        const instances = drawable.isInstancedMesh ? (drawable.count ?? 1) : 1
+        rows.push({
+          name: drawable.name || drawable.parent?.name || '(unnamed)',
+          type: drawable.type,
+          triangles: Math.round(triangleCount * instances)
+        })
+      })
+      return rows.sort((a, b) => b.triangles - a.triangles).slice(0, 16)
+    },
     state: () => ({
+      targetHeroScrollProgress,
+      currentHeroScrollProgress,
       targetTimeline,
       currentTimeline,
       targetCardOrbit,
@@ -7247,12 +7474,30 @@ onMounted(async () => {
       currentPlaceholderProgress,
       targetRotationY,
       currentRotationY,
+      geckoRotationY: geckoGroup.rotation.y,
+      geckoVariant:
+        loadedModel === geckoMobileModel ? 'mobile-lod' : loadedModel ? 'desktop' : 'loading',
+      backboneVariant:
+        loadedBackboneModel === backboneMobileVariant?.model
+          ? 'mobile-lod'
+          : loadedBackboneModel
+            ? 'desktop'
+            : 'loading',
+      embryoVariant:
+        embryoModelHolder === embryoMobileModelHolder
+          ? 'mobile-lod'
+          : embryoModelHolder
+            ? 'desktop'
+            : 'fallback',
       heroCardsVisible: heroCardsGroup.visible,
       heroCardItems: heroCardItems.length,
       heroCardVisibleHolders: heroCardItems.filter((item) => item.holder.visible).length,
       heroCardHitMeshes: heroCardHitMeshes.length,
       cardInteractionReady,
       cardOrbitUnlockedNow,
+      responsiveHoverEffects,
+      dnaTilesVisible: dnaTiles.visible,
+      boneTilesVisible: boneTiles.visible,
       bottomRenderMode: lastBottomRenderMode
     }),
     hit: (x: number, y: number) =>
@@ -7310,6 +7555,7 @@ onUnmounted(() => {
   window.removeEventListener('pointermove', onParallaxPointerMove)
   parallaxPointerEventsBound = false
   cardPointerEventsBound = false
+  cardHoverEventsBound = false
   if (cardPreviewVideo) {
     cardPreviewVideo.pause()
     cardPreviewVideo.removeAttribute('src')
@@ -7319,27 +7565,43 @@ onUnmounted(() => {
   document.body.style.cursor = ''
   cardClickCanvas = null
 
-  if (loadedModel) {
-    geckoGroup.remove(loadedModel)
-    loadedModel.traverse((node) => {
+  for (const model of [geckoDesktopModel, geckoMobileModel]) {
+    if (!model) continue
+    geckoGroup.remove(model)
+    model.traverse((node) => {
       const mesh = node as THREE.Mesh
       if (mesh.isMesh) mesh.geometry.dispose()
     })
   }
+  geckoDesktopModel = null
+  geckoMobileModel = null
+  loadedModel = null
 
-  if (loadedBackboneInner) {
-    // 脊髓線的 TubeGeometry 已加入 disposables，這裡只需脫離場景。
-    backboneAxisFixGroup.remove(loadedBackboneInner)
-    loadedBackboneInner = null
-  }
-
-  if (loadedBackboneModel) {
-    backboneAxisFixGroup.remove(loadedBackboneModel)
-    loadedBackboneModel.traverse((node) => {
+  for (const variant of [backboneDesktopVariant, backboneMobileVariant]) {
+    if (!variant) continue
+    if (variant.inner) backboneAxisFixGroup.remove(variant.inner)
+    backboneAxisFixGroup.remove(variant.model)
+    variant.model.traverse((node) => {
       const mesh = node as THREE.Mesh
       if (mesh.isMesh) mesh.geometry.dispose()
     })
   }
+  backboneDesktopVariant = null
+  backboneMobileVariant = null
+  loadedBackboneInner = null
+  loadedBackboneModel = null
+
+  for (const holder of [embryoDesktopModelHolder, embryoMobileModelHolder]) {
+    if (!holder) continue
+    embryoGroup.remove(holder)
+    holder.traverse((node) => {
+      const mesh = node as THREE.Mesh
+      if (mesh.isMesh) mesh.geometry.dispose()
+    })
+  }
+  embryoDesktopModelHolder = null
+  embryoMobileModelHolder = null
+  embryoModelHolder = null
 
   disposables.forEach((item) => item.dispose())
   envRT?.dispose()

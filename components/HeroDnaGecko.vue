@@ -18,7 +18,13 @@ interface HeroGalleryCard {
 
 const bottomRenderMode = ref<'always' | 'manual'>('always')
 const compactViewport = ref(false)
-const canvasDpr = computed<[number, number]>(() => (compactViewport.value ? [1, 1.2] : [1, 1.5]))
+const canvasDpr = computed<[number, number]>(() => (compactViewport.value ? [1, 1] : [1, 1.5]))
+const canvasColorFilter = computed(() =>
+  compactViewport.value ? 'brightness(1.14) saturate(1.1) contrast(1.02)' : 'none'
+)
+const ambientLightIntensity = computed(() => (compactViewport.value ? 0.68 : 0.5))
+const keyLightIntensity = computed(() => (compactViewport.value ? 1.22 : 1.05))
+const fillLightIntensity = computed(() => (compactViewport.value ? 0.82 : 0.68))
 const particlesRef = ref<{ scrubTo: (progress: number, immediate?: boolean) => void } | null>(null)
 const journeyProgress = ref(0)
 // 終章揭露進度：白實驗室 + 玻璃蛋易觸發 Bloom，終章時把 Bloom 平滑壓下來（其他場景不動）。
@@ -33,8 +39,6 @@ const bloomThreshold = computed(
   () => (compactViewport.value ? 1.08 : 0.9) + 0.1 * finaleReveal.value
 ) // 手機只保留高亮邊緣，桌面維持原本閾值。
 const journeySegments = ref<{ key: string; end: number }[]>([])
-const nativeHeroProgress = ref(0)
-const nextSceneProgress = ref(0)
 const selectedCard = ref<HeroGalleryCard | null>(null)
 const isGalleryExiting = ref(false)
 const galleryTransitionKey = ref(0)
@@ -49,8 +53,6 @@ let compactViewportMedia: MediaQueryList | null = null
 const HERO_FORCE_START_EVENT = 'hero-lab:force-start'
 
 function resetNativeHeroState() {
-  nativeHeroProgress.value = 0
-  nextSceneProgress.value = 0
   particlesRef.value?.scrubTo(0, true)
 }
 
@@ -72,7 +74,7 @@ function clampInitialHeroStart() {
 
 function forceInitialHeroStart() {
   clearInitialStartClamp()
-  initialStartClampUntil = performance.now() + 720
+  initialStartClampUntil = performance.now() + 220
   clampInitialHeroStart()
 
   let frames = 0
@@ -83,7 +85,7 @@ function forceInitialHeroStart() {
     }
     clampInitialHeroStart()
     frames += 1
-    if (frames < 10) {
+    if (frames < 4) {
       initialStartClampFrame = window.requestAnimationFrame(clampFrame)
     } else {
       initialStartClampFrame = 0
@@ -96,7 +98,7 @@ function forceInitialHeroStart() {
     initialStartClampTimer = null
     initialStartClampUntil = 0
     queueNativeHeroScrollSync()
-  }, 740)
+  }, 240)
 }
 
 function getNativeHeroScrollProgress() {
@@ -114,7 +116,6 @@ function syncNativeHeroScroll() {
   }
   const progress = getNativeHeroScrollProgress()
   if (progress === null) return
-  nativeHeroProgress.value = progress
   particlesRef.value?.scrubTo(progress, false)
 }
 
@@ -145,7 +146,6 @@ function setBottomRenderMode(mode: 'always' | 'manual') {
 }
 
 function onScrub(progress: number) {
-  nativeHeroProgress.value = Math.max(0, Math.min(1, progress))
   if (scrollNativeHeroTo(progress)) return
   particlesRef.value?.scrubTo(progress)
 }
@@ -156,10 +156,6 @@ function setJourneyProgress(value: number) {
 
 function setJourneySegments(segments: { key: string; end: number }[]) {
   journeySegments.value = segments
-}
-
-function setNextSceneProgress(value: number) {
-  nextSceneProgress.value = Math.max(0, Math.min(1, value))
 }
 
 function syncCompactViewport() {
@@ -273,11 +269,20 @@ onBeforeUnmount(() => {
         :alpha="true"
         :dpr="canvasDpr"
         :render-mode="bottomRenderMode"
+        :style="{ filter: canvasColorFilter }"
       >
         <TresPerspectiveCamera :position="[0, 0, 7]" :fov="55" />
-        <TresAmbientLight :intensity="0.5" />
-        <TresDirectionalLight :position="[2.2, 3.6, 4.4]" :intensity="1.05" color="#ffd2a2" />
-        <TresDirectionalLight :position="[0, 5.8, 6.8]" :intensity="0.68" color="#ffe2bd" />
+        <TresAmbientLight :intensity="ambientLightIntensity" />
+        <TresDirectionalLight
+          :position="[2.2, 3.6, 4.4]"
+          :intensity="keyLightIntensity"
+          color="#ffd2a2"
+        />
+        <TresDirectionalLight
+          :position="[0, 5.8, 6.8]"
+          :intensity="fillLightIntensity"
+          color="#ffe2bd"
+        />
 
         <DnaGeckoParticles
           ref="particlesRef"
@@ -285,12 +290,11 @@ onBeforeUnmount(() => {
           @card-select="selectHeroCard"
           @journey-progress="setJourneyProgress"
           @journey-segments="setJourneySegments"
-          @next-scene-progress="setNextSceneProgress"
           @finale-reveal="setFinaleReveal"
           @finale-action="goFinaleAction"
         />
 
-        <EffectComposer>
+        <EffectComposer v-if="!compactViewport">
           <UnrealBloom :strength="bloomStrength" :radius="0.28" :threshold="bloomThreshold" />
         </EffectComposer>
       </TresCanvas>
@@ -431,12 +435,12 @@ onBeforeUnmount(() => {
   will-change: clip-path;
 }
 
-.hero-canvas {
+:deep(canvas.hero-canvas) {
   width: 100%;
   height: 100%;
   display: block;
-  /* 觸控在 canvas 上拖曳仍可捲動頁面（否則手機捲不動）。 */
-  touch-action: pan-y;
+  /* TresCanvas 會寫入 inline touch-action:none；必須強制覆蓋，手機才能原生垂直捲動。 */
+  touch-action: pan-y !important;
 }
 
 .scroll-cue {
