@@ -1,0 +1,170 @@
+
+> dev
+> nuxt dev --port 3000 --host localhost
+
+|
+•  Nuxt 3.21.2 (with Nitro 2.13.3, Vite 7.3.2 and Vue 3.5.32)
+
+  ➜ Local:    http://localhost:3000/
+  ➜ Network:  use --host to expose
+
+  ➜ DevTools: press Shift + Alt + D in the browser (v3.2.4)
+
+√ Vite client built in 214ms
+√ Vite server built in 7117ms
+[nuxt] i Compiled runtime.vue-devtools-client.p7mCKhEuTl9RudmPVXASDEvOcrvGVs9ZrrxKNNSziPs.js in 8907.63ms
+[nuxt] i Compiled router.options.mjs in 15147.07ms
+[nuxt] i Compiled types/supabase-database.d.ts in 25965.34ms
+[nuxt] i Compiled plugins.server.mjs in 28560.54ms
+[nuxt] i Compiled plugins.client.mjs in 28620.38ms
+[nuxt] i Compiled types/plugins.d.ts in 28643.15ms
+i page reload virtual:nuxt:D%3A%2FUsers%2FUser%2FDesktop%2Fgencko-vercel%2F.nuxt%2Froute-rules.mjs
+[nuxt] i Compiled plugins.client.mjs in 771.42ms
+[nuxt] i Compiled types/plugins.d.ts in 1270.09ms
+[nitro] √ Nuxt Nitro server built in 33058ms
+i Vite server warmed up in 1ms
+i Vite client warmed up in 65ms
+√ Vite server hmr 28 files in 3729.722ms
+√ Vite server hmr 9 files in 0.004ms
+√ Vite server hmr 9 files in 0.004ms
+i hmr update /components/HeroDnaGecko.vue?vue&type=style&index=0&scoped=4e974110&lang.css
+√ Vite server hmr 25 files in 29.926ms
+√ Vite server hmr 9 files in 0.006ms
+√ Vite server hmr 7 files in 0.01ms
+i hmr update /components/DnaGeckoParticles.vue
+[nuxt] i Compiled types/plugins.d.ts in 655.06ms
+√ Vite server hmr 26 files in 16.983ms
+i hmr update /components/DnaGeckoParticles.vue (x2)
+√ Vite server hmr 22 files in 19.26ms
+√ Vite server hmr 9 files in 0.007ms
+i hmr update /components/DnaGeckoParticles.vue (x3)
+[nuxt] i Compiled plugins.server.mjs in 601.07ms
+[nuxt] i Compiled plugins.client.mjs in 4900.26ms
+[nuxt] i Compiled types/plugins.d.ts in 4953.98ms
+i hmr update /components/DnaGeckoParticles.vue (x4)
+[nuxt] i Compiled plugins.server.mjs in 1253.19ms
+[nuxt] i Compiled plugins.client.mjs in 3357.81ms
+[nuxt] i Compiled types/plugins.d.ts in 3432.53ms
+√ Vite server hmr 21 files in 49.528ms
+[nuxt] i Compiled plugins.client.mjs in 513.47ms
+[nuxt] i Compiled types/plugins.d.ts in 585.34ms
+√ Vite server hmr 9 files in 0.002ms
+i hmr update /components/DnaGeckoParticles.vue (x5)
+[nuxt] i Compiled plugins.client.mjs in 1399.74ms
+[nuxt] i Compiled types/plugins.d.ts in 5850.18ms
+[nuxt] i Compiled plugins.server.mjs in 521.73ms
+[nuxt] i Compiled plugins.client.mjs in 663.83ms
+[nuxt] i Compiled types/plugins.d.ts in 1058.15ms
+i .nuxt/dist directory has been removed. Restarting Nuxt...
+  ➜ DevTools: press Shift + Alt + D in the browser (v3.2.4)
+
+√ Vite client built in 306ms
+√ Vite server built in 11099ms
+[nuxt] i Compiled runtime.vue-devtools-client.p7mCKhEuTl9RudmPVXASDEvOcrvGVs9ZrrxKNNSziPs.js in 31177.41ms
+[nuxt] i Compiled router.options.mjs in 52059.23ms
+[nuxt] i Compiled types/supabase-database.d.ts in 76291.15ms
+[nuxt] i Compiled plugins.server.mjs in 58104.93ms
+[nuxt] i Compiled plugins.client.mjs in 58125.09ms
+[nuxt] i Compiled types/plugins.d.ts in 58156.32ms
+i page reload virtual:nuxt:D%3A%2FUsers%2FUser%2FDesktop%2Fgencko-vercel%2F.nuxt%2Froute-rules.mjs
+[nitro] √ Nuxt Nitro server built in 66303ms
+i Vite server warmed up in 4ms
+i Vite client warmed up in 44ms
+√ Vite server hmr 29 files in 4678.018ms
+√ Vite server hmr 5 files in 0.006ms
+[nuxt] i Compiled router.options.mjs in 676.75ms
+[nuxt] i Compiled types/supabase-database.d.ts in 895.44ms
+√ Vite server hmr 19 files in 0.004ms
+[nuxt] i Compiled types/supabase-database.d.ts in 735.98ms
+[nuxt] i Compiled plugins.server.mjs in 755.12ms
+[nuxt] i Compiled plugins.client.mjs in 841.56ms
+[nuxt] i Compiled types/plugins.d.ts in 915.4ms
+i hmr update /components/DnaGeckoParticles.vue
+i hmr update /components/DnaGeckoParticles.vue (x2)
+i hmr update /components/DnaGeckoParticles.vue (x3)
+i hmr update /components/DnaGeckoParticles.vue (x4)
+i hmr update /components/DnaGeckoParticles.vue (x5)
+i hmr update /components/DnaGeckoParticles.vue (x6)
+i hmr update /components/HeroDnaGecko.vue
+√ Vite server hmr 856 files in 20.309ms
+i hmr update /components/DnaGeckoParticles.vue
+i hmr update /components/DnaGeckoParticles.vue (x2)
+i hmr update /components/DnaGeckoParticles.vue (x3)
+√ Vite server hmr 14 files in 30.322ms
+√ Vite server hmr 11 files in 0.007ms
+[nuxt] i Compiled plugins.server.mjs in 667ms
+[nuxt] i Compiled plugins.client.mjs in 719.26ms
+[nuxt] i Compiled types/plugins.d.ts in 827.5ms
+[nuxt] i Compiled plugins.client.mjs in 561.29ms
+[nuxt] i Compiled types/plugins.d.ts in 651.55ms
+[nuxt] i Compiled types/supabase-database.d.ts in 655.05ms
+[nuxt] i Compiled plugins.server.mjs in 959.72ms
+[nuxt] i Compiled plugins.client.mjs in 1064.22ms
+[nuxt] i Compiled types/plugins.d.ts in 1180.96ms
+[nuxt] i Compiled plugins.client.mjs in 570.88ms
+[nuxt] i Compiled types/plugins.d.ts in 734.02ms
+[nuxt] i Compiled plugins.client.mjs in 578.15ms
+[nuxt] i Compiled types/plugins.d.ts in 760.96ms
+i hmr update /components/DnaGeckoParticles.vue (x4)
+i hmr update /components/DnaGeckoParticles.vue (x5)
+i hmr update /components/DnaGeckoParticles.vue (x6)
+i hmr update /components/DnaGeckoParticles.vue (x7)
+i hmr update /components/DnaGeckoParticles.vue (x8)
+i hmr update /components/DnaGeckoParticles.vue (x9)
+i hmr update /components/DnaGeckoParticles.vue (x10)
+[nuxt] i Compiled plugins.server.mjs in 916.13ms
+[nuxt] i Compiled plugins.client.mjs in 1037.02ms
+[nuxt] i Compiled types/plugins.d.ts in 1837.39ms
+i .nuxt/dist directory has been removed. Restarting Nuxt...
+  ➜ DevTools: press Shift + Alt + D in the browser (v3.2.4)
+
+√ Vite client built in 76ms
+√ Vite server built in 2535ms
+[nuxt] i Compiled runtime.vue-devtools-client.p7mCKhEuTl9RudmPVXASDEvOcrvGVs9ZrrxKNNSziPs.js in 5610.3ms
+[nuxt] i Compiled router.options.mjs in 9314.88ms
+[nuxt] i Compiled types/supabase-database.d.ts in 17613.84ms
+[nuxt] i Compiled plugins.server.mjs in 14786.92ms
+[nuxt] i Compiled plugins.client.mjs in 14793.69ms
+[nuxt] i Compiled types/plugins.d.ts in 14804.41ms
+i page reload virtual:nuxt:D%3A%2FUsers%2FUser%2FDesktop%2Fgencko-vercel%2F.nuxt%2Froute-rules.mjs
+[nitro] √ Nuxt Nitro server built in 18058ms
+i Vite server warmed up in 1ms
+i Vite client warmed up in 17ms
+√ Vite server hmr 36 files in 2274.279ms
+√ Vite server hmr 20 files in 0.005ms
+√ Vite server hmr 51 files in 0.01ms
+√ Vite server hmr 3 files in 0.005ms
+√ Vite server hmr 3 files in 0.007ms
+√ Vite server hmr 5 files in 0.005ms
+i hmr update /components/DnaGeckoParticles.vue
+i hmr update /components/HeroDnaGecko.vue
+[nuxt] i Compiled types/supabase-database.d.ts in 860.71ms
+i hmr update /pages/hero-lab.vue?direct&vue&type=style&index=0&scoped=1d3ea231&lang.css, /pages/hero-lab.vue?vue&type=style&index=0&scoped=1d3ea231&lang.css, /pages/hero-lab.vue?macro=true, /@id/virtual:nuxt:D%3A%2FUsers%2FUser%2FDesktop%2Fgencko-vercel%2F.nuxt%2Froutes.mjs
+i hmr update /@id/virtual:nuxt:D%3A%2FUsers%2FUser%2FDesktop%2Fgencko-vercel%2F.nuxt%2Froutes.mjs, /pages/hero-lab.vue?macro=true
+i hmr update /components/DnaGeckoParticles.vue
+√ Vite server hmr 26 files in 53.939ms
+√ Vite server hmr 14 files in 0.006ms
+√ Vite server hmr 4 files in 0.005ms
+i hmr update /components/HeroDnaGecko.vue
+i hmr update /components/DnaGeckoParticles.vue
+√ Vite server hmr 16 files in 27.995ms
+√ Vite server hmr 5 files in 0.006ms
+√ Vite server hmr 14 files in 0.003ms
+[nuxt] i Compiled types/plugins.d.ts in 576.28ms
+√ Vite server hmr 3 files in 0.001ms
+[nuxt] i Compiled router.options.mjs in 1187.51ms
+[nuxt] i Compiled types/supabase-database.d.ts in 4062.46ms
+[nuxt] i Compiled plugins.server.mjs in 1124.15ms
+[nuxt] i Compiled plugins.client.mjs in 1142.36ms
+[nuxt] i Compiled types/plugins.d.ts in 1160.54ms
+[nuxt] i Compiled types/plugins.d.ts in 818.39ms
+√ Vite server hmr 26 files in 0.002ms
+[nuxt] i Compiled types/plugins.d.ts in 562.29ms
+i hmr update /components/HeroLogoDisc.vue
+√ Vite server hmr 19 files in 31.701ms
+√ Vite server hmr 15 files in 0.003ms
+i hmr update /components/DnaGeckoParticles.vue
+[nuxt] i Compiled plugins.client.mjs in 595.31ms
+[nuxt] i Compiled types/plugins.d.ts in 734.69ms
+√ Vite server hmr 19 files in 36.449ms
+√ Vite server hmr 13 files in 0.004ms

@@ -1,0 +1,25 @@
+
+> dev
+> nuxt dev --port 3100 --host 127.0.0.1
+
+|
+•  Nuxt 3.21.2 (with Nitro 2.13.3, Vite 7.3.2 and Vue 3.5.32)
+
+  ➜ Local:    http://127.0.0.1:3100/
+  ➜ Network:  use --host to expose
+
+  ➜ DevTools: press Shift + Alt + D in the browser (v3.2.4)
+
+√ Vite client built in 54ms
+√ Vite server built in 1718ms
+[nuxt] i Compiled runtime.vue-devtools-client.p7mCKhEuTl9RudmPVXASDEvOcrvGVs9ZrrxKNNSziPs.js in 2926.88ms
+[nuxt] i Compiled router.options.mjs in 5201.15ms
+[nuxt] i Compiled types/supabase-database.d.ts in 8756.5ms
+[nuxt] i Compiled plugins.server.mjs in 8209.85ms
+[nuxt] i Compiled plugins.client.mjs in 8246.58ms
+[nuxt] i Compiled types/plugins.d.ts in 8265.68ms
+i page reload virtual:nuxt:D%3A%2FUsers%2FUser%2FDesktop%2Fgencko-vercel%2F.nuxt%2Froute-rules.mjs
+[nitro] √ Nuxt Nitro server built in 10186ms
+i Vite server warmed up in 0ms
+i Vite client warmed up in 20ms
+√ Vite server hmr 28 files in 1385.817ms

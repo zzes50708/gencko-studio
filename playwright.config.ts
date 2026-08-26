@@ -9,6 +9,7 @@ export default defineConfig({
   timeout: 30_000,
   expect: { timeout: 7_000 },
   retries: process.env.CI ? 2 : 0,
+  workers: 1,
   reporter: process.env.CI ? [['github'], ['list']] : 'list',
   use: {
     baseURL: BASE_URL,
@@ -17,7 +18,14 @@ export default defineConfig({
     screenshot: 'only-on-failure',
     trace: 'retain-on-failure'
   },
-  projects: [{ name: 'chromium-desktop', use: { ...devices['Desktop Chrome'] } }]
+  projects: [
+    { name: 'chromium-desktop', use: { ...devices['Desktop Chrome'] } },
+    {
+      name: 'chromium-mobile',
+      use: { ...devices['Pixel 5'] },
+      grep: /Hero Lab/
+    }
+  ]
   // 由外部啟動的 dev server 接管；本機跑前請先 `npm run dev`
   // 若想自動啟服，把下面解註並調整 reuseExistingServer
   // webServer: {

@@ -1,0 +1,22 @@
+[console:debug] [vite] connecting...
+[console:debug] [vite] connected.
+[console:info] <Suspense> is an experimental feature and its API will likely change.
+[console:warning] [Vue warn]: Component inside <Transition> renders non-element root node that cannot be animated. 
+  at <HeroLab onVnodeUnmounted=fn<onVnodeUnmounted> ref=Ref< undefined > > 
+  at <RouteProvider key="/hero-lab" vnode= {__v_isVNode: true, __v_skip: true, type: Object, props: Object, key: null} route= {fullPath: /hero-lab, hash: , query: Object, name: hero-lab, path: /hero-lab}  ... > 
+  at <BaseTransition onAfterLeave= [] onBeforeLeave=undefined mode="out-in"  ... > 
+  at <Transition onAfterLeave= [] onBeforeLeave=undefined name="page"  ... > 
+  at <RouterView name=undefined route=undefined > 
+  at <NuxtPage page-key="/hero-lab" > 
+  at <NuxtErrorBoundary > 
+  at <App key=4 > 
+  at <NuxtRoot>
+[console:warning] THREE.sigmaRadians, 0.5, is too large and will clip, as it requested 244 samples when the maximum is set to 20
+[console:warning] THREE.sigmaRadians, 0.5, is too large and will clip, as it requested 244 samples when the maximum is set to 20
+[console:warning] [nuxt] `D:/Users/User/Desktop/gencko-vercel/pages/hero-lab.vue` does not have a single root node and will cause errors when navigating between routes.
+[console:warning] [.WebGL-0xeb40140b800]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels
+[console:warning] [.WebGL-0xeb4001b0800]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels
+[console:warning] [.WebGL-0xeb4001b0800]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels
+[console:warning] [.WebGL-0xeb40140b800]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (this message will no longer repeat)
+[console:log] THREE.InterleavedBufferAttribute.clone(): Cloning an interleaved buffer attribute will de-interleave buffer data.
+[console:log] ✨ %cNuxt DevTools %c Press Shift + Alt + D to open DevTools color: black; border-radius: 3px 0 0 3px; padding: 2px 2px 1px 10px; background: #00DC82 border-radius: 0 3px 3px 0; padding: 2px 10px 1px 2px; background: #00DC8220 

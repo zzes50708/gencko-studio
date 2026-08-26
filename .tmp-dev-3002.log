@@ -1,0 +1,24 @@
+
+> dev
+> nuxt dev --port 3002 --host 127.0.0.1
+
+|
+•  [32mNuxt [1m3.21.2[22m[39m[90m (with [39m[90mNitro [1m2.13.3[22m[39m[90m, Vite [1m7.3.2[22m[39m[90m and Vue [1m3.5.32[22m[39m[90m)[39m
+
+[32m  ➜ Local:   [39m [36m[4mhttp://127.0.0.1:[1m3002[22m/[24m[39m
+[90m  ➜ Network:  use [37m--host[90m to expose[39m
+
+[33m  ➜ DevTools: [39m[2mpress [22m[32mShift[39m[2m + [22m[32mAlt[39m[2m + [22m[32mD[39m[2m in the browser (v3.2.4)[22m
+
+[32m√[39m Vite client built in 95ms
+[32m√[39m Vite server built in 2619ms
+[90m[[90mnuxt[90m][39m [36mi[39m Compiled [36mruntime.vue-devtools-client.p7mCKhEuTl9RudmPVXASDEvOcrvGVs9ZrrxKNNSziPs.js[39m in 14419.63ms
+[90m[[90mnuxt[90m][39m [36mi[39m Compiled [36mrouter.options.mjs[39m in 24007.07ms
+[90m[[90mnuxt[90m][39m [36mi[39m Compiled [36mtypes/supabase-database.d.ts[39m in 40433.77ms
+[90m[[90mnuxt[90m][39m [36mi[39m Compiled [36mplugins.server.mjs[39m in 32429.31ms
+[90m[[90mnuxt[90m][39m [36mi[39m Compiled [36mplugins.client.mjs[39m in 32476.1ms
+[90m[[90mnuxt[90m][39m [36mi[39m Compiled [36mtypes/plugins.d.ts[39m in 32527.98ms
+[36mi[39m [32mpage reload [39m[2mvirtual:nuxt:D%3A%2FUsers%2FUser%2FDesktop%2Fgencko-vercel%2F.nuxt%2Froute-rules.mjs[22m
+[90m[[90mnitro[90m][39m [32m√[39m Nuxt Nitro server built in 38488ms
+[36mi[39m Vite server warmed up in 1ms
+[36mi[39m Vite client warmed up in 74ms

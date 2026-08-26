@@ -1,0 +1,173 @@
+
+> dev
+> nuxt dev --port 3101 --host 127.0.0.1
+
+|
+•  [32mNuxt [1m3.21.2[22m[39m[90m (with [39m[90mNitro [1m2.13.3[22m[39m[90m, Vite [1m7.3.2[22m[39m[90m and Vue [1m3.5.32[22m[39m[90m)[39m
+
+[32m  ➜ Local:   [39m [36m[4mhttp://127.0.0.1:[1m3101[22m/[24m[39m
+[90m  ➜ Network:  use [37m--host[90m to expose[39m
+
+[33m  ➜ DevTools: [39m[2mpress [22m[32mShift[39m[2m + [22m[32mAlt[39m[2m + [22m[32mD[39m[2m in the browser (v3.2.4)[22m
+
+[32m√[39m Vite client built in 56ms
+[32m√[39m Vite server built in 2705ms
+[90m[[90mnuxt[90m][39m [36mi[39m Compiled [36mruntime.vue-devtools-client.p7mCKhEuTl9RudmPVXASDEvOcrvGVs9ZrrxKNNSziPs.js[39m in 2447.79ms
+[90m[[90mnuxt[90m][39m [36mi[39m Compiled [36mrouter.options.mjs[39m in 4285.19ms
+[90m[[90mnuxt[90m][39m [36mi[39m Compiled [36mtypes/supabase-database.d.ts[39m in 7764.12ms
+[90m[[90mnuxt[90m][39m [36mi[39m Compiled [36mplugins.server.mjs[39m in 8847.97ms
+[90m[[90mnuxt[90m][39m [36mi[39m Compiled [36mplugins.client.mjs[39m in 8854.62ms
+[90m[[90mnuxt[90m][39m [36mi[39m Compiled [36mtypes/plugins.d.ts[39m in 8861.19ms
+[36mi[39m [32mpage reload [39m[2mvirtual:nuxt:D%3A%2FUsers%2FUser%2FDesktop%2Fgencko-vercel%2F.nuxt%2Froute-rules.mjs[22m
+[90m[[90mnitro[90m][39m [32m√[39m Nuxt Nitro server built in 10309ms
+[36mi[39m Vite server warmed up in 1ms
+[36mi[39m Vite client warmed up in 18ms
+[32m√[39m Vite server hmr 28 files in 1376.592ms
+[36mi[39m [32mpage reload [39m[2mpublic/__neural_preview.html[22m
+[36mi[39m [32mpage reload [39m[2mpublic/__neural_preview.html[22m[2m (x2)[22m
+[36mi[39m [32mpage reload [39m[2mpublic/neural-preview-tmp.html[22m
+[36mi[39m [32mpage reload [39m[2mpublic/neural-preview-tmp.html[22m[2m (x2)[22m
+[36mi[39m [32mpage reload [39m[2mpublic/__neural_preview.html[22m
+[36mi[39m [32mpage reload [39m[2mpublic/__neural_preview.html[22m[2m (x2)[22m
+[36mi[39m [32mpage reload [39m[2mpublic/neural-preview-tmp.html[22m
+[36mi[39m [32mpage reload [39m[2mpublic/neural-preview-tmp.html[22m[2m (x2)[22m
+[90m[[90mnuxt[90m][39m [36mi[39m Compiled [36mruntime.vue-devtools-client.p7mCKhEuTl9RudmPVXASDEvOcrvGVs9ZrrxKNNSziPs.js[39m in 783.59ms
+[32m√[39m Vite server hmr 120 files in 0.025ms
+[32m√[39m Vite server hmr 6 files in 0.006ms
+[36mi[39m [32mhmr update [39m[2m/components/DnaGeckoParticles.vue[22m
+[90m[[90mnuxt[90m][39m [36mi[39m Compiled [36mtypes/plugins.d.ts[39m in 563.41ms
+[32m√[39m Vite server hmr 48 files in 20.783ms
+[36mi[39m [32mhmr update [39m[2m/components/DnaGeckoParticles.vue[22m[2m (x2)[22m
+[90m[[90mnuxt[90m][39m [36mi[39m Compiled [36mtypes/supabase-database.d.ts[39m in 631.07ms
+[32m√[39m Vite server hmr 43 files in 19.337ms
+[90m[[90mnuxt[90m][39m [36mi[39m Compiled [36mtypes/plugins.d.ts[39m in 613.39ms
+[36mi[39m [32mhmr update [39m[2m/components/DnaGeckoParticles.vue[22m[2m (x3)[22m
+[32m√[39m Vite server hmr 26 files in 17.551ms
+[36mi[39m [32mhmr update [39m[2m/components/DnaGeckoParticles.vue[22m[2m (x4)[22m
+[32m√[39m Vite server hmr 18 files in 11.484ms
+[36mi[39m [32mhmr update [39m[2m/components/DnaGeckoParticles.vue[22m[2m (x5)[22m
+[36mi[39m [32mhmr update [39m[2m/components/HeroDnaGecko.vue, /components/HeroDnaGecko.vue?vue&type=style&index=0&scoped=4e974110&lang.css[22m
+[36mi[39m [32mhmr update [39m[2m/pages/hero-lab.vue?direct&vue&type=style&index=0&scoped=1d3ea231&lang.css, /pages/hero-lab.vue?vue&type=style&index=0&scoped=1d3ea231&lang.css, /pages/hero-lab.vue?macro=true, /@id/virtual:nuxt:D%3A%2FUsers%2FUser%2FDesktop%2Fgencko-vercel%2F.nuxt%2Froutes.mjs[22m
+[36mi[39m [32mhmr update [39m[2m/@id/virtual:nuxt:D%3A%2FUsers%2FUser%2FDesktop%2Fgencko-vercel%2F.nuxt%2Froutes.mjs, /pages/hero-lab.vue?macro=true[22m
+[36mi[39m [32mhmr update [39m[2m/components/DnaGeckoParticles.vue[22m
+[32m√[39m Vite server hmr 23 files in 162.881ms
+[36mi[39m [32mhmr update [39m[2m/components/HeroDnaGecko.vue, /components/HeroDnaGecko.vue?vue&type=style&index=0&scoped=4e974110&lang.css[22m
+[36mi[39m [32mhmr update [39m[2m/pages/hero-lab.vue?direct&vue&type=style&index=0&scoped=1d3ea231&lang.css, /pages/hero-lab.vue?vue&type=style&index=0&scoped=1d3ea231&lang.css, /pages/hero-lab.vue?macro=true, /@id/virtual:nuxt:D%3A%2FUsers%2FUser%2FDesktop%2Fgencko-vercel%2F.nuxt%2Froutes.mjs[22m
+[36mi[39m [32mhmr update [39m[2m/@id/virtual:nuxt:D%3A%2FUsers%2FUser%2FDesktop%2Fgencko-vercel%2F.nuxt%2Froutes.mjs, /pages/hero-lab.vue?macro=true[22m
+[36mi[39m [32mhmr update [39m[2m/components/DnaGeckoParticles.vue[22m
+[36mi[39m [32mhmr update [39m[2m/components/DnaGeckoParticles.vue[22m[2m (x2)[22m
+[36mi[39m [32mhmr update [39m[2m/components/DnaGeckoParticles.vue[22m[2m (x3)[22m
+[32m√[39m Vite server hmr 22 files in 112.549ms
+[36mi[39m [32mhmr update [39m[2m/components/DnaGeckoParticles.vue[22m[2m (x4)[22m
+[90m[[90mnuxt[90m][39m [36mi[39m Compiled [36mplugins.server.mjs[39m in 605.47ms
+[90m[[90mnuxt[90m][39m [36mi[39m Compiled [36mplugins.client.mjs[39m in 608.8ms
+[90m[[90mnuxt[90m][39m [36mi[39m Compiled [36mtypes/plugins.d.ts[39m in 616.77ms
+[32m√[39m Vite server hmr 18 files in 29.624ms
+[36mi[39m [32mhmr update [39m[2m/components/DnaGeckoParticles.vue[22m[2m (x5)[22m
+[32m√[39m Vite server hmr 19 files in 125.473ms
+[36mi[39m [32mhmr update [39m[2m/components/DnaGeckoParticles.vue[22m[2m (x6)[22m
+[32m√[39m Vite server hmr 20 files in 18.006ms
+[36mi[39m [32mhmr update [39m[2m/components/DnaGeckoParticles.vue[22m[2m (x7)[22m
+[32m√[39m Vite server hmr 19 files in 19.743ms
+[36mi[39m [32mhmr update [39m[2m/components/DnaGeckoParticles.vue[22m[2m (x8)[22m
+[32m√[39m Vite server hmr 18 files in 37.394ms
+[36mi[39m [32mhmr update [39m[2m/components/DnaGeckoParticles.vue[22m[2m (x9)[22m
+[32m√[39m Vite server hmr 18 files in 23.271ms
+[36mi[39m [32mhmr update [39m[2m/components/DnaGeckoParticles.vue[22m[2m (x10)[22m
+[32m√[39m Vite server hmr 20 files in 12.658ms
+[36mi[39m [32mhmr update [39m[2m/components/DnaGeckoParticles.vue[22m[2m (x11)[22m
+[32m√[39m Vite server hmr 21 files in 34.275ms
+[36mi[39m [32mhmr update [39m[2m/components/DnaGeckoParticles.vue[22m[2m (x12)[22m
+[32m√[39m Vite server hmr 19 files in 17.9ms
+[36mi[39m [32mhmr update [39m[2m/components/HeroDnaGecko.vue[22m
+[36mi[39m [32mhmr update [39m[2m/components/HeroDnaGecko.vue[22m[2m (x2)[22m
+[36mi[39m [32mhmr update [39m[2m/components/HeroDnaGecko.vue[22m[2m (x3)[22m
+[36mi[39m [32mhmr update [39m[2m/components/HeroDnaGecko.vue[22m[2m (x4)[22m
+[36mi[39m [32mhmr update [39m[2m/components/HeroDnaGecko.vue[22m[2m (x5)[22m
+[36mi[39m [32mhmr update [39m[2m/components/HeroDnaGecko.vue[22m[2m (x6)[22m
+[36mi[39m [32mhmr update [39m[2m/components/HeroDebrisPhysics.vue[22m
+[36mi[39m [32mhmr update [39m[2m/components/DnaGeckoParticles.vue[22m
+[36mi[39m [32mhmr update [39m[2m/components/DnaGeckoParticles.vue[22m[2m (x2)[22m
+[36mi[39m [32mhmr update [39m[2m/components/DnaGeckoParticles.vue[22m[2m (x3)[22m
+[36mi[39m [32mhmr update [39m[2m/components/DnaGeckoParticles.vue[22m[2m (x4)[22m
+[90m[[90mnuxt[90m][39m [36mi[39m Compiled [36mplugins.server.mjs[39m in 883.08ms
+[90m[[90mnuxt[90m][39m [36mi[39m Compiled [36mplugins.client.mjs[39m in 933.17ms
+[90m[[90mnuxt[90m][39m [36mi[39m Compiled [36mtypes/plugins.d.ts[39m in 1009.61ms
+[36mi[39m [32mhmr update [39m[2m/components/DnaGeckoParticles.vue[22m[2m (x5)[22m
+[90m[[90mnuxt[90m][39m [36mi[39m Compiled [36mplugins.server.mjs[39m in 772.36ms
+[90m[[90mnuxt[90m][39m [36mi[39m Compiled [36mplugins.client.mjs[39m in 855.96ms
+[90m[[90mnuxt[90m][39m [36mi[39m Compiled [36mtypes/plugins.d.ts[39m in 973.7ms
+[36mi[39m [32mhmr update [39m[2m/components/DnaGeckoParticles.vue[22m[2m (x6)[22m
+[90m[[90mnuxt[90m][39m [36mi[39m Compiled [36mrouter.options.mjs[39m in 956.61ms
+[90m[[90mnuxt[90m][39m [36mi[39m Compiled [36mtypes/supabase-database.d.ts[39m in 999.9ms
+[36mi[39m [32mhmr update [39m[2m/components/DnaGeckoParticles.vue[22m[2m (x7)[22m
+[36mi[39m [32mhmr update [39m[2m/components/DnaGeckoParticles.vue[22m[2m (x8)[22m
+[36mi[39m [32mhmr update [39m[2m/components/DnaGeckoParticles.vue[22m[2m (x9)[22m
+[36mi[39m [32mhmr update [39m[2m/components/DnaGeckoParticles.vue[22m[2m (x10)[22m
+[36mi[39m [32mhmr update [39m[2m/components/DnaGeckoParticles.vue[22m[2m (x11)[22m
+[90m[[90mnuxt[90m][39m [36mi[39m Compiled [36mruntime.vue-devtools-client.p7mCKhEuTl9RudmPVXASDEvOcrvGVs9ZrrxKNNSziPs.js[39m in 804.93ms
+[90m[[90mnuxt[90m][39m [36mi[39m Compiled [36mrouter.options.mjs[39m in 809.47ms
+[90m[[90mnuxt[90m][39m [36mi[39m Compiled [36mtypes/supabase-database.d.ts[39m in 859.8ms
+[36mi[39m [32mhmr update [39m[2m/components/DnaGeckoParticles.vue[22m[2m (x12)[22m
+[36mi[39m [32mhmr update [39m[2m/components/DnaGeckoParticles.vue[22m[2m (x13)[22m
+[90m[[90mnuxt[90m][39m [36mi[39m Compiled [36mtypes/supabase-database.d.ts[39m in 503.92ms
+[90m[[90mnuxt[90m][39m [36mi[39m Compiled [36mplugins.server.mjs[39m in 845.15ms
+[90m[[90mnuxt[90m][39m [36mi[39m Compiled [36mplugins.client.mjs[39m in 991.07ms
+[90m[[90mnuxt[90m][39m [36mi[39m Compiled [36mtypes/plugins.d.ts[39m in 1053.99ms
+[36mi[39m [32mhmr update [39m[2m/components/DnaGeckoParticles.vue[22m[2m (x14)[22m
+[36mi[39m [32mhmr update [39m[2m/components/DnaGeckoParticles.vue[22m[2m (x15)[22m
+[90m[[90mnuxt[90m][39m [36mi[39m Compiled [36mruntime.vue-devtools-client.p7mCKhEuTl9RudmPVXASDEvOcrvGVs9ZrrxKNNSziPs.js[39m in 695.66ms
+[90m[[90mnuxt[90m][39m [36mi[39m Compiled [36mrouter.options.mjs[39m in 652.1ms
+[90m[[90mnuxt[90m][39m [36mi[39m Compiled [36mtypes/supabase-database.d.ts[39m in 729.17ms
+[36mi[39m [32mhmr update [39m[2m/components/DnaGeckoParticles.vue[22m[2m (x16)[22m
+[36mi[39m [32mhmr update [39m[2m/components/DnaGeckoParticles.vue[22m[2m (x17)[22m
+[90m[[90mnuxt[90m][39m [36mi[39m Compiled [36mapp-component.mjs[39m in 563.14ms
+[90m[[90mnuxt[90m][39m [36mi[39m Compiled [36mtypes/app.config.d.ts[39m in 563.38ms
+[90m[[90mnuxt[90m][39m [36mi[39m Compiled [36mapp.config.mjs[39m in 563.46ms
+[90m[[90mnuxt[90m][39m [36mi[39m Compiled [36mtypes/app-defaults.d.ts[39m in 563.52ms
+[90m[[90mnuxt[90m][39m [36mi[39m Compiled [36mtypes/build.d.ts[39m in 563.58ms
+[90m[[90mnuxt[90m][39m [36mi[39m Compiled [36mnitro.client.mjs[39m in 553.31ms
+[90m[[90mnuxt[90m][39m [36mi[39m Compiled [36mcss.mjs[39m in 553.35ms
+[90m[[90mnuxt[90m][39m [36mi[39m Compiled [36mfetch.mjs[39m in 553.4ms
+[90m[[90mnuxt[90m][39m [36mi[39m Compiled [36merror-component.mjs[39m in 553.46ms
+[90m[[90mnuxt[90m][39m [36mi[39m Compiled [36mglobal-polyfills.mjs[39m in 553.56ms
+[90m[[90mnuxt[90m][39m [36mi[39m Compiled [36mlayouts.mjs[39m in 553.61ms
+[90m[[90mnuxt[90m][39m [36mi[39m Compiled [36mmiddleware.mjs[39m in 553.66ms
+[90m[[90mnuxt[90m][39m [36mi[39m Compiled [36mnuxt.config.mjs[39m in 553.53ms
+[90m[[90mnuxt[90m][39m [36mi[39m Compiled [36mpaths.mjs[39m in 543.96ms
+[90m[[90mnuxt[90m][39m [36mi[39m Compiled [36mroot-component.mjs[39m in 534.14ms
+[90m[[90mnuxt[90m][39m [36mi[39m Compiled [36mtest-component-wrapper.mjs[39m in 538.21ms
+[90m[[90mnuxt[90m][39m [36mi[39m Compiled [36mtypes/vue-shim.d.ts[39m in 538.4ms
+[90m[[90mnuxt[90m][39m [36mi[39m Compiled [36mtypes/nitro-layouts.d.ts[39m in 538.49ms
+[90m[[90mnuxt[90m][39m [36mi[39m Compiled [36mtypes/builder-env.d.ts[39m in 538.55ms
+[90m[[90mnuxt[90m][39m [36mi[39m Compiled [36mtypes/supabase.d.ts[39m in 538.62ms
+[90m[[90mnuxt[90m][39m [36mi[39m Compiled [36mmodule/nuxt-site-config.d.ts[39m in 538.49ms
+[90m[[90mnuxt[90m][39m [36mi[39m Compiled [36mtypes/nuxt-sitemap-augments.d.ts[39m in 533.41ms
+[90m[[90mnuxt[90m][39m [36mi[39m Compiled [36mtypes/nuxt-sitemap-virtual.d.ts[39m in 533.47ms
+[90m[[90mnuxt[90m][39m [36mi[39m Compiled [36mtypes/nuxt-robots-nuxt.d.ts[39m in 533.54ms
+[90m[[90mnuxt[90m][39m [36mi[39m Compiled [36mtypes/nuxt-robots-nitro.d.ts[39m in 533.6ms
+[90m[[90mnuxt[90m][39m [36mi[39m Compiled [36mimage/providers.d.ts[39m in 533.66ms
+[90m[[90mnuxt[90m][39m [36mi[39m Compiled [36mdevtools/settings.mjs[39m in 502.71ms
+[90m[[90mnuxt[90m][39m [36mi[39m Compiled [36mtypes/schema.d.ts[39m in 554.19ms
+[90m[[90mnuxt[90m][39m [36mi[39m Compiled [36mruntime.vue-devtools-client.p7mCKhEuTl9RudmPVXASDEvOcrvGVs9ZrrxKNNSziPs.js[39m in 766.4ms
+[90m[[90mnuxt[90m][39m [36mi[39m Compiled [36mrouter.options.mjs[39m in 730.18ms
+[90m[[90mnuxt[90m][39m [36mi[39m Compiled [36mtypes/supabase-database.d.ts[39m in 817.82ms
+[36mi[39m [32mhmr update [39m[2m/components/DnaGeckoParticles.vue[22m[2m (x18)[22m
+[90m[[90mnuxt[90m][39m [36mi[39m Compiled [36mruntime.vue-devtools-client.p7mCKhEuTl9RudmPVXASDEvOcrvGVs9ZrrxKNNSziPs.js[39m in 534.21ms
+[90m[[90mnuxt[90m][39m [36mi[39m Compiled [36mrouter.options.mjs[39m in 505.96ms
+[90m[[90mnuxt[90m][39m [36mi[39m Compiled [36mtypes/supabase-database.d.ts[39m in 569.95ms
+[36mi[39m [32mhmr update [39m[2m/components/DnaGeckoParticles.vue[22m[2m (x19)[22m
+[36mi[39m [32mhmr update [39m[2m/components/DnaGeckoParticles.vue[22m[2m (x20)[22m
+[36mi[39m [32mhmr update [39m[2m/components/DnaGeckoParticles.vue[22m[2m (x21)[22m
+[36mi[39m [32mhmr update [39m[2m/components/DnaGeckoParticles.vue[22m[2m (x22)[22m
+[36mi[39m [32mhmr update [39m[2m/components/DnaGeckoParticles.vue[22m[2m (x23)[22m
+[90m[[90mnuxt[90m][39m [36mi[39m Compiled [36mruntime.vue-devtools-client.p7mCKhEuTl9RudmPVXASDEvOcrvGVs9ZrrxKNNSziPs.js[39m in 755.49ms
+[90m[[90mnuxt[90m][39m [36mi[39m Compiled [36mrouter.options.mjs[39m in 713.27ms
+[90m[[90mnuxt[90m][39m [36mi[39m Compiled [36mtypes/supabase-database.d.ts[39m in 800.85ms
+[36mi[39m [32mhmr update [39m[2m/components/DnaGeckoParticles.vue[22m[2m (x24)[22m
+[36mi[39m [32mhmr update [39m[2m/components/DnaGeckoParticles.vue[22m[2m (x25)[22m
+[36mi[39m [32mhmr update [39m[2m/components/DnaGeckoParticles.vue[22m[2m (x26)[22m
+[36mi[39m [32mhmr update [39m[2m/components/DnaGeckoParticles.vue[22m[2m (x27)[22m
+[90m[[90mnuxt[90m][39m [36mi[39m Compiled [36mtypes/plugins.d.ts[39m in 511.34ms
+[36mi[39m [32mhmr update [39m[2m/components/DnaGeckoParticles.vue[22m[2m (x28)[22m
+[36mi[39m [32mhmr update [39m[2m/components/DnaGeckoParticles.vue[22m[2m (x29)[22m

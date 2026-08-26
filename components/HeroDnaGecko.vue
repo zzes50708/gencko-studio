@@ -19,19 +19,30 @@ interface HeroGalleryCard {
 const bottomRenderMode = ref<'always' | 'manual'>('always')
 const compactViewport = ref(false)
 const canvasDpr = computed<[number, number]>(() => (compactViewport.value ? [1, 1] : [1, 1.5]))
-const canvasColorFilter = computed(() =>
-  compactViewport.value ? 'brightness(1.14) saturate(1.1) contrast(1.02)' : 'none'
-)
 const ambientLightIntensity = computed(() => (compactViewport.value ? 0.68 : 0.5))
 const keyLightIntensity = computed(() => (compactViewport.value ? 1.22 : 1.05))
 const fillLightIntensity = computed(() => (compactViewport.value ? 0.82 : 0.68))
 const particlesRef = ref<{ scrubTo: (progress: number, immediate?: boolean) => void } | null>(null)
 const journeyProgress = ref(0)
+const finaleExposureReveal = ref(0)
 // 終章揭露進度：白實驗室 + 玻璃蛋易觸發 Bloom，終章時把 Bloom 平滑壓下來（其他場景不動）。
 const finaleReveal = ref(0)
 function setFinaleReveal(v: number) {
   finaleReveal.value = v
 }
+function setFinaleExposureReveal(v: number) {
+  finaleExposureReveal.value = v
+}
+const canvasColorFilter = computed(() => {
+  if (!compactViewport.value) return 'none'
+
+  // 前段保留手機補亮；終章沿房間 wipe 漸進還原，避免白色材質被 1.14 倍亮度剪白。
+  const reveal = Math.min(1, Math.max(0, finaleExposureReveal.value))
+  const brightness = 1.14 + (1 - 1.14) * reveal
+  const saturation = 1.1 + (1 - 1.1) * reveal
+  const contrast = 1.02 + (1 - 1.02) * reveal
+  return `brightness(${brightness}) saturate(${saturation}) contrast(${contrast})`
+})
 const bloomStrength = computed(
   () => (compactViewport.value ? 0.08 : 0.18) * (1 - 0.88 * finaleReveal.value)
 ) // 手機降低 Bloom，避免窄畫面高亮溢出；桌面維持原值。
@@ -44,6 +55,7 @@ const isGalleryExiting = ref(false)
 const galleryTransitionKey = ref(0)
 let closeGalleryTimer: ReturnType<typeof setTimeout> | null = null
 let nativeScrollFrame = 0
+let lastNativeScrollProgress = Number.NaN
 let initialStartClampFrame = 0
 let initialStartClampTimer: number | null = null
 let initialStartClampUntil = 0
@@ -53,6 +65,7 @@ let compactViewportMedia: MediaQueryList | null = null
 const HERO_FORCE_START_EVENT = 'hero-lab:force-start'
 
 function resetNativeHeroState() {
+  lastNativeScrollProgress = Number.NaN
   particlesRef.value?.scrubTo(0, true)
 }
 
@@ -116,6 +129,8 @@ function syncNativeHeroScroll() {
   }
   const progress = getNativeHeroScrollProgress()
   if (progress === null) return
+  if (progress === lastNativeScrollProgress) return
+  lastNativeScrollProgress = progress
   particlesRef.value?.scrubTo(progress, false)
 }
 
@@ -225,6 +240,7 @@ onBeforeUnmount(() => {
   clearInitialStartClamp()
   window.removeEventListener(HERO_FORCE_START_EVENT, forceInitialHeroStart)
   window.removeEventListener('scroll', queueNativeHeroScrollSync)
+  lastNativeScrollProgress = Number.NaN
   if (nativeScrollFrame) window.cancelAnimationFrame(nativeScrollFrame)
 })
 </script>
@@ -291,6 +307,7 @@ onBeforeUnmount(() => {
           @journey-progress="setJourneyProgress"
           @journey-segments="setJourneySegments"
           @finale-reveal="setFinaleReveal"
+          @finale-exposure-reveal="setFinaleExposureReveal"
           @finale-action="goFinaleAction"
         />
 
@@ -1265,8 +1282,11 @@ onBeforeUnmount(() => {
   }
 
   .intro-title {
-    font-size: clamp(1.75rem, 8vw, 3rem);
-    line-height: 0.98;
+    /* 手機窄寬度會讓第一行自動折行，保留足夠行高避免字框互相覆蓋。 */
+    width: min(100%, 20rem);
+    font-size: clamp(1.55rem, 7.2vw, 2.55rem);
+    line-height: 1.1;
+    letter-spacing: -0.045em;
   }
 
   .intro-meta p {

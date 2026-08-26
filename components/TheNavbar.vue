@@ -109,6 +109,15 @@ const navLogoUrl = computed(() => (store.logoUrl ? getCleanUrl(store.logoUrl, 72
 
         <!-- Right Controls -->
         <div class="nav-right">
+          <NuxtLink
+            to="/home"
+            class="btn-app btn-app--ghost btn-app--sm btn-app--pill home-btn"
+            style="text-decoration: none; display: flex; align-items: center"
+            title="首頁"
+          >
+            首頁
+          </NuxtLink>
+
           <button
             v-if="store.canInstall"
             @click="store.installApp"
@@ -319,6 +328,11 @@ const navLogoUrl = computed(() => (store.logoUrl ? getCleanUrl(store.logoUrl, 72
   font-weight: bold;
 }
 
+.home-btn {
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
 .theme-toggle {
   cursor: pointer;
   font-size: 1rem;
@@ -393,6 +407,11 @@ const navLogoUrl = computed(() => (store.logoUrl ? getCleanUrl(store.logoUrl, 72
   /* 手機：會員按鈕放右上（原亮色按鈕位置），亮/暗切換放最右（原漢堡位置） */
   .member-btn {
     margin-right: 0;
+  }
+  .home-btn {
+    padding-left: 9px;
+    padding-right: 9px;
+    font-size: 0.82rem;
   }
   .theme-toggle {
     margin-right: -10px;

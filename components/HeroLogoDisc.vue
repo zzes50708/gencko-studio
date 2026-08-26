@@ -63,33 +63,44 @@ onMounted(() => {
   const parent = el.parentElement as HTMLElement | null
   let w = parent?.clientWidth || 360
   let h = parent?.clientHeight || 360
+  // 手機使用低面數、無環境反射版本；不依賴 user-agent，讓 F12 模擬與真機一致。
+  const compact = w < 768 || window.matchMedia('(pointer: coarse), (hover: none)').matches
 
-  renderer = new THREE.WebGLRenderer({ canvas: el, alpha: true, antialias: true })
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5))
+  renderer = new THREE.WebGLRenderer({
+    canvas: el,
+    alpha: true,
+    antialias: !compact,
+    powerPreference: compact ? 'low-power' : 'high-performance'
+  })
+  renderer.setPixelRatio(compact ? 1 : Math.min(window.devicePixelRatio || 1, 1.5))
   renderer.setSize(w, h, false)
   renderer.outputColorSpace = THREE.SRGBColorSpace
   renderer.toneMapping = THREE.ACESFilmicToneMapping
-  renderer.toneMappingExposure = 1.08
+  renderer.toneMappingExposure = compact ? 1 : 1.08
 
   const scene = new THREE.Scene()
   const camera = new THREE.PerspectiveCamera(34, w / h, 0.1, 100)
   camera.position.set(0, 0, 5.1)
 
-  const pmrem = new THREE.PMREMGenerator(renderer)
-  const envRT = pmrem.fromScene(new RoomEnvironment(), 0.5)
-  scene.environment = envRT.texture
-  pmrem.dispose()
-  disposables.push(envRT)
+  if (!compact) {
+    const pmrem = new THREE.PMREMGenerator(renderer)
+    const envRT = pmrem.fromScene(new RoomEnvironment(), 0.5)
+    scene.environment = envRT.texture
+    pmrem.dispose()
+    disposables.push(envRT)
+  }
 
-  const key = new THREE.DirectionalLight('#fff2e6', 1.7)
-  key.position.set(2.4, 3.2, 4.2)
-  scene.add(key)
+  if (!compact) {
+    const key = new THREE.DirectionalLight('#fff2e6', 1.7)
+    key.position.set(2.4, 3.2, 4.2)
+    scene.add(key)
 
-  const rim = new THREE.DirectionalLight('#8fbfff', 0.7)
-  rim.position.set(-3, -1.2, 2)
-  scene.add(rim)
+    const rim = new THREE.DirectionalLight('#8fbfff', 0.7)
+    rim.position.set(-3, -1.2, 2)
+    scene.add(rim)
 
-  scene.add(new THREE.AmbientLight('#ffffff', 0.22))
+    scene.add(new THREE.AmbientLight('#ffffff', 0.22))
+  }
 
   const group = new THREE.Group()
   scene.add(group)
@@ -99,13 +110,13 @@ onMounted(() => {
     (img) => {
       const tex = new THREE.CanvasTexture(keyOutBackground(img))
       tex.colorSpace = THREE.SRGBColorSpace
-      tex.anisotropy = renderer?.capabilities.getMaxAnisotropy() ?? 1
+      tex.anisotropy = compact ? 1 : (renderer?.capabilities.getMaxAnisotropy() ?? 1)
       disposables.push(tex)
 
       const R = 1.4
       const halfT = 0.17
       const fil = 0.12
-      const seg = 14
+      const seg = compact ? 6 : 14
 
       const prof: THREE.Vector2[] = [new THREE.Vector2(0, halfT), new THREE.Vector2(R - fil, halfT)]
       for (let i = 1; i <= seg; i++) {
@@ -119,40 +130,50 @@ onMounted(() => {
       }
       prof.push(new THREE.Vector2(0, -halfT))
 
-      const bodyGeo = new THREE.LatheGeometry(prof, 256)
+      const bodyGeo = new THREE.LatheGeometry(prof, compact ? 64 : 256)
       disposables.push(bodyGeo)
 
-      const bodyMat = new THREE.MeshPhysicalMaterial({
-        color: new THREE.Color('#140f11'),
-        metalness: 0.0,
-        roughness: 0.4,
-        clearcoat: 1.0,
-        clearcoatRoughness: 0.12,
-        envMapIntensity: 0.65,
-        side: THREE.DoubleSide
-      })
+      const bodyMat = compact
+        ? new THREE.MeshBasicMaterial({ color: '#140f11', side: THREE.DoubleSide })
+        : new THREE.MeshPhysicalMaterial({
+            color: new THREE.Color('#140f11'),
+            metalness: 0.0,
+            roughness: 0.4,
+            clearcoat: 1.0,
+            clearcoatRoughness: 0.12,
+            envMapIntensity: 0.65,
+            side: THREE.DoubleSide
+          })
       disposables.push(bodyMat)
 
       const body = new THREE.Mesh(bodyGeo, bodyMat)
       body.rotation.x = -Math.PI / 2
       group.add(body)
 
-      const faceGeo = new THREE.CircleGeometry(R - fil * 0.6, 180)
+      const faceGeo = new THREE.CircleGeometry(R - fil * 0.6, compact ? 64 : 180)
       disposables.push(faceGeo)
 
-      const faceMat = new THREE.MeshPhysicalMaterial({
-        map: tex,
-        transparent: true,
-        alphaTest: 0.01,
-        metalness: 0.0,
-        roughness: 0.3,
-        clearcoat: 1.0,
-        clearcoatRoughness: 0.06,
-        emissive: new THREE.Color('#ffffff'),
-        emissiveMap: tex,
-        emissiveIntensity: 0.4,
-        envMapIntensity: 1.15
-      })
+      const faceMat = compact
+        ? new THREE.MeshBasicMaterial({
+            map: tex,
+            transparent: true,
+            alphaTest: 0.04,
+            side: THREE.DoubleSide,
+            toneMapped: false
+          })
+        : new THREE.MeshPhysicalMaterial({
+            map: tex,
+            transparent: true,
+            alphaTest: 0.01,
+            metalness: 0.0,
+            roughness: 0.3,
+            clearcoat: 1.0,
+            clearcoatRoughness: 0.06,
+            emissive: new THREE.Color('#ffffff'),
+            emissiveMap: tex,
+            emissiveIntensity: 0.4,
+            envMapIntensity: 1.15
+          })
       disposables.push(faceMat)
 
       const face = new THREE.Mesh(faceGeo, faceMat)

@@ -5,7 +5,7 @@ import { test, expect } from '@playwright/test'
 
 test.describe('首頁 / 全站基礎結構', () => {
   test('首頁載入 + Skip to content 鏈接存在（WCAG）', async ({ page }) => {
-    await page.goto('/')
+    await page.goto('/home')
     await expect(page.locator('.skip-to-content')).toBeAttached()
     await expect(page.locator('#main-content')).toBeVisible()
   })
@@ -15,6 +15,106 @@ test.describe('首頁 / 全站基礎結構', () => {
     expect(res?.status()).toBe(404)
     await expect(page.locator('text=找不到這隻守宮')).toBeVisible()
     await expect(page.locator('meta[name="robots"][content*="noindex"]')).toHaveCount(1)
+  })
+})
+
+test.describe('Hero Lab / 流暢度回歸', () => {
+  test.describe.configure({ mode: 'serial', timeout: 60_000 })
+
+  test.beforeEach(async ({ page }) => {
+    const pageErrors: Error[] = []
+    page.on('pageerror', (error) => pageErrors.push(error))
+    page.on('console', (message) => {
+      if (message.type() === 'error') pageErrors.push(new Error(message.text()))
+    })
+    await page.goto('/')
+    await expect(page.locator('.hero-lab')).toBeVisible()
+    await page.waitForFunction(
+      () =>
+        typeof (window as unknown as { __hero?: { state?: unknown } }).__hero?.state === 'function',
+      undefined,
+      { timeout: 30_000 }
+    )
+    ;(page as unknown as { __heroPageErrors?: Error[] }).__heroPageErrors = pageErrors
+  })
+
+  test.afterEach(async ({ page }) => {
+    expect((page as unknown as { __heroPageErrors?: Error[] }).__heroPageErrors ?? []).toEqual([])
+  })
+
+  test('起始狀態在頂部，進度可驅動場景且 dev 性能介面可用', async ({ page }) => {
+    await expect.poll(() => page.evaluate(() => window.scrollY)).toBeLessThan(2)
+    await expect
+      .poll(() => page.evaluate(() => (window as any).__hero.state().currentHeroScrollProgress))
+      .toBeLessThan(0.01)
+
+    await page.evaluate(() => {
+      const maxScroll = document.documentElement.scrollHeight - window.innerHeight
+      window.scrollTo(0, Math.max(1, maxScroll * 0.2))
+    })
+    await expect
+      .poll(() => page.evaluate(() => (window as any).__hero.state().targetHeroScrollProgress))
+      .toBeGreaterThan(0.01)
+    await expect
+      .poll(() => page.evaluate(() => (window as any).__hero.state().currentHeroScrollProgress))
+      .toBeGreaterThan(0.001)
+
+    const perf = await page.evaluate(() => {
+      const api = (window as any).__heroPerf
+      return typeof api?.snapshot === 'function' ? api.snapshot() : null
+    })
+    if (perf) {
+      expect(perf.frameCount).toBeGreaterThan(0)
+      expect(perf.p95FrameTimeMs).toBeGreaterThanOrEqual(0)
+    }
+  })
+
+  test('卡片可開啟/關閉，離開 Hero 後頁面狀態恢復', async ({ page }) => {
+    await page.evaluate(() => {
+      const maxScroll = document.documentElement.scrollHeight - window.innerHeight
+      window.scrollTo(0, Math.max(1, maxScroll * 0.55))
+    })
+    await expect
+      .poll(() => page.evaluate(() => (window as any).__hero.state().heroCardsVisible))
+      .toBe(true)
+    await expect
+      .poll(() => page.evaluate(() => (window as any).__hero.state().cardInteractionReady))
+      .toBe(true)
+    await page.waitForTimeout(500)
+
+    for (
+      let attempt = 0;
+      attempt < 4 && (await page.locator('.gallery-scene').count()) === 0;
+      attempt += 1
+    ) {
+      const cardPoint = await page.evaluate(() => {
+        const cards = (window as any).__hero
+          .cardQuads()
+          ?.filter((item: any) => item.front > 0.2)
+          .sort((a: any, b: any) => b.front - a.front)
+        for (const quad of cards ?? []) {
+          const x = quad.pts.reduce((sum: number, point: any) => sum + point.x, 0) / quad.pts.length
+          const y = quad.pts.reduce((sum: number, point: any) => sum + point.y, 0) / quad.pts.length
+          if ((window as any).__hero.hit(x, y) === quad.title) return { x, y }
+        }
+        return null
+      })
+      expect(cardPoint).not.toBeNull()
+      await page.mouse.move(cardPoint!.x, cardPoint!.y)
+      await page.mouse.click(cardPoint!.x, cardPoint!.y)
+      await page.waitForTimeout(220)
+    }
+    await expect(page.locator('.gallery-scene')).toBeVisible()
+    await page.locator('.gallery-close').click()
+    await expect(page.locator('.gallery-scene')).toBeHidden()
+
+    await expect(page.locator('.hero-lab-home-link')).toHaveAttribute('href', '/home')
+    await page.goto('/home')
+    await expect(page).toHaveURL(/\/home$/)
+    await expect
+      .poll(() => page.evaluate(() => document.body.classList.contains('hero-lab-active')))
+      .toBe(false)
+    await expect(page.locator('.hero-lab')).toHaveCount(0)
   })
 })
 

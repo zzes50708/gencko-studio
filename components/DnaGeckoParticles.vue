@@ -24,6 +24,8 @@ const emit = defineEmits<{
   'next-scene-progress': [value: number]
   // 終章揭露進度(0→1)：讓父層在終章把 Bloom 壓下來（白實驗室易觸發 Bloom）。
   'finale-reveal': [value: number]
+  // 終章房間 wipe 的連續進度：手機用來逐步撤掉前段場景的補亮濾鏡。
+  'finale-exposure-reveal': [value: number]
 }>()
 
 const MODEL_URL = '/models/gecko-tripo.glb'
@@ -607,11 +609,10 @@ function makeHologram(
 const group = new THREE.Group()
 const disposables: { dispose(): void }[] = []
 
-function makeInitialLogoBodyGeometry() {
+function makeInitialLogoBodyGeometry(segments = 14) {
   const radius = 1.5
   const halfT = 0.17
   const fillet = 0.12
-  const segments = 14
   const profile: THREE.Vector2[] = [
     new THREE.Vector2(0, halfT),
     new THREE.Vector2(radius - fillet, halfT)
@@ -906,6 +907,25 @@ const backboneSampleMat = makeGlass(
 )
 backboneSampleMat.depthWrite = true
 backboneSampleMat.depthTest = true
+
+const BACKBONE_DESKTOP_COLORS = {
+  a: '#df5a1e',
+  b: '#ff7c22',
+  c: '#ffad52'
+}
+const BACKBONE_MOBILE_COLORS = {
+  a: '#ff7133',
+  b: '#ff984d',
+  c: '#ffd08a'
+}
+
+function syncBackboneVisualVariant(compact = responsiveIsCompact) {
+  const colors = compact ? BACKBONE_MOBILE_COLORS : BACKBONE_DESKTOP_COLORS
+  backboneSampleMat.uniforms.uColorA.value.set(colors.a)
+  backboneSampleMat.uniforms.uColorB.value.set(colors.b)
+  backboneSampleMat.uniforms.uColorC.value.set(colors.c)
+}
+
 const initialLogoMat = new THREE.MeshPhysicalMaterial({
   color: '#e2d7cc',
   transparent: true,
@@ -934,6 +954,19 @@ const initialLogoBodyMat = new THREE.MeshPhysicalMaterial({
   depthTest: true,
   side: THREE.DoubleSide
 })
+const initialLogoMobileMat = new THREE.MeshBasicMaterial({
+  color: '#ffffff',
+  transparent: true,
+  alphaTest: 0.04,
+  depthWrite: true,
+  depthTest: true,
+  side: THREE.DoubleSide,
+  toneMapped: false
+})
+const initialLogoMobileBodyMat = new THREE.MeshBasicMaterial({
+  color: '#140f11',
+  side: THREE.DoubleSide
+})
 disposables.push(
   geckoMat,
   geckoAssemblyPointsMat,
@@ -942,27 +975,53 @@ disposables.push(
   dnaAuxMat,
   backboneSampleMat,
   initialLogoMat,
-  initialLogoBodyMat
+  initialLogoBodyMat,
+  initialLogoMobileMat,
+  initialLogoMobileBodyMat
 )
 
 const initialLogoGroup = new THREE.Group()
 initialLogoGroup.position.z = CFG.dna.z + 0.08
 const initialLogoGeo = new THREE.CircleGeometry(1.31, 192)
-const initialLogoBodyGeo = makeInitialLogoBodyGeometry()
-disposables.push(initialLogoGeo, initialLogoBodyGeo)
-const initialLogoBodyMesh = new THREE.Mesh(initialLogoBodyGeo, initialLogoBodyMat)
+const initialLogoMobileGeo = new THREE.CircleGeometry(1.31, 64)
+const initialLogoBodyGeo = makeInitialLogoBodyGeometry(14)
+const initialLogoMobileBodyGeo = makeInitialLogoBodyGeometry(6)
+disposables.push(initialLogoGeo, initialLogoMobileGeo, initialLogoBodyGeo, initialLogoMobileBodyGeo)
+const initialLogoBodyMesh: THREE.Mesh<THREE.BufferGeometry, THREE.Material> = new THREE.Mesh(
+  initialLogoBodyGeo,
+  initialLogoBodyMat
+)
 initialLogoBodyMesh.rotation.x = -Math.PI / 2
 initialLogoBodyMesh.renderOrder = 4
 initialLogoGroup.add(initialLogoBodyMesh)
-const initialLogoMesh = new THREE.Mesh(initialLogoGeo, initialLogoMat)
+const initialLogoMesh: THREE.Mesh<THREE.BufferGeometry, THREE.Material> = new THREE.Mesh(
+  initialLogoGeo,
+  initialLogoMat
+)
 initialLogoMesh.position.z = 0.182
 initialLogoMesh.renderOrder = 5
 initialLogoGroup.add(initialLogoMesh)
-const initialLogoBackMesh = new THREE.Mesh(initialLogoGeo, initialLogoMat)
+const initialLogoBackMesh: THREE.Mesh<THREE.BufferGeometry, THREE.Material> = new THREE.Mesh(
+  initialLogoGeo,
+  initialLogoMat
+)
 initialLogoBackMesh.position.z = -0.182
 initialLogoBackMesh.rotation.y = Math.PI
 initialLogoBackMesh.renderOrder = 5
 initialLogoGroup.add(initialLogoBackMesh)
+
+function syncInitialLogoVariant(compact = responsiveIsCompact) {
+  const faceGeo = compact ? initialLogoMobileGeo : initialLogoGeo
+  const bodyGeo = compact ? initialLogoMobileBodyGeo : initialLogoBodyGeo
+  const faceMat = compact ? initialLogoMobileMat : initialLogoMat
+  const bodyMat = compact ? initialLogoMobileBodyMat : initialLogoBodyMat
+  initialLogoMesh.geometry = faceGeo
+  initialLogoBackMesh.geometry = faceGeo
+  initialLogoBodyMesh.geometry = bodyGeo
+  initialLogoMesh.material = faceMat
+  initialLogoBackMesh.material = faceMat
+  initialLogoBodyMesh.material = bodyMat
+}
 
 new THREE.ImageLoader().load(LOGO_TEXTURE_URL, (img) => {
   const texture = new THREE.CanvasTexture(keyOutLogoBackground(img))
@@ -971,6 +1030,8 @@ new THREE.ImageLoader().load(LOGO_TEXTURE_URL, (img) => {
   initialLogoMat.map = texture
   initialLogoMat.emissiveMap = texture
   initialLogoMat.needsUpdate = true
+  initialLogoMobileMat.map = texture
+  initialLogoMobileMat.needsUpdate = true
   disposables.push(texture)
 })
 
@@ -2244,6 +2305,85 @@ let cssLastLogoSpin = Number.NaN
 let cssLastSeamWeightX = -1
 let cssLastSeamWeightY = -1
 let lastBottomRenderMode: 'always' | 'manual' = 'always'
+let heroViewportVisible = true
+let heroPerfApi: Record<string, unknown> | null = null
+let heroPerfObserver: PerformanceObserver | null = null
+const heroPerfFrameTimes: number[] = []
+let heroPerfFrameIndex = 0
+let heroPerfFrameCount = 0
+let heroPerfScrollTargetAt = 0
+let heroPerfLastScrollLatency = 0
+let heroPerfScrollSamples = 0
+
+function resetHeroPerfSamples() {
+  heroPerfFrameTimes.length = 0
+  heroPerfFrameIndex = 0
+  heroPerfFrameCount = 0
+  heroPerfScrollTargetAt = 0
+  heroPerfLastScrollLatency = 0
+  heroPerfScrollSamples = 0
+}
+
+function markHeroPerfScrollTarget() {
+  if (import.meta.dev) heroPerfScrollTargetAt = performance.now()
+}
+
+function recordHeroPerfFrame(delta: number) {
+  if (!import.meta.dev) return
+  const frameMs = Math.min(250, Math.max(0, delta * 1000))
+  if (heroPerfFrameTimes.length < 240) {
+    heroPerfFrameTimes.push(frameMs)
+  } else {
+    heroPerfFrameTimes[heroPerfFrameIndex] = frameMs
+    heroPerfFrameIndex = (heroPerfFrameIndex + 1) % heroPerfFrameTimes.length
+  }
+  heroPerfFrameCount += 1
+  if (heroPerfScrollTargetAt > 0) {
+    heroPerfLastScrollLatency = Math.max(0, performance.now() - heroPerfScrollTargetAt)
+    heroPerfScrollSamples += 1
+    heroPerfScrollTargetAt = 0
+  }
+}
+
+function installHeroPerf() {
+  if (!import.meta.dev || typeof window === 'undefined') return
+  resetHeroPerfSamples()
+  const snapshot = () => {
+    const samples = [...heroPerfFrameTimes].sort((a, b) => a - b)
+    const sum = samples.reduce((total, value) => total + value, 0)
+    return {
+      frameCount: heroPerfFrameCount,
+      avgFrameTimeMs: samples.length ? sum / samples.length : 0,
+      p95FrameTimeMs: samples.length ? samples[Math.floor(samples.length * 0.95)] : 0,
+      longTasks: Number((heroPerfApi as { longTasks?: number } | null)?.longTasks ?? 0),
+      scrollSamples: heroPerfScrollSamples,
+      lastScrollLatencyMs: heroPerfLastScrollLatency
+    }
+  }
+  heroPerfApi = { snapshot, reset: resetHeroPerfSamples, longTasks: 0 }
+  ;(window as unknown as { __heroPerf?: unknown }).__heroPerf = heroPerfApi
+  if ('PerformanceObserver' in window) {
+    try {
+      heroPerfObserver = new PerformanceObserver((list) => {
+        const api = heroPerfApi as { longTasks?: number } | null
+        if (api) api.longTasks = (api.longTasks ?? 0) + list.getEntries().length
+      })
+      heroPerfObserver.observe({ type: 'longtask', buffered: true })
+    } catch {
+      heroPerfObserver = null
+    }
+  }
+}
+
+function removeHeroPerf() {
+  heroPerfObserver?.disconnect()
+  heroPerfObserver = null
+  if (typeof window !== 'undefined') {
+    const win = window as unknown as { __heroPerf?: unknown }
+    if (win.__heroPerf === heroPerfApi) delete win.__heroPerf
+  }
+  heroPerfApi = null
+}
 // 非 Hero Lab 的元件內觸控拖曳狀態。
 let lastTouchY = 0
 const cardOrbitSpeed = 0.0006
@@ -2339,6 +2479,7 @@ const transitionSectionStart = journeySegments[0]?.end ?? 0
 const transitionSectionEnd = journeySegments[1]?.end ?? 1
 let lastJourneyEmit = -1
 let lastFinaleEmit = -1
+let lastFinaleExposureEmit = -1
 let lastNextSceneEmit = -1
 let targetHeroScrollProgress = 0
 let currentHeroScrollProgress = 0
@@ -2372,8 +2513,7 @@ function setBottomRenderMode(mode: 'always' | 'manual') {
 }
 
 function wakeBottomRender() {
-  lastBottomRenderMode = 'manual'
-  setBottomRenderMode('always')
+  if (lastBottomRenderMode !== 'always') setBottomRenderMode('always')
 }
 
 // 焦點/可見性/回到頁面時，強制重送 always（繞過相等判斷），避免元件的 render-mode 狀態
@@ -2387,7 +2527,11 @@ function forceWakeRender() {
 
 function onVisibilityChange() {
   if (typeof document === 'undefined') return
-  if (document.visibilityState === 'visible') forceWakeRender()
+  if (document.visibilityState === 'visible') {
+    forceWakeRender()
+  } else {
+    setBottomRenderMode('manual')
+  }
 }
 
 function applyScrollDelta(deltaY: number) {
@@ -3650,7 +3794,8 @@ function makeProjectionCardVideoMaterial(color: string, accent: string) {
       uVideo: { value: cardPreviewTexture },
       uColor: { value: new THREE.Color(color) },
       uAccent: { value: new THREE.Color(accent) },
-      uOpacity: { value: 1 }
+      uOpacity: { value: 1 },
+      uBrightness: { value: 1 }
     },
     transparent: true,
     depthWrite: true,
@@ -3678,6 +3823,7 @@ function makeProjectionCardVideoMaterial(color: string, accent: string) {
       uniform vec3 uColor;
       uniform vec3 uAccent;
       uniform float uOpacity;
+      uniform float uBrightness;
       varying vec2 vUv;
       varying vec3 vNormal;
       varying vec3 vViewDir;
@@ -3721,6 +3867,7 @@ function makeProjectionCardVideoMaterial(color: string, accent: string) {
         // 影片直接覆蓋整個有厚度的卡片；邊與側面以入射角染光，保留立體層次。
         frame *= scan * (0.42 + vignette * 0.58) * (0.52 + facing * 0.48);
         frame += mix(uColor, uAccent, 0.5) * edgeGlow * 0.46;
+        frame *= uBrightness;
         gl_FragColor = vec4(frame, uOpacity);
       }
     `
@@ -5819,6 +5966,7 @@ type CanvasViewportRect = {
   top: number
 }
 let canvasResizeObserver: ResizeObserver | null = null
+let canvasVisibilityObserver: IntersectionObserver | null = null
 let responsiveInitFrame = 0
 let responsiveResizeFrame = 0
 let pendingResponsiveRect: CanvasViewportRect | null = null
@@ -5842,6 +5990,8 @@ let cardInteractionReady = false
 let finaleActionInteractionReady = false
 let hoveredHeroCardTitle = ''
 let hoveredFinaleActionTo = ''
+let lastCardMaterialReveal = Number.NaN
+let lastCardMaterialBrightness = Number.NaN
 
 function getHeroCanvasElement() {
   return rendererRef?.domElement ?? document.querySelector<HTMLCanvasElement>('.hero-canvas')
@@ -5969,6 +6119,20 @@ function bindResponsiveCanvasObserver() {
     queueResponsiveSceneState(rect, { force: true, refreshScrollTrigger: true })
   })
   canvasResizeObserver.observe(host)
+  if (typeof IntersectionObserver !== 'undefined') {
+    canvasVisibilityObserver?.disconnect()
+    canvasVisibilityObserver = new IntersectionObserver(
+      ([entry]) => {
+        const visible = entry?.isIntersecting ?? true
+        if (heroViewportVisible === visible) return
+        heroViewportVisible = visible
+        if (visible) forceWakeRender()
+        else setBottomRenderMode('manual')
+      },
+      { threshold: 0 }
+    )
+    canvasVisibilityObserver.observe(host)
+  }
 }
 
 function syncResponsiveSceneLayout(
@@ -6013,6 +6177,8 @@ function syncResponsiveSceneLayout(
   }
 
   responsiveIsCompact = compact
+  syncInitialLogoVariant(compact)
+  syncBackboneVisualVariant(compact)
   // F12 手機模擬未必回報 coarse pointer，但視覺上仍應走手機斜帶幾何；
   // 因此只要進入 compact 版型，就套用同一組斜角補償，讓桌機手機模擬與真手機一致。
   // CSS clip-path 及 shader 的 uResolution 都會讀取同一組權重。
@@ -6275,8 +6441,22 @@ function onCardPointerLeave() {
   setHoveredHeroCard(null)
 }
 
+function isNativeInteractiveTarget(event: MouseEvent | PointerEvent) {
+  const target = event.target as
+    | (Element & { closest?: (selector: string) => Element | null })
+    | null
+  const tagName = target?.tagName?.toLowerCase()
+  return (
+    tagName === 'a' ||
+    tagName === 'button' ||
+    Boolean(target?.closest?.('a,button,input,select,textarea,[role="button"]'))
+  )
+}
+
 function onCardClick(event: MouseEvent | PointerEvent) {
   if (document.querySelector('.gallery-scene')) return
+  // DOM 導覽/按鈕優先，避免 canvas 下方的 3D hit-test 攔截既有 UI 行為。
+  if (isNativeInteractiveTarget(event)) return
   const now = performance.now()
   if (now - lastCardPointerAt < 180) return
   const finaleAction = getFinaleActionUnderPointer(event)
@@ -6434,6 +6614,11 @@ function initEnvMap() {
 }
 
 onBeforeRender(({ elapsed, delta }) => {
+  if (!heroViewportVisible || (typeof document !== 'undefined' && document.hidden)) {
+    setBottomRenderMode('manual')
+    return
+  }
+  recordHeroPerfFrame(delta)
   uniforms.uTime.value = elapsed
   if (!envDone) initEnvMap()
   syncResponsiveSceneLayout()
@@ -6444,11 +6629,11 @@ onBeforeRender(({ elapsed, delta }) => {
     typeof document !== 'undefined' && document.body.classList.contains('hero-lab-active')
   const nativeTouchScroll = nativeScrollMode && responsiveTouchViewport
   // 原生 scroll callback 只更新 target；所有視覺共用 render loop 的 current。
-  // 手機約 0.3～0.5 秒收斂，避免舊版 0.035 造成明顯拖尾，也不會一幀跳段。
-  const heroProgressDamping = nativeTouchScroll ? 0.16 : 0.22
+  // 手機縮短 scroll space 後同步收緊阻尼，讓視覺跟上手指但仍保留少量慣性。
+  const heroProgressDamping = nativeTouchScroll ? 0.2 : 0.22
   currentHeroScrollProgress +=
     (targetHeroScrollProgress - currentHeroScrollProgress) * fpsSmooth(heroProgressDamping, dt)
-  const timelineDamping = nativeTouchScroll ? 0.1 : 0.14
+  const timelineDamping = nativeTouchScroll ? 0.15 : 0.14
   currentTimeline += (targetTimeline - currentTimeline) * fpsSmooth(timelineDamping, dt)
   const introReveal = stageValue(currentTimeline, 0, introRevealSpan, introRevealMax)
   const gridReveal = stageValue(currentTimeline, gridRevealStart, gridRevealSpan, introRevealMax)
@@ -6667,13 +6852,13 @@ onBeforeRender(({ elapsed, delta }) => {
   // ── Scene3 卡片環繞軸心：與骨幹一起被斜帶揭露，初始為第一張正中、其餘沿右下排隊，
   //    捲動時依序從右下進中間，再往左上繞到骨幹後側。──
   const cardOrbitDelta = targetCardOrbit - currentCardOrbit
-  const activeCardOrbitDamping = nativeTouchScroll ? 0.14 : cardOrbitDamping
+  const activeCardOrbitDamping = nativeTouchScroll ? 0.18 : cardOrbitDamping
   currentCardOrbit += cardOrbitDelta * fpsSmooth(activeCardOrbitDamping, dt)
   if (Math.abs(cardOrbitDelta) < cardOrbitSettleEpsilon) {
     currentCardOrbit = targetCardOrbit
   }
   const nextSceneDelta = targetNextSceneProgress - currentNextSceneProgress
-  const activeNextSceneDamping = nativeTouchScroll ? 0.12 : nextSceneDamping
+  const activeNextSceneDamping = nativeTouchScroll ? 0.16 : nextSceneDamping
   currentNextSceneProgress += nextSceneDelta * fpsSmooth(activeNextSceneDamping, dt)
   if (Math.abs(nextSceneDelta) < nextSceneSettleEpsilon) {
     currentNextSceneProgress = targetNextSceneProgress
@@ -6697,7 +6882,14 @@ onBeforeRender(({ elapsed, delta }) => {
   //     現在整段連續前進、不留中段凍結，收尾直接掃滿（右上角不再留黑）。
   // 只採用 render loop 平滑後的 current 值。不可混入 target，也不可在 placeholder
   // 開始時硬設為 1，否則手機一次觸控捲動就會跳過完整的房間中間態。
-  const eggWipeReveal = THREE.MathUtils.smoothstep(currentNextSceneProgress, 0.0, 1.0)
+  const mobileCardOrbitProgress = THREE.MathUtils.clamp(currentCardOrbit / cardOrbitMax, 0, 1)
+  const mobileCardWipeLead = responsiveIsCompact
+    ? THREE.MathUtils.clamp((mobileCardOrbitProgress - 0.78) / 0.22, 0, 1) * 0.24
+    : 0
+  // 手機版把卡片尾段與終章段接成同一條線性進度，避免 Math.max() 造成停頓平台。
+  const eggWipeReveal = responsiveIsCompact
+    ? THREE.MathUtils.clamp(mobileCardWipeLead + currentNextSceneProgress * 0.76, 0, 1)
+    : THREE.MathUtils.smoothstep(currentNextSceneProgress, 0.0, 1.0)
   eggUniforms.uEggReveal.value = eggWipeReveal
   const eggTransitionShow = eggWipeReveal > 0.001
 
@@ -6966,6 +7158,11 @@ onBeforeRender(({ elapsed, delta }) => {
     lastFinaleEmit = eggPresence
     emit('finale-reveal', eggPresence)
   }
+  const finaleExposureReveal = Math.max(eggWipeReveal, finalePreReveal)
+  if (Math.abs(finaleExposureReveal - lastFinaleExposureEmit) > 0.004) {
+    lastFinaleExposureEmit = finaleExposureReveal
+    emit('finale-exposure-reveal', finaleExposureReveal)
+  }
   // Scene3 捲動：骨幹沿 +Y 上移；卡片與下一場景共享同一段退場進度。
   const sceneExitProgress = currentNextSceneProgress + currentPlaceholderProgress
   const sceneExitWheelDistance =
@@ -6995,15 +7192,26 @@ onBeforeRender(({ elapsed, delta }) => {
     const orbitPhase = (cardOrbitUnlockedNow ? currentCardOrbit : 0) + exitOrbitPhase
     let activeCard: HeroCardItem | null = null
     let activeCardScore = -Infinity
+    const cardBrightness = responsiveIsCompact ? 1.5 : 1
+    const cardMaterialDirty =
+      Math.abs(mobileCardReveal - lastCardMaterialReveal) > 0.0001 ||
+      cardBrightness !== lastCardMaterialBrightness
+    if (cardMaterialDirty) {
+      lastCardMaterialReveal = mobileCardReveal
+      lastCardMaterialBrightness = cardBrightness
+    }
     for (const it of heroCardItems) {
       const wa = orbitPhase - (cardEntranceAngle + it.index * cardStep)
       it.pivot.rotation.y = wa
       it.holder.position.y = cardRingY + wa * cardVerticalSlope
       const front = THREE.MathUtils.clamp(Math.cos(wa), -1, 1)
       it.front = front
-      it.coreMat.uniforms.uOpacity.value = mobileCardReveal
-      for (const mat of it.titleMats) {
-        mat.uniforms.uAlpha.value = (mat === it.titleMat ? 0.9 : 0.2) * mobileCardReveal
+      if (cardMaterialDirty) {
+        it.coreMat.uniforms.uOpacity.value = mobileCardReveal
+        it.coreMat.uniforms.uBrightness.value = cardBrightness
+        for (const mat of it.titleMats) {
+          mat.uniforms.uAlpha.value = (mat === it.titleMat ? 0.9 : 0.2) * mobileCardReveal
+        }
       }
       const hoverTarget = hoveredHeroCardTitle === it.card.title ? 1.045 : 1
       it.hoverScale += (hoverTarget - it.hoverScale) * fpsSmooth(0.18, dt)
@@ -7217,6 +7425,7 @@ onBeforeRender(({ elapsed, delta }) => {
 function scrubTo(progress: number, immediate = true) {
   wakeBottomRender()
   const clamped = THREE.MathUtils.clamp(progress, 0, 1)
+  markHeroPerfScrollTarget()
   targetHeroScrollProgress = clamped
   if (immediate) currentHeroScrollProgress = clamped
   const targetWheel = clamped * totalJourneyWheelLen
@@ -7292,53 +7501,13 @@ function scrubTo(progress: number, immediate = true) {
     setHoveredHeroCard(null)
     syncActiveHeroCard(null)
     syncActiveHeroCardHitbox(null)
-  } else if (!immediate) {
-    syncCardInteractionFromScrollTarget()
   }
-}
-
-function syncCardInteractionFromScrollTarget() {
-  if (uniforms.uEggReveal.value >= 0.985) {
-    heroCardsGroup.visible = false
-    cardInteractionReady = false
-    setHoveredHeroCard(null)
-    syncActiveHeroCard(null)
-    syncActiveHeroCardHitbox(null)
-    return
-  }
-  const cardFitScale = getMobileCardFitScale()
-  const sceneExitWheelDistance =
-    currentNextSceneProgress * nextSceneWheelLen +
-    currentPlaceholderProgress * placeholderSceneWheelLen
-  const orbitPhase = currentCardOrbit + sceneExitWheelDistance * cardOrbitSpeed
-  let activeCard: HeroCardItem | null = null
-  let activeCardScore = -Infinity
-
-  heroCardsGroup.visible = true
-  cardInteractionReady = true
-  for (const it of heroCardItems) {
-    const wa = orbitPhase - (cardEntranceAngle + it.index * cardStep)
-    it.pivot.rotation.y = wa
-    it.holder.position.y = cardRingY + wa * cardVerticalSlope
-    const front = THREE.MathUtils.clamp(Math.cos(wa), -1, 1)
-    it.front = front
-    it.holder.visible = true
-    it.holder.scale.setScalar(
-      cardFitScale * THREE.MathUtils.lerp(0.94, 1.02, Math.max(front, 0)) * it.hoverScale
-    )
-    if (front > activeCardScore) {
-      activeCardScore = front
-      activeCard = it
-    }
-  }
-
-  syncActiveHeroCard(activeCard?.card ?? null)
-  syncActiveHeroCardHitbox(activeCard)
 }
 
 defineExpose({ scrubTo })
 
 onMounted(async () => {
+  installHeroPerf()
   if (cardPreviewVideo) {
     cardPreviewVideo.play().catch(() => {
       // 瀏覽器未允許自動播放時，仍可在下一次使用者互動後開始更新預覽。
@@ -7441,7 +7610,7 @@ onMounted(async () => {
     costs: () => {
       const rows: { name: string; type: string; triangles: number }[] = []
       group.traverse((object) => {
-        const drawable = object as THREE.Mesh & { count?: number }
+        const drawable = object as THREE.Mesh & { count?: number; isInstancedMesh?: boolean }
         if (!drawable.geometry) return
         let ancestor: THREE.Object3D | null = drawable
         while (ancestor) {
@@ -7530,10 +7699,13 @@ onMounted(async () => {
 
 onUnmounted(() => {
   setBottomRenderMode('always')
+  removeHeroPerf()
   if (responsiveInitFrame) window.cancelAnimationFrame(responsiveInitFrame)
   if (responsiveResizeFrame) window.cancelAnimationFrame(responsiveResizeFrame)
   canvasResizeObserver?.disconnect()
   canvasResizeObserver = null
+  canvasVisibilityObserver?.disconnect()
+  canvasVisibilityObserver = null
   window.removeEventListener('wheel', onWheel)
   window.removeEventListener('touchstart', onTouchStart)
   window.removeEventListener('touchmove', onTouchMove)

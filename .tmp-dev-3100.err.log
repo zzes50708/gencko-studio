@@ -1,0 +1,28 @@
+
+<--- Last few GCs --->
+
+[2412:00000284E6D24000]  2389130 ms: Mark-Compact (reduce) 4091.2 (4101.8) -> 4088.9 (4096.6) MB, pooled: 0 MB, 1582.79 / 0.00 ms  (+ 522.6 ms in 150 steps since start of marking, biggest step 8.1 ms, walltime since start of marking 2344 ms) (average mu =[2412:00000284E6D24000]  2391892 ms: Mark-Compact 4089.7 (4096.6) -> 4087.4 (4099.6) MB, pooled: 0 MB, 2723.53 / 0.00 ms  (average mu = 0.176, current mu = 0.014) task; scavenge might not succeed
+
+FATAL ERROR: Ineffective mark-compacts near heap limit Allocation failed - JavaScript heap out of memory
+----- Native stack trace -----
+
+ 1: 00007FF6C4EAAE1F node::OnFatalError+1343
+ 2: 00007FF6C5AF37B7 v8::Function::NewInstance+423
+ 3: 00007FF6C58F3E77 v8::base::AddressSpaceReservation::AddressSpaceReservation+322071
+ 4: 00007FF6C58F7B84 v8::base::AddressSpaceReservation::AddressSpaceReservation+337700
+ 5: 00007FF6C5906B1C v8::internal::StrongRootAllocatorBase::deallocate_impl+16604
+ 6: 00007FF6C590635B v8::internal::StrongRootAllocatorBase::deallocate_impl+14619
+ 7: 00007FF6C6D6EBED v8::base::UnsignedDivisionByConstant<unsigned __int64>+2791309
+ 8: 00007FF6C58F1940 v8::base::AddressSpaceReservation::AddressSpaceReservation+312544
+ 9: 00007FF6C58A22F2 EVP_PKEY_asn1_set_get_priv_key+86258
+10: 00007FF6C4DFD11A node::GetNodeReport+98346
+11: 00007FF6C4DFB900 node::GetNodeReport+92176
+12: 00007FF6C5B5B19B uv_run+1867
+13: 00007FF6C5B5AD0F uv_run+703
+14: 00007FF6C4FBD4FF node::DecodeWrite+367
+15: 00007FF6C4E38DE2 node::MultiIsolatePlatform::DisposeIsolate+242594
+16: 00007FF6C4F0549C node::Start+1052
+17: 00007FF6C5F22042 AES_cbc_encrypt+2546
+18: 00007FF6C6D782F4 v8::base::UnsignedDivisionByConstant<unsigned __int64>+2829972
+19: 00007FFA6C66CCB7 BaseThreadInitThunk+23
+20: 00007FFA6D92AD6C RtlUserThreadStart+44
