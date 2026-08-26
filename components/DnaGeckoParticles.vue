@@ -1430,6 +1430,28 @@ const eggShellMat = new THREE.MeshPhysicalMaterial({
   attenuationColor: new THREE.Color('#8093ad'), // 由近白改為冷灰藍，讓厚處產生可見暗邊
   attenuationDistance: 1.4 // 由 16（幾乎無效）縮短到真正產生吸光
 })
+let eggShellMaterialProfile = ''
+
+function syncEggShellMaterialProfile(visible: boolean) {
+  const nextProfile = visible ? 'visible' : 'hidden'
+  if (eggShellMaterialProfile === nextProfile) return
+  eggShellMaterialProfile = nextProfile
+
+  if (visible) {
+    eggShellMat.transmission = 0.985
+    eggShellMat.thickness = 0.4
+    eggShellMat.roughness = 0.02
+    eggShellMat.envMapIntensity = 0.34
+  } else {
+    eggShellMat.transmission = 0.94
+    eggShellMat.thickness = 0.76
+    eggShellMat.roughness = 0.052
+    eggShellMat.envMapIntensity = 0.42
+  }
+
+  // 這些是材質編譯參數，只有 profile 切換時才需要重新套用。
+  eggShellMat.needsUpdate = true
+}
 eggShellMat.onBeforeCompile = (shader) => {
   shader.uniforms.uFinaleReveal = eggUniforms.uFinaleReveal
   shader.uniforms.uIntroReveal = eggUniforms.uFinaleReveal
@@ -2820,7 +2842,7 @@ function loadGeckoModel(compact: boolean) {
         const mesh = node as THREE.Mesh
         if (!mesh.isMesh) return
 
-        mesh.geometry.computeVertexNormals()
+        if (!mesh.geometry.getAttribute('normal')) mesh.geometry.computeVertexNormals()
         disposeMaterial(mesh.material)
         mesh.material = geckoMat
         mesh.renderOrder = 8
@@ -2987,7 +3009,7 @@ function loadBackboneModel(compact: boolean) {
         const mesh = node as THREE.Mesh
         if (!mesh.isMesh) return
 
-        mesh.geometry.computeVertexNormals()
+        if (!mesh.geometry.getAttribute('normal')) mesh.geometry.computeVertexNormals()
         disposeMaterial(mesh.material)
         mesh.material = backboneSampleMat
       })
@@ -4326,7 +4348,7 @@ function loadEmbryoModel(compact: boolean) {
       model.traverse((node) => {
         const mesh = node as THREE.Mesh
         if (!mesh.isMesh) return
-        mesh.geometry.computeVertexNormals()
+        if (!mesh.geometry.getAttribute('normal')) mesh.geometry.computeVertexNormals()
         disposeMaterial(mesh.material)
         mesh.material = embryoMat
         mesh.renderOrder = 41
@@ -5742,11 +5764,19 @@ const dnaGridIntersections: THREE.Intersection[] = []
 const dnaGridPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -DNA_GRID_Y)
 const dnaGridHit = new THREE.Vector3()
 const dnaGridMouseTarget = new THREE.Vector3(9999, 9999, 9999)
+const lastBoneGridTarget = new THREE.Vector3(9999, 9999, 9999)
+const lastDnaGridTarget = new THREE.Vector3(9999, 9999, 9999)
+let boneTileLiftsSettled = true
+let dnaTileLiftsSettled = true
 const HOVER_FAST_FOLLOW = 0.2
 const HOVER_FALL_FOLLOW = 0.045
 
 function updateBoneTileLifts(dt: number) {
   const radius = boneTilesMat.uniforms.uHoverRadius.value as number
+  const radiusSq = radius * radius
+  const targetChanged = boneGridMouseTarget.distanceToSquared(lastBoneGridTarget) > 1e-6
+  if (!targetChanged && boneTileLiftsSettled) return
+  lastBoneGridTarget.copy(boneGridMouseTarget)
   const sinTilt = Math.sin(BONE_GRID_TILT_X)
   const cosTilt = Math.cos(BONE_GRID_TILT_X)
   const localTargetX = boneGridMouseTarget.x
@@ -5754,44 +5784,65 @@ function updateBoneTileLifts(dt: number) {
     -sinTilt * (boneGridMouseTarget.y - BONE_GRID_Y) + cosTilt * boneGridMouseTarget.z
   const followRise = fpsSmooth(HOVER_FAST_FOLLOW, dt)
   const followFall = fpsSmooth(HOVER_FALL_FOLLOW, dt)
+  let dirty = false
+  let unsettled = false
 
   for (let ix = 0, i = 0; ix < BONE_TILES_N; ix++) {
     const x = (ix - BONE_TILES_N / 2 + 0.5) * BONE_TILE_CELL
     for (let iz = 0; iz < BONE_TILES_N; iz++, i++) {
       const z = (iz - BONE_TILES_N / 2 + 0.5) * BONE_TILE_CELL
+      const dx = localTargetX - x
+      const dz = localTargetZ - z
+      const distanceSq = dx * dx + dz * dz
       const targetLift =
-        THREE.MathUtils.smoothstep(radius, 0, Math.hypot(localTargetX - x, localTargetZ - z)) * 0.5
+        distanceSq < radiusSq
+          ? THREE.MathUtils.smoothstep(radius, 0, Math.sqrt(distanceSq)) * 0.5
+          : 0
       const follow = targetLift > boneTileLift[i] ? followRise : followFall
-      boneTileLift[i] += (targetLift - boneTileLift[i]) * follow
+      const nextLift = boneTileLift[i] + (targetLift - boneTileLift[i]) * follow
+      if (Math.abs(nextLift - boneTileLift[i]) > 1e-6) {
+        boneTileLift[i] = nextLift
+        dirty = true
+      }
+      if (Math.abs(targetLift - nextLift) > 1e-4) unsettled = true
     }
   }
-  boneTileLiftAttr.needsUpdate = true
+  boneTileLiftsSettled = !unsettled
+  if (dirty) boneTileLiftAttr.needsUpdate = true
 }
 
 function updateDnaTileLifts(dt: number) {
   const radius = dnaTilesMat.uniforms.uHoverRadius.value as number
+  const radiusSq = radius * radius
+  const targetChanged = dnaGridMouseTarget.distanceToSquared(lastDnaGridTarget) > 1e-6
+  if (!targetChanged && dnaTileLiftsSettled) return
+  lastDnaGridTarget.copy(dnaGridMouseTarget)
   const followRise = fpsSmooth(HOVER_FAST_FOLLOW, dt)
   const followFall = fpsSmooth(HOVER_FALL_FOLLOW, dt)
+  let dirty = false
+  let unsettled = false
 
   for (let i = 0; i < dnaTileLift.length; i++) {
     const offset = i * 3
     const centerX = dnaTileCenters[offset]
     const centerY = dnaTileCenters[offset + 1] + DNA_GRID_Y
     const centerZ = dnaTileCenters[offset + 2] + DNA_GRID_Z
+    const dx = centerX - dnaGridMouseTarget.x
+    const dy = centerY - dnaGridMouseTarget.y
+    const dz = centerZ - dnaGridMouseTarget.z
+    const distanceSq = dx * dx + dy * dy + dz * dz
     const targetLift =
-      THREE.MathUtils.smoothstep(
-        radius,
-        0,
-        Math.hypot(
-          centerX - dnaGridMouseTarget.x,
-          centerY - dnaGridMouseTarget.y,
-          centerZ - dnaGridMouseTarget.z
-        )
-      ) * 0.5
+      distanceSq < radiusSq ? THREE.MathUtils.smoothstep(radius, 0, Math.sqrt(distanceSq)) * 0.5 : 0
     const follow = targetLift > dnaTileLift[i] ? followRise : followFall
-    dnaTileLift[i] += (targetLift - dnaTileLift[i]) * follow
+    const nextLift = dnaTileLift[i] + (targetLift - dnaTileLift[i]) * follow
+    if (Math.abs(nextLift - dnaTileLift[i]) > 1e-6) {
+      dnaTileLift[i] = nextLift
+      dirty = true
+    }
+    if (Math.abs(targetLift - nextLift) > 1e-4) unsettled = true
   }
-  dnaTileLiftAttr.needsUpdate = true
+  dnaTileLiftsSettled = !unsettled
+  if (dirty) dnaTileLiftAttr.needsUpdate = true
 }
 
 // ===== 縮成點的爆發特效：collapse 完成瞬間，中心閃光 + 火花外射（相加發光）。=====
@@ -5971,6 +6022,16 @@ let responsiveInitFrame = 0
 let responsiveResizeFrame = 0
 let pendingResponsiveRect: CanvasViewportRect | null = null
 let parallaxPointerEventsBound = false
+const TOUCH_VIEWPORT_QUERY = '(hover: none), (pointer: coarse)'
+const FINE_POINTER_QUERY = '(hover: hover) and (pointer: fine)'
+let touchViewportMedia: MediaQueryList | null = null
+let finePointerMedia: MediaQueryList | null = null
+let cachedTouchViewport = false
+let cachedFinePointer = false
+let drawingBufferWidth = 0
+let drawingBufferHeight = 0
+let drawingBufferSeamWeightX = Number.NaN
+let drawingBufferSeamWeightY = Number.NaN
 // 斜縫的對角座標權重（a2,b2；a2+b2=2）。CSS clip 與所有 shader 都用它，
 // 讓真機的直向畫面保留與桌機相同的實體斜角。
 let seamWeightX = 1
@@ -6029,6 +6090,58 @@ function getStableViewportRect() {
   return getHeroCanvasRect()
 }
 
+function syncInputCapabilities() {
+  if (typeof window === 'undefined') return
+  cachedTouchViewport =
+    touchViewportMedia?.matches ?? window.matchMedia(TOUCH_VIEWPORT_QUERY).matches
+  cachedFinePointer = finePointerMedia?.matches ?? window.matchMedia(FINE_POINTER_QUERY).matches
+}
+
+function onInputCapabilitiesChange() {
+  syncInputCapabilities()
+  const rect = getHeroCanvasRect()
+  if (rect) queueResponsiveSceneState(rect, { force: true, refreshScrollTrigger: true })
+  else syncParallaxPointerBinding()
+}
+
+function bindInputCapabilityMedia() {
+  if (typeof window === 'undefined') return
+  touchViewportMedia = window.matchMedia(TOUCH_VIEWPORT_QUERY)
+  finePointerMedia = window.matchMedia(FINE_POINTER_QUERY)
+  syncInputCapabilities()
+  touchViewportMedia.addEventListener?.('change', onInputCapabilitiesChange)
+  finePointerMedia.addEventListener?.('change', onInputCapabilitiesChange)
+}
+
+function unbindInputCapabilityMedia() {
+  touchViewportMedia?.removeEventListener?.('change', onInputCapabilitiesChange)
+  finePointerMedia?.removeEventListener?.('change', onInputCapabilitiesChange)
+  touchViewportMedia = null
+  finePointerMedia = null
+}
+
+function syncDrawingBufferUniforms(force = false) {
+  if (!rendererRef) return
+  rendererRef.getDrawingBufferSize(tmpRes)
+  const width = Math.max(1, tmpRes.x)
+  const height = Math.max(1, tmpRes.y)
+  if (
+    !force &&
+    width === drawingBufferWidth &&
+    height === drawingBufferHeight &&
+    seamWeightX === drawingBufferSeamWeightX &&
+    seamWeightY === drawingBufferSeamWeightY
+  ) {
+    return
+  }
+  drawingBufferWidth = width
+  drawingBufferHeight = height
+  drawingBufferSeamWeightX = seamWeightX
+  drawingBufferSeamWeightY = seamWeightY
+  uniforms.uResolution.value.set(width / seamWeightX, height / seamWeightY)
+  uniforms.uEggRes.value.set(1e7, height / 2)
+}
+
 function getCurrentTransitionProgress() {
   return inverseLerpClamped(currentHeroScrollProgress, transitionSectionStart, transitionSectionEnd)
 }
@@ -6063,11 +6176,7 @@ function applyResponsiveSceneState(
   }
   syncResponsiveSceneLayout(rect, options.force ?? false)
   syncTransitionBandMesh(getCurrentTransitionProgress())
-  if (rendererRef) {
-    rendererRef.getDrawingBufferSize(tmpRes)
-    uniforms.uResolution.value.set(tmpRes.x / seamWeightX, tmpRes.y / seamWeightY)
-    uniforms.uEggRes.value.set(1e7, tmpRes.y / 2)
-  }
+  syncDrawingBufferUniforms(true)
   forceWakeRender()
 }
 
@@ -6144,7 +6253,9 @@ function syncResponsiveSceneLayout(
   if (!rect) return
   const width = Math.max(1, Math.round(rect.width))
   const height = Math.max(1, Math.round(rect.height))
-  const touchViewport = window.matchMedia('(hover: none), (pointer: coarse)').matches
+  // useLoop 可能早於 onMounted 的 media 綁定執行；首幀先建立快取，避免手機誤走桌機 LOD。
+  if (!touchViewportMedia || !finePointerMedia) syncInputCapabilities()
+  const touchViewport = cachedTouchViewport
   if (
     !force &&
     width === responsiveViewportWidth &&
@@ -6161,7 +6272,7 @@ function syncResponsiveSceneLayout(
   responsiveAspect = aspect
   // 窄視窗的裝置模擬器仍可能回報 fine pointer；依專案規則，低於 md 也必須走手機構圖。
   const compact = width < 768 || touchViewport
-  responsiveHoverEffects = !compact && hasFinePointer()
+  responsiveHoverEffects = !compact && cachedFinePointer
   responsivePortraitFactor =
     compact && aspect < 1 ? THREE.MathUtils.clamp((1 - aspect) / 0.5, 0, 1) : 0
   // 直向與接近平方的手機都需要縮小構圖；手機橫向寬畫面則保留原本比例。
@@ -6424,10 +6535,7 @@ function onCardPointerMove(event: PointerEvent) {
     setHoveredHeroCard(null)
     return
   }
-  if (
-    finaleActionInteractionReady &&
-    window.matchMedia('(hover: hover) and (pointer: fine)').matches
-  ) {
+  if (finaleActionInteractionReady && cachedFinePointer) {
     setHoveredFinaleAction(getFinaleActionUnderPointer(event))
     setHoveredHeroCard(null)
     return
@@ -6477,9 +6585,7 @@ function onCardClick(event: MouseEvent | PointerEvent) {
 }
 
 function hasFinePointer() {
-  return (
-    typeof window !== 'undefined' && window.matchMedia('(hover: hover) and (pointer: fine)').matches
-  )
+  return cachedFinePointer
 }
 
 function syncCardHoverBindings() {
@@ -6567,6 +6673,7 @@ function initEnvMap() {
   if (!webgl) return
   envDone = true
   rendererRef = webgl
+  syncDrawingBufferUniforms(true)
   bindCardClickCanvas(webgl.domElement)
   bindResponsiveCanvasObserver()
   const initialRect = getHeroCanvasRect()
@@ -6686,14 +6793,6 @@ onBeforeRender(({ elapsed, delta }) => {
   // DOM 斜帶仍使用上方 seamB 幾何；所有 Scene03 Shader 改用提前完成的獨立揭露線。
   uniforms.uSeamB.value = THREE.MathUtils.lerp(0, seamBMax, scene3WipeProgress)
   uniforms.uIntroSeam.value = introSeam
-  if (rendererRef) {
-    rendererRef.getDrawingBufferSize(tmpRes)
-    // 前面斜帶（uResolution）：餵入「有效解析度」= (W/a2, H/b2)，讓 d = a2·x/W + b2·y/H
-    // 一次壓平斜縫的對角斜角（桌機權重 1,1 → 等同原值）。
-    uniforms.uResolution.value.set(tmpRes.x / seamWeightX, tmpRes.y / seamWeightY)
-    // 終章 wipe（uEggRes，已解耦）：x 設超大 → x 貢獻≈0，sd ≈ 2·(y/H) → 水平線由下往上掃。
-    uniforms.uEggRes.value.set(1e7, tmpRes.y / 2)
-  }
   // Logo 盤旋轉：橫跨 T1+T2 的單一單調曲線。
   // 直接對線性 sweep（0→1 已單調跨越 T1+T2）套「一次」smoothstep：
   // 只有最頭(−90°)與最尾(+90°)平滑，中間（含正面）等速通過。
@@ -7065,6 +7164,7 @@ onBeforeRender(({ elapsed, delta }) => {
   const burstT = THREE.MathUtils.clamp((finaleReveal - 0.86) / 0.14, 0.0, 1.0)
   burstGroup.visible = burstT > 0.001 && burstT < 0.999
   burstMat.uniforms.uBurst.value = burstT
+  syncEggShellMaterialProfile(eggGroup.visible)
   if (eggGroup.visible) {
     // 蛋自建立起即使用最終顯示尺寸；聚攏階段整組縮到 0（碎片+胚胎收束成一點）。
     eggGroup.scale.set(
@@ -7077,24 +7177,10 @@ onBeforeRender(({ elapsed, delta }) => {
     eggRotationY += (eggRotationTarget - eggRotationY) * fpsSmooth(0.08, dt)
     eggGroup.rotation.x = 0.04
     eggGroup.rotation.y = eggRotationY
-    eggShellMat.transparent = true
-    eggShellMat.depthWrite = false
     eggShellMat.opacity =
       0.045 * eggPresence * (1 - THREE.MathUtils.smoothstep(finaleReveal, 0.76, 0.92))
-    eggShellMat.transmission = 0.985
-    eggShellMat.thickness = 0.4
-    eggShellMat.roughness = 0.02
-    eggShellMat.envMapIntensity = 0.34
-    eggShellMat.needsUpdate = true
   } else {
     eggShellMat.opacity = 0
-    eggShellMat.transparent = true
-    eggShellMat.depthWrite = false
-    eggShellMat.transmission = 0.94
-    eggShellMat.thickness = 0.76
-    eggShellMat.roughness = 0.052
-    eggShellMat.envMapIntensity = 0.42
-    eggShellMat.needsUpdate = true
   }
 
   const heartbeatOmega = Math.PI * 2.0
@@ -7386,6 +7472,7 @@ onBeforeRender(({ elapsed, delta }) => {
 
   // 除錯 HUD：網址加 ?debug=1 才顯示即時數值，讓真機截一張圖就能定位捲動/進度問題。
   if (
+    import.meta.dev &&
     typeof document !== 'undefined' &&
     /[?&]debug/.test(window.location.search) &&
     elapsed - lastDebugHudUpdateAt >= 0.08
@@ -7508,6 +7595,7 @@ defineExpose({ scrubTo })
 
 onMounted(async () => {
   installHeroPerf()
+  bindInputCapabilityMedia()
   if (cardPreviewVideo) {
     cardPreviewVideo.play().catch(() => {
       // 瀏覽器未允許自動播放時，仍可在下一次使用者互動後開始更新預覽。
@@ -7535,164 +7623,166 @@ onMounted(async () => {
   document.addEventListener('visibilitychange', onVisibilityChange)
   window.addEventListener('focus', forceWakeRender)
   window.addEventListener('pageshow', forceWakeRender)
-  // Debug：瞬間跳關（僅供 hero-lab 驗證用）
-  // 版本標記：在 Console 打 window.__heroBuild 可確認瀏覽器跑的是不是最新模組（排除 HMR/快取殘留）。
-  ;(window as unknown as { __heroBuild?: string }).__heroBuild = 'debug-hud @2026-08-18f'
-  // eslint-disable-next-line no-console
-  console.log('[hero-build]', (window as unknown as { __heroBuild?: string }).__heroBuild)
-  ;(window as unknown as { __hero?: unknown }).__hero = {
-    jump(t: number, c = 0) {
-      wakeBottomRender()
-      targetTimeline = t
-      currentTimeline = t
-      targetCardOrbit = c
-      currentCardOrbit = c
-      targetNextSceneProgress = 0
-      currentNextSceneProgress = 0
-      targetPlaceholderProgress = 0
-      currentPlaceholderProgress = 0
-    },
-    // 即時試胚胎 GLB 定位：__hero.embryo(rx, ry, rz, scaleMul)（弧度 + 縮放倍率）。
-    embryo(rx?: number, ry?: number, rz?: number, s?: number) {
-      wakeBottomRender()
-      if (typeof rx === 'number') EMBRYO_ROT_X = rx
-      if (typeof ry === 'number') EMBRYO_ROT_Y = ry
-      if (typeof rz === 'number') EMBRYO_ROT_Z = rz
-      if (typeof s === 'number') EMBRYO_SCALE_MUL = s
-      for (const holder of [embryoDesktopModelHolder, embryoMobileModelHolder]) {
-        if (!holder) continue
-        holder.rotation.set(EMBRYO_ROT_X, EMBRYO_ROT_Y, EMBRYO_ROT_Z)
-        const base = holder.userData.baseScale || 1
-        holder.scale.setScalar(base * EMBRYO_SCALE_MUL)
-      }
-      return { rx: EMBRYO_ROT_X, ry: EMBRYO_ROT_Y, rz: EMBRYO_ROT_Z, s: EMBRYO_SCALE_MUL }
-    },
-    // 即時試守宮定角：__hero.geckoRot(y, x, z)（弧度）。回傳目前值。
-    geckoRot(y?: number, x?: number, z?: number) {
-      wakeBottomRender()
-      if (typeof y === 'number') GECKO_REST_ROT_Y = y
-      if (typeof x === 'number') GECKO_REST_ROT_X = x
-      if (typeof z === 'number') GECKO_REST_ROT_Z = z
-      return { y: GECKO_REST_ROT_Y, x: GECKO_REST_ROT_X, z: GECKO_REST_ROT_Z }
-    },
-    scene3(c = 0, n = 0, p = 0) {
-      wakeBottomRender()
-      targetTimeline = scene3HoldTimeline
-      currentTimeline = scene3HoldTimeline
-      targetCardOrbit = c
-      currentCardOrbit = c
-      targetNextSceneProgress = n
-      currentNextSceneProgress = n
-      targetPlaceholderProgress = p
-      currentPlaceholderProgress = p
-    },
-    breaks: () => timelineBreaks,
-    cardMax: () => cardOrbitMax,
-    // Debug：即時改所有卡片材質（找亮度/透明度來源用）
-    setCard(p: Record<string, unknown>) {
-      for (const it of heroCardItems) {
-        Object.assign(it.coreMat, p)
-        it.coreMat.needsUpdate = true
-      }
-      return 'ok'
-    },
-    // Debug：讀上一幀 renderer 統計（找卡頓來源用）
-    info: () => {
-      const r = rendererRef
-      return r
-        ? {
-            calls: r.info.render.calls,
-            triangles: r.info.render.triangles,
-            programs: r.info.programs?.length ?? 0
-          }
-        : null
-    },
-    costs: () => {
-      const rows: { name: string; type: string; triangles: number }[] = []
-      group.traverse((object) => {
-        const drawable = object as THREE.Mesh & { count?: number; isInstancedMesh?: boolean }
-        if (!drawable.geometry) return
-        let ancestor: THREE.Object3D | null = drawable
-        while (ancestor) {
-          if (!ancestor.visible) return
-          ancestor = ancestor.parent
+  if (import.meta.dev) {
+    // Debug：瞬間跳關（僅供 hero-lab 驗證用）
+    // 版本標記：在 Console 打 window.__heroBuild 可確認瀏覽器跑的是不是最新模組（排除 HMR/快取殘留）。
+    ;(window as unknown as { __heroBuild?: string }).__heroBuild = 'debug-hud @2026-08-18f'
+    // eslint-disable-next-line no-console
+    console.log('[hero-build]', (window as unknown as { __heroBuild?: string }).__heroBuild)
+    ;(window as unknown as { __hero?: unknown }).__hero = {
+      jump(t: number, c = 0) {
+        wakeBottomRender()
+        targetTimeline = t
+        currentTimeline = t
+        targetCardOrbit = c
+        currentCardOrbit = c
+        targetNextSceneProgress = 0
+        currentNextSceneProgress = 0
+        targetPlaceholderProgress = 0
+        currentPlaceholderProgress = 0
+      },
+      // 即時試胚胎 GLB 定位：__hero.embryo(rx, ry, rz, scaleMul)（弧度 + 縮放倍率）。
+      embryo(rx?: number, ry?: number, rz?: number, s?: number) {
+        wakeBottomRender()
+        if (typeof rx === 'number') EMBRYO_ROT_X = rx
+        if (typeof ry === 'number') EMBRYO_ROT_Y = ry
+        if (typeof rz === 'number') EMBRYO_ROT_Z = rz
+        if (typeof s === 'number') EMBRYO_SCALE_MUL = s
+        for (const holder of [embryoDesktopModelHolder, embryoMobileModelHolder]) {
+          if (!holder) continue
+          holder.rotation.set(EMBRYO_ROT_X, EMBRYO_ROT_Y, EMBRYO_ROT_Z)
+          const base = holder.userData.baseScale || 1
+          holder.scale.setScalar(base * EMBRYO_SCALE_MUL)
         }
-        const geometry = drawable.geometry as THREE.BufferGeometry
-        const triangleCount = geometry.index
-          ? geometry.index.count / 3
-          : (geometry.getAttribute('position')?.count ?? 0) / 3
-        const instances = drawable.isInstancedMesh ? (drawable.count ?? 1) : 1
-        rows.push({
-          name: drawable.name || drawable.parent?.name || '(unnamed)',
-          type: drawable.type,
-          triangles: Math.round(triangleCount * instances)
-        })
-      })
-      return rows.sort((a, b) => b.triangles - a.triangles).slice(0, 16)
-    },
-    state: () => ({
-      targetHeroScrollProgress,
-      currentHeroScrollProgress,
-      targetTimeline,
-      currentTimeline,
-      targetCardOrbit,
-      currentCardOrbit,
-      targetNextSceneProgress,
-      currentNextSceneProgress,
-      targetPlaceholderProgress,
-      currentPlaceholderProgress,
-      targetRotationY,
-      currentRotationY,
-      geckoRotationY: geckoGroup.rotation.y,
-      geckoVariant:
-        loadedModel === geckoMobileModel ? 'mobile-lod' : loadedModel ? 'desktop' : 'loading',
-      backboneVariant:
-        loadedBackboneModel === backboneMobileVariant?.model
-          ? 'mobile-lod'
-          : loadedBackboneModel
-            ? 'desktop'
-            : 'loading',
-      embryoVariant:
-        embryoModelHolder === embryoMobileModelHolder
-          ? 'mobile-lod'
-          : embryoModelHolder
-            ? 'desktop'
-            : 'fallback',
-      heroCardsVisible: heroCardsGroup.visible,
-      heroCardItems: heroCardItems.length,
-      heroCardVisibleHolders: heroCardItems.filter((item) => item.holder.visible).length,
-      heroCardHitMeshes: heroCardHitMeshes.length,
-      cardInteractionReady,
-      cardOrbitUnlockedNow,
-      responsiveHoverEffects,
-      dnaTilesVisible: dnaTiles.visible,
-      boneTilesVisible: boneTiles.visible,
-      bottomRenderMode: lastBottomRenderMode
-    }),
-    hit: (x: number, y: number) =>
-      getHeroCardUnderPointer({ clientX: x, clientY: y } as MouseEvent)?.card.title ?? null,
-    cardQuads: () => {
-      const camera = resolveCamera(tres.camera)
-      const canvas =
-        cardClickCanvas ??
-        rendererRef?.domElement ??
-        document.querySelector<HTMLCanvasElement>('.hero-canvas')
-      if (!camera || !canvas) return []
-      const rect = canvas.getBoundingClientRect()
-      return heroCardItems
-        .filter((item) => item.holder.visible)
-        .map((item) => {
-          const pts = cardHitboxCorners.map((corner) => {
-            cardHitboxWorld.copy(corner)
-            item.coreMesh.localToWorld(cardHitboxWorld)
-            cardHitboxProjected.copy(cardHitboxWorld).project(camera)
-            return {
-              x: (cardHitboxProjected.x * 0.5 + 0.5) * rect.width + rect.left,
-              y: (-cardHitboxProjected.y * 0.5 + 0.5) * rect.height + rect.top
+        return { rx: EMBRYO_ROT_X, ry: EMBRYO_ROT_Y, rz: EMBRYO_ROT_Z, s: EMBRYO_SCALE_MUL }
+      },
+      // 即時試守宮定角：__hero.geckoRot(y, x, z)（弧度）。回傳目前值。
+      geckoRot(y?: number, x?: number, z?: number) {
+        wakeBottomRender()
+        if (typeof y === 'number') GECKO_REST_ROT_Y = y
+        if (typeof x === 'number') GECKO_REST_ROT_X = x
+        if (typeof z === 'number') GECKO_REST_ROT_Z = z
+        return { y: GECKO_REST_ROT_Y, x: GECKO_REST_ROT_X, z: GECKO_REST_ROT_Z }
+      },
+      scene3(c = 0, n = 0, p = 0) {
+        wakeBottomRender()
+        targetTimeline = scene3HoldTimeline
+        currentTimeline = scene3HoldTimeline
+        targetCardOrbit = c
+        currentCardOrbit = c
+        targetNextSceneProgress = n
+        currentNextSceneProgress = n
+        targetPlaceholderProgress = p
+        currentPlaceholderProgress = p
+      },
+      breaks: () => timelineBreaks,
+      cardMax: () => cardOrbitMax,
+      // Debug：即時改所有卡片材質（找亮度/透明度來源用）
+      setCard(p: Record<string, unknown>) {
+        for (const it of heroCardItems) {
+          Object.assign(it.coreMat, p)
+          it.coreMat.needsUpdate = true
+        }
+        return 'ok'
+      },
+      // Debug：讀上一幀 renderer 統計（找卡頓來源用）
+      info: () => {
+        const r = rendererRef
+        return r
+          ? {
+              calls: r.info.render.calls,
+              triangles: r.info.render.triangles,
+              programs: r.info.programs?.length ?? 0
             }
+          : null
+      },
+      costs: () => {
+        const rows: { name: string; type: string; triangles: number }[] = []
+        group.traverse((object) => {
+          const drawable = object as THREE.Mesh & { count?: number; isInstancedMesh?: boolean }
+          if (!drawable.geometry) return
+          let ancestor: THREE.Object3D | null = drawable
+          while (ancestor) {
+            if (!ancestor.visible) return
+            ancestor = ancestor.parent
+          }
+          const geometry = drawable.geometry as THREE.BufferGeometry
+          const triangleCount = geometry.index
+            ? geometry.index.count / 3
+            : (geometry.getAttribute('position')?.count ?? 0) / 3
+          const instances = drawable.isInstancedMesh ? (drawable.count ?? 1) : 1
+          rows.push({
+            name: drawable.name || drawable.parent?.name || '(unnamed)',
+            type: drawable.type,
+            triangles: Math.round(triangleCount * instances)
           })
-          return { title: item.card.title, front: item.front, pts }
         })
+        return rows.sort((a, b) => b.triangles - a.triangles).slice(0, 16)
+      },
+      state: () => ({
+        targetHeroScrollProgress,
+        currentHeroScrollProgress,
+        targetTimeline,
+        currentTimeline,
+        targetCardOrbit,
+        currentCardOrbit,
+        targetNextSceneProgress,
+        currentNextSceneProgress,
+        targetPlaceholderProgress,
+        currentPlaceholderProgress,
+        targetRotationY,
+        currentRotationY,
+        geckoRotationY: geckoGroup.rotation.y,
+        geckoVariant:
+          loadedModel === geckoMobileModel ? 'mobile-lod' : loadedModel ? 'desktop' : 'loading',
+        backboneVariant:
+          loadedBackboneModel === backboneMobileVariant?.model
+            ? 'mobile-lod'
+            : loadedBackboneModel
+              ? 'desktop'
+              : 'loading',
+        embryoVariant:
+          embryoModelHolder === embryoMobileModelHolder
+            ? 'mobile-lod'
+            : embryoModelHolder
+              ? 'desktop'
+              : 'fallback',
+        heroCardsVisible: heroCardsGroup.visible,
+        heroCardItems: heroCardItems.length,
+        heroCardVisibleHolders: heroCardItems.filter((item) => item.holder.visible).length,
+        heroCardHitMeshes: heroCardHitMeshes.length,
+        cardInteractionReady,
+        cardOrbitUnlockedNow,
+        responsiveHoverEffects,
+        dnaTilesVisible: dnaTiles.visible,
+        boneTilesVisible: boneTiles.visible,
+        bottomRenderMode: lastBottomRenderMode
+      }),
+      hit: (x: number, y: number) =>
+        getHeroCardUnderPointer({ clientX: x, clientY: y } as MouseEvent)?.card.title ?? null,
+      cardQuads: () => {
+        const camera = resolveCamera(tres.camera)
+        const canvas =
+          cardClickCanvas ??
+          rendererRef?.domElement ??
+          document.querySelector<HTMLCanvasElement>('.hero-canvas')
+        if (!camera || !canvas) return []
+        const rect = canvas.getBoundingClientRect()
+        return heroCardItems
+          .filter((item) => item.holder.visible)
+          .map((item) => {
+            const pts = cardHitboxCorners.map((corner) => {
+              cardHitboxWorld.copy(corner)
+              item.coreMesh.localToWorld(cardHitboxWorld)
+              cardHitboxProjected.copy(cardHitboxWorld).project(camera)
+              return {
+                x: (cardHitboxProjected.x * 0.5 + 0.5) * rect.width + rect.left,
+                y: (-cardHitboxProjected.y * 0.5 + 0.5) * rect.height + rect.top
+              }
+            })
+            return { title: item.card.title, front: item.front, pts }
+          })
+      }
     }
   }
 })
@@ -7700,6 +7790,12 @@ onMounted(async () => {
 onUnmounted(() => {
   setBottomRenderMode('always')
   removeHeroPerf()
+  if (import.meta.dev && typeof window !== 'undefined') {
+    const win = window as unknown as { __hero?: unknown; __heroBuild?: string }
+    delete win.__hero
+    delete win.__heroBuild
+  }
+  unbindInputCapabilityMedia()
   if (responsiveInitFrame) window.cancelAnimationFrame(responsiveInitFrame)
   if (responsiveResizeFrame) window.cancelAnimationFrame(responsiveResizeFrame)
   canvasResizeObserver?.disconnect()
