@@ -9,7 +9,6 @@ interface JourneySegment {
 
 const props = defineProps<{
   progress: number
-  // 仍接收但目前視覺不使用分段，保留給未來需要時使用。
   segments?: JourneySegment[]
 }>()
 
@@ -33,12 +32,30 @@ let resizeObserver: ResizeObserver | null = null
 let raf = 0
 let smoothProgress = 0
 
+const SEGMENT_LABELS: Record<string, string> = {
+  scene01: 'DNA 起始場景',
+  transition: '骨幹轉場',
+  scene03: '基因卡片場景',
+  cards: '功能入口卡片',
+  next: '終章準備',
+  placeholder: '終章行動入口'
+}
+
 function clamp01(v: number) {
   return v < 0 ? 0 : v > 1 ? 1 : v
 }
 
 function targetProgress() {
   return clamp01(dragProgress ?? props.progress ?? 0)
+}
+
+function currentSegmentLabel() {
+  const segment = (props.segments ?? []).find((item) => targetProgress() <= item.end + 0.0001)
+  return segment ? (SEGMENT_LABELS[segment.key] ?? segment.key) : 'Hero Lab 旅程'
+}
+
+function accessibleProgressLabel() {
+  return `${currentSegmentLabel()}，${Math.round(targetProgress() * 100)}%`
 }
 
 function progressFromEvent(event: PointerEvent) {
@@ -77,6 +94,12 @@ function onPointerUp(event: PointerEvent) {
   } catch {
     /* noop */
   }
+}
+
+function onAccessibleInput(event: Event) {
+  const input = event.currentTarget as HTMLInputElement | null
+  if (!input) return
+  emit('scrub', clamp01(Number(input.value)))
 }
 
 const VERT = /* glsl */ `
@@ -238,11 +261,12 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="hsp" aria-hidden="true">
-    <canvas ref="canvasRef" class="hsp__canvas" />
+  <div class="hsp">
+    <canvas ref="canvasRef" class="hsp__canvas" aria-hidden="true" />
     <div
       ref="hitRef"
       class="hsp__hit"
+      aria-hidden="true"
       @pointerenter="onPointerEnter"
       @pointerleave="onPointerLeave"
       @pointerdown="onPointerDown"
@@ -250,6 +274,21 @@ onBeforeUnmount(() => {
       @pointerup="onPointerUp"
       @pointercancel="onPointerUp"
     />
+    <div class="hsp__a11y">
+      <label for="hero-lab-progress">Hero Lab 旅程進度</label>
+      <input
+        id="hero-lab-progress"
+        type="range"
+        min="0"
+        max="1"
+        step="0.001"
+        :value="targetProgress()"
+        :aria-valuetext="accessibleProgressLabel()"
+        :aria-label="accessibleProgressLabel()"
+        @input="onAccessibleInput"
+      />
+      <span aria-live="polite">{{ currentSegmentLabel() }}</span>
+    </div>
   </div>
 </template>
 
@@ -284,12 +323,52 @@ onBeforeUnmount(() => {
   cursor: ns-resize;
 }
 
+.hsp__a11y {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.hsp__a11y:focus-within {
+  z-index: 1;
+  width: min(18rem, calc(100vw - 2rem));
+  height: auto;
+  margin: 0;
+  padding: 0.65rem 0.8rem;
+  overflow: visible;
+  clip: auto;
+  color: #fff;
+  background: rgba(7, 8, 10, 0.92);
+  border: 1px solid rgba(255, 196, 128, 0.72);
+  border-radius: 0.4rem;
+  white-space: normal;
+  pointer-events: auto;
+}
+
+.hsp__a11y label,
+.hsp__a11y span {
+  display: block;
+  font:
+    0.75rem/1.4 'Courier New',
+    Courier,
+    monospace;
+}
+
+.hsp__a11y input {
+  width: 100%;
+  margin: 0.35rem 0;
+}
+
 @media (max-width: 767px), (hover: none), (pointer: coarse) {
   .hsp {
     width: 64px;
   }
   .hsp__hit {
-    width: 30px;
+    width: 44px;
   }
 }
 </style>

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
 import { onBeforeRouteLeave } from 'vue-router'
 import DnaGeckoParticles from '@/components/DnaGeckoParticles.vue'
 import GalleryGlitchScreen from '@/components/GalleryGlitchScreen.vue'
@@ -10,6 +10,7 @@ interface HeroGalleryCard {
   color: string
   accent: string
   video: string
+  atlasIndex: number
   to: string
   year: string
   kind: string
@@ -51,9 +52,16 @@ const bloomThreshold = computed(
 ) // 手機只保留高亮邊緣，桌面維持原本閾值。
 const journeySegments = ref<{ key: string; end: number }[]>([])
 const selectedCard = ref<HeroGalleryCard | null>(null)
+const galleryVideoUsesAtlas = import.meta.env.VITE_HERO_CARD_ATLAS === 'true'
+const HERO_CARD_ATLAS_VIDEO_URL = '/previews/hero-card-atlas.mp4'
+const HERO_CARD_ATLAS_MOBILE_VIDEO_URL = '/previews/hero-card-atlas-mobile.mp4'
 const isGalleryExiting = ref(false)
 const galleryTransitionKey = ref(0)
+const galleryDialogRef = ref<HTMLElement | null>(null)
+const galleryCloseRef = ref<HTMLButtonElement | null>(null)
+const heroAccessibleNavRef = ref<HTMLElement | null>(null)
 let closeGalleryTimer: ReturnType<typeof setTimeout> | null = null
+let galleryFocusFrame = 0
 let nativeScrollFrame = 0
 let lastNativeScrollProgress = Number.NaN
 let initialStartClampFrame = 0
@@ -61,6 +69,40 @@ let initialStartClampTimer: number | null = null
 let initialStartClampUntil = 0
 let finaleNavigationPending = false
 let compactViewportMedia: MediaQueryList | null = null
+let galleryReturnFocus: HTMLElement | null = null
+
+const galleryVideoSource = computed(() => {
+  const card = selectedCard.value
+  if (!card) return ''
+  if (!galleryVideoUsesAtlas) return card.video
+  return compactViewport.value ? HERO_CARD_ATLAS_MOBILE_VIDEO_URL : HERO_CARD_ATLAS_VIDEO_URL
+})
+
+const galleryVideoStyle = computed(() => {
+  const card = selectedCard.value
+  if (!card || !galleryVideoUsesAtlas) return undefined
+  const column = card.atlasIndex % 4
+  const row = card.atlasIndex < 4 ? 0 : 1
+  return {
+    width: '400%',
+    height: '200%',
+    maxWidth: 'none',
+    objectFit: 'fill' as const,
+    transform: `translate(${-column * 25}%, ${-row * 50}%)`
+  }
+})
+
+const heroAccessibleDestinations = [
+  { title: '飼養指南', to: '/care' },
+  { title: '專欄文章', to: '/articles' },
+  { title: '信任保證', to: '/why-gencko' },
+  { title: '種群展示', to: '/breeders' },
+  { title: '選購守宮', to: '/shop' },
+  { title: '基因圖鑑', to: '/genes' },
+  { title: '基因計算', to: '/calculator' },
+  { title: '特寵醫院', to: '/hospital' },
+  { title: '新手入門', to: '/start-here' }
+]
 
 const HERO_FORCE_START_EVENT = 'hero-lab:force-start'
 
@@ -181,6 +223,10 @@ function syncCompactViewport() {
 }
 
 function selectHeroCard(card: HeroGalleryCard) {
+  galleryReturnFocus =
+    document.activeElement instanceof HTMLElement && document.activeElement !== document.body
+      ? document.activeElement
+      : null
   if (closeGalleryTimer) {
     clearTimeout(closeGalleryTimer)
     closeGalleryTimer = null
@@ -188,10 +234,26 @@ function selectHeroCard(card: HeroGalleryCard) {
   isGalleryExiting.value = false
   galleryTransitionKey.value += 1
   selectedCard.value = card
+  if (galleryFocusFrame) window.cancelAnimationFrame(galleryFocusFrame)
+  void nextTick(() => {
+    const focusCloseButton = () => galleryCloseRef.value?.focus({ preventScroll: true })
+    focusCloseButton()
+    // 觸控瀏覽器可能在 Vue 更新後才把焦點放回 tap 目標，下一幀再校正一次。
+    galleryFocusFrame = window.requestAnimationFrame(() => {
+      galleryFocusFrame = window.requestAnimationFrame(() => {
+        focusCloseButton()
+        galleryFocusFrame = 0
+      })
+    })
+  })
 }
 
 function closeGalleryScene(lockReverse = true) {
   if (!selectedCard.value || isGalleryExiting.value) return
+  if (galleryFocusFrame) {
+    window.cancelAnimationFrame(galleryFocusFrame)
+    galleryFocusFrame = 0
+  }
   isGalleryExiting.value = true
   galleryTransitionKey.value += 1
   if (closeGalleryTimer) clearTimeout(closeGalleryTimer)
@@ -199,7 +261,44 @@ function closeGalleryScene(lockReverse = true) {
     selectedCard.value = null
     isGalleryExiting.value = false
     closeGalleryTimer = null
+    void nextTick(() => {
+      if (galleryReturnFocus?.isConnected) galleryReturnFocus.focus()
+      else heroAccessibleNavRef.value?.focus()
+      galleryReturnFocus = null
+    })
   }, 820)
+}
+
+function onGalleryKeydown(event: KeyboardEvent) {
+  if (event.key === 'Escape') {
+    event.preventDefault()
+    closeGalleryScene(true)
+    return
+  }
+  if (event.key !== 'Tab') return
+
+  const dialog = galleryDialogRef.value
+  if (!dialog) return
+  const focusable = Array.from(
+    dialog.querySelectorAll<HTMLElement>(
+      'button, a, input, select, textarea, video, [tabindex]:not([tabindex="-1"])'
+    )
+  ).filter((element) => !element.hasAttribute('disabled') && element.getClientRects().length > 0)
+  if (focusable.length === 0) {
+    event.preventDefault()
+    dialog.focus()
+    return
+  }
+
+  const first = focusable[0]
+  const last = focusable[focusable.length - 1]
+  if (event.shiftKey && document.activeElement === first) {
+    event.preventDefault()
+    last.focus()
+  } else if (!event.shiftKey && document.activeElement === last) {
+    event.preventDefault()
+    first.focus()
+  }
 }
 
 function onGalleryWheel(event: WheelEvent) {
@@ -238,6 +337,8 @@ onBeforeUnmount(() => {
   window.removeEventListener('resize', syncCompactViewport)
   if (closeGalleryTimer) clearTimeout(closeGalleryTimer)
   clearInitialStartClamp()
+  if (galleryFocusFrame) window.cancelAnimationFrame(galleryFocusFrame)
+  galleryFocusFrame = 0
   window.removeEventListener(HERO_FORCE_START_EVENT, forceInitialHeroStart)
   window.removeEventListener('scroll', queueNativeHeroScrollSync)
   lastNativeScrollProgress = Number.NaN
@@ -329,13 +430,35 @@ onBeforeUnmount(() => {
       @scrub="onScrub"
     />
 
+    <nav
+      v-if="!selectedCard"
+      ref="heroAccessibleNavRef"
+      class="hero-accessible-nav"
+      tabindex="-1"
+      aria-label="Hero Lab 快速導覽"
+    >
+      <span>Hero Lab 快速導覽</span>
+      <a
+        v-for="destination in heroAccessibleDestinations"
+        :key="destination.to"
+        :href="destination.to"
+      >
+        {{ destination.title }}
+      </a>
+    </nav>
+
     <Transition name="gallery">
       <div
         v-if="selectedCard"
+        ref="galleryDialogRef"
         class="gallery-scene"
         :class="{ 'gallery-scene--exiting': isGalleryExiting }"
         role="dialog"
         aria-modal="true"
+        aria-labelledby="hero-gallery-title"
+        aria-describedby="hero-gallery-description"
+        tabindex="-1"
+        @keydown="onGalleryKeydown"
         @wheel="onGalleryWheel"
       >
         <div class="gallery-noise" aria-hidden="true" />
@@ -344,13 +467,22 @@ onBeforeUnmount(() => {
           class="gallery-transition-canvas"
           :card="selectedCard"
           :mode="isGalleryExiting ? 'exit' : 'enter'"
+          :video-src="galleryVideoSource"
+          :atlas-index="selectedCard.atlasIndex"
+          :use-atlas="galleryVideoUsesAtlas"
         />
         <aside class="gallery-copy">
           <p class="gallery-kicker">GENCKO EXHIBIT</p>
-          <h3>{{ selectedCard.title }}</h3>
+          <h3 id="hero-gallery-title">{{ selectedCard.title }}</h3>
           <p class="gallery-meta">{{ selectedCard.year }} / {{ selectedCard.kind }}</p>
-          <p class="gallery-desc">{{ selectedCard.description }}</p>
-          <button class="gallery-close" type="button" @click="closeGalleryScene(true)">
+          <p id="hero-gallery-description" class="gallery-desc">{{ selectedCard.description }}</p>
+          <button
+            ref="galleryCloseRef"
+            class="gallery-close"
+            type="button"
+            aria-label="關閉展覽"
+            @click="closeGalleryScene(true)"
+          >
             &lt;- CLOSE
           </button>
         </aside>
@@ -363,9 +495,10 @@ onBeforeUnmount(() => {
           <div class="gallery-screen">
             <div class="gallery-screen__image">
               <video
-                :key="`${selectedCard.title}-${galleryTransitionKey}`"
+                :key="`${selectedCard.title}-${galleryTransitionKey}-${compactViewport ? 'mobile' : 'desktop'}`"
                 class="gallery-screen__video"
-                :src="selectedCard.video"
+                :src="galleryVideoSource"
+                :style="galleryVideoStyle"
                 autoplay
                 muted
                 loop
@@ -489,6 +622,61 @@ onBeforeUnmount(() => {
   font-family: 'Courier New', Courier, monospace;
   font-size: 1rem;
   letter-spacing: 0.34em;
+}
+
+.hero-accessible-nav {
+  position: fixed;
+  top: 1rem;
+  left: 1rem;
+  z-index: 7000;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.hero-accessible-nav:focus-within,
+.hero-accessible-nav:focus {
+  width: min(28rem, calc(100vw - 2rem));
+  height: auto;
+  padding: 0.7rem;
+  overflow: visible;
+  clip: auto;
+  white-space: normal;
+  background: rgba(7, 8, 10, 0.94);
+  border: 1px solid rgba(255, 196, 128, 0.72);
+  border-radius: 0.45rem;
+}
+
+.hero-accessible-nav span {
+  width: 100%;
+  color: rgba(255, 214, 166, 0.92);
+  font:
+    0.72rem/1.4 'Courier New',
+    Courier,
+    monospace;
+  letter-spacing: 0.08em;
+}
+
+.hero-accessible-nav a {
+  color: #fff;
+  font-size: 0.8rem;
+  line-height: 1.4;
+  text-decoration: underline;
+  text-underline-offset: 0.18em;
+}
+
+.hero-accessible-nav:not(:focus-within):not(:focus) span,
+.hero-accessible-nav:not(:focus-within):not(:focus) a {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
 }
 
 .finale-action-grid {
@@ -776,6 +964,29 @@ onBeforeUnmount(() => {
   text-decoration: underline;
   text-underline-offset: 0.22em;
   cursor: pointer;
+}
+
+.gallery-close:focus-visible,
+.hero-accessible-nav a:focus-visible,
+.hero-accessible-nav:focus-visible {
+  outline: 2px solid #ffc480;
+  outline-offset: 4px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .scroll-cue__line,
+  .gallery-noise,
+  .gallery-screen__image::before,
+  .gallery-transition-canvas,
+  .gallery-enter-active .gallery-projector,
+  .gallery-enter-active .gallery-copy {
+    animation: none;
+  }
+
+  .gallery-enter-active,
+  .gallery-leave-active {
+    transition-duration: 1ms;
+  }
 }
 
 .gallery-projector {
@@ -1405,9 +1616,26 @@ onBeforeUnmount(() => {
     animation-duration: 0.68s;
   }
 
+  /* 手機直接從置中位置進場，避免先從上方偏位再回到螢幕中心。 */
+  .gallery-enter-active .gallery-projector {
+    animation-name: galleryScreenInMobile;
+  }
+
   .gallery-enter-active,
   .gallery-leave-active {
     transition-duration: 0.34s;
+  }
+
+  @keyframes galleryScreenInMobile {
+    from {
+      opacity: 0;
+      transform: translate(-50%, -50%) perspective(900px) rotateY(-3deg) rotateX(1deg) scale(0.86);
+    }
+
+    to {
+      opacity: 1;
+      transform: translate(-50%, -50%) perspective(900px) rotateY(-3deg) rotateX(1deg) scale(1);
+    }
   }
 }
 </style>

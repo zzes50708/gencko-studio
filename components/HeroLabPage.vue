@@ -165,8 +165,8 @@ onBeforeUnmount(() => {
 
 .hero-lab-home-link {
   position: fixed;
-  top: 18px;
-  right: 24px;
+  top: max(18px, calc(env(safe-area-inset-top) + 8px));
+  right: max(24px, calc(env(safe-area-inset-right) + 12px));
   z-index: 3600;
   text-decoration: none;
 }
@@ -192,8 +192,8 @@ onBeforeUnmount(() => {
   }
 
   .hero-lab-home-link {
-    top: 12px;
-    right: 12px;
+    top: max(12px, calc(env(safe-area-inset-top) + 8px));
+    right: max(12px, calc(env(safe-area-inset-right) + 8px));
   }
 }
 

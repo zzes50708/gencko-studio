@@ -15,6 +15,8 @@ export interface CyberpunkGlitchTransitionMaterial extends THREE.ShaderMaterial 
   uniforms: {
     uTextureA: { value: THREE.Texture | null }
     uTextureB: { value: THREE.Texture | null }
+    uTextureBOffset: { value: THREE.Vector2 }
+    uTextureBScale: { value: THREE.Vector2 }
     uProgress: { value: number }
     uTime: { value: number }
     uDisplacementStrength: { value: number }
@@ -31,6 +33,8 @@ export function createCyberpunkGlitchTransitionMaterial(
     uniforms: {
       uTextureA: { value: options.textureA ?? null },
       uTextureB: { value: options.textureB ?? null },
+      uTextureBOffset: { value: new THREE.Vector2(0, 0) },
+      uTextureBScale: { value: new THREE.Vector2(1, 1) },
       uProgress: { value: options.progress ?? 0 },
       uTime: { value: options.time ?? 0 },
       uDisplacementStrength: { value: options.displacementStrength ?? 0.11 },
@@ -52,6 +56,8 @@ export function createCyberpunkGlitchTransitionMaterial(
     fragmentShader: /* glsl */ `
       uniform sampler2D uTextureA;
       uniform sampler2D uTextureB;
+      uniform vec2 uTextureBOffset;
+      uniform vec2 uTextureBScale;
       uniform float uProgress;
       uniform float uTime;
       uniform float uDisplacementStrength;
@@ -144,7 +150,9 @@ export function createCyberpunkGlitchTransitionMaterial(
         vec2 rgbOffset = vec2(uRgbSplitStrength * (0.35 + sliceGate + edgeBand) * transitionPulse, 0.0);
 
         vec3 fromColor = sampleRgbSplit(uTextureA, displacedUv - rgbOffset * 0.4, rgbOffset);
-        vec3 toColor = sampleRgbSplit(uTextureB, displacedUv + rgbOffset * 0.4, -rgbOffset);
+        vec2 videoUv = displacedUv * uTextureBScale + uTextureBOffset;
+        vec2 videoSplit = rgbOffset * uTextureBScale.x;
+        vec3 toColor = sampleRgbSplit(uTextureB, videoUv + videoSplit * 0.4, -videoSplit);
         vec3 color = mix(fromColor, toColor, wipe);
 
         vec3 cyberGlow = vec3(0.0, 0.95, 1.0) * edgeBand * 0.18;

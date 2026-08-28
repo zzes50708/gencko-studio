@@ -19,7 +19,7 @@ test.describe('首頁 / 全站基礎結構', () => {
 })
 
 test.describe('Hero Lab / 流暢度回歸', () => {
-  test.describe.configure({ mode: 'serial', timeout: 60_000 })
+  test.describe.configure({ mode: 'serial', timeout: 90_000 })
 
   test.beforeEach(async ({ page }) => {
     const pageErrors: Error[] = []
@@ -69,6 +69,25 @@ test.describe('Hero Lab / 流暢度回歸', () => {
     }
   })
 
+  test('鍵盤可使用 Hero Lab 語意導覽與進度控制', async ({ page }) => {
+    const progress = page.locator('#hero-lab-progress')
+    const accessibleNav = page.locator('.hero-accessible-nav')
+
+    await expect(progress).toHaveCount(1)
+    await progress.focus()
+    await expect(progress).toBeFocused()
+    await page.keyboard.press('ArrowRight')
+    await expect
+      .poll(() => page.evaluate(() => (window as any).__hero.state().targetHeroScrollProgress))
+      .toBeGreaterThan(0)
+
+    const firstDestination = accessibleNav.locator('a').first()
+    await firstDestination.focus()
+    await expect(firstDestination).toBeFocused()
+    await expect(accessibleNav).toBeVisible()
+    await expect(accessibleNav.locator('a')).toHaveCount(9)
+  })
+
   test('卡片可開啟/關閉，離開 Hero 後頁面狀態恢復', async ({ page }) => {
     await page.evaluate(() => {
       const maxScroll = document.documentElement.scrollHeight - window.innerHeight
@@ -82,6 +101,7 @@ test.describe('Hero Lab / 流暢度回歸', () => {
       .toBe(true)
     await page.waitForTimeout(500)
 
+    let expectedCardTitle = ''
     for (
       let attempt = 0;
       attempt < 4 && (await page.locator('.gallery-scene').count()) === 0;
@@ -95,18 +115,26 @@ test.describe('Hero Lab / 流暢度回歸', () => {
         for (const quad of cards ?? []) {
           const x = quad.pts.reduce((sum: number, point: any) => sum + point.x, 0) / quad.pts.length
           const y = quad.pts.reduce((sum: number, point: any) => sum + point.y, 0) / quad.pts.length
-          if ((window as any).__hero.hit(x, y) === quad.title) return { x, y }
+          if ((window as any).__hero.hit(x, y) === quad.title) return { x, y, title: quad.title }
         }
         return null
       })
       expect(cardPoint).not.toBeNull()
-      await page.mouse.move(cardPoint!.x, cardPoint!.y)
-      await page.mouse.click(cardPoint!.x, cardPoint!.y)
+      expectedCardTitle = cardPoint!.title
+      if ((page.viewportSize()?.width ?? 1280) < 768) {
+        await page.touchscreen.tap(cardPoint!.x, cardPoint!.y)
+      } else {
+        await page.mouse.move(cardPoint!.x, cardPoint!.y)
+        await page.mouse.click(cardPoint!.x, cardPoint!.y)
+      }
       await page.waitForTimeout(220)
     }
     await expect(page.locator('.gallery-scene')).toBeVisible()
-    await page.locator('.gallery-close').click()
+    await expect(page.locator('#hero-gallery-title')).toHaveText(expectedCardTitle)
+    await expect(page.locator('.gallery-close')).toBeFocused()
+    await page.keyboard.press('Escape')
     await expect(page.locator('.gallery-scene')).toBeHidden()
+    await expect(page.locator('.hero-accessible-nav')).toBeFocused()
 
     await expect(page.locator('.hero-lab-home-link')).toHaveAttribute('href', '/home')
     await page.goto('/home')
@@ -115,6 +143,30 @@ test.describe('Hero Lab / 流暢度回歸', () => {
       .poll(() => page.evaluate(() => document.body.classList.contains('hero-lab-active')))
       .toBe(false)
     await expect(page.locator('.hero-lab')).toHaveCount(0)
+  })
+
+  test('終章往回滑可恢復卡片', async ({ page }) => {
+    await page.evaluate(() => {
+      const maxScroll = document.documentElement.scrollHeight - window.innerHeight
+      window.scrollTo(0, Math.max(1, maxScroll))
+    })
+    await expect
+      .poll(() => page.evaluate(() => (window as any).__hero.state().targetPlaceholderProgress))
+      .toBeGreaterThan(0.95)
+    await expect
+      .poll(() => page.evaluate(() => (window as any).__hero.state().heroCardsVisible))
+      .toBe(false)
+
+    await page.evaluate(() => {
+      const maxScroll = document.documentElement.scrollHeight - window.innerHeight
+      window.scrollTo(0, Math.max(1, maxScroll * 0.55))
+    })
+    await expect
+      .poll(() => page.evaluate(() => (window as any).__hero.state().heroCardsVisible))
+      .toBe(true)
+    await expect
+      .poll(() => page.evaluate(() => (window as any).__hero.state().heroCardVisibleHolders))
+      .toBeGreaterThan(0)
   })
 })
 

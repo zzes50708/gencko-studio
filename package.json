@@ -21,6 +21,8 @@
     "db:types": "npx supabase gen types typescript --project-id sfndneptcwhblvrxykcy > types/supabase.ts",
     "test": "vitest run",
     "test:watch": "vitest",
+    "capture:hero-atlas": "node scripts/capture-hero-card-clips.mjs",
+    "compose:hero-atlas": "node scripts/compose-hero-card-atlas.mjs",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui"
   },

@@ -3254,6 +3254,7 @@ interface HeroCard {
   color: string
   accent: string
   video: string
+  atlasIndex: number
   to: string
   year: string
   kind: string
@@ -3269,12 +3270,18 @@ interface HeroCardHitbox {
 }
 
 const HERO_CARD_SAMPLE_VIDEO_URL = '/previews/hero-card-sample.mp4'
+const HERO_CARD_ATLAS_VIDEO_URL = '/previews/hero-card-atlas.mp4'
+const HERO_CARD_ATLAS_MOBILE_VIDEO_URL = '/previews/hero-card-atlas-mobile.mp4'
+const HERO_CARD_ATLAS_COLUMNS = 4
+const HERO_CARD_ATLAS_ROWS = 2
+const HERO_CARD_ATLAS_ENABLED = import.meta.env.VITE_HERO_CARD_ATLAS === 'true'
 
 const HERO_CARDS: HeroCard[] = [
   {
     title: '飼養指南',
     color: '#d88a48',
     accent: '#6f96c7',
+    atlasIndex: 0,
     to: '/care',
     year: '2026',
     kind: 'HUSBANDRY / KNOWLEDGE',
@@ -3284,6 +3291,7 @@ const HERO_CARDS: HeroCard[] = [
     title: '專欄文章',
     color: '#dc7d43',
     accent: '#c45a88',
+    atlasIndex: 1,
     to: '/articles',
     year: '2026',
     kind: 'EDITORIAL / FIELD NOTES',
@@ -3294,6 +3302,7 @@ const HERO_CARDS: HeroCard[] = [
     title: '信任保證',
     color: '#d69a52',
     accent: '#69aa94',
+    atlasIndex: 2,
     to: '/why-gencko',
     year: '2026',
     kind: 'TRUST / STANDARD',
@@ -3303,6 +3312,7 @@ const HERO_CARDS: HeroCard[] = [
     title: '種群展示',
     color: '#e08b3f',
     accent: '#b8a45a',
+    atlasIndex: 3,
     to: '/breeders',
     year: '2026',
     kind: 'BREEDERS / LINEAGE',
@@ -3312,6 +3322,7 @@ const HERO_CARDS: HeroCard[] = [
     title: '選購守宮',
     color: '#d87546',
     accent: '#9a677f',
+    atlasIndex: 4,
     to: '/shop',
     year: '2026',
     kind: 'SHOP / CURATION',
@@ -3321,6 +3332,7 @@ const HERO_CARDS: HeroCard[] = [
     title: '基因圖鑑',
     color: '#da8446',
     accent: '#7f9fd0',
+    atlasIndex: 5,
     to: '/genes',
     year: '2026',
     kind: 'GENETICS / INDEX',
@@ -3330,6 +3342,7 @@ const HERO_CARDS: HeroCard[] = [
     title: '基因計算',
     color: '#dd7d3f',
     accent: '#c9688d',
+    atlasIndex: 6,
     to: '/calculator',
     year: '2026',
     kind: 'TOOLS / CALCULATION',
@@ -3339,6 +3352,7 @@ const HERO_CARDS: HeroCard[] = [
     title: '特寵醫院',
     color: '#d8954d',
     accent: '#72a996',
+    atlasIndex: 7,
     to: '/hospital',
     year: '2026',
     kind: 'VET / SUPPORT MAP',
@@ -3359,6 +3373,8 @@ const cardRingY = 0.08 // 第一張正面時基準高度
 const cardVerticalSlope = 0.48 // 相位每推進 1 rad 時沿 Y 軸抬升距離
 const heroCardsGroup = new THREE.Group()
 const cardPreviewVideo = typeof document !== 'undefined' ? document.createElement('video') : null
+let cardPreviewUsesAtlas = false
+let cardPreviewAtlasSource = ''
 const cardPreviewTexture = cardPreviewVideo
   ? new THREE.VideoTexture(cardPreviewVideo)
   : new THREE.Texture()
@@ -3370,6 +3386,7 @@ if (cardPreviewVideo) {
   cardPreviewVideo.playsInline = true
   cardPreviewVideo.preload = 'auto'
   cardPreviewVideo.setAttribute('playsinline', '')
+  cardPreviewVideo.addEventListener('error', onCardPreviewVideoError)
   cardPreviewTexture.colorSpace = THREE.SRGBColorSpace
   cardPreviewTexture.minFilter = THREE.LinearFilter
   cardPreviewTexture.magFilter = THREE.LinearFilter
@@ -3402,6 +3419,58 @@ const cardHitboxCorners = [
 ]
 const cardHitboxWorld = new THREE.Vector3()
 const cardHitboxProjected = new THREE.Vector3()
+
+function getCardVideoAtlasTransform(index: number) {
+  if (!cardPreviewUsesAtlas) {
+    return { offsetX: 0, offsetY: 0, scaleX: 1, scaleY: 1 }
+  }
+  const tileWidth = 1 / HERO_CARD_ATLAS_COLUMNS
+  const tileHeight = 1 / HERO_CARD_ATLAS_ROWS
+  const column = index % HERO_CARD_ATLAS_COLUMNS
+  const row = Math.floor(index / HERO_CARD_ATLAS_COLUMNS)
+  return {
+    offsetX: column * tileWidth,
+    // atlas 第 0 列需放在 texture UV 的底列。
+    offsetY: (HERO_CARD_ATLAS_ROWS - 1 - row) * tileHeight,
+    scaleX: tileWidth,
+    scaleY: tileHeight
+  }
+}
+
+function syncCardVideoAtlasUniforms() {
+  for (const item of heroCardItems) {
+    const atlas = getCardVideoAtlasTransform(item.index)
+    item.coreMat.uniforms.uVideoOffset.value.set(atlas.offsetX, atlas.offsetY)
+    item.coreMat.uniforms.uVideoScale.value.set(atlas.scaleX, atlas.scaleY)
+  }
+}
+
+function onCardPreviewVideoError() {
+  if (!cardPreviewVideo || !cardPreviewUsesAtlas) return
+  cardPreviewUsesAtlas = false
+  cardPreviewAtlasSource = ''
+  cardPreviewVideo.src = HERO_CARD_SAMPLE_VIDEO_URL
+  cardPreviewVideo.load()
+  syncCardVideoAtlasUniforms()
+  cardPreviewVideo.play().catch(() => {
+    // 瀏覽器未允許自動播放時，保留既有的使用者互動播放行為。
+  })
+}
+
+function loadCardPreviewAtlas() {
+  if (!cardPreviewVideo || !HERO_CARD_ATLAS_ENABLED) return
+  cardPreviewUsesAtlas = true
+  const compact = window.innerWidth < 768 || cachedTouchViewport
+  const source = compact ? HERO_CARD_ATLAS_MOBILE_VIDEO_URL : HERO_CARD_ATLAS_VIDEO_URL
+  if (cardPreviewAtlasSource === source) return
+  cardPreviewAtlasSource = source
+  cardPreviewVideo.src = source
+  cardPreviewVideo.load()
+  syncCardVideoAtlasUniforms()
+  cardPreviewVideo.play().catch(() => {
+    // 瀏覽器未允許自動播放時，保留既有的使用者互動播放行為。
+  })
+}
 
 function syncActiveHeroCard(card: HeroCard | null) {
   const nextTitle = card?.title ?? ''
@@ -3805,7 +3874,8 @@ function makeProjectionCardGeometry() {
   return geo
 }
 
-function makeProjectionCardVideoMaterial(color: string, accent: string) {
+function makeProjectionCardVideoMaterial(color: string, accent: string, atlasIndex: number) {
+  const atlas = getCardVideoAtlasTransform(atlasIndex)
   const mat = new THREE.ShaderMaterial({
     uniforms: {
       uTime: uniforms.uTime,
@@ -3814,6 +3884,8 @@ function makeProjectionCardVideoMaterial(color: string, accent: string) {
       uEggReveal: uniforms.uEggReveal,
       uEggRes: uniforms.uEggRes,
       uVideo: { value: cardPreviewTexture },
+      uVideoOffset: { value: new THREE.Vector2(atlas.offsetX, atlas.offsetY) },
+      uVideoScale: { value: new THREE.Vector2(atlas.scaleX, atlas.scaleY) },
       uColor: { value: new THREE.Color(color) },
       uAccent: { value: new THREE.Color(accent) },
       uOpacity: { value: 1 },
@@ -3842,6 +3914,8 @@ function makeProjectionCardVideoMaterial(color: string, accent: string) {
       uniform float uEggReveal;
       uniform vec2 uEggRes;
       uniform sampler2D uVideo;
+      uniform vec2 uVideoOffset;
+      uniform vec2 uVideoScale;
       uniform vec3 uColor;
       uniform vec3 uAccent;
       uniform float uOpacity;
@@ -3867,16 +3941,17 @@ function makeProjectionCardVideoMaterial(color: string, accent: string) {
         float reveal = smoothstep(uSeamB + 0.035, uSeamB - 0.01, cardScreenD);
         if (reveal <= 0.001) discard;
 
-        vec2 px = vec2(1.0 / 960.0, 1.0 / 540.0) * 8.0;
-        vec3 frame = texture2D(uVideo, vUv).rgb * 0.18;
-        frame += texture2D(uVideo, vUv + vec2(px.x, 0.0)).rgb * 0.13;
-        frame += texture2D(uVideo, vUv - vec2(px.x, 0.0)).rgb * 0.13;
-        frame += texture2D(uVideo, vUv + vec2(0.0, px.y)).rgb * 0.13;
-        frame += texture2D(uVideo, vUv - vec2(0.0, px.y)).rgb * 0.13;
-        frame += texture2D(uVideo, vUv + px).rgb * 0.075;
-        frame += texture2D(uVideo, vUv - px).rgb * 0.075;
-        frame += texture2D(uVideo, vUv + vec2(px.x, -px.y)).rgb * 0.075;
-        frame += texture2D(uVideo, vUv + vec2(-px.x, px.y)).rgb * 0.075;
+        vec2 videoUv = vUv * uVideoScale + uVideoOffset;
+        vec2 px = uVideoScale * vec2(1.0 / 960.0, 1.0 / 540.0) * 8.0;
+        vec3 frame = texture2D(uVideo, videoUv).rgb * 0.18;
+        frame += texture2D(uVideo, videoUv + vec2(px.x, 0.0)).rgb * 0.13;
+        frame += texture2D(uVideo, videoUv - vec2(px.x, 0.0)).rgb * 0.13;
+        frame += texture2D(uVideo, videoUv + vec2(0.0, px.y)).rgb * 0.13;
+        frame += texture2D(uVideo, videoUv - vec2(0.0, px.y)).rgb * 0.13;
+        frame += texture2D(uVideo, videoUv + px).rgb * 0.075;
+        frame += texture2D(uVideo, videoUv - px).rgb * 0.075;
+        frame += texture2D(uVideo, videoUv + vec2(px.x, -px.y)).rgb * 0.075;
+        frame += texture2D(uVideo, videoUv + vec2(-px.x, px.y)).rgb * 0.075;
 
         float luma = dot(frame, vec3(0.299, 0.587, 0.114));
         vec3 tint = mix(uColor, uAccent, smoothstep(0.16, 0.88, vUv.y));
@@ -3913,7 +3988,7 @@ function buildHeroCards() {
     holder.position.set(0, cardRingY, cardRingRadius) // 位於半徑上、卡面朝外(+Z)
 
     // 影片直接包覆整張有厚度的卡，寫入深度，前方卡片必定遮擋後方卡片。
-    const coreMat = makeProjectionCardVideoMaterial(card.color, card.accent)
+    const coreMat = makeProjectionCardVideoMaterial(card.color, card.accent, i)
     const coreMesh = new THREE.Mesh(coreGeo, coreMat)
     coreMesh.renderOrder = 20
     holder.add(coreMesh)
@@ -6001,6 +6076,13 @@ let responsiveTouchViewport = false
 let responsiveHoverEffects = false
 let responsiveAspect = 1
 let responsivePortraitFactor = 0
+let mobileCardFitScale = 1
+let mobileCardFitWidth = 0
+let mobileCardFitHeight = 0
+let mobileCardFitFov = Number.NaN
+let mobileCardFitCameraZ = Number.NaN
+let mobileCardFitCardZ = Number.NaN
+let mobileCardFitCamera: THREE.PerspectiveCamera | null = null
 let lastTransitionBandLogProgress = Number.NaN
 let lastTransitionBandLogY = Number.NaN
 let lastTransitionBandLogScale = Number.NaN
@@ -6016,6 +6098,7 @@ type CanvasViewportRect = {
   left: number
   top: number
 }
+const stableViewportRect: CanvasViewportRect = { width: 0, height: 0, left: 0, top: 0 }
 let canvasResizeObserver: ResizeObserver | null = null
 let canvasVisibilityObserver: IntersectionObserver | null = null
 let responsiveInitFrame = 0
@@ -6049,6 +6132,7 @@ let cardClickCanvas: HTMLCanvasElement | null = null
 let lastCardPointerAt = 0
 let cardInteractionReady = false
 let finaleActionInteractionReady = false
+let cardsWereRendered = false
 let hoveredHeroCardTitle = ''
 let hoveredFinaleActionTo = ''
 let lastCardMaterialReveal = Number.NaN
@@ -6080,12 +6164,14 @@ function getHeroCanvasRect(): CanvasViewportRect | null {
 
 function getStableViewportRect() {
   if (responsiveViewportWidth > 0 && responsiveViewportHeight > 0) {
-    return {
-      width: responsiveViewportWidth,
-      height: responsiveViewportHeight,
-      left: 0,
-      top: 0
+    if (
+      stableViewportRect.width !== responsiveViewportWidth ||
+      stableViewportRect.height !== responsiveViewportHeight
+    ) {
+      stableViewportRect.width = responsiveViewportWidth
+      stableViewportRect.height = responsiveViewportHeight
     }
+    return stableViewportRect
   }
   return getHeroCanvasRect()
 }
@@ -6102,6 +6188,7 @@ function onInputCapabilitiesChange() {
   const rect = getHeroCanvasRect()
   if (rect) queueResponsiveSceneState(rect, { force: true, refreshScrollTrigger: true })
   else syncParallaxPointerBinding()
+  loadCardPreviewAtlas()
 }
 
 function bindInputCapabilityMedia() {
@@ -6215,6 +6302,7 @@ function onResponsiveViewportResize() {
   if (!rect) return
   queueResponsiveSceneState(rect, { force: true, refreshScrollTrigger: true })
   syncParallaxPointerBinding()
+  loadCardPreviewAtlas()
 }
 
 function bindResponsiveCanvasObserver() {
@@ -6282,6 +6370,7 @@ function syncResponsiveSceneLayout(
   // 不能改動全域相機投影，否則會讓房間超出左右邊界。
   const nextFov = narrowMobile ? THREE.MathUtils.clamp(60 + (1.3 - aspect) * 32, 64, 82) : 55
   const camera = resolvePerspectiveCamera(tres.camera)
+  mobileCardFitCamera = camera
   if (camera && Math.abs(camera.fov - nextFov) > 0.01) {
     camera.fov = nextFov
     camera.updateProjectionMatrix()
@@ -6321,6 +6410,7 @@ function syncResponsiveSceneLayout(
 }
 let cardPointerEventsBound = false
 let cardHoverEventsBound = false
+let cardTapStart: { x: number; y: number; time: number; card: HeroCardItem | null } | null = null
 const SEAM_BAND = 0.85 // Logo 斜帶在 d 座標的寬度（越小越窄）
 type ClipPoint = { x: number; y: number }
 
@@ -6384,14 +6474,30 @@ function getMobileCardFitScale() {
   const width = rect.width
   const height = rect.height
   if (width >= 768) return 1
-  const camera = resolvePerspectiveCamera(tres.camera)
+  const camera = mobileCardFitCamera ?? resolvePerspectiveCamera(tres.camera)
+  if (camera && !mobileCardFitCamera) mobileCardFitCamera = camera
   const fov = camera?.fov ?? 55
   const cameraZ = camera?.position.z ?? 7
   const cardZ = heroCardsGroup.position.z + cardRingRadius
+  if (
+    width === mobileCardFitWidth &&
+    height === mobileCardFitHeight &&
+    fov === mobileCardFitFov &&
+    cameraZ === mobileCardFitCameraZ &&
+    cardZ === mobileCardFitCardZ
+  ) {
+    return mobileCardFitScale
+  }
   const distance = Math.max(1, Math.abs(cameraZ - cardZ))
   const viewHeight = 2 * Math.tan(THREE.MathUtils.degToRad(fov) * 0.5) * distance
   const viewWidth = viewHeight * (width / height)
-  return THREE.MathUtils.clamp((viewWidth * 0.84) / CARD_W, 0.24, 1)
+  mobileCardFitWidth = width
+  mobileCardFitHeight = height
+  mobileCardFitFov = fov
+  mobileCardFitCameraZ = cameraZ
+  mobileCardFitCardZ = cardZ
+  mobileCardFitScale = THREE.MathUtils.clamp((viewWidth * 0.84) / CARD_W, 0.24, 1)
+  return mobileCardFitScale
 }
 
 function syncTransitionBandMesh(_progress: number, _bandActiveOverride?: boolean) {
@@ -6402,7 +6508,7 @@ function syncTransitionBandMesh(_progress: number, _bandActiveOverride?: boolean
   transitionBandMesh.scale.set(1, 1, 1)
 }
 
-function getHeroCardUnderPointer(event: MouseEvent | PointerEvent) {
+function getHeroCardUnderPointer(event: MouseEvent | PointerEvent, preferProjected = false) {
   if (!cardInteractionReady || !heroCardsGroup.visible) return null
   const camera = resolveCamera(tres.camera)
   if (!camera) return null
@@ -6434,7 +6540,7 @@ function getHeroCardUnderPointer(event: MouseEvent | PointerEvent) {
     return card && card.holder.visible
   })
   const raycastHit = hit ? (heroCardByMesh.get(hit.object) ?? null) : null
-  if (raycastHit) return raycastHit
+  if (raycastHit && !preferProjected) return raycastHit
 
   let fallbackHit: HeroCardItem | null = null
   let fallbackScore = -Infinity
@@ -6446,7 +6552,7 @@ function getHeroCardUnderPointer(event: MouseEvent | PointerEvent) {
       fallbackHit = item
     }
   }
-  return fallbackHit
+  return fallbackHit ?? raycastHit
 }
 
 function isPointInsideProjectedCard(
@@ -6561,7 +6667,7 @@ function isNativeInteractiveTarget(event: MouseEvent | PointerEvent) {
   )
 }
 
-function onCardClick(event: MouseEvent | PointerEvent) {
+function onCardClick(event: MouseEvent | PointerEvent, preferredCard: HeroCardItem | null = null) {
   if (document.querySelector('.gallery-scene')) return
   // DOM 導覽/按鈕優先，避免 canvas 下方的 3D hit-test 攔截既有 UI 行為。
   if (isNativeInteractiveTarget(event)) return
@@ -6575,13 +6681,48 @@ function onCardClick(event: MouseEvent | PointerEvent) {
     emit('finale-action', finaleAction.to)
     return
   }
-  const card = getHeroCardUnderPointer(event)
+  // 卡片會持續繞行，優先使用 pointerdown/最近一次 hover 鎖定的視覺卡片，
+  // 避免按下與 click 之間的位置更新讓標題和影片跳到另一張卡片。
+  const hoveredCard = hoveredHeroCardTitle
+    ? (heroCardItems.find((item) => item.card.title === hoveredHeroCardTitle) ?? null)
+    : null
+  const lockedCard = preferredCard ?? hoveredCard
+  const card =
+    lockedCard?.holder.visible && lockedCard.front > -0.12
+      ? lockedCard
+      : getHeroCardUnderPointer(event, true)
   if (!card) return
 
   event.preventDefault()
   lastCardPointerAt = now
   wakeBottomRender()
   emit('card-select', card.card)
+}
+
+function onCardPointerDown(event: PointerEvent) {
+  if (event.pointerType !== 'touch' || event.button !== 0 || event.target !== cardClickCanvas)
+    return
+  cardTapStart = {
+    x: event.clientX,
+    y: event.clientY,
+    time: performance.now(),
+    card: getHeroCardUnderPointer(event, true)
+  }
+}
+
+function onCardPointerUp(event: PointerEvent) {
+  if (event.pointerType !== 'touch' || !cardTapStart) return
+  const start = cardTapStart
+  cardTapStart = null
+  const elapsed = performance.now() - start.time
+  const distance = Math.hypot(event.clientX - start.x, event.clientY - start.y)
+  if (elapsed > 750 || distance > 14) return
+  // 觸控短按直接使用按下當下的卡片，避免等待瀏覽器 click 合成造成延遲或誤選。
+  onCardClick(event, start.card)
+}
+
+function onCardPointerCancel(event: PointerEvent) {
+  if (event.pointerType === 'touch') cardTapStart = null
 }
 
 function hasFinePointer() {
@@ -6614,6 +6755,9 @@ function bindCardClickCanvas(canvas: HTMLCanvasElement) {
   if (!cardPointerEventsBound) {
     cardPointerEventsBound = true
     window.addEventListener('click', onCardClick, true)
+    window.addEventListener('pointerdown', onCardPointerDown, true)
+    window.addEventListener('pointerup', onCardPointerUp, true)
+    window.addEventListener('pointercancel', onCardPointerCancel, true)
   }
   // 手機只保留 click/tap；hover raycast 僅在桌機 fine pointer 啟用。
   syncCardHoverBindings()
@@ -7267,8 +7411,11 @@ onBeforeRender(({ elapsed, delta }) => {
       currentTimeline >= cardOrbitInputStart - stageEpsilon)
   cardInteractionReady = cardsShouldRender && cardsInteractive && mobileCardReveal >= 0.995
   // 終章 wipe 完成後，卡片不能殘留任何未被 shader 丟棄的材質碎片。
-  heroCardsGroup.visible = cardsShouldRender && !finaleWipeDone
-  if (cardsShouldRender) {
+  const cardsShouldAnimate = cardsShouldRender && !finaleWipeDone
+  heroCardsGroup.visible = cardsShouldAnimate
+  if (cardsShouldAnimate) {
+    const cardsEnteringRender = !cardsWereRendered
+    cardsWereRendered = true
     cardOrbitUnlockedNow =
       (targetTimeline >= cardOrbitInputStart &&
         currentTimeline >= cardOrbitInputStart - stageEpsilon) ||
@@ -7280,6 +7427,7 @@ onBeforeRender(({ elapsed, delta }) => {
     let activeCardScore = -Infinity
     const cardBrightness = responsiveIsCompact ? 1.5 : 1
     const cardMaterialDirty =
+      cardsEnteringRender ||
       Math.abs(mobileCardReveal - lastCardMaterialReveal) > 0.0001 ||
       cardBrightness !== lastCardMaterialBrightness
     if (cardMaterialDirty) {
@@ -7322,23 +7470,22 @@ onBeforeRender(({ elapsed, delta }) => {
     cardOrbitUnlockedNow = false
     cardInteractionReady = false
     setHoveredHeroCard(null)
-    for (const it of heroCardItems) {
-      const wa = -(cardEntranceAngle + it.index * cardStep)
-      it.pivot.rotation.y = wa
-      it.holder.position.y = cardRingY + wa * cardVerticalSlope
-      it.front = 0
-      it.coreMat.uniforms.uOpacity.value = 0
-      for (const mat of it.titleMats) mat.uniforms.uAlpha.value = 0
-      it.hoverScale = 1
-      it.holder.scale.setScalar(cardFitScale)
-      it.holder.visible = false
+    if (cardsWereRendered) {
+      for (const it of heroCardItems) {
+        const wa = -(cardEntranceAngle + it.index * cardStep)
+        it.pivot.rotation.y = wa
+        it.holder.position.y = cardRingY + wa * cardVerticalSlope
+        it.front = 0
+        it.coreMat.uniforms.uOpacity.value = 0
+        for (const mat of it.titleMats) mat.uniforms.uAlpha.value = 0
+        it.hoverScale = 1
+        it.holder.scale.setScalar(cardFitScale)
+        it.holder.visible = false
+      }
+      cardsWereRendered = false
     }
     syncActiveHeroCard(null)
     syncActiveHeroCardHitbox(null)
-  }
-  // 完成終章後以最後一道可見性判定覆蓋卡片迴圈，避免同幀更新留下碎片。
-  if (finaleWipeDone) {
-    for (const it of heroCardItems) it.holder.visible = false
   }
   uniforms.uRevealPlaneOffset.value = revealPlaneOffset
   currentGridReveal +=
@@ -7596,6 +7743,7 @@ defineExpose({ scrubTo })
 onMounted(async () => {
   installHeroPerf()
   bindInputCapabilityMedia()
+  void loadCardPreviewAtlas()
   if (cardPreviewVideo) {
     cardPreviewVideo.play().catch(() => {
       // 瀏覽器未允許自動播放時，仍可在下一次使用者互動後開始更新預覽。
@@ -7753,6 +7901,7 @@ onMounted(async () => {
         heroCardHitMeshes: heroCardHitMeshes.length,
         cardInteractionReady,
         cardOrbitUnlockedNow,
+        cardVideoMode: cardPreviewUsesAtlas ? 'atlas' : 'sample',
         responsiveHoverEffects,
         dnaTilesVisible: dnaTiles.visible,
         boneTilesVisible: boneTiles.visible,
@@ -7816,6 +7965,10 @@ onUnmounted(() => {
   window.removeEventListener('focus', forceWakeRender)
   window.removeEventListener('pageshow', forceWakeRender)
   window.removeEventListener('click', onCardClick, true)
+  window.removeEventListener('pointerdown', onCardPointerDown, true)
+  window.removeEventListener('pointerup', onCardPointerUp, true)
+  window.removeEventListener('pointercancel', onCardPointerCancel, true)
+  cardTapStart = null
   window.removeEventListener('pointermove', onCardPointerMove, true)
   window.removeEventListener('pointerleave', onCardPointerLeave, true)
   window.removeEventListener('pointercancel', onCardPointerLeave, true)
@@ -7825,6 +7978,7 @@ onUnmounted(() => {
   cardPointerEventsBound = false
   cardHoverEventsBound = false
   if (cardPreviewVideo) {
+    cardPreviewVideo.removeEventListener('error', onCardPreviewVideoError)
     cardPreviewVideo.pause()
     cardPreviewVideo.removeAttribute('src')
     cardPreviewVideo.load()

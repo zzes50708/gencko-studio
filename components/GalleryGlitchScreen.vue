@@ -17,6 +17,9 @@ interface GalleryCard {
 const props = defineProps<{
   card: GalleryCard
   mode?: 'enter' | 'exit'
+  videoSrc?: string
+  atlasIndex?: number
+  useAtlas?: boolean
 }>()
 
 const canvasRef = ref<HTMLCanvasElement | null>(null)
@@ -35,6 +38,21 @@ let currentTexture: THREE.Texture | null = null
 let previousTexture: THREE.Texture | null = null
 let videoElement: HTMLVideoElement | null = null
 let videoTexture: THREE.VideoTexture | null = null
+
+function syncVideoAtlasUniforms(useVideoTexture: boolean) {
+  if (!material) return
+  if (!useVideoTexture || !props.useAtlas) {
+    material.uniforms.uTextureBOffset.value.set(0, 0)
+    material.uniforms.uTextureBScale.value.set(1, 1)
+    return
+  }
+
+  const index = props.atlasIndex ?? 0
+  const column = index % 4
+  const row = index < 4 ? 0 : 1
+  material.uniforms.uTextureBOffset.value.set(column / 4, row / 2)
+  material.uniforms.uTextureBScale.value.set(1 / 4, 1 / 2)
+}
 
 function makeCardTexture(card: GalleryCard, variant: 'full' | 'ghost' | 'dark' = 'full') {
   const ghost = variant === 'ghost'
@@ -121,14 +139,16 @@ function renderFrame(now: number) {
 
 function startTransition(card: GalleryCard, mode: 'enter' | 'exit' = 'enter') {
   if (!material) return
-  if (videoElement && videoElement.src !== new URL(card.video, window.location.href).href) {
-    videoElement.src = card.video
+  const source = props.videoSrc ?? card.video
+  if (videoElement && videoElement.src !== new URL(source, window.location.href).href) {
+    videoElement.src = source
     videoElement.load()
     videoElement.play().catch(() => {})
   }
   const nextPreviousTexture = makeCardTexture(card, mode === 'exit' ? 'full' : 'ghost')
   const nextCurrentTexture =
     mode === 'exit' || !videoTexture ? makeCardTexture(card, 'dark') : videoTexture
+  syncVideoAtlasUniforms(mode !== 'exit' && Boolean(videoTexture))
   if (previousTexture && previousTexture !== videoTexture) previousTexture.dispose()
   if (currentTexture && currentTexture !== videoTexture) currentTexture.dispose()
   previousTexture = nextPreviousTexture
@@ -154,7 +174,7 @@ onMounted(async () => {
   })
   renderer.outputColorSpace = THREE.SRGBColorSpace
   videoElement = document.createElement('video')
-  videoElement.src = props.card.video
+  videoElement.src = props.videoSrc ?? props.card.video
   videoElement.muted = true
   videoElement.loop = true
   videoElement.playsInline = true
@@ -184,7 +204,7 @@ onMounted(async () => {
 })
 
 watch(
-  () => [props.card.title, props.mode] as const,
+  () => [props.card.title, props.mode, props.videoSrc, props.atlasIndex, props.useAtlas] as const,
   () => startTransition(props.card, props.mode ?? 'enter')
 )
 
