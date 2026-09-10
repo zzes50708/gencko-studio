@@ -187,7 +187,8 @@ export default defineNuxtConfig({
   },
 
   sitemap: {
-    sources: ['/api/_sitemap-urls']
+    sources: ['/api/_sitemap-urls'],
+    exclude: ['/hero-lab', '/compare', '/stories', '/profile', '/identity/**']
   },
 
   robots: {
@@ -196,7 +197,7 @@ export default defineNuxtConfig({
       // 一般搜尋引擎（Google / Bing 等）
       {
         userAgent: ['*'],
-        disallow: ['/profile', '/identity/']
+        allow: ['/']
       },
       // AI 搜尋 / 即時聯網爬蟲（使用者透過 ChatGPT / Perplexity / Claude 等查詢時會即時抓取）
       // ✅ 允許 — 讓 AI 回答「台灣哪裡有賣豹紋守宮」時能引用本站
@@ -211,8 +212,7 @@ export default defineNuxtConfig({
           'Google-Extended', // Google AI Overviews / Gemini grounding
           'Applebot-Extended' // Apple Intelligence
         ],
-        allow: ['/'],
-        disallow: ['/profile', '/identity/']
+        allow: ['/']
       },
       // AI 模型訓練爬蟲（用於訓練下一代模型，非即時檢索）
       // ❌ 預設 Disallow — 使用者本次僅指定允許「搜尋 / 聯網」類；如要參與模型訓練可改 allow
@@ -339,11 +339,11 @@ export default defineNuxtConfig({
         {
           rel: 'preload',
           as: 'style',
-          href: 'https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&family=Black+Ops+One&display=swap'
+          href: 'https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&family=Noto+Serif+TC:wght@600;700&family=Black+Ops+One&display=swap'
         },
         {
           rel: 'stylesheet',
-          href: 'https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&family=Black+Ops+One&display=swap',
+          href: 'https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&family=Noto+Serif+TC:wght@600;700&family=Black+Ops+One&display=swap',
           media: 'print',
           onload: "this.media='all'"
         }

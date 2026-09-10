@@ -2,12 +2,8 @@ export const PERSONAS = []
 
 export const ANCHORS = [
   { id: 'env', icon: '🏠', label: '環境' },
-  { id: 'temp', icon: '🌡', label: '溫度' },
-  { id: 'humidity', icon: '💧', label: '濕度' },
   { id: 'food', icon: '🍴', label: '餵食' },
   { id: 'breeding', icon: '🧬', label: '繁殖' },
-  { id: 'species', icon: '🦎', label: '豹紋 vs 肥尾' },
-  { id: 'danger', icon: '⚠️', label: '地雷' },
   { id: 'faq', icon: '❓', label: 'FAQ' }
 ]
 

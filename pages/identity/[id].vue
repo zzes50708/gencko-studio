@@ -1,7 +1,8 @@
 <script setup>
-import { computed } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { useHead, useAsyncData, useSupabaseClient } from '#imports'
+import { getCleanUrl } from '~/utils/image'
 
 const route = useRoute()
 const supabase = useSupabaseClient()
@@ -34,15 +35,60 @@ const {
   }
 })
 
-// 圖片解析處理
-const displayImg = computed(() => {
-  if (!item.value || !item.value.ImageURL) return null
-  const url = item.value.ImageURL
+// 圖片來源先正規化，讓代理失敗時仍能直接載入原始來源
+const getIdentityImageSource = (url) => {
+  if (!url) return null
+
+  let target = String(url).trim()
   const driveRegex = /file\/d\/([a-zA-Z0-9_-]+)\//
-  const match = url.match(driveRegex)
-  let target = url
+  const match = target.match(driveRegex)
   if (match && match[1]) target = 'https://drive.google.com/uc?id=' + match[1]
-  return `https://wsrv.nl/?url=${encodeURIComponent(target)}&w=1200&output=webp&q=90`
+
+  if (target.includes('cdn.jsdelivr.net/gh/')) {
+    target = target
+      .replace('https://cdn.jsdelivr.net/gh/', 'https://raw.githubusercontent.com/')
+      .replace('@main/', '/main/')
+      .replace('@master/', '/master/')
+  }
+
+  return target
+}
+
+const imageState = ref('optimized')
+const identityImageEl = ref(null)
+
+const originalImg = computed(() => {
+  if (!item.value || !item.value.ImageURL) return null
+  return getIdentityImageSource(item.value.ImageURL)
+})
+
+const displayImg = computed(() => {
+  if (!originalImg.value) return null
+  return getCleanUrl(originalImg.value, 1200)
+})
+
+const identityImageSrc = computed(() => {
+  if (imageState.value === 'failed') return null
+  if (imageState.value === 'fallback') return originalImg.value
+  return displayImg.value
+})
+
+const handleImageError = () => {
+  if (
+    imageState.value === 'optimized' &&
+    originalImg.value &&
+    originalImg.value !== displayImg.value
+  ) {
+    imageState.value = 'fallback'
+    return
+  }
+
+  imageState.value = 'failed'
+}
+
+onMounted(() => {
+  const image = identityImageEl.value
+  if (image?.complete && image.naturalWidth === 0) handleImageError()
 })
 
 // 性別格式化
@@ -88,13 +134,15 @@ useHead({
   title: computed(() => siteData.value.title),
   meta: [
     { name: 'description', content: computed(() => siteData.value.desc) },
+    { name: 'robots', content: 'noindex, nofollow' },
     { property: 'og:title', content: computed(() => `${siteData.value.title} | Gencko Studio`) },
     { property: 'og:description', content: computed(() => siteData.value.desc) },
     { property: 'og:image', content: computed(() => siteData.value.img) },
     { property: 'og:url', content: computed(() => siteData.value.url) },
     { property: 'og:type', content: 'profile' },
     { name: 'twitter:card', content: 'summary_large_image' }
-  ]
+  ],
+  link: [{ rel: 'canonical', href: computed(() => siteData.value.url) }]
 })
 
 const triggerPrint = () => {
@@ -106,12 +154,17 @@ const triggerPrint = () => {
 
 <template>
   <div class="id-page-container">
-    <!-- Loading / Error -->
-    <div v-if="pending" class="status-msg">
-      <div class="loader"></div>
+    <div class="common-document-meta identity-document-meta" aria-label="身份文件說明">
+      <span>GENCKO IDENTITY RECORD</span>
+      <span>VERIFY / REVIEW / KEEP</span>
+    </div>
+    <div v-if="pending" class="status-msg" aria-busy="true">
+      <div class="loader" aria-hidden="true"></div>
+      <p role="status">正在取得電子身分證</p>
     </div>
     <div v-else-if="error" class="status-msg err">
-      ⚠️ {{ error.message || '找不到此個體資料或已下架' }}
+      <h1>無法顯示電子身分證</h1>
+      <p role="alert">{{ error.message || '找不到此個體資料或已下架' }}</p>
       <TheBackButton
         fallback="/"
         text="返回上一頁"
@@ -119,65 +172,91 @@ const triggerPrint = () => {
       />
     </div>
 
-    <!-- Identity Content -->
     <div v-else-if="item" class="id-content-wrap">
-      <!-- 🌟 引入全域共用的 App-like 返回按鈕 -->
-      <TheBackButton fallback="/" text="返回上一頁" />
-
-      <!-- 卡片本體 -->
-      <div class="id-card print-target">
-        <!-- Left: Photo -->
-        <div class="card-photo-box">
-          <img
-            v-if="displayImg"
-            :src="displayImg"
-            alt="ID Photo"
-            loading="eager"
-            fetchpriority="high"
-            decoding="async"
-          />
-          <div v-else class="no-img">No Image</div>
-        </div>
-
-        <!-- Right: Info -->
-        <div class="card-info-box">
-          <div class="card-header">
-            <div class="brand-sub">Digital Identity</div>
-            <h1 class="card-id">{{ item.ID }}</h1>
-            <div class="brand-logo">Gencko Studio</div>
-          </div>
-
-          <div class="info-grid">
-            <div class="ig-row">
-              <label>Morph</label>
-              <div class="ig-val highlight">{{ item.Morph }}</div>
-            </div>
-            <div class="ig-row">
-              <label>Gender</label>
-              <div class="ig-val" :class="sexClass">{{ fmtSex }}</div>
-            </div>
-            <div class="ig-row">
-              <label>Birthday</label>
-              <div class="ig-val">{{ item.Birthday || 'Unknown' }}</div>
-            </div>
-            <div class="ig-row" v-if="item.Species">
-              <label>Species</label>
-              <div class="ig-val">{{ item.Species }}</div>
-            </div>
-          </div>
-
-          <div class="card-footer">
-            <div class="cf-line"></div>
-            <div class="cf-txt">Verified & Bred by Gencko Studio</div>
-          </div>
-        </div>
+      <div class="identity-navigation">
+        <TheBackButton fallback="/" text="返回上一頁" />
+        <span>Gencko verified record</span>
       </div>
 
-      <!-- Actions -->
-      <div class="id-actions">
-        <button @click="triggerPrint" class="act-btn primary">🖨️ 儲存電子身分證 (PDF)</button>
-      </div>
-      <p class="id-hint">* 點擊按鈕可將此卡片存為 PDF 收藏</p>
+      <article
+        class="identity-certificate"
+        data-phase3-surface="identity"
+        aria-labelledby="identity-title"
+      >
+        <header class="identity-heading">
+          <div>
+            <p class="identity-eyebrow">繁育紀錄證明</p>
+            <h1 id="identity-title">個體 {{ item.ID }} 電子身分證</h1>
+          </div>
+          <span class="verified-mark">紀錄已建檔</span>
+        </header>
+
+        <div class="id-card print-target">
+          <div class="card-photo-box">
+            <img
+              v-if="identityImageSrc"
+              ref="identityImageEl"
+              :src="identityImageSrc"
+              :alt="`${item.Morph} 個體 ${item.ID} 電子身分證照片`"
+              loading="eager"
+              fetchpriority="high"
+              decoding="async"
+              @error="handleImageError"
+            />
+            <div v-else class="no-img">No Image</div>
+          </div>
+
+          <div class="card-info-box">
+            <div class="card-header">
+              <div class="brand-sub">Digital Identity</div>
+              <div class="card-id">{{ item.ID }}</div>
+              <div class="brand-logo">Gencko Studio</div>
+            </div>
+
+            <dl class="info-grid">
+              <div class="ig-row">
+                <dt>Morph</dt>
+                <dd class="ig-val highlight">{{ item.Morph }}</dd>
+              </div>
+              <div class="ig-row">
+                <dt>Gender</dt>
+                <dd class="ig-val" :class="sexClass">{{ fmtSex }}</dd>
+              </div>
+              <div class="ig-row">
+                <dt>Birthday</dt>
+                <dd class="ig-val">{{ item.Birthday || 'Unknown' }}</dd>
+              </div>
+              <div v-if="item.Species" class="ig-row">
+                <dt>Species</dt>
+                <dd class="ig-val">{{ item.Species }}</dd>
+              </div>
+            </dl>
+
+            <div class="card-footer">
+              <div class="cf-line"></div>
+              <div class="cf-txt">Verified & Bred by Gencko Studio</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="identity-note">
+          <strong>電子紀錄</strong>
+          <span>此頁呈現目前建檔的個體資訊，可列印或另存為 PDF 留存。</span>
+        </div>
+
+        <div class="id-actions">
+          <button
+            type="button"
+            class="act-btn primary"
+            aria-label="儲存電子身分證為 PDF"
+            @click="triggerPrint"
+          >
+            <span aria-hidden="true">↓</span>
+            儲存電子身分證（PDF）
+          </button>
+        </div>
+        <p class="id-hint">瀏覽器將開啟列印面板，請選擇「另存為 PDF」。</p>
+      </article>
     </div>
   </div>
 </template>
@@ -361,6 +440,7 @@ const triggerPrint = () => {
   width: 100%;
 }
 .act-btn {
+  min-height: var(--control-min-height);
   padding: 12px 28px;
   border-radius: 30px;
   border: none;
@@ -378,6 +458,10 @@ const triggerPrint = () => {
 }
 .act-btn:active {
   transform: scale(0.95);
+}
+.act-btn:focus-visible {
+  outline: 3px solid var(--pri);
+  outline-offset: 2px;
 }
 
 /* 提示文字 (已變數化) */
@@ -471,5 +555,348 @@ const triggerPrint = () => {
     font-size: 0.75rem;
     margin-top: 8px;
   }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .loader,
+  .act-btn {
+    animation: none !important;
+    transition: none !important;
+  }
+  .act-btn:active {
+    transform: none;
+  }
+}
+
+/* Phase 3 focused redesign：以檔案館式證明卡補強頁面層級。 */
+.id-page-container {
+  justify-content: flex-start;
+  padding: 1rem 1.25rem 5rem;
+  font-family: inherit;
+}
+
+.id-content-wrap {
+  max-width: 960px;
+}
+
+.identity-navigation {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+
+.identity-navigation > span {
+  color: var(--txt);
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  opacity: 0.48;
+}
+
+.identity-certificate {
+  width: 100%;
+}
+
+.identity-heading {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 2rem;
+  padding: clamp(1.25rem, 4vw, 2.75rem) 0 1.5rem;
+}
+
+.identity-eyebrow {
+  margin: 0 0 0.6rem;
+  color: var(--pri);
+  font-size: 0.75rem;
+  font-weight: 800;
+}
+
+.identity-heading h1 {
+  margin: 0;
+  color: var(--txt);
+  font-size: clamp(2rem, 5vw, 4rem);
+  line-height: 1.03;
+  text-wrap: balance;
+}
+
+.verified-mark {
+  flex: none;
+  padding: 0.45rem 0.7rem;
+  border: 1px solid color-mix(in srgb, var(--pri) 38%, var(--bd));
+  border-radius: 0.5rem;
+  color: var(--pri);
+  font-size: 0.75rem;
+  font-weight: 800;
+}
+
+.id-card {
+  min-height: 25rem;
+  border: 1px solid #d9d4cf;
+  border-radius: 1.25rem;
+  box-shadow: 0 24px 60px rgba(43, 34, 28, 0.2);
+}
+
+.card-photo-box {
+  min-height: 25rem;
+}
+
+.card-info-box {
+  padding: clamp(1.5rem, 4vw, 3rem);
+}
+
+.card-id {
+  margin: 0.3rem 0;
+  color: #0f172a;
+  font-size: clamp(1.8rem, 4vw, 2.8rem);
+  font-weight: 900;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.info-grid {
+  margin: 0;
+}
+
+.ig-row dt {
+  margin-bottom: 0.2rem;
+  color: #7a8799;
+  font-size: 0.7rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.ig-row dd {
+  margin: 0;
+}
+
+.identity-note {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 1rem;
+  margin-top: 1rem;
+  padding: 1rem 1.25rem;
+  border-left: 3px solid var(--pri);
+  background: var(--card-bg);
+  color: var(--txt);
+}
+
+.identity-note strong {
+  font-size: 0.82rem;
+}
+
+.identity-note span {
+  font-size: 0.82rem;
+  line-height: 1.55;
+  opacity: 0.65;
+}
+
+.id-actions {
+  margin-top: 1.5rem;
+}
+
+.act-btn {
+  gap: 0.5rem;
+  box-shadow: 0 8px 20px rgba(216, 67, 21, 0.22);
+  transition:
+    transform 180ms ease-out,
+    box-shadow 180ms ease-out;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .act-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 24px rgba(216, 67, 21, 0.3);
+  }
+}
+
+@media (max-width: 620px) {
+  .id-page-container {
+    padding: 0.5rem 0.75rem 4rem;
+  }
+
+  .identity-navigation > span {
+    display: none;
+  }
+
+  .identity-heading {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 1rem;
+    padding-top: 0.75rem;
+  }
+
+  .identity-heading h1 {
+    font-size: clamp(2rem, 10vw, 3rem);
+  }
+
+  .id-card {
+    min-height: 0;
+    flex-direction: column;
+    border-radius: 1rem;
+  }
+
+  .card-photo-box {
+    width: 100%;
+    max-width: none;
+    min-height: 0;
+    aspect-ratio: 1 / 1;
+  }
+
+  .card-info-box {
+    width: 100%;
+    padding: 1.25rem;
+  }
+
+  .card-header {
+    margin-bottom: 1.25rem;
+    padding-bottom: 1rem;
+  }
+
+  .brand-sub,
+  .brand-logo,
+  .cf-txt {
+    font-size: 0.7rem;
+  }
+
+  .card-id {
+    margin: 0.3rem 0;
+    font-size: 2rem;
+  }
+
+  .info-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1rem;
+  }
+
+  .ig-row dt {
+    font-size: 0.65rem;
+  }
+
+  .ig-val,
+  .ig-val.highlight {
+    overflow-wrap: anywhere;
+    font-size: 0.95rem;
+  }
+
+  .card-footer {
+    margin-top: 1.5rem;
+  }
+
+  .identity-note {
+    grid-template-columns: 1fr;
+    gap: 0.35rem;
+  }
+
+  .act-btn {
+    width: 100%;
+    max-width: none;
+  }
+}
+
+.identity-heading h1 {
+  font-family: 'Noto Serif TC', serif;
+  letter-spacing: -0.04em;
+}
+
+.id-card {
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.identity-note,
+.act-btn {
+  border-radius: 2px;
+}
+
+.identity-navigation,
+.identity-certificate,
+.identity-note {
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.identity-navigation,
+.identity-certificate {
+  border-width: 1px 0;
+  background-image: none;
+}
+
+.info-grid {
+  gap: 0;
+  border-top: 1px solid var(--bd);
+  border-left: 1px solid var(--bd);
+}
+
+.info-grid > * {
+  border-width: 0 1px 1px 0;
+  border-radius: 0;
+}
+
+@media print {
+  .identity-navigation,
+  .identity-heading,
+  .identity-note,
+  .id-actions,
+  .id-hint {
+    display: none !important;
+  }
+
+  .id-page-container {
+    padding: 0;
+  }
+
+  .id-card {
+    box-shadow: none;
+    break-inside: avoid;
+  }
+}
+/* 電子證書保留文件邊界與列印版面，只統一螢幕閱讀介面。 */
+@media screen {
+  .id-page-container {
+    padding-top: 8px;
+    padding-bottom: 28px;
+  }
+  .identity-certificate {
+    border-radius: 0;
+    box-shadow: none;
+    padding-top: 18px;
+  }
+  .identity-heading {
+    gap: 16px;
+    margin-bottom: 18px;
+  }
+  .identity-heading h1 {
+    font-family: var(--font-heading-zh);
+    font-size: clamp(1.7rem, 3.5vw, 2.6rem);
+    line-height: 1.4;
+  }
+  .identity-note {
+    border-radius: 0;
+    background: transparent;
+    border-inline: 0;
+    padding-block: 14px;
+  }
+  .act-btn {
+    min-height: 44px;
+    border-radius: 2px;
+    box-shadow: none;
+  }
+  .id-hint {
+    margin-bottom: 0;
+  }
+}
+/* 本頁返回與次要操作使用同一按鈕形式。 */
+:deep(.app-back-btn),
+.btn-app {
+  border-radius: 2px;
+  min-height: 44px;
+  box-shadow: none;
+  font-family: var(--font-body-zh);
+}
+:deep(.app-back-btn) {
+  border: 1px solid var(--txt);
 }
 </style>

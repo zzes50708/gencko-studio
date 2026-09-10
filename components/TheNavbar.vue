@@ -1,6 +1,9 @@
 ﻿<script setup>
-import { ref, computed, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
+import { useMediaQuery } from '@vueuse/core'
+import { useRoute } from 'vue-router'
 import { getCleanUrl } from '~/utils/image'
+import { DESKTOP_NAV_GROUPS, getNavigationGroup } from '~/utils/site-navigation'
 import { useMainStore } from '~/stores/useMainStore' // ?? 撘 store
 
 const props = defineProps({
@@ -14,11 +17,51 @@ const props = defineProps({
 const emit = defineEmits(['toggle-theme', 'scroll-top'])
 
 const store = useMainStore() // ?? ??摰?????寞?
-const isShopActive = computed(() => ['shop', 'auction', 'breeders', 'merch'].includes(props.curTab))
-const isToolActive = computed(() =>
-  ['calculator', 'genes', 'health', 'qs', 'hospital'].includes(props.curTab)
-)
-const isArticlesActive = computed(() => ['articles', 'care', 'faq', 'guide'].includes(props.curTab))
+const route = useRoute()
+const openMenu = ref(null)
+const clickedMenu = ref(null)
+const canHover = useMediaQuery('(min-width: 768px) and (hover: hover) and (pointer: fine)')
+const dismissedMenu = ref(null)
+const activeGroup = computed(() => getNavigationGroup(route.path))
+
+const toggleMenu = (key) => {
+  if (clickedMenu.value === key && openMenu.value === key) {
+    openMenu.value = null
+    clickedMenu.value = null
+    dismissedMenu.value = key
+  } else {
+    openMenu.value = key
+    clickedMenu.value = key
+    dismissedMenu.value = null
+  }
+}
+
+const closeMenu = () => {
+  openMenu.value = null
+  clickedMenu.value = null
+  dismissedMenu.value = null
+}
+
+const closeMenuForNavigation = () => {
+  dismissedMenu.value = dismissedMenu.value || openMenu.value || activeGroup.value
+  openMenu.value = null
+}
+
+const clearDismissedMenu = (key) => {
+  if (dismissedMenu.value === key) dismissedMenu.value = null
+}
+
+const dismissMenu = (event) => {
+  dismissedMenu.value = event.target.closest('.nav-item-dt')?.dataset.navKey || openMenu.value
+  openMenu.value = null
+  clickedMenu.value = null
+}
+
+const handleFocusOut = (event) => {
+  if (!event.currentTarget.contains(event.relatedTarget)) openMenu.value = null
+}
+
+watch(() => route.path, closeMenuForNavigation)
 
 // LCP 優化：logo 原圖 4.4MB（1856×1865），實際只顯示 36×36
 // 透過 wsrv.nl 壓縮至 72px webp（≈ 3KB），縮減 99.9%
@@ -32,6 +75,7 @@ const navLogoUrl = computed(() => (store.logoUrl ? getCleanUrl(store.logoUrl, 72
       <div class="nav-container">
         <!-- Logo -->
         <NuxtLink
+          no-prefetch
           to="/"
           class="nav-left"
           @click="$emit('scroll-top')"
@@ -54,11 +98,12 @@ const navLogoUrl = computed(() => (store.logoUrl ? getCleanUrl(store.logoUrl, 72
             fetchpriority="high"
           />
           <div
+            class="nav-wordmark"
             style="
-              font-weight: 900;
-              font-size: 1.2rem;
+              font-weight: 800;
+              font-size: 1.05rem;
               color: var(--pri);
-              letter-spacing: 1px;
+              letter-spacing: 0.16em;
               line-height: 1;
             "
           >
@@ -67,42 +112,50 @@ const navLogoUrl = computed(() => (store.logoUrl ? getCleanUrl(store.logoUrl, 72
         </NuxtLink>
 
         <!-- Desktop Menu -->
-        <div class="dt-nav">
-          <div class="nav-item-dt dropdown-hover" :class="{ active: isArticlesActive }">
-            <NuxtLink to="/articles" class="nav-item-dt-link" aria-label="專欄文章">
-              專欄文章
+        <div class="dt-nav" @keydown.esc="dismissMenu">
+          <div
+            v-for="group in DESKTOP_NAV_GROUPS"
+            :key="group.key"
+            :data-nav-key="group.key"
+            class="nav-item-dt"
+            :class="{
+              active: activeGroup === group.key,
+              open: openMenu === group.key,
+              dismissed: dismissedMenu === group.key
+            }"
+            @focusout="handleFocusOut"
+            v-on="canHover ? {
+              mouseenter: () => { openMenu = group.key; dismissedMenu = null },
+              mouseleave: () => { closeMenu(); clearDismissedMenu(group.key) }
+            } : {}"
+          >
+            <NuxtLink no-prefetch :to="group.to" class="nav-item-dt-link" @focus="openMenu = group.key" @click="dismissMenu">
+              {{ group.label }}
             </NuxtLink>
-            ▾
-            <div class="dt-dropdown">
-              <NuxtLink to="/guide">守宮介紹</NuxtLink>
-              <NuxtLink to="/start-here">新手入門</NuxtLink>
-              <NuxtLink to="/care">飼養指南</NuxtLink>
-              <NuxtLink to="/articles">文章列表</NuxtLink>
-              <NuxtLink to="/faq">常見問題</NuxtLink>
-            </div>
-          </div>
-
-          <div class="nav-item-dt dropdown-hover" :class="{ active: isShopActive }">
-            <NuxtLink to="/shop" class="nav-item-dt-link" aria-label="探索選購">探索選購</NuxtLink>
-            ▾
-            <div class="dt-dropdown">
-              <NuxtLink to="/shop">選購守宮</NuxtLink>
-              <NuxtLink to="/buying-guide">購買流程</NuxtLink>
-              <NuxtLink to="/why-gencko">信任保證</NuxtLink>
-              <NuxtLink to="/auction">線上競標</NuxtLink>
-              <NuxtLink to="/breeders">種群展示</NuxtLink>
-              <NuxtLink to="/merch">周邊商品</NuxtLink>
-            </div>
-          </div>
-          <div class="nav-item-dt dropdown-hover" :class="{ active: isToolActive }">
-            <NuxtLink to="/genes" class="nav-item-dt-link" aria-label="工具知識">工具知識</NuxtLink>
-            ▾
-            <div class="dt-dropdown">
-              <NuxtLink to="/genes">基因圖鑑</NuxtLink>
-              <NuxtLink to="/calculator">基因計算機</NuxtLink>
-              <NuxtLink to="/hospital">特寵醫院</NuxtLink>
-              <NuxtLink to="/health">健康評估</NuxtLink>
-              <NuxtLink to="/qs">飼養前評估</NuxtLink>
+            <button
+              type="button"
+              class="nav-disclosure"
+              :aria-expanded="openMenu === group.key"
+              :aria-controls="`nav-menu-${group.key}`"
+              :aria-label="`${group.label}選單`"
+              @click="toggleMenu(group.key)"
+            >
+              <span aria-hidden="true">▾</span>
+            </button>
+            <div
+              :id="`nav-menu-${group.key}`"
+              class="dt-dropdown"
+              :class="{ visible: openMenu === group.key }"
+            >
+              <NuxtLink
+                no-prefetch
+                v-for="link in group.links"
+                :key="link.to"
+                :to="link.to"
+                @click="dismissMenu"
+              >
+                {{ link.label }}
+              </NuxtLink>
             </div>
           </div>
         </div>
@@ -110,8 +163,11 @@ const navLogoUrl = computed(() => (store.logoUrl ? getCleanUrl(store.logoUrl, 72
         <!-- Right Controls -->
         <div class="nav-right">
           <NuxtLink
+            no-prefetch
             to="/home"
             class="btn-app btn-app--ghost btn-app--sm btn-app--pill home-btn"
+            :class="{ active: activeGroup === 'home' }"
+            :aria-current="activeGroup === 'home' ? 'page' : undefined"
             style="text-decoration: none; display: flex; align-items: center"
             title="首頁"
           >
@@ -144,8 +200,11 @@ const navLogoUrl = computed(() => (store.logoUrl ? getCleanUrl(store.logoUrl, 72
           </button>
 
           <NuxtLink
+            no-prefetch
             to="/profile"
             class="btn-app btn-app--ghost btn-app--sm btn-app--pill member-btn"
+            :class="{ active: activeGroup === 'profile' }"
+            :aria-current="activeGroup === 'profile' ? 'page' : undefined"
             style="text-decoration: none; display: flex; align-items: center"
             title="會員"
           >
@@ -195,7 +254,7 @@ const navLogoUrl = computed(() => (store.logoUrl ? getCleanUrl(store.logoUrl, 72
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   padding: 0 15px;
-  transition: transform 0.3s ease;
+  transition: transform 0.2s ease-out;
 }
 .sticky-nav.nav-hidden {
   transform: translateY(-100%);
@@ -267,8 +326,29 @@ const navLogoUrl = computed(() => (store.logoUrl ? getCleanUrl(store.logoUrl, 72
 }
 
 /* Dropdown */
-.dropdown-hover {
-  position: relative;
+.nav-disclosure {
+  display: inline-grid;
+  place-items: center;
+  width: 28px;
+  height: var(--control-min-height);
+  min-height: var(--control-min-height);
+  padding: 0;
+  color: inherit;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+.nav-disclosure span {
+  transition: transform 0.2s ease;
+}
+.nav-item-dt.open .nav-disclosure span {
+  transform: rotate(180deg);
+}
+.nav-disclosure:focus-visible,
+.nav-item-dt-link:focus-visible,
+.dt-dropdown a:focus-visible {
+  outline: 2px solid var(--pri);
+  outline-offset: 2px;
 }
 .dt-dropdown {
   position: absolute;
@@ -284,11 +364,13 @@ const navLogoUrl = computed(() => (store.logoUrl ? getCleanUrl(store.logoUrl, 72
   visibility: hidden;
   opacity: 0;
   transform: translateY(-5px);
-  transition: all 0.2s ease;
+  transition:
+    opacity 0.2s ease,
+    transform 0.2s ease;
   display: flex;
   z-index: 100;
 }
-.dropdown-hover:hover .dt-dropdown {
+.dt-dropdown.visible {
   visibility: visible;
   opacity: 1;
   transform: translateY(0);
@@ -333,6 +415,13 @@ const navLogoUrl = computed(() => (store.logoUrl ? getCleanUrl(store.logoUrl, 72
   font-weight: 700;
 }
 
+.home-btn.active,
+.member-btn.active {
+  color: var(--pri);
+  border-color: var(--pri);
+  background: rgba(255, 88, 20, 0.08);
+}
+
 .theme-toggle {
   cursor: pointer;
   font-size: 1rem;
@@ -344,7 +433,7 @@ const navLogoUrl = computed(() => (store.logoUrl ? getCleanUrl(store.logoUrl, 72
   padding: 4px 10px;
   border-radius: 20px;
   background: transparent;
-  min-height: 32px;
+  min-height: var(--control-min-height);
   line-height: 1;
 }
 
@@ -372,7 +461,7 @@ const navLogoUrl = computed(() => (store.logoUrl ? getCleanUrl(store.logoUrl, 72
   height: 2px;
   background: var(--bd);
   z-index: 999;
-  transition: transform 0.3s ease;
+  transition: transform 0.2s ease-out;
 }
 .reading-progress-bar--nav-hidden {
   transform: translateY(-50px);
@@ -386,7 +475,7 @@ const navLogoUrl = computed(() => (store.logoUrl ? getCleanUrl(store.logoUrl, 72
 }
 
 /* Mobile Menu Overlay & Responsive */
-@media (max-width: 768px) {
+@media (max-width: 767px) {
   .dt-only {
     display: none !important;
   }
@@ -415,6 +504,164 @@ const navLogoUrl = computed(() => (store.logoUrl ? getCleanUrl(store.logoUrl, 72
   }
   .theme-toggle {
     margin-right: -10px;
+  }
+}
+
+@media (min-width: 768px) and (max-width: 1120px) {
+  .nav-item-dt {
+    padding-inline: 7px;
+    font-size: 0.82rem;
+  }
+  .nav-right {
+    gap: 6px;
+  }
+  .nav-wordmark,
+  .install-label {
+    display: none;
+  }
+  .dt-install-btn {
+    margin-right: 0;
+  }
+}
+
+/* Boutique shell v0 */
+.sticky-nav {
+  top: env(safe-area-inset-top, 0px);
+  height: 64px;
+  padding-inline: clamp(16px, 3vw, 44px);
+  background: color-mix(in srgb, var(--card-bg-solid) 92%, transparent);
+  border-bottom: 1px solid var(--bd);
+  box-shadow: none;
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+}
+
+.nav-container {
+  max-width: 1380px;
+  height: 64px;
+}
+
+.nav-left {
+  gap: 12px;
+}
+
+.nav-logo-img {
+  width: 34px;
+  height: 34px;
+  border: 0;
+}
+
+.dt-nav {
+  gap: 2px;
+}
+
+.nav-item-dt {
+  height: auto;
+  padding: 10px 12px;
+  color: var(--txt-muted);
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+
+.nav-item-dt:hover,
+.nav-item-dt.active {
+  color: var(--txt);
+  background: transparent;
+}
+
+.nav-item-dt.active {
+  border-bottom: 0;
+}
+
+.nav-item-dt.active::after {
+  content: '';
+  position: absolute;
+  right: 12px;
+  bottom: 4px;
+  left: 12px;
+  height: 1px;
+  background: var(--pri);
+}
+
+.dt-dropdown {
+  top: calc(100% + 17px);
+  min-width: 176px;
+  padding: 8px;
+  background: var(--card-bg-solid);
+  border-radius: 4px;
+  box-shadow: 0 22px 55px rgba(18, 16, 12, 0.14);
+}
+
+.dt-dropdown a {
+  padding: 11px 12px;
+  color: var(--txt-muted);
+  font-size: 0.78rem;
+  font-weight: 600;
+  border: 0;
+}
+
+.nav-right {
+  gap: 2px;
+}
+
+.home-btn,
+.member-btn {
+  min-height: 44px;
+  padding-inline: 11px;
+  color: var(--txt-muted);
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  font-size: 0.76rem;
+  font-weight: 600;
+}
+
+.home-btn.active,
+.member-btn.active {
+  color: var(--txt);
+  background: transparent;
+  border-color: transparent;
+}
+
+.theme-toggle {
+  min-width: 46px;
+  min-height: 44px;
+  padding: 4px 8px;
+  color: var(--txt-muted);
+  border-radius: 2px;
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+
+.reading-progress-bar {
+  top: calc(env(safe-area-inset-top, 0px) + 64px);
+  height: 1px;
+}
+
+.progress-fill {
+  box-shadow: none;
+}
+
+@media (max-width: 767px) {
+  .sticky-nav {
+    padding-inline: 14px;
+  }
+
+  .nav-wordmark {
+    display: block;
+  }
+
+  .home-btn {
+    display: none !important;
+  }
+
+  .member-btn {
+    padding-inline: 8px;
+  }
+
+  .theme-toggle {
+    margin-right: 0;
   }
 }
 </style>

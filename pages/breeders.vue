@@ -1,9 +1,8 @@
 <script setup>
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useHead, useAsyncData, useSupabaseClient } from '#imports'
 import { useMainStore } from '~/stores/useMainStore'
 import { getCleanUrl } from '~/utils/image'
-import ShopFlipCard from '~/components/ShopFlipCard.vue'
 
 const store = useMainStore()
 const supabase = useSupabaseClient()
@@ -35,20 +34,13 @@ const { data: ssrBreeders } = await useAsyncData('breeders-list-seo-v1', async (
 // 物種切換（使用本地 ref，store 中未定義 breeder_sp，直接寫入 store 不具響應性）
 const breederSp = ref('豹紋守宮')
 
+onMounted(() => {
+  store.ensureInventoryLoaded()
+})
+
 // 切換物種
 const selectBreederSp = (species) => {
   breederSp.value = species
-}
-
-// 收藏切換（保留以滿足 ShopFlipCard 的 prop；種群卡已隱藏收藏鈕 show-wishlist=false）
-const toggleWishlist = (id) => {
-  if (!store.wishlist) store.wishlist = []
-  if (store.wishlist.includes(id)) {
-    store.wishlist = store.wishlist.filter((x) => x !== id)
-  } else {
-    store.wishlist.push(id)
-  }
-  if (import.meta.client) localStorage.setItem('gencko_wishlist', JSON.stringify(store.wishlist))
 }
 
 // 種群展示列表：不分種公種母；依「熱門 → 售價高到低」排序（不顯示排序 UI）
@@ -122,7 +114,7 @@ const breedersBreadcrumbLd = {
   '@context': 'https://schema.org',
   '@type': 'BreadcrumbList',
   itemListElement: [
-    { '@type': 'ListItem', position: 1, name: '首頁', item: 'https://www.genckobreeding.com/' },
+    { '@type': 'ListItem', position: 1, name: '首頁', item: 'https://www.genckobreeding.com/home' },
     { '@type': 'ListItem', position: 2, name: '種群展示', item: breedersUrl }
   ]
 }
@@ -200,16 +192,22 @@ useHead({
 
 <template>
   <div class="breeders-page-wrapper">
-    <!-- SEO：頁面唯一 h1（sr-only 含完整關鍵字） -->
-    <h1 class="sr-only">Gencko 種群展示｜豹紋守宮與肥尾守宮繁育種公種母</h1>
-    <!-- 視覺主標保留為 div（桌機可見、手機隱藏） -->
-    <div class="page-title dt-only" aria-hidden="true">種群展示</div>
+    <div class="common-document-meta" aria-label="種群展示說明">
+      <span>GENCKO BREEDING ARCHIVE</span>
+      <span>LINEAGE / GENETICS / SELECTION</span>
+    </div>
+    <header class="breeders-intro">
+      <p class="breeders-eyebrow">SELECTED BREEDERS</p>
+      <h1 class="breeders-mobile-heading">核心種群</h1>
+      <p>精選 Gencko 自留繁育個體，從品系與基因看見每一代的選育方向。</p>
+    </header>
 
-    <div class="tabs">
+    <div class="tabs" role="group" aria-label="選擇展示物種">
       <button
         type="button"
         class="tab"
         :class="{ active: breederSp === '豹紋守宮' }"
+        :aria-pressed="breederSp === '豹紋守宮'"
         @click="selectBreederSp('豹紋守宮')"
       >
         豹紋守宮
@@ -218,31 +216,79 @@ useHead({
         type="button"
         class="tab"
         :class="{ active: breederSp === '肥尾守宮' }"
+        :aria-pressed="breederSp === '肥尾守宮'"
         @click="selectBreederSp('肥尾守宮')"
       >
         肥尾守宮
       </button>
     </div>
 
-    <div v-if="breedersList.length === 0" style="text-align: center; padding: 3rem; color: #888">
-      目前尚無可展示的種群資料。
-    </div>
+    <section class="breeders-directory-stage" aria-labelledby="breeders-directory-title">
+      <header class="breeders-stage-heading">
+        <span>01</span>
+        <div>
+          <p>BREEDING COLLECTION</p>
+          <h2 id="breeders-directory-title">{{ breederSp }}精選種群</h2>
+        </div>
+      </header>
 
-    <!-- Breeders Grid：改用與 shop 相同的翻卡，點擊進個體頁（#task3）；種群為非賣品故隱藏比較 -->
-    <div class="grid photo-grid" v-else>
-      <ShopFlipCard
-        v-for="(i, index) in breedersList"
-        :key="i.ID"
-        :item="i"
-        :index="index"
-        :is-wishlisted="(store.wishlist || []).includes(i.ID)"
-        :show-compare="false"
-        :show-wishlist="false"
-        :show-status-badge="false"
-        :show-back-price="false"
-        :on-toggle-wishlist="toggleWishlist"
-      />
-    </div>
+      <div
+        v-if="store.loading && !store.inventoryLoaded && breedersList.length === 0"
+        class="breeders-empty-state"
+      >
+        <span>LOADING COLLECTION</span>
+        <h3>正在載入種群資料</h3>
+        <p>正在取得最新個體資料，請稍候。</p>
+      </div>
+
+      <div v-else-if="store.dataError && breedersList.length === 0" class="breeders-empty-state">
+        <span>CONNECTION INTERRUPTED</span>
+        <h3>種群資料載入失敗</h3>
+        <p>連線暫時中斷，請重新載入資料。</p>
+        <div>
+          <button
+            type="button"
+            class="btn-app btn-app--primary btn-app--md"
+            @click="store.loadDataFromAPI"
+          >
+            重新載入
+          </button>
+        </div>
+      </div>
+
+      <div v-else-if="breedersList.length === 0" class="breeders-empty-state">
+        <span>ARCHIVE UPDATING</span>
+        <h3>此物種目前尚無公開種群。</h3>
+        <p>完成個體資料整理後會陸續更新；你可以先瀏覽在售個體或探索基因圖鑑。</p>
+        <div>
+          <NuxtLink no-prefetch to="/shop">瀏覽在售個體</NuxtLink>
+          <NuxtLink no-prefetch to="/genes">探索基因圖鑑</NuxtLink>
+        </div>
+      </div>
+
+      <div class="grid photo-grid" v-else>
+        <article v-for="(i, index) in breedersList" :key="i.ID" class="breeder-photo-card">
+          <img
+            v-if="i.ImageURL"
+            :src="getCleanUrl(i.ImageURL, 600)"
+            :alt="`${i.Morph} 種群`"
+            class="breeder-photo"
+            :loading="index < 8 ? 'eager' : 'lazy'"
+            :fetchpriority="index < 8 ? 'high' : 'auto'"
+            decoding="async"
+          />
+          <div
+            v-else
+            class="breeder-photo breeder-photo--empty"
+            role="img"
+            :aria-label="`${i.Morph} 無圖片`"
+          >
+            <span>無圖片</span>
+          </div>
+          <h3 class="breeder-morph">{{ i.Morph }}</h3>
+        </article>
+      </div>
+    </section>
   </div>
 </template>
 
@@ -261,6 +307,98 @@ useHead({
 .dt-only {
   display: block;
 }
+.m-only {
+  display: none;
+}
+
+.breeders-mobile-heading {
+  color: var(--txt);
+  font-size: 1.35rem;
+  font-weight: 900;
+  letter-spacing: 0.5px;
+  margin-bottom: 14px;
+  border-left: 3px solid var(--pri);
+  padding-left: 12px;
+}
+
+.breeders-directory-stage {
+  margin-top: clamp(28px, 5vw, 56px);
+  padding-top: 20px;
+  border-top: 1px solid var(--bd);
+}
+
+.breeders-stage-heading {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr);
+  gap: 14px;
+  align-items: start;
+  margin-bottom: 22px;
+}
+
+.breeders-stage-heading > span {
+  display: inline-grid;
+  place-items: center;
+  width: 34px;
+  height: 28px;
+  border: 1px solid var(--pri);
+  color: var(--pri);
+  font-size: 0.68rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+}
+
+.breeders-stage-heading p,
+.breeders-empty-state > span {
+  margin: 0 0 4px;
+  color: var(--txt-muted);
+  font-size: 0.66rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+}
+
+.breeders-stage-heading h2,
+.breeders-empty-state h3 {
+  margin: 0;
+  color: var(--txt);
+  font-family: 'Noto Serif TC', serif;
+  letter-spacing: -0.04em;
+}
+
+.breeders-stage-heading h2 {
+  font-size: clamp(1.25rem, 2vw, 1.75rem);
+}
+
+.breeders-empty-state {
+  padding: clamp(28px, 5vw, 56px) 0;
+  border-block: 1px solid var(--bd);
+}
+
+.breeders-empty-state h3 {
+  margin-top: 8px;
+  font-size: clamp(1.35rem, 3vw, 2rem);
+}
+
+.breeders-empty-state p {
+  max-width: 56ch;
+  margin: 12px 0 20px;
+  color: var(--txt-muted);
+  line-height: 1.7;
+}
+
+.breeders-empty-state div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.breeders-empty-state a {
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--pri);
+  color: var(--pri);
+  font-size: 0.85rem;
+  font-weight: 800;
+  text-decoration: none;
+}
 
 /* 頁籤切換 (變數化) */
 .tabs {
@@ -275,6 +413,7 @@ useHead({
 .tab {
   flex: 1;
   padding: 12px;
+  min-height: var(--control-min-height);
   text-align: center;
   cursor: pointer;
   color: var(--txt);
@@ -298,6 +437,12 @@ useHead({
   opacity: 1;
   box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.1);
 }
+.tab:focus-visible {
+  outline: 3px solid var(--pri);
+  outline-offset: 2px;
+  position: relative;
+  z-index: 1;
+}
 
 /* 性別篩選列 */
 .gender-filter-row {
@@ -308,6 +453,7 @@ useHead({
 .g-btn {
   flex: 1;
   padding: 8px 10px;
+  min-height: var(--control-min-height);
   border-radius: 8px;
   border: 1px solid var(--bd);
   background: var(--card-bg);
@@ -321,10 +467,6 @@ useHead({
   justify-content: center;
   gap: 6px;
   opacity: 0.7;
-}
-.g-btn:hover {
-  opacity: 1;
-  border-color: var(--bd-hover);
 }
 .g-btn.active {
   opacity: 1;
@@ -380,6 +522,9 @@ useHead({
   .dt-only {
     display: none !important;
   }
+  .m-only {
+    display: block;
+  }
   .breeders-page-wrapper {
     padding-top: 0;
   }
@@ -391,13 +536,262 @@ useHead({
     font-size: 0.95rem;
   }
 
-  /* 改為 3 欄並縮小間距 */
+  /* 手機改為雙欄，保留卡片標題與 metadata 的可讀寬度 */
   .grid.photo-grid {
-    grid-template-columns: repeat(3, 1fr) !important;
-    gap: 6px;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 10px;
   }
   .morph-title {
     font-size: 0.8rem !important;
+  }
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .g-btn:hover {
+    opacity: 1;
+    border-color: var(--bd-hover);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tab,
+  .g-btn {
+    transition: none;
+  }
+}
+
+.breeders-page-wrapper {
+  max-width: 1440px;
+  padding: clamp(38px, 6vw, 88px) clamp(20px, 5vw, 76px) 100px;
+}
+
+.breeders-intro {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 460px);
+  align-items: end;
+  gap: 40px;
+  margin-bottom: 32px;
+  padding-bottom: 30px;
+  border-bottom: 1px solid var(--bd);
+}
+
+.breeders-eyebrow {
+  grid-column: 1 / -1;
+  margin: 0 0 -28px;
+  color: var(--pri);
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+}
+
+.breeders-mobile-heading {
+  display: block;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  color: var(--txt);
+  font-family: 'Noto Serif TC', serif;
+  font-size: clamp(2.7rem, 6vw, 5.8rem);
+  line-height: 0.96;
+  letter-spacing: -0.06em;
+}
+
+.breeders-intro > p:last-child {
+  margin: 0;
+  color: var(--txt-muted);
+  font-size: 0.94rem;
+  line-height: 1.9;
+}
+
+.tabs {
+  margin-bottom: 28px;
+  border: 0;
+  border-bottom: 1px solid var(--bd);
+  border-radius: 0;
+  background: transparent;
+}
+
+.tab {
+  border: 0;
+  border-bottom: 2px solid transparent;
+  color: var(--txt-muted);
+}
+
+.tab.active {
+  border-color: var(--pri);
+  background: transparent;
+  box-shadow: none;
+  color: var(--pri);
+}
+
+.photo-grid {
+  gap: clamp(18px, 2vw, 30px);
+}
+
+/* 種群型錄與選購頁一致：商品卡、方形照片與翻面背板全部採直角。 */
+:deep(.photo-grid .flip-card),
+:deep(.photo-grid .flip-face),
+:deep(.photo-grid .flip-back-inner),
+:deep(.photo-grid .card-img.slim-img),
+:deep(.photo-grid .slim-body) {
+  border-radius: 0 !important;
+}
+
+@media (max-width: 768px) {
+  .breeders-page-wrapper {
+    padding: 30px 16px 96px;
+  }
+
+  .breeders-intro {
+    grid-template-columns: 1fr;
+    gap: 16px;
+    margin-bottom: 22px;
+    padding-bottom: 22px;
+  }
+
+  .breeders-eyebrow {
+    grid-column: auto;
+    margin: 0;
+  }
+
+  .breeders-mobile-heading {
+    display: block !important;
+    font-size: clamp(2.5rem, 14vw, 4rem);
+  }
+
+  .breeders-intro > p:last-child {
+    font-size: 0.84rem;
+    line-height: 1.7;
+  }
+}
+
+/* 純圖片種群型錄 */
+.breeders-page-wrapper {
+  padding: 12px clamp(20px, 5vw, 76px) clamp(36px, 5vw, 64px);
+}
+
+.common-document-meta {
+  margin-bottom: clamp(12px, 2vw, 20px);
+}
+
+.breeders-intro {
+  gap: 24px;
+  margin-bottom: 16px;
+  padding-bottom: 18px;
+}
+
+.breeders-eyebrow {
+  margin-bottom: -16px;
+}
+
+.tabs {
+  margin-bottom: 14px;
+}
+
+.breeders-directory-stage {
+  margin-top: 14px;
+  padding-top: 14px;
+}
+
+.breeders-stage-heading {
+  margin-bottom: 14px;
+}
+
+.photo-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: clamp(10px, 1.4vw, 18px);
+}
+
+.breeder-photo-card {
+  position: relative;
+  min-width: 0;
+  aspect-ratio: 1 / 1;
+  overflow: hidden;
+  background: var(--card-bg-solid);
+}
+
+.breeder-photo {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.breeder-photo--empty {
+  display: grid;
+  place-items: center;
+  color: var(--txt-muted);
+  font-size: 0.78rem;
+  border: 1px solid var(--bd);
+}
+
+.breeder-morph {
+  position: absolute;
+  right: clamp(8px, 1.2vw, 14px);
+  bottom: clamp(8px, 1.2vw, 14px);
+  left: clamp(8px, 1.2vw, 14px);
+  z-index: 1;
+  margin: 0;
+  overflow: hidden;
+  color: #fff;
+  font-family: 'Noto Serif TC', serif;
+  font-size: clamp(1rem, 1.55vw, 1.4rem);
+  font-weight: 900;
+  line-height: 1.2;
+  text-align: right;
+  text-overflow: ellipsis;
+  text-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.96),
+    0 3px 12px rgba(0, 0, 0, 0.88);
+  white-space: nowrap;
+}
+
+@media (max-width: 768px) {
+  .breeders-page-wrapper {
+    padding: 8px 10px 72px;
+  }
+
+  .common-document-meta {
+    margin-bottom: 10px;
+  }
+
+  .breeders-intro {
+    gap: 10px;
+    margin-bottom: 12px;
+    padding-bottom: 14px;
+  }
+
+  .breeders-eyebrow {
+    margin: 0;
+  }
+
+  .breeders-mobile-heading {
+    font-size: clamp(2.2rem, 12vw, 3.5rem);
+  }
+
+  .tabs {
+    margin-bottom: 10px;
+  }
+
+  .breeders-directory-stage {
+    margin-top: 10px;
+    padding-top: 10px;
+  }
+
+  .breeders-stage-heading {
+    margin-bottom: 10px;
+  }
+
+  .grid.photo-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    gap: 6px;
+  }
+
+  .breeder-morph {
+    right: 6px;
+    bottom: 6px;
+    left: 6px;
+    font-size: clamp(0.76rem, 3.4vw, 0.95rem);
   }
 }
 </style>

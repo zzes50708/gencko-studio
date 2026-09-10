@@ -106,7 +106,7 @@ const qsBreadcrumbLd = {
   '@context': 'https://schema.org',
   '@type': 'BreadcrumbList',
   itemListElement: [
-    { '@type': 'ListItem', position: 1, name: '首頁', item: 'https://www.genckobreeding.com/' },
+    { '@type': 'ListItem', position: 1, name: '首頁', item: 'https://www.genckobreeding.com/home' },
     { '@type': 'ListItem', position: 2, name: '飼養前自我評估', item: qsUrl }
   ]
 }
@@ -547,7 +547,22 @@ onBeforeUnmount(() => {
   <div class="qs-container">
     <!-- ============ 問卷階段 ============ -->
     <div v-if="!finished">
+      <div class="qs-document-meta" aria-label="評估流程說明">
+        <span>GENCKO READINESS DESK</span>
+        <span>18 QUESTIONS / ONE CLEAR NEXT STEP</span>
+      </div>
       <h1 class="page-title">飼養前自我評估</h1>
+
+      <nav class="qs-tool-nav" aria-label="評估後續工具">
+        <div>
+          <span>READINESS CHECK / 18 題</span>
+          <strong>這裡評估飼養準備度，不判斷疾病。</strong>
+        </div>
+        <div class="qs-tool-links">
+          <NuxtLink no-prefetch to="/health">進行健康評估</NuxtLink>
+          <NuxtLink no-prefetch to="/hospital">查找特寵醫院</NuxtLink>
+        </div>
+      </nav>
 
       <div class="qs-progress-area">
         <div class="qs-progress-labels">
@@ -578,7 +593,9 @@ onBeforeUnmount(() => {
               <div class="qs-dim-tag">
                 {{ QUIZ_DIMENSIONS[q.dim].icon }} {{ QUIZ_DIMENSIONS[q.dim].label }}
               </div>
-              <div class="qs-question-text">{{ q.text }}</div>
+              <h2 v-if="idx === step" class="qs-question-text" aria-live="polite">
+                {{ q.text }}
+              </h2>
               <div v-if="idx === step" class="qs-options-grid">
                 <button
                   type="button"
@@ -586,6 +603,8 @@ onBeforeUnmount(() => {
                   :key="opt.id"
                   class="qs-option-btn"
                   :class="{ 'is-selected': selectedOptionId === opt.id }"
+                  :aria-label="`${q.text}：${opt.label}`"
+                  :aria-pressed="selectedOptionId === opt.id"
                   @click="selectOption(q.id, opt)"
                 >
                   <span class="qs-option-label">{{ opt.label }}</span>
@@ -602,13 +621,17 @@ onBeforeUnmount(() => {
         </template>
       </ClientOnly>
 
-      <button v-if="step > 0" @click="prevStep" class="qs-nav-btn">
+      <button type="button" v-if="step > 0" @click="prevStep" class="qs-nav-btn">
         <span>← 返回上一題</span>
       </button>
     </div>
 
     <!-- ============ 結果階段 ============ -->
     <div v-else class="qs-result-wrap">
+      <div class="qs-document-meta" aria-label="評估結果說明">
+        <span>GENCKO READINESS DESK</span>
+        <span>YOUR PERSONAL REVIEW</span>
+      </div>
       <!-- 總分卡 -->
       <div class="qs-result-box">
         <span class="qs-badge">Evaluation Complete</span>
@@ -660,6 +683,7 @@ onBeforeUnmount(() => {
         <div class="qs-track-desc">{{ recommendedTrack.desc }}</div>
         <div class="qs-track-links">
           <NuxtLink
+            no-prefetch
             v-for="l in recommendedTrack.links"
             :key="l.href"
             :to="l.href"
@@ -687,7 +711,11 @@ onBeforeUnmount(() => {
             <div class="qs-risk-q">{{ QUIZ_DIMENSIONS[c.dim].icon }} {{ c.question }}</div>
             <div class="qs-risk-a">您的選擇：「{{ c.label }}」</div>
             <div class="qs-risk-note">{{ c.note }}</div>
-            <button class="qs-modify-btn" @click="jumpToQuestion(findQuestionIdx(c.qId))">
+            <button
+              type="button"
+              class="qs-modify-btn"
+              @click="jumpToQuestion(findQuestionIdx(c.qId))"
+            >
               ✏️ 修改這題
             </button>
           </div>
@@ -699,7 +727,11 @@ onBeforeUnmount(() => {
             <div class="qs-risk-q">{{ QUIZ_DIMENSIONS[w.dim].icon }} {{ w.question }}</div>
             <div class="qs-risk-a">您的選擇：「{{ w.label }}」</div>
             <div class="qs-risk-note">{{ w.note }}</div>
-            <button class="qs-modify-btn" @click="jumpToQuestion(findQuestionIdx(w.qId))">
+            <button
+              type="button"
+              class="qs-modify-btn"
+              @click="jumpToQuestion(findQuestionIdx(w.qId))"
+            >
               ✏️ 修改這題
             </button>
           </div>
@@ -710,7 +742,7 @@ onBeforeUnmount(() => {
         💡 溫馨提示：新手飼養前建議多尋求專業玩家或專科醫師的建議，確保環境與設備完全就緒。
       </div>
 
-      <button @click="resetQuiz" class="qs-reset-btn">🔄 重新評估</button>
+      <button type="button" @click="resetQuiz" class="qs-reset-btn">🔄 重新評估</button>
     </div>
   </div>
 </template>
@@ -721,6 +753,68 @@ onBeforeUnmount(() => {
   margin: 0 auto;
   padding-top: 15px;
   min-height: 60vh;
+}
+
+.qs-document-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 0 0 14px;
+  border-bottom: 1px solid var(--bd);
+  color: var(--txt-muted);
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+}
+
+.qs-document-meta span:first-child {
+  color: var(--pri);
+}
+
+.qs-tool-nav {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 18px;
+  align-items: center;
+  margin: 12px 0 24px;
+  padding: 15px 16px;
+  border: 1px solid var(--bd);
+  border-radius: var(--radius-lg);
+  background: var(--card-bg);
+  box-shadow: var(--shadow-card);
+}
+.qs-tool-nav > div:first-child {
+  display: grid;
+  gap: 4px;
+  color: var(--txt);
+}
+.qs-tool-nav > div:first-child span {
+  color: var(--pri);
+  font-size: 0.68rem;
+  font-weight: 900;
+  letter-spacing: 0.14em;
+}
+.qs-tool-links {
+  display: flex;
+  gap: 8px;
+}
+.qs-tool-links a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--control-min-height);
+  padding: 0 13px;
+  border: 1px solid var(--bd-solid);
+  border-radius: var(--radius-sm);
+  background: var(--btn-secondary-bg);
+  color: var(--txt);
+  font-size: 0.8rem;
+  font-weight: 850;
+  text-decoration: none;
+}
+.qs-tool-links a:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: var(--focus-offset);
 }
 
 /* ============ 進度條 ============ */
@@ -741,7 +835,7 @@ onBeforeUnmount(() => {
   width: 100%;
   height: 5px;
   background: rgba(128, 128, 128, 0.2);
-  border-radius: 3px;
+  border-radius: 0;
   overflow: hidden;
 }
 .qs-progress-fill {
@@ -847,12 +941,7 @@ onBeforeUnmount(() => {
   color: var(--txt);
   font-family: inherit;
   font-size: inherit;
-}
-.qs-option-btn:hover {
-  border-color: var(--pri);
-  background: rgba(128, 128, 128, 0.05);
-  transform: translateY(-1px);
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+  min-height: var(--control-min-height);
 }
 .qs-option-btn.is-selected {
   border-color: var(--pri);
@@ -876,9 +965,6 @@ onBeforeUnmount(() => {
   transition: 0.2s;
   flex-shrink: 0;
 }
-.qs-option-btn:hover .qs-check-circle {
-  border-color: var(--pri);
-}
 .qs-option-btn.is-selected .qs-check-circle {
   border-color: var(--pri);
   background: var(--pri);
@@ -901,14 +987,10 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   gap: 8px;
+  min-height: var(--control-min-height);
   padding: 8px 0;
   transition: 0.2s;
 }
-.qs-nav-btn:hover {
-  color: var(--pri);
-  opacity: 1;
-}
-
 /* ============ 結果頁 ============ */
 .qs-result-wrap {
   animation: slideUp 0.6s ease;
@@ -1091,14 +1173,10 @@ onBeforeUnmount(() => {
   border-radius: 8px;
   font-size: 0.9rem;
   font-weight: 600;
+  min-height: var(--control-min-height);
   transition: 0.2s;
   box-shadow: 0 3px 10px var(--pri-glow);
 }
-.qs-track-link:hover {
-  transform: translateY(-2px);
-  filter: brightness(1.1);
-}
-
 /* 風險區 */
 .qs-risk-section {
   border-color: rgba(220, 60, 0, 0.3);
@@ -1176,12 +1254,8 @@ onBeforeUnmount(() => {
   font-size: 0.78rem;
   font-weight: 600;
   cursor: pointer;
+  min-height: var(--control-min-height);
   transition: 0.2s;
-}
-.qs-modify-btn:hover {
-  background: var(--pri);
-  color: #fff;
-  border-color: var(--pri);
 }
 
 /* 提示 + 重置 */
@@ -1206,16 +1280,86 @@ onBeforeUnmount(() => {
   font-weight: bold;
   font-size: 1.05rem;
   cursor: pointer;
+  min-height: var(--control-min-height);
   transition: 0.3s;
   box-shadow: 0 5px 15px var(--pri-glow);
 }
-.qs-reset-btn:hover {
-  transform: translateY(-3px);
-  filter: brightness(1.1);
+
+.qs-option-btn:focus-visible,
+.qs-nav-btn:focus-visible,
+.qs-track-link:focus-visible,
+.qs-modify-btn:focus-visible,
+.qs-reset-btn:focus-visible {
+  outline: 3px solid var(--pri);
+  outline-offset: 3px;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .qs-option-btn:hover {
+    border-color: var(--pri);
+    background: rgba(128, 128, 128, 0.05);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+  }
+
+  .qs-option-btn:hover .qs-check-circle {
+    border-color: var(--pri);
+  }
+
+  .qs-nav-btn:hover {
+    color: var(--pri);
+    opacity: 1;
+  }
+
+  .qs-track-link:hover {
+    transform: translateY(-2px);
+    filter: brightness(1.1);
+  }
+
+  .qs-modify-btn:hover {
+    background: var(--pri);
+    color: #fff;
+    border-color: var(--pri);
+  }
+
+  .qs-reset-btn:hover {
+    transform: translateY(-3px);
+    filter: brightness(1.1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .qs-option-btn,
+  .qs-check-circle,
+  .qs-nav-btn,
+  .qs-track-link,
+  .qs-modify-btn,
+  .qs-reset-btn,
+  .qs-result-wrap,
+  .qs-carousel-track,
+  .qs-card,
+  .qs-dim-fill {
+    animation: none;
+    transition: none;
+  }
+
+  .qs-option-btn:hover,
+  .qs-track-link:hover,
+  .qs-reset-btn:hover {
+    transform: none;
+  }
 }
 
 /* RWD */
 @media (max-width: 540px) {
+  .qs-tool-nav {
+    grid-template-columns: 1fr;
+    padding: 13px;
+  }
+  .qs-tool-links {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
   .qs-card {
     padding: 20px 18px;
   }
@@ -1255,4 +1399,272 @@ onBeforeUnmount(() => {
     transform: translateY(0);
   }
 }
+/* 購買評估以表單與報告的閱讀感取代大面積裝飾。 */
+.qs-container,
+.qs-tool-nav,
+.qs-card,
+.qs-result-box,
+.qs-section,
+.qs-risk-card,
+.qs-hint-box {
+  border-radius: 3px;
+  box-shadow: none;
+}
+
+.qs-title,
+.qs-res-title,
+.qs-section-title,
+.qs-question-text {
+  font-family: 'Noto Serif TC', serif;
+  letter-spacing: -0.03em;
+}
+
+.qs-option-btn,
+.qs-nav-btn,
+.qs-track-link,
+.qs-modify-btn,
+.qs-reset-btn {
+  border-radius: 2px;
+  box-shadow: none;
+}
+
+/* 自評工具以步驟表單與評估報告呈現，保留分數與風險本身的語意。 */
+.qs-tool-nav,
+.qs-progress-area,
+.qs-card,
+.qs-result-box,
+.qs-section,
+.qs-risk-card,
+.qs-hint-box {
+  border-radius: 0;
+  background-image: none;
+  box-shadow: none;
+}
+
+.qs-tool-nav {
+  padding: 16px 0;
+  border-width: 1px 0;
+  background: transparent;
+}
+
+.qs-progress-area {
+  padding: 14px 0;
+  border-width: 1px 0;
+  background: transparent;
+}
+
+.qs-carousel {
+  padding: 0;
+}
+
+.qs-card {
+  padding: 26px 0;
+  border-width: 1px 0;
+  background: transparent;
+}
+
+.qs-dim-tag,
+.qs-badge,
+.qs-risk-header,
+.qs-modify-btn,
+.qs-track-link,
+.qs-reset-btn {
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.qs-options-grid {
+  gap: 0;
+  border-top: 1px solid var(--bd);
+}
+
+.qs-option-btn {
+  min-height: 64px;
+  padding: 14px 0;
+  border-width: 0 0 1px;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.qs-option-btn.is-selected,
+.qs-option-btn:hover {
+  border-color: var(--pri);
+  background: color-mix(in srgb, var(--pri) 5%, transparent);
+  box-shadow: none;
+  transform: none;
+}
+
+.qs-check-circle {
+  border-radius: 0;
+}
+
+.qs-result-box,
+.qs-section {
+  padding: 26px 0;
+  border-width: 1px 0;
+  background: transparent;
+}
+
+.qs-grade-letter {
+  width: auto;
+  height: auto;
+  min-width: 92px;
+  padding: 10px 18px;
+  border-radius: 0;
+  background: var(--pri) !important;
+  box-shadow: none;
+}
+
+.qs-score-display {
+  text-shadow: none;
+}
+
+.qs-dim-grid {
+  gap: 0;
+  border-top: 1px solid var(--bd);
+  border-left: 1px solid var(--bd);
+}
+
+.qs-dim-item {
+  border-width: 0 1px 1px 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.qs-dim-item.is-weakest {
+  background: color-mix(in srgb, var(--pri) 7%, transparent);
+  box-shadow: none;
+}
+
+.qs-risk-card,
+.qs-hint-box {
+  padding-left: 14px;
+  background: transparent;
+}
+
+@media (max-width: 540px) {
+  .qs-tool-nav,
+  .qs-card,
+  .qs-result-box,
+  .qs-section {
+    padding-left: 0;
+    padding-right: 0;
+  }
+
+  .qs-carousel {
+    margin: 0;
+    padding: 0;
+  }
+}
+
+.qs-card::before {
+  content: 'CURRENT PROMPT';
+  display: block;
+  margin-bottom: 16px;
+  color: var(--pri);
+  font-size: 0.65rem;
+  font-weight: 850;
+  letter-spacing: 0.12em;
+}
+
+@media (min-width: 768px) and (hover: hover) and (pointer: fine) {
+  .qs-option-btn:hover,
+  .qs-track-link:hover,
+  .qs-reset-btn:hover {
+    transform: none;
+    box-shadow: none;
+  }
+}
+/* 自評保留題目輪播與計分，以一致表單層級呈現。 */
+.qs-container {
+  padding-top: 8px;
+  padding-bottom: 28px;
+}
+.qs-container .page-title {
+  font-family: var(--font-heading-zh);
+  font-size: clamp(2rem, 4.5vw, 3.7rem);
+  line-height: 1.3;
+  margin-block: 20px 14px;
+}
+.qs-question-text {
+  font-family: var(--font-heading-zh);
+  line-height: 1.5;
+}
+.qs-tool-nav,
+.qs-progress-area {
+  margin-block: 12px;
+  padding-block: 14px;
+}
+.qs-card {
+  box-shadow: none !important;
+  border-radius: 0;
+}
+.qs-card::before {
+  margin-bottom: 10px;
+}
+.qs-result-box,
+.qs-section {
+  margin-block: 16px;
+  padding-block: 18px;
+}
+.qs-dim-grid {
+  border-left: 0;
+  gap: 0 20px;
+}
+.qs-dim-item {
+  border: 0;
+  border-bottom: 1px solid var(--bd);
+  padding: 14px 0;
+}
+.qs-risk-card,
+.qs-hint-box {
+  border: 0;
+  border-bottom: 1px solid var(--bd);
+  padding: 12px 0;
+  background: transparent;
+}
+.qs-tool-links a,
+.qs-track-link,
+.qs-modify-btn,
+.qs-reset-btn,
+.qs-nav-btn {
+  min-height: 44px;
+  border-radius: 2px;
+  box-shadow: none;
+  border: 1px solid var(--txt);
+}
+.qs-option-btn {
+  padding: 14px 10px;
+  border-radius: 2px;
+}
+.qs-option-label {
+  line-height: 1.65;
+}
+.qs-score-display {
+  font-variant-numeric: tabular-nums;
+}
+.qs-container .page-title {
+  text-align: left;
+  border: 0;
+  padding-left: 0;
+}
+.qs-question-text {
+  text-align: left;
+}
+/* 本頁返回與次要操作使用同一按鈕形式。 */
+:deep(.app-back-btn),
+.btn-app {
+  border-radius: 2px;
+  min-height: 44px;
+  box-shadow: none;
+  font-family: var(--font-body-zh);
+}
+:deep(.app-back-btn) {
+  border: 1px solid var(--txt);
+}
+.qs-grade-letter, .qs-score-display, .qs-dim-score { font-family: var(--font-body-zh); font-variant-numeric: tabular-nums; }
+.qs-result-box { text-align: left; }
+.qs-grade-row { justify-content: flex-start; }
+.qs-section-title { text-align: left; }
 </style>

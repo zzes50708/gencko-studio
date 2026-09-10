@@ -1,6 +1,6 @@
 <script setup>
-import { computed, ref, onMounted } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { computed, ref, onMounted, nextTick } from 'vue'
+import { useRoute } from 'vue-router'
 import { useHead, useAsyncData, useSupabaseClient } from '#imports'
 import { useMainStore } from '~/stores/useMainStore'
 import { getCleanUrl } from '~/utils/image'
@@ -10,11 +10,11 @@ definePageMeta({
 })
 
 const route = useRoute()
-const router = useRouter()
 const store = useMainStore()
 const supabase = useSupabaseClient()
 
 const productId = String(route.params.id || '').trim()
+const isHydrated = ref(false)
 
 // 展場設定於 SSR 先載入到 store，避免個體頁價格「先顯示原價再切成提示」的閃爍
 const { data: ssrSiteSettings } = await useAsyncData('product-site-settings', async () => {
@@ -37,7 +37,7 @@ const { data: currentProduct, pending } = await useAsyncData(`product-${productI
         'id, species, morph, genes, gender_type, gender_value, birthday, listing_price, sold_price, status, note, image_url, created_at, photo_updated_at'
       )
       .eq('id', productId)
-      .single()
+      .maybeSingle()
 
     if (error || !data) {
       console.warn('[product] 查無此個體或查詢失敗:', productId, error?.message)
@@ -242,7 +242,12 @@ const siteData = computed(() => {
       '@context': 'https://schema.org',
       '@type': 'BreadcrumbList',
       itemListElement: [
-        { '@type': 'ListItem', position: 1, name: '首頁', item: 'https://www.genckobreeding.com/' },
+        {
+          '@type': 'ListItem',
+          position: 1,
+          name: '首頁',
+          item: 'https://www.genckobreeding.com/home'
+        },
         {
           '@type': 'ListItem',
           position: 2,
@@ -364,6 +369,39 @@ const matchedAuctionId = computed(() => {
   return morphMatch?.id || null
 })
 
+const normalizeMorphName = (value) =>
+  String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[\s·・\-_/（）()]+/g, '')
+
+const getMorphSimilarity = (source, candidate) => {
+  const a = normalizeMorphName(source)
+  const b = normalizeMorphName(candidate)
+  if (!a || !b) return 0
+  if (a === b) return 1
+
+  const shorterLength = Math.min(a.length, b.length)
+  const longerLength = Math.max(a.length, b.length)
+  if (a.includes(b) || b.includes(a)) return 0.8 + (shorterLength / longerLength) * 0.19
+  if (shorterLength === 1) return 0
+
+  const toBigrams = (text) =>
+    Array.from({ length: text.length - 1 }, (_, index) => text.slice(index, index + 2))
+  const aBigrams = toBigrams(a)
+  const remaining = toBigrams(b)
+  let matches = 0
+
+  for (const bigram of aBigrams) {
+    const matchIndex = remaining.indexOf(bigram)
+    if (matchIndex === -1) continue
+    matches += 1
+    remaining.splice(matchIndex, 1)
+  }
+
+  return (2 * matches) / (aBigrams.length + (b.length - 1))
+}
+
 const relatedProducts = computed(() => {
   if (!currentProduct.value || !(store.inv || []).length) return []
   const p = currentProduct.value
@@ -375,15 +413,44 @@ const relatedProducts = computed(() => {
     .map((i) => {
       const iGenes = Array.isArray(i.Genes) ? i.Genes : []
       const sharedGenes = pGenes.filter((g) => iGenes.includes(g)).length
-      const sameMorph = i.Morph === p.Morph ? 3 : 0
-      return { ...i, _score: sameMorph + sharedGenes }
+      return {
+        ...i,
+        _morphSimilarity: getMorphSimilarity(p.Morph, i.Morph),
+        _sharedGenes: sharedGenes
+      }
     })
-    .filter((i) => i._score > 0)
-    .sort((a, b) => b._score - a._score || (b.ImageURL ? 1 : 0) - (a.ImageURL ? 1 : 0))
+    .filter((i) => i._morphSimilarity > 0 || i._sharedGenes > 0)
+    .sort(
+      (a, b) =>
+        b._morphSimilarity - a._morphSimilarity ||
+        b._sharedGenes - a._sharedGenes ||
+        (b.ImageURL ? 1 : 0) - (a.ImageURL ? 1 : 0) ||
+        String(a.ID).localeCompare(String(b.ID))
+    )
     .slice(0, 8)
 })
 
+const isWishlisted = computed(() =>
+  currentProduct.value?.ID ? (store.wishlist || []).includes(currentProduct.value.ID) : false
+)
+
+const toggleWishlist = () => {
+  const id = currentProduct.value?.ID
+  if (!id) return
+
+  if (isWishlisted.value) {
+    store.wishlist = (store.wishlist || []).filter((itemId) => itemId !== id)
+  } else {
+    store.wishlist = [...(store.wishlist || []), id]
+  }
+
+  if (import.meta.client) {
+    localStorage.setItem('gencko_wishlist', JSON.stringify(store.wishlist))
+  }
+}
+
 onMounted(() => {
+  isHydrated.value = true
   if (currentProduct.value?.ID) {
     const id = currentProduct.value.ID
     store.history = [id, ...(store.history || []).filter((x) => x !== id)].slice(0, 50)
@@ -416,6 +483,8 @@ const shareLink = async () => {
 
 const generatedImage = ref(null)
 const isGenerating = ref(false)
+const promoTriggerEl = ref(null)
+const promoDialogEl = ref(null)
 
 const generatePromo = async () => {
   if (!currentProduct.value) return
@@ -475,6 +544,8 @@ const generatePromo = async () => {
     ctx.font = 'bold 65px Arial, sans-serif'
     ctx.fillText('STUDIO', 1030, 1000)
     generatedImage.value = canvas.toDataURL('image/jpeg', 0.9)
+    await nextTick()
+    promoDialogEl.value?.focus()
   } catch (err) {
     console.error('圖卡生成失敗', err)
     alert('圖片生成失敗，可能是因為網路跨域限制。')
@@ -482,12 +553,46 @@ const generatePromo = async () => {
     isGenerating.value = false
   }
 }
+
+const closePromo = async () => {
+  generatedImage.value = null
+  await nextTick()
+  promoTriggerEl.value?.focus()
+}
+
+const handlePromoKeydown = (event) => {
+  if (event.key === 'Escape') {
+    event.preventDefault()
+    void closePromo()
+    return
+  }
+  if (event.key !== 'Tab' || !promoDialogEl.value) return
+
+  const focusable = [
+    ...promoDialogEl.value.querySelectorAll('button, [href], input, select, textarea')
+  ].filter((element) => !element.disabled && element.offsetParent !== null)
+  if (!focusable.length) return
+
+  const first = focusable[0]
+  const last = focusable[focusable.length - 1]
+  if (event.shiftKey && document.activeElement === first) {
+    event.preventDefault()
+    last.focus()
+  } else if (!event.shiftKey && document.activeElement === last) {
+    event.preventDefault()
+    first.focus()
+  }
+}
 </script>
 
 <template>
   <div class="product-root-container">
     <div class="product-page-wrapper">
-      <div v-if="pending" style="text-align: center; padding: 100px 0; color: #888">
+      <div class="common-document-meta" aria-label="個體詳情說明">
+        <span>GENCKO ANIMAL RECORD</span>
+        <span>DETAIL / CARE / INQUIRE</span>
+      </div>
+      <div v-if="isHydrated && pending" style="text-align: center; padding: 100px 0; color: #888">
         <div class="loader" style="margin: 0 auto 20px auto"></div>
         <p>正在尋找這隻守宮的資料...</p>
         <TheBackButton
@@ -522,17 +627,21 @@ const generatePromo = async () => {
             <div v-if="productModules.transaction.status === 'Sold'" class="sold-stamp">
               SOLD OUT
             </div>
-            <img
-              v-for="(img, idx) in productModules.visuals.list"
-              :key="idx"
-              :src="getCleanUrl(img)"
-              class="prod-main-img"
-              @click="router.push(`/identity/${productModules.identity.id}`)"
-              style="cursor: pointer"
-              title="查看專屬電子身分證"
-              loading="eager"
-              decoding="async"
-            />
+            <NuxtLink
+              no-prefetch
+              class="prod-img-link"
+              :to="`/identity/${productModules.identity.id}`"
+              :aria-label="`查看 ${productModules.identity.morph} 專屬電子身分證`"
+            >
+              <img
+                v-for="(img, idx) in productModules.visuals.list"
+                :key="idx"
+                :src="getCleanUrl(img)"
+                class="prod-main-img"
+                loading="eager"
+                decoding="async"
+              />
+            </NuxtLink>
             <div class="prod-hint">點擊圖片可查看專屬電子身分證</div>
           </div>
           <div class="prod-info-box">
@@ -586,10 +695,10 @@ const generatePromo = async () => {
 
             <div class="prod-actions">
               <NuxtLink
+                no-prefetch
                 v-if="productModules.transaction.status === 'Auction' && matchedAuctionId"
                 :to="`/auction/${matchedAuctionId}`"
-                class="btn-app btn-app--primary btn-app--lg btn-app--pill btn-buy-lg"
-                style="background: #e67e22; box-shadow: 0 4px 10px rgba(230, 126, 34, 0.4)"
+                class="btn-app btn-app--primary btn-app--lg btn-buy-lg"
               >
                 🔨 前往競標場次
               </NuxtLink>
@@ -600,13 +709,35 @@ const generatePromo = async () => {
                 "
                 :href="store.lineLink"
                 target="_blank"
-                class="btn-app btn-app--primary btn-app--lg btn-app--pill btn-buy-lg"
+                class="btn-app btn-app--primary btn-app--lg btn-buy-lg"
               >
                 私訊購買（Line）
               </a>
               <div class="action-sub-buttons">
-                <button class="btn-share" @click="shareLink">分享連結</button>
-                <button class="btn-promo" @click="generatePromo" :disabled="isGenerating">
+                <button
+                  type="button"
+                  class="btn-app btn-app--secondary btn-app--md btn-wishlist"
+                  :class="{ 'btn-wishlist--active': isWishlisted }"
+                  :aria-pressed="isWishlisted"
+                  :aria-label="isWishlisted ? '取消收藏此個體' : '收藏此個體'"
+                  @click="toggleWishlist"
+                >
+                  {{ isWishlisted ? '已收藏' : '收藏' }}
+                </button>
+                <button
+                  type="button"
+                  class="btn-app btn-app--secondary btn-app--md btn-share"
+                  @click="shareLink"
+                >
+                  分享連結
+                </button>
+                <button
+                  type="button"
+                  ref="promoTriggerEl"
+                  class="btn-app btn-app--secondary btn-app--md btn-promo"
+                  @click="generatePromo"
+                  :disabled="isGenerating"
+                >
                   {{ isGenerating ? '⏳ 生成中...' : '產生圖卡' }}
                 </button>
               </div>
@@ -619,12 +750,18 @@ const generatePromo = async () => {
             style="margin-bottom: 14px; border-bottom: 1px solid var(--bd); padding-bottom: 10px"
           >
             <h2 class="sec-title" style="font-size: 1.2rem">相似個體推薦</h2>
-            <NuxtLink to="/shop" class="sec-more" style="text-decoration: none; font-size: 0.85rem">
+            <NuxtLink
+              no-prefetch
+              to="/shop"
+              class="sec-more"
+              style="text-decoration: none; font-size: 0.85rem"
+            >
               查看更多 →
             </NuxtLink>
           </div>
           <div class="related-grid">
             <NuxtLink
+              no-prefetch
               v-for="item in relatedProducts"
               :key="item.ID"
               :to="`/product/${item.ID}`"
@@ -682,10 +819,28 @@ const generatePromo = async () => {
         </div>
       </div>
 
-      <div v-if="generatedImage" class="promo-modal-overlay" @click="generatedImage = null">
-        <div class="promo-modal-content" @click.stop>
-          <button class="btn-close-promo" @click="generatedImage = null">✕</button>
-          <h3 style="color: var(--txt); margin-top: 10px">📸 宣傳圖卡已生成</h3>
+      <div v-if="generatedImage" class="promo-modal-overlay" @click="closePromo">
+        <div
+          ref="promoDialogEl"
+          class="promo-modal-content"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="promo-dialog-title"
+          tabindex="-1"
+          @click.stop
+          @keydown="handlePromoKeydown"
+        >
+          <button
+            type="button"
+            class="btn-app btn-app--ghost btn-app--sm btn-close-promo"
+            aria-label="關閉宣傳圖卡"
+            @click="closePromo"
+          >
+            <span aria-hidden="true">✕</span>
+          </button>
+          <h3 id="promo-dialog-title" style="color: var(--txt); margin-top: 10px">
+            📸 宣傳圖卡已生成
+          </h3>
           <p style="color: var(--txt); opacity: 0.8; font-size: 0.9rem">
             請長按圖片儲存（或點擊右鍵另存），
             <br />
@@ -737,10 +892,18 @@ const generatePromo = async () => {
 .prod-main-img {
   width: 100%;
   height: auto;
-  max-height: 500px;
-  object-fit: contain;
-  cursor: zoom-in;
+  max-height: none;
+  aspect-ratio: 1 / 1;
+  object-fit: cover;
   display: block;
+}
+.prod-img-link {
+  display: block;
+  cursor: zoom-in;
+}
+.prod-img-link:focus-visible {
+  outline: 3px solid var(--pri);
+  outline-offset: -3px;
 }
 .prod-hint {
   text-align: center;
@@ -879,6 +1042,7 @@ const generatePromo = async () => {
 }
 .btn-buy-lg {
   width: 100%;
+  min-height: var(--control-min-height);
   background: var(--pri);
   color: #fff;
   text-align: center;
@@ -893,19 +1057,16 @@ const generatePromo = async () => {
   align-items: center;
   justify-content: center;
 }
-.btn-buy-lg:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 15px var(--pri-glow);
-}
-
 .action-sub-buttons {
   display: flex;
   gap: 10px;
   width: 100%;
 }
+.btn-wishlist,
 .btn-share,
 .btn-promo {
   flex: 1;
+  min-height: var(--control-min-height);
   background: var(--card-bg);
   color: var(--txt);
   border: 1px solid var(--bd);
@@ -917,8 +1078,7 @@ const generatePromo = async () => {
   font-size: 0.95rem;
   white-space: nowrap;
 }
-.btn-share:hover,
-.btn-promo:hover {
+.btn-wishlist--active {
   border-color: var(--pri);
   color: var(--pri);
 }
@@ -1015,12 +1175,18 @@ const generatePromo = async () => {
   position: absolute;
   top: 10px;
   right: 10px;
-  background: transparent;
-  border: none;
+  background: var(--card-bg-solid);
+  border: 1px solid var(--bd-solid);
+  border-radius: 2px;
   color: var(--txt);
   font-size: 1.4rem;
   cursor: pointer;
   opacity: 0.6;
+  min-width: var(--control-min-height);
+  min-height: var(--control-min-height);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 .promo-result-img {
   width: 100%;
@@ -1159,7 +1325,8 @@ const generatePromo = async () => {
     gap: 8px;
   }
   .btn-share,
-  .btn-promo {
+  .btn-promo,
+  .btn-wishlist {
     padding: 10px 5px;
     font-size: 0.85rem;
   }
@@ -1170,7 +1337,7 @@ const generatePromo = async () => {
     margin-top: 5px;
   }
   .related-grid {
-    grid-template-columns: repeat(3, 1fr) !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
     gap: 8px !important;
   }
 }
@@ -1200,10 +1367,9 @@ const generatePromo = async () => {
     border-color var(--transition);
   cursor: pointer;
 }
-.related-card:hover {
-  transform: translateY(-3px);
-  border-color: var(--bd-hover);
-  box-shadow: var(--shadow-hover);
+.related-card:focus-visible {
+  outline: 3px solid var(--pri);
+  outline-offset: 3px;
 }
 .related-img-wrap {
   position: relative;
@@ -1217,9 +1383,6 @@ const generatePromo = async () => {
   object-fit: cover;
   display: block;
   transition: transform var(--transition);
-}
-.related-card:hover .related-img-wrap img {
-  transform: scale(1.04);
 }
 .related-img-placeholder {
   width: 100%;
@@ -1263,5 +1426,98 @@ const generatePromo = async () => {
   font-size: 0.82rem;
   font-weight: bold;
   color: var(--pri);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .btn-buy-lg:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 15px var(--pri-glow);
+  }
+  .btn-wishlist:hover,
+  .btn-share:hover,
+  .btn-promo:hover {
+    border-color: var(--pri);
+    color: var(--pri);
+  }
+  .related-card:hover {
+    transform: translateY(-3px);
+    border-color: var(--bd-hover);
+    box-shadow: var(--shadow-hover);
+  }
+  .related-card:hover .related-img-wrap img {
+    transform: scale(1.04);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .prod-img-link,
+  .btn-buy-lg,
+  .btn-share,
+  .btn-promo,
+  .btn-wishlist,
+  .btn-close-promo,
+  .related-card,
+  .related-img-wrap img,
+  .promo-modal-content {
+    transition: none !important;
+    animation: none !important;
+  }
+}
+
+/* Boutique detail alignment */
+.common-document-meta {
+  margin-bottom: 0;
+}
+
+.prod-container {
+  max-width: 1280px;
+  padding: 0 clamp(16px, 4vw, 56px) clamp(24px, 3vw, 40px);
+}
+
+.prod-topbar :deep(.app-back-btn) {
+  border-radius: 2px;
+}
+
+.prod-img-box,
+.prod-info-box,
+.prod-terms-box,
+.promo-modal-content {
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.prod-info-box {
+  background: transparent;
+}
+
+.prod-title {
+  font-family: 'Noto Serif TC', serif;
+  font-size: clamp(2rem, 4vw, 4.4rem);
+  letter-spacing: -0.05em;
+}
+
+.gene-pill,
+.g-icon-pill,
+.btn-buy-lg,
+.btn-wishlist,
+.btn-share,
+.btn-promo {
+  border-radius: 2px;
+  box-shadow: none;
+}
+
+.prod-price-area,
+.prod-identity-notice,
+.prod-terms-box,
+.promo-result-img {
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.prod-info-box,
+.prod-price-area,
+.prod-terms-box {
+  border-width: 1px 0;
+  background-image: none;
 }
 </style>

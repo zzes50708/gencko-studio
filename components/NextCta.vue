@@ -30,6 +30,7 @@ const mobileCols = computed(() => (props.actions.length === 4 ? 2 : props.action
 
     <div class="next-actions" :style="{ '--cols': mobileCols }">
       <NuxtLink
+        no-prefetch
         v-for="a in actions"
         :key="a.to"
         :to="a.to"
@@ -48,25 +49,26 @@ const mobileCols = computed(() => (props.actions.length === 4 ? 2 : props.action
   align-items: center;
   justify-content: space-between;
   flex-wrap: wrap;
-  gap: 18px;
-  padding: 20px;
-  background: var(--card-bg);
+  gap: var(--space-5);
+  padding: clamp(28px, 5vw, 56px) 0;
+  border-block: 1px solid var(--bd);
+  background: transparent;
 }
 
 .card {
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-card);
+  border-radius: 0;
+  box-shadow: none;
 }
 
 .next-head {
   display: grid;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 .next-kicker {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
   color: var(--pri);
   font-weight: 900;
   font-size: 0.82rem;
@@ -77,9 +79,9 @@ const mobileCols = computed(() => (props.actions.length === 4 ? 2 : props.action
   content: '';
   width: 7px;
   height: 7px;
-  border-radius: 999px;
+  border-radius: 0;
   background: var(--pri);
-  box-shadow: 0 0 0 4px var(--pri-glow-soft);
+  box-shadow: none;
 }
 
 .sec-title {
@@ -99,13 +101,13 @@ const mobileCols = computed(() => (props.actions.length === 4 ? 2 : props.action
   display: flex;
   flex-wrap: wrap;
   justify-content: flex-end;
-  gap: 10px;
+  gap: var(--space-2);
 }
 
 @media (max-width: 640px) {
   .next-cta {
-    padding: 16px;
-    gap: 14px;
+    padding: 24px 0;
+    gap: var(--space-3);
   }
 
   .sec-title {

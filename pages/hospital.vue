@@ -55,6 +55,7 @@ const hospitalsVerifiedDate = computed(() => {
 
 const hospCity = ref('all')
 const hospDistrict = ref('all')
+const hospQuery = ref('')
 const hospExpanded = ref(new Set())
 
 const toggleHospExpand = (id) => {
@@ -79,10 +80,18 @@ const hospDistricts = computed(() => {
 })
 
 const hospFiltered = computed(() => {
+  const query = hospQuery.value.trim().toLocaleLowerCase('zh-TW')
   return HOSPITAL_DATA.value.filter((h) => {
     const cityMatch = hospCity.value === 'all' || h.city === hospCity.value
     const districtMatch = hospDistrict.value === 'all' || h.district === hospDistrict.value
-    return cityMatch && districtMatch
+    const keywordMatch =
+      !query ||
+      [h.name, h.address, h.city, h.district].some((value) =>
+        String(value || '')
+          .toLocaleLowerCase('zh-TW')
+          .includes(query)
+      )
+    return cityMatch && districtMatch && keywordMatch
   })
 })
 
@@ -236,7 +245,7 @@ const hospBreadcrumbLd = {
   '@context': 'https://schema.org',
   '@type': 'BreadcrumbList',
   itemListElement: [
-    { '@type': 'ListItem', position: 1, name: '首頁', item: 'https://www.genckobreeding.com/' },
+    { '@type': 'ListItem', position: 1, name: '首頁', item: 'https://www.genckobreeding.com/home' },
     { '@type': 'ListItem', position: 2, name: '特寵醫院查詢', item: hospUrl }
   ]
 }
@@ -352,160 +361,167 @@ useHead({
 
 <template>
   <div class="hosp-page-wrapper">
-    <h1 class="sr-only">全台特寵醫院查詢｜爬蟲、守宮、兩棲動物獸醫地圖</h1>
-
-    <div class="hosp-alert-box">
-      <span class="icon">💡</span>
-      <div class="text-content">
-        <strong>收藏清單儲存於本機瀏覽器</strong>
-        <span>若清除瀏覽器快取或更換手機/電腦，收藏紀錄將會消失喔！</span>
+    <header class="hosp-hero">
+      <div class="hosp-document-meta" aria-label="醫院名錄說明">
+        <span>GENCKO CARE DIRECTORY</span>
+        <span>SEARCH / SAVE / CONTACT</span>
       </div>
-    </div>
+      <span>EXOTIC CARE DIRECTORY / 全台資源</span>
+      <h1>特寵醫院查詢</h1>
+      <p>以縣市、行政區或關鍵字縮小既有名單；展開後可直接撥號或前往真實 Google Maps 連結。</p>
+    </header>
 
-    <!-- Filter Section -->
-    <div class="hosp-filter-row">
-      <div class="hosp-select-group">
-        <label class="hosp-label">區域與縣市</label>
-        <select
-          class="hosp-select"
-          :value="hospCity"
-          @change="changeCity($event.target.value)"
-          aria-label="區域與縣市"
-        >
-          <option value="all">所有縣市</option>
-          <optgroup v-for="(cities, region) in HOSPITAL_REGIONS" :key="region" :label="region">
-            <option
-              v-for="city in cities"
-              :key="city"
-              :value="city"
-              v-show="hospAvailableCities.has(city)"
-            >
-              {{ city }}
-            </option>
-          </optgroup>
-        </select>
-        <div class="hosp-select-icon">▼</div>
-      </div>
-      <div class="hosp-select-group">
-        <label class="hosp-label">行政區</label>
-        <select
-          class="hosp-select"
-          v-model="hospDistrict"
-          :disabled="hospCity === 'all'"
-          aria-label="行政區"
-        >
-          <option value="all">所有區域</option>
-          <option v-for="d in hospDistricts" :key="d" :value="d">{{ d }}</option>
-        </select>
-        <div class="hosp-select-icon">▼</div>
-      </div>
-    </div>
-
-    <!-- Results Info -->
-    <div class="hosp-count-row">
-      <span class="hosp-count">搜尋結果: {{ hospFiltered.length }} 間</span>
-      <div class="hosp-divider"></div>
-      <span v-if="hospitalsVerifiedDate" class="hosp-verified" :title="`本清單最後驗證日`">
-        資料更新：{{ hospitalsVerifiedDate }}
-      </span>
-    </div>
-
-    <!-- Hospital List -->
-    <div class="hosp-list">
-      <div v-if="hospFiltered.length === 0" class="hosp-empty">
-        <svg
-          width="24"
-          height="24"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2"
-          style="display: block; margin: 0 auto 10px auto"
-        >
-          <circle cx="11" cy="11" r="8"></circle>
-          <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-        </svg>
-        沒有找到符合的醫院
-      </div>
-
-      <article
-        v-for="h in hospFiltered"
-        :key="h.id"
-        class="hosp-card"
-        :class="{ expanded: isHospExpanded(h.id) }"
-      >
-        <div class="hosp-header" @click="toggleHospExpand(h.id)">
-          <h3 class="hosp-name">{{ h.name }}</h3>
-          <div class="hosp-header-right">
-            <span class="hosp-tag">{{ h.city }} {{ h.district }}</span>
-            <span
-              class="fav-btn"
-              :class="{ active: hospWishlist.includes(h.id) }"
-              @click.stop.prevent="toggleHospWishlist(h.id)"
-              style="
-                position: relative;
-                top: auto;
-                right: auto;
-                z-index: 10;
-                box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
-              "
-            >
-              ❤
-            </span>
-            <span
-              class="hosp-toggle-icon"
-              :class="{ expanded: isHospExpanded(h.id) }"
-              aria-hidden="true"
-            >
-              ▼
-            </span>
+    <div class="hosp-workspace">
+      <aside class="hosp-filter-panel" aria-label="醫院篩選條件">
+        <div class="hosp-alert-box">
+          <span class="icon">i</span>
+          <div class="text-content">
+            <strong>收藏儲存在這台裝置</strong>
+            <span>清除瀏覽器資料或更換裝置後，收藏紀錄不會保留。</span>
           </div>
         </div>
 
-        <div v-show="isHospExpanded(h.id)" class="hosp-details">
-          <a
-            :href="getMapLink(h)"
-            target="_blank"
-            class="hosp-detail-row hosp-link"
-            rel="noopener noreferrer"
+        <label class="hosp-search-group">
+          <span class="hosp-label">名稱或地址</span>
+          <input
+            v-model="hospQuery"
+            type="search"
+            class="hosp-search"
+            aria-label="搜尋醫院名稱或地址"
+            placeholder="輸入醫院、路名或行政區"
+          />
+        </label>
+
+        <!-- Filter Section -->
+        <div class="hosp-filter-row">
+          <div class="hosp-select-group">
+            <label class="hosp-label">區域與縣市</label>
+            <select
+              class="hosp-select"
+              :value="hospCity"
+              @change="changeCity($event.target.value)"
+              aria-label="區域與縣市"
+            >
+              <option value="all">所有縣市</option>
+              <optgroup v-for="(cities, region) in HOSPITAL_REGIONS" :key="region" :label="region">
+                <option
+                  v-for="city in cities"
+                  :key="city"
+                  :value="city"
+                  v-show="hospAvailableCities.has(city)"
+                >
+                  {{ city }}
+                </option>
+              </optgroup>
+            </select>
+            <div class="hosp-select-icon">▼</div>
+          </div>
+          <div class="hosp-select-group">
+            <label class="hosp-label">行政區</label>
+            <select
+              class="hosp-select"
+              v-model="hospDistrict"
+              :disabled="hospCity === 'all'"
+              aria-label="行政區"
+            >
+              <option value="all">所有區域</option>
+              <option v-for="d in hospDistricts" :key="d" :value="d">{{ d }}</option>
+            </select>
+            <div class="hosp-select-icon">▼</div>
+          </div>
+        </div>
+
+        <div class="hosp-count-row" aria-live="polite">
+          <span class="hosp-count">{{ hospFiltered.length }} 間符合條件</span>
+          <span v-if="hospitalsVerifiedDate" class="hosp-verified">
+            更新 {{ hospitalsVerifiedDate }}
+          </span>
+        </div>
+      </aside>
+
+      <section class="hosp-list-panel" aria-label="特寵醫院清單">
+        <div class="hosp-list-heading">
+          <span>DIRECTORY</span>
+          <strong>點選醫院查看聯絡方式</strong>
+        </div>
+
+        <!-- Hospital List -->
+        <div class="hosp-list">
+          <div v-if="hospFiltered.length === 0" class="hosp-empty">
+            沒有找到符合的醫院，請放寬縣市或關鍵字條件。
+          </div>
+
+          <article
+            v-for="h in hospFiltered"
+            :key="h.id"
+            class="hosp-card"
+            :class="{ expanded: isHospExpanded(h.id) }"
           >
-            <svg
-              class="hosp-icon"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            >
-              <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
-              <circle cx="12" cy="10" r="3"></circle>
-            </svg>
-            <span>{{ h.address }}</span>
-          </a>
+            <div class="hosp-header">
+              <button
+                type="button"
+                class="hosp-header-toggle"
+                :aria-expanded="isHospExpanded(h.id)"
+                :aria-controls="`hosp-details-${h.id}`"
+                @click="toggleHospExpand(h.id)"
+              >
+                <h3 class="hosp-name">{{ h.name }}</h3>
+                <div class="hosp-header-right">
+                  <span class="hosp-tag">{{ h.city }} {{ h.district }}</span>
+                  <span
+                    class="hosp-toggle-icon"
+                    :class="{ expanded: isHospExpanded(h.id) }"
+                    aria-hidden="true"
+                  >
+                    ▼
+                  </span>
+                </div>
+              </button>
+              <button
+                type="button"
+                class="fav-btn hosp-fav-btn"
+                :class="{ active: hospWishlist.includes(h.id) }"
+                :aria-label="hospWishlist.includes(h.id) ? `取消收藏 ${h.name}` : `收藏 ${h.name}`"
+                @click="toggleHospWishlist(h.id)"
+              >
+                ❤
+              </button>
+            </div>
 
-          <div class="hosp-detail-row">
-            <svg
-              class="hosp-icon"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            >
-              <path
-                d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"
-              ></path>
-            </svg>
-            <span style="font-family: monospace">{{ h.phone }}</span>
-          </div>
+            <div :id="`hosp-details-${h.id}`" v-show="isHospExpanded(h.id)" class="hosp-details">
+              <a
+                :href="getMapLink(h)"
+                target="_blank"
+                class="hosp-detail-row hosp-link"
+                rel="noopener noreferrer"
+              >
+                <svg
+                  class="hosp-icon"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                  <circle cx="12" cy="10" r="3"></circle>
+                </svg>
+                <span>{{ h.address }}</span>
+              </a>
 
-          <a :href="'tel:' + h.phone.replace(/[^\d]/g, '')" class="hosp-call-btn" @click.stop>
-            撥打電話
-          </a>
+              <div class="hosp-detail-row">
+                <span class="hosp-phone-label">TEL</span>
+                <span class="hosp-phone">{{ h.phone }}</span>
+              </div>
+
+              <a :href="'tel:' + h.phone.replace(/[^\d]/g, '')" class="hosp-call-btn" @click.stop>
+                撥打電話
+              </a>
+            </div>
+          </article>
         </div>
-      </article>
+      </section>
     </div>
   </div>
 </template>
@@ -517,9 +533,104 @@ useHead({
   全面導入 CSS 變數，徹底移除所有不必要的 :global(body.day-mode) 覆寫。
 */
 .hosp-page-wrapper {
-  max-width: 900px;
+  max-width: 1180px;
   margin: 0 auto;
   padding-top: 15px;
+}
+
+.hosp-document-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 18px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--bd);
+  color: var(--txt-muted);
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+}
+
+.hosp-document-meta span:first-child {
+  color: var(--pri);
+}
+
+.hosp-hero {
+  max-width: 760px;
+  margin-bottom: 24px;
+}
+.hosp-hero > span,
+.hosp-list-heading > span {
+  color: var(--pri);
+  font-size: 0.7rem;
+  font-weight: 900;
+  letter-spacing: 0.16em;
+}
+.hosp-hero h1 {
+  margin: 8px 0;
+  color: var(--txt);
+  font-size: clamp(2.1rem, 5vw, 4rem);
+  line-height: 1;
+  letter-spacing: -0.055em;
+}
+.hosp-hero p {
+  max-width: 64ch;
+  margin: 0;
+  color: var(--txt-muted);
+  line-height: 1.65;
+}
+.hosp-workspace {
+  display: grid;
+  grid-template-columns: minmax(260px, 330px) minmax(0, 1fr);
+  gap: 20px;
+  align-items: start;
+}
+.hosp-filter-panel {
+  position: sticky;
+  top: 84px;
+  padding: 16px;
+  border: 1px solid var(--bd);
+  border-radius: var(--radius-lg);
+  background: var(--card-bg);
+  box-shadow: var(--shadow-card);
+}
+.hosp-list-heading {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 12px;
+  padding: 0 4px 12px;
+  border-bottom: 1px solid var(--bd);
+  color: var(--txt);
+}
+.hosp-search-group {
+  display: grid;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+.hosp-search {
+  width: 100%;
+  min-height: var(--control-min-height);
+  padding: 0 12px;
+  border: 1px solid var(--bd-solid);
+  border-radius: var(--radius-sm);
+  background: var(--gb-inner-bg);
+  color: var(--txt);
+  font: inherit;
+}
+.hosp-search:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: var(--focus-offset);
+}
+.hosp-phone-label {
+  color: var(--pri);
+  font-size: 0.68rem;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+}
+.hosp-phone {
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-variant-numeric: tabular-nums;
 }
 
 /* Responsive Utilities */
@@ -566,7 +677,7 @@ useHead({
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 10px;
-  margin-bottom: 20px;
+  margin-bottom: 14px;
 }
 .hosp-select-group {
   position: relative;
@@ -582,6 +693,7 @@ useHead({
 .hosp-select {
   width: 100%;
   padding: 12px;
+  min-height: var(--control-min-height);
   background: var(--card-bg);
   border: 1px solid var(--bd);
   color: var(--txt);
@@ -614,9 +726,11 @@ useHead({
 .hosp-count-row {
   display: flex;
   align-items: center;
-  margin-bottom: 12px;
-  padding: 0 5px;
-  gap: 0;
+  justify-content: space-between;
+  margin: 0;
+  padding-top: 12px;
+  gap: 12px;
+  border-top: 1px solid var(--bd);
 }
 .hosp-verified {
   font-size: 0.72rem;
@@ -640,6 +754,7 @@ useHead({
 
 /* Hospital List */
 .hosp-list {
+  counter-reset: hospital;
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -670,10 +785,6 @@ useHead({
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
   overflow: hidden;
 }
-.hosp-card:hover {
-  border-color: var(--pri);
-  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
-}
 .hosp-card.expanded {
   border-color: var(--pri);
   box-shadow: 0 6px 18px rgba(255, 69, 0, 0.12);
@@ -681,16 +792,47 @@ useHead({
 
 .hosp-header {
   display: flex;
-  justify-content: space-between;
   align-items: center;
   gap: 12px;
   padding: 14px 16px;
-  cursor: pointer;
   user-select: none;
-  transition: background 0.2s;
 }
-.hosp-header:hover {
-  background: rgba(255, 69, 0, 0.03);
+.hosp-header-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex: 1;
+  min-width: 0;
+  min-height: var(--control-min-height);
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.hosp-header-toggle:focus-visible,
+.hosp-fav-btn:focus-visible {
+  outline: 3px solid var(--pri);
+  outline-offset: 3px;
+}
+.hosp-fav-btn {
+  position: relative;
+  z-index: 1;
+  min-width: var(--control-min-height);
+  min-height: var(--control-min-height);
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--txt);
+  cursor: pointer;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+}
+.hosp-fav-btn.active {
+  transform: scale(1.05);
 }
 .hosp-header-right {
   display: flex;
@@ -766,9 +908,7 @@ useHead({
   transition: 0.2s;
   display: flex;
   align-items: center;
-}
-.hosp-link:hover {
-  color: var(--pri);
+  min-height: var(--control-min-height);
 }
 
 .hosp-tag {
@@ -794,16 +934,26 @@ useHead({
   text-align: center;
   margin-top: 6px;
   display: block;
-}
-.hosp-call-btn:hover {
-  background: var(--pri);
-  color: #fff;
+  min-height: var(--control-min-height);
 }
 
 @media (max-width: 768px) {
   /* 🌟 Mobile Optimizations for App-like feel */
   .hosp-page-wrapper {
     padding-top: 0;
+  }
+
+  .hosp-hero h1 {
+    font-size: 2.35rem;
+  }
+
+  .hosp-workspace {
+    grid-template-columns: 1fr;
+  }
+
+  .hosp-filter-panel {
+    position: static;
+    padding: 12px;
   }
 
   .hosp-alert-box {
@@ -813,10 +963,9 @@ useHead({
   }
 
   .hosp-filter-row {
-    /* 🌟 保持並排，減少垂直高度佔用 */
-    grid-template-columns: 1fr 1fr;
-    gap: 15px; /* 縮減間距 */
-    margin-bottom: 0px;
+    grid-template-columns: 1fr;
+    gap: 10px;
+    margin-bottom: 12px;
   }
 
   .hosp-select {
@@ -834,7 +983,11 @@ useHead({
   }
 
   .hosp-header {
-    padding: 12px 14px;
+    padding: 8px 14px;
+    gap: 8px;
+  }
+
+  .hosp-header-toggle {
     gap: 8px;
   }
 
@@ -880,5 +1033,258 @@ useHead({
     height: 20px;
     font-size: 0.7rem;
   }
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .hosp-card:hover {
+    border-color: var(--pri);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+  }
+  .hosp-header-toggle:hover {
+    background: rgba(255, 69, 0, 0.03);
+  }
+  .hosp-link:hover {
+    color: var(--pri);
+  }
+  .hosp-call-btn:hover {
+    background: var(--pri);
+    color: #fff;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hosp-card,
+  .hosp-select,
+  .hosp-header-toggle,
+  .hosp-toggle-icon,
+  .hosp-link,
+  .hosp-call-btn,
+  .hosp-fav-btn,
+  .hosp-details {
+    transition: none;
+    animation: none;
+  }
+  .hosp-fav-btn.active {
+    transform: none;
+  }
+}
+/* 醫療資訊維持嚴謹可掃讀的清單感，地圖與聯絡資料不受影響。 */
+.hosp-page-wrapper,
+.hosp-filter-panel,
+.hosp-alert-box,
+.hosp-card,
+.hosp-empty {
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.hosp-hero h1,
+.hosp-list-heading h2,
+.hosp-card h2 {
+  font-family: 'Noto Serif TC', serif;
+  letter-spacing: -0.03em;
+}
+
+.hosp-filter-panel,
+.hosp-card {
+  background-image: none;
+}
+
+.hosp-search,
+.hosp-select,
+.hosp-filter-panel button,
+.hosp-card a {
+  border-radius: 2px;
+  box-shadow: none;
+}
+
+/* 醫院名單採可掃讀的服務清單，篩選與展開資訊不再被卡片框切碎。 */
+.hosp-hero {
+  padding: 32px 0;
+  border-width: 1px 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.hosp-workspace {
+  gap: 32px;
+}
+
+.hosp-filter-panel {
+  padding: 18px 0;
+  border-width: 1px 0;
+  background: transparent;
+}
+
+.hosp-search,
+.hosp-select {
+  border-width: 0 0 1px;
+  border-radius: 0;
+  background: transparent;
+}
+
+.hosp-alert-box,
+.hosp-empty {
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.hosp-list {
+  gap: 0;
+  border-top: 1px solid var(--bd);
+}
+
+.hosp-card,
+.hosp-card.expanded {
+  counter-increment: hospital;
+  border-width: 0 0 1px;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.hosp-header::before {
+  content: counter(hospital, decimal-leading-zero);
+  align-self: center;
+  margin-right: 12px;
+  color: var(--pri);
+  font-size: 0.68rem;
+  font-weight: 850;
+  letter-spacing: 0.08em;
+}
+
+.hosp-card.expanded {
+  border-color: var(--pri);
+}
+
+.hosp-header {
+  padding: 18px 0;
+}
+
+.hosp-header-toggle {
+  min-height: 36px;
+}
+
+.hosp-fav-btn,
+.hosp-toggle-icon,
+.hosp-tag,
+.hosp-call-btn {
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.hosp-toggle-icon {
+  background: transparent;
+  border: 1px solid var(--bd);
+}
+
+.hosp-details {
+  padding: 14px 0 20px;
+  background: transparent;
+}
+
+@media (min-width: 768px) and (hover: hover) and (pointer: fine) {
+  .hosp-card:hover,
+  .hosp-card.expanded:hover {
+    border-color: var(--pri);
+    box-shadow: none;
+  }
+
+  .hosp-header-toggle:hover {
+    background: transparent;
+    color: var(--pri);
+  }
+}
+
+@media (max-width: 768px) {
+  .hosp-hero,
+  .hosp-filter-panel {
+    padding: 20px 0;
+  }
+
+  .hosp-card {
+    border-radius: 0;
+  }
+
+  .hosp-header,
+  .hosp-details {
+    padding-left: 0;
+    padding-right: 0;
+  }
+}
+
+@media (min-width: 768px) and (hover: hover) and (pointer: fine) {
+  .hosp-card:hover {
+    transform: none;
+    box-shadow: none;
+  }
+}
+/* 醫療名錄保留篩選、展開與電話的清楚操作層級。 */
+.hosp-page-wrapper {
+  padding: 8px 18px 28px;
+}
+.hosp-hero {
+  padding-block: 22px;
+  margin-bottom: 20px;
+}
+.hosp-hero h1 {
+  font-family: var(--font-heading-zh);
+  font-size: clamp(2rem, 4.5vw, 3.5rem);
+  line-height: 1.3;
+}
+.hosp-workspace {
+  gap: 24px;
+}
+.hosp-alert-box {
+  padding: 14px 0;
+  border: 0;
+  border-bottom: 1px solid var(--bd);
+}
+.hosp-filter-panel {
+  border-radius: 0;
+  box-shadow: none;
+}
+.hosp-search,
+.hosp-select {
+  border: 1px solid var(--bd);
+  border-radius: 2px;
+  min-height: 44px;
+}
+.hosp-header {
+  padding-block: 14px;
+}
+.hosp-header-toggle,
+.hosp-fav-btn {
+  min-height: 44px;
+}
+.hosp-fav-btn {
+  min-width: 44px;
+}
+.hosp-name {
+  font-family: var(--font-heading-zh);
+  line-height: 1.5;
+}
+.hosp-call-btn {
+  border: 1px solid var(--txt);
+  border-radius: 2px;
+  min-height: 44px;
+  padding: 10px 14px;
+}
+.hosp-link {
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+/* 本頁返回與次要操作使用同一按鈕形式。 */
+:deep(.app-back-btn),
+.btn-app {
+  border-radius: 2px;
+  min-height: 44px;
+  box-shadow: none;
+  font-family: var(--font-body-zh);
+}
+:deep(.app-back-btn) {
+  border: 1px solid var(--txt);
 }
 </style>

@@ -71,22 +71,24 @@ const goCalc = () => clearError({ redirect: '/calculator' })
 .err-page {
   max-width: 720px;
   margin: 0 auto;
-  padding: 80px 20px 60px 20px;
-  text-align: center;
+  padding: 40px 20px 32px;
+  text-align: left;
   color: var(--txt);
 }
 .err-hero {
-  margin-bottom: 32px;
+  margin-bottom: 24px;
 }
 .err-code {
-  font-family: 'Black Ops One', sans-serif;
-  font-size: clamp(5rem, 18vw, 8.5rem);
+  font-family: var(--font-body-zh);
+  font-variant-numeric: tabular-nums;
+  font-size: clamp(3rem, 10vw, 5rem);
   line-height: 1;
   color: var(--pri);
-  text-shadow: 0 6px 30px var(--pri-glow-soft);
+  text-shadow: none;
   margin-bottom: 8px;
 }
 .err-title {
+  font-family: var(--font-heading-zh);
   font-size: clamp(1.4rem, 4.5vw, 2rem);
   font-weight: 900;
   margin: 0 0 12px 0;
@@ -101,13 +103,20 @@ const goCalc = () => clearError({ redirect: '/calculator' })
   display: flex;
   gap: 10px;
   flex-wrap: wrap;
-  justify-content: center;
-  margin-bottom: 28px;
+  justify-content: flex-start;
+  margin-bottom: 20px;
+}
+.err-actions .btn-app {
+  border-radius: 2px;
+  min-height: 44px;
+  font-family: var(--font-body-zh);
+  white-space: nowrap;
+  box-shadow: none;
 }
 .err-tip {
   font-size: 0.9rem;
   opacity: 0.8;
-  border-top: 1px dashed var(--bd);
+  border-top: 1px solid var(--bd);
   padding-top: 18px;
   margin-top: 18px;
 }
@@ -120,7 +129,7 @@ const goCalc = () => clearError({ redirect: '/calculator' })
 }
 @media (max-width: 480px) {
   .err-page {
-    padding: 60px 16px 40px 16px;
+    padding: 32px 16px 24px;
   }
   .err-actions .btn-app {
     width: 100%;

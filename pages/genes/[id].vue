@@ -1,5 +1,5 @@
 <script setup>
-import { computed } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { useHead, useAsyncData, useSupabaseClient } from '#imports'
 import { useMainStore } from '~/stores/useMainStore'
@@ -10,6 +10,11 @@ definePageMeta({ key: (route) => route.fullPath })
 const route = useRoute()
 const store = useMainStore()
 const supabase = useSupabaseClient()
+const isHydrated = ref(false)
+
+onMounted(() => {
+  isHydrated.value = true
+})
 
 // 從路由參數取得要顯示的基因名稱，並進行解碼
 const geneName = decodeURIComponent(route.params.id)
@@ -29,7 +34,7 @@ const { data: viewingGene, pending } = await useAsyncData(`gene-${geneName}`, as
     .from('genetic_pages')
     .select('*')
     .eq('name', geneName)
-    .single()
+    .maybeSingle()
 
   if (error || !data) return null
 
@@ -193,7 +198,12 @@ const siteData = computed(() => {
       '@context': 'https://schema.org',
       '@type': 'BreadcrumbList',
       itemListElement: [
-        { '@type': 'ListItem', position: 1, name: '首頁', item: 'https://www.genckobreeding.com/' },
+        {
+          '@type': 'ListItem',
+          position: 1,
+          name: '首頁',
+          item: 'https://www.genckobreeding.com/home'
+        },
         {
           '@type': 'ListItem',
           position: 2,
@@ -250,8 +260,12 @@ useHead({
 
 <template>
   <div class="gene-detail-wrapper">
+    <div class="common-document-meta gene-document-meta" aria-label="基因詞條說明">
+      <span>GENCKO GENE RECORD</span>
+      <span>TRAIT / INHERITANCE / NOTES</span>
+    </div>
     <div
-      v-if="pending"
+      v-if="isHydrated && pending"
       style="text-align: center; padding: 100px 0; color: var(--txt); opacity: 0.6"
     >
       <div class="loader" style="margin: 0 auto 20px auto"></div>
@@ -272,12 +286,33 @@ useHead({
     </div>
 
     <div v-else class="gene-container">
-      <!-- 🌟 引入全域共用的 App-like 返回按鈕 -->
       <TheBackButton fallback="/genes" text="返回圖鑑" style="margin-bottom: 10px" />
 
-      <!-- 🌟 集中閱讀的卡片化設計 -->
+      <nav class="gene-tool-nav" aria-label="基因詞條工具">
+        <div>
+          <span>GENE WORKFLOW</span>
+          <strong>查完詞條，接著模擬配對</strong>
+        </div>
+        <NuxtLink no-prefetch to="/calculator" class="gene-tool-link">前往基因計算機</NuxtLink>
+      </nav>
+
       <div class="content-card">
-        <h1 class="gene-title">{{ viewingGene.Name }}</h1>
+        <header class="gene-title-row">
+          <div>
+            <span class="gene-kicker">GENETIC PROFILE</span>
+            <h1 class="gene-title">{{ viewingGene.Name }}</h1>
+          </div>
+          <dl class="gene-facts">
+            <div v-if="viewingGene.InheritanceMode">
+              <dt>遺傳模式</dt>
+              <dd>{{ viewingGene.InheritanceMode }}</dd>
+            </div>
+            <div v-if="viewingGene.DiscoveryYear">
+              <dt>發現年份</dt>
+              <dd>{{ viewingGene.DiscoveryYear }}</dd>
+            </div>
+          </dl>
+        </header>
 
         <div v-if="geneWarningText" class="warn-box">
           <span style="font-size: 1.2rem; margin-right: 5px">⚠️</span>
@@ -304,9 +339,7 @@ useHead({
               <p class="detail-txt">{{ viewingGene.Detail }}</p>
             </div>
 
-            <div v-if="viewingGene.Source" class="source-text">
-              資料來源：{{ viewingGene.Source }}
-            </div>
+            <div class="source-text">資料來源：{{ viewingGene.Source || '尚待資料庫補充' }}</div>
           </div>
         </div>
       </div>
@@ -316,10 +349,50 @@ useHead({
 
 <style scoped>
 .gene-detail-wrapper {
-  max-width: 900px;
+  max-width: 1080px;
   margin: 0 auto;
   padding-top: 5px;
   padding-bottom: 20px;
+}
+
+.gene-tool-nav {
+  display: flex;
+  justify-content: space-between;
+  gap: 18px;
+  align-items: center;
+  margin-bottom: 16px;
+  padding: 14px 16px;
+  border: 1px solid var(--bd);
+  border-radius: var(--radius-md);
+  background: var(--card-bg);
+}
+.gene-tool-nav > div {
+  display: grid;
+  gap: 3px;
+  color: var(--txt);
+}
+.gene-tool-nav span,
+.gene-kicker {
+  color: var(--pri);
+  font-size: 0.68rem;
+  font-weight: 900;
+  letter-spacing: 0.14em;
+}
+.gene-tool-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--control-min-height);
+  padding: 0 16px;
+  border-radius: var(--radius-sm);
+  background: var(--pri-btn);
+  color: #fff;
+  font-weight: 850;
+  text-decoration: none;
+}
+.gene-tool-link:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: var(--focus-offset);
 }
 
 /* 🌟 卡片化內容 (適配日夜變數) */
@@ -336,8 +409,37 @@ useHead({
   margin: 0 0 20px 0;
   color: var(--txt);
   line-height: 1.2;
+  padding: 0;
+}
+.gene-title-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 24px;
+  align-items: end;
+  margin-bottom: 20px;
+  padding-bottom: 16px;
   border-bottom: 1px solid var(--bd);
-  padding-bottom: 15px;
+}
+.gene-title-row .gene-title {
+  margin: 6px 0 0;
+}
+.gene-facts {
+  display: flex;
+  gap: 18px;
+  margin: 0;
+}
+.gene-facts div {
+  display: grid;
+  gap: 3px;
+}
+.gene-facts dt {
+  color: var(--txt-muted);
+  font-size: 0.7rem;
+}
+.gene-facts dd {
+  margin: 0;
+  color: var(--txt);
+  font-weight: 800;
 }
 
 .warn-box {
@@ -419,6 +521,20 @@ p {
     border-radius: 12px;
   }
 
+  .gene-tool-nav,
+  .gene-title-row {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .gene-tool-link {
+    width: 100%;
+  }
+
+  .gene-facts {
+    flex-wrap: wrap;
+  }
+
   .gene-title {
     font-size: 1.8rem;
     margin-bottom: 15px;
@@ -438,5 +554,146 @@ p {
   p {
     font-size: 1rem;
   }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .loader {
+    animation: none;
+  }
+}
+/* 詞條頁維持閱讀節奏，不以浮誇容器搶走基因內容。 */
+.gene-container,
+.gene-tool-nav,
+.gene-img,
+.gene-text-content {
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.gene-title,
+.gene-section-title {
+  font-family: 'Noto Serif TC', serif;
+  letter-spacing: -0.035em;
+}
+
+.gene-img {
+  aspect-ratio: 1;
+  object-fit: cover;
+}
+
+.gene-tool-link {
+  border-radius: 2px;
+}
+
+/* 基因詞條採單篇閱讀版，讓來源、遺傳模式與影像成為同一份資料頁。 */
+.gene-tool-nav,
+.content-card,
+.warn-box,
+.gene-img {
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.gene-tool-nav {
+  margin-bottom: 28px;
+  padding: 16px 0;
+  border-width: 1px 0;
+  background: transparent;
+}
+
+.content-card {
+  padding: 0;
+  border-width: 1px 0;
+  background: transparent;
+}
+
+.gene-title-row {
+  padding: 26px 0 18px;
+}
+
+.warn-box {
+  padding: 14px 0 14px 14px;
+  border-width: 1px 0 1px 3px;
+  background: transparent;
+}
+
+.gene-layout {
+  padding: 26px 0;
+}
+
+.gene-img {
+  width: 45%;
+}
+
+@media (max-width: 768px) {
+  .content-card,
+  .gene-title-row,
+  .gene-layout {
+    padding-left: 0;
+    padding-right: 0;
+  }
+}
+/* 詞條以圖文與資料列呈現。 */
+.gene-detail-wrapper {
+  padding: 8px 18px 28px;
+}
+.content-card {
+  border: 0;
+  border-radius: 0;
+  padding: 18px 0;
+  background: transparent;
+  box-shadow: none;
+}
+.gene-title {
+  font-family: var(--font-heading-zh);
+  font-size: clamp(2rem, 4.5vw, 3.5rem);
+  line-height: 1.3;
+}
+.gene-title-row {
+  margin-bottom: 18px;
+  gap: 20px;
+}
+.gene-tool-nav {
+  padding: 12px 0;
+  margin-block: 12px;
+  background: transparent;
+  border-radius: 0;
+  box-shadow: none;
+}
+.gene-tool-link {
+  min-height: 44px;
+  border: 1px solid var(--txt);
+  border-radius: 2px;
+  padding: 10px 14px;
+  white-space: nowrap;
+}
+.gene-img {
+  border-radius: 0;
+  box-shadow: none;
+  object-fit: contain;
+}
+.warn-box {
+  border-radius: 0;
+  box-shadow: none;
+}
+.detail-section {
+  margin-top: 20px;
+  padding-top: 16px;
+}
+.brief-txt,
+.detail-txt {
+  font-family: var(--font-body-zh);
+  line-height: 1.85;
+}
+/* 本頁返回與次要操作使用同一按鈕形式。 */
+:deep(.app-back-btn),
+.btn-app {
+  border-radius: 2px;
+  min-height: 44px;
+  box-shadow: none;
+  font-family: var(--font-body-zh);
+}
+:deep(.app-back-btn) {
+  border: 1px solid var(--txt);
 }
 </style>

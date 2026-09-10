@@ -46,7 +46,7 @@ defineProps({
         </div>
         <h2 class="node-title">{{ node.title }}</h2>
         <p class="node-body">{{ node.body }}</p>
-        <NuxtLink v-if="node.to" :to="node.to" class="node-link">
+        <NuxtLink no-prefetch v-if="node.to" :to="node.to" class="node-link">
           {{ node.linkLabel || '看更多' }}
           <span aria-hidden="true">→</span>
         </NuxtLink>
@@ -185,10 +185,21 @@ defineProps({
   align-items: center;
   gap: 6px;
   margin-top: 2px;
+  min-height: var(--control-min-height);
+  padding: 8px 4px;
   color: var(--pri);
   font-weight: 800;
   font-size: 0.88rem;
   text-decoration: none;
+  border-radius: 8px;
+  transition:
+    color var(--transition),
+    background-color var(--transition);
+}
+
+.node-link:focus-visible {
+  outline: 3px solid var(--pri);
+  outline-offset: 3px;
 }
 
 @media (hover: hover) and (pointer: fine) {
@@ -234,7 +245,8 @@ defineProps({
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .node-card {
+  .node-card,
+  .node-link {
     transition: none;
   }
 

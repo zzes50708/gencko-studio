@@ -15,7 +15,7 @@ const store = useMainStore()
 const stageEl = ref(null)
 const isMounted = ref(false)
 const canUseMotion = useMediaQuery('(prefers-reduced-motion: no-preference)')
-const isDesktop = useMediaQuery('(hover: hover) and (pointer: fine)')
+const isDesktop = useMediaQuery('(min-width: 768px) and (hover: hover) and (pointer: fine)')
 
 const currentSceneIndex = ref(0)
 const isTransitioning = ref(false) // 頧??true ??璉??撓??
@@ -102,7 +102,7 @@ onMounted(async () => {
   // Layer 4：GSAP Observer 接管滾動；避免真的讓頁面 scroll，造成頂部導覽列閃動/底部導覽列跳動
   gsapObserver = Observer.create({
     target: stageEl.value || window,
-    type: 'wheel,touch,pointer',
+    type: isDesktop.value ? 'wheel,pointer' : 'touch',
     tolerance: 10,
     preventDefault: true,
     // 觸控裝置：手指往上滑（視覺上內容往上）應該要進入下一幕
@@ -375,7 +375,7 @@ const geneTokens = computed(() => {
     <!-- ?? z-index 2: WebGL 3D canvas嚗?璈?+ ?????剁??? -->
     <div class="bg-layer" aria-hidden="true">
       <ClientOnly>
-        <TresCanvas :alpha="true" :clear-color="bgColor" window-size>
+        <TresCanvas v-if="isDesktop" :alpha="true" :clear-color="bgColor" window-size>
           <TresPerspectiveCamera :position="[0, 0, 8]" :fov="52" />
           <TresAmbientLight
             :intensity="isDayMode ? 0.3 : 0.2"
@@ -394,6 +394,9 @@ const geneTokens = computed(() => {
             @ready="onSceneReady"
           />
         </TresCanvas>
+        <div v-else class="stage-mobile-fallback" aria-hidden="true">
+          <MobileParticleField />
+        </div>
       </ClientOnly>
     </div>
 
@@ -401,6 +404,7 @@ const geneTokens = computed(() => {
     <TheDnaDecor :is-day-mode="isDayMode" class="dna-layer" />
 
     <MatrixGeneRain
+      v-if="isDesktop && geneFxActive"
       class="gene-fx-layer"
       :enabled="geneFxActive"
       :alpha="geneFxA"
@@ -466,6 +470,7 @@ const geneTokens = computed(() => {
             <p v-if="scene.desc" class="scene-desc" v-html="scene.desc" />
             <div v-if="scene.btn" class="scene-cta" style="pointer-events: auto">
               <NuxtLink
+                no-prefetch
                 :to="scene.btn.to"
                 class="btn-app btn-app--primary btn-app--md btn-app--pill"
               >
@@ -506,6 +511,7 @@ const geneTokens = computed(() => {
           }"
         >
           <NuxtLink
+            no-prefetch
             to="/home"
             class="btn-app btn-app--ghost btn-app--sm btn-app--pill"
             aria-label="直接進入官網"
@@ -522,10 +528,14 @@ const geneTokens = computed(() => {
             pointerEvents: activeDot === 5 ? 'auto' : 'none'
           }"
         >
-          <NuxtLink to="/shop" class="btn-app btn-app--primary btn-app--md btn-app--pill">
+          <NuxtLink
+            no-prefetch
+            to="/shop"
+            class="btn-app btn-app--primary btn-app--md btn-app--pill"
+          >
             前往選購
           </NuxtLink>
-          <NuxtLink to="/home" class="btn-app btn-app--ghost btn-app--md btn-app--pill">
+          <NuxtLink no-prefetch to="/home" class="btn-app btn-app--ghost btn-app--md btn-app--pill">
             回到首頁
           </NuxtLink>
         </div>
@@ -606,6 +616,14 @@ const geneTokens = computed(() => {
   /* mix-blend-mode: screen：黑色像素 = 透明，蜂巢透出；粒子顏色在極深底色下色差 < 5%
      繞過 THREE.Color 忽略 rgba alpha 的限制，不依賴 WebGL alpha 合成 */
   /* mix-blend-mode removed: hex-overlay handles texture */
+}
+
+.stage-mobile-fallback {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 50% 42%, rgba(232, 68, 10, 0.14), transparent 34%),
+    linear-gradient(135deg, rgba(255, 102, 34, 0.05), transparent 48%);
 }
 
 /*
@@ -1521,5 +1539,34 @@ const geneTokens = computed(() => {
   flex-wrap: wrap;
   margin-top: 2rem;
   pointer-events: auto;
+}
+/* 動畫場景沿用既有時間軸，文字與操作對齊官網字型規則。 */
+.scene-title {
+  font-family: var(--font-heading-zh);
+  font-weight: 700;
+  text-shadow: none;
+}
+.scene-desc,
+.scene-subtitle,
+.scene-cta,
+.scene-end-nav {
+  font-family: var(--font-body-zh);
+}
+.scene-cta .btn-app,
+.scene-end-nav .btn-app,
+.scene-hero-skip .btn-app {
+  border-radius: 2px;
+  min-height: 44px;
+  box-shadow: none;
+  white-space: nowrap;
+}
+.scene-desc {
+  opacity: 0.9;
+}
+@media (max-width: 767px) {
+  .scene-end-nav {
+    flex-wrap: wrap;
+    gap: 10px;
+  }
 }
 </style>

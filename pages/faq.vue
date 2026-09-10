@@ -90,18 +90,34 @@ const toggleQ = (key: string) => {
     <TheBackButton wrapper-class="m-only" fallback="/" />
 
     <div class="content-card">
-      <!-- SEO：頁面唯一 h1（sr-only 含完整關鍵字） -->
-      <h1 class="sr-only">常見問題 FAQ｜Gencko 守宮飼養、健康、購買完整解答</h1>
-      <!-- 視覺主標保留為 div（桌機可見、手機隱藏） -->
-      <div class="page-title dt-only" aria-hidden="true">常見問題 FAQ</div>
+      <div class="faq-document-meta" aria-label="FAQ 閱讀說明">
+        <span>GENCKO ANSWER DESK</span>
+        <span>依分類閱讀 / 展開完整回答</span>
+      </div>
+      <header class="faq-intro" data-testid="faq-route-map">
+        <div class="faq-intro-copy">
+          <div class="faq-kicker">QUICK ANSWERS · 先找問題，再決定下一步</div>
+          <h1>常見問題 FAQ</h1>
+          <p>依主題切換，展開後直接閱讀完整答案；需要更深入時，可接著前往對應的指南與工具。</p>
+        </div>
+        <nav class="faq-route-map" aria-label="FAQ 延伸入口">
+          <NuxtLink no-prefetch to="/start-here">新手入門</NuxtLink>
+          <NuxtLink no-prefetch to="/care">飼養指南</NuxtLink>
+          <NuxtLink no-prefetch to="/health">健康評估</NuxtLink>
+          <NuxtLink no-prefetch to="/buying-guide">購買流程</NuxtLink>
+        </nav>
+      </header>
 
       <!-- 分類 Tab -->
-      <div class="cat-tabs">
+      <div class="cat-tabs" role="tablist" aria-label="常見問題分類">
         <button
           v-for="cat in FAQ_CATEGORIES"
           :key="cat.id"
+          type="button"
           class="cat-tab"
           :class="{ active: activeCategory === cat.id }"
+          role="tab"
+          :aria-selected="activeCategory === cat.id"
           @click="switchCategory(cat.id)"
         >
           <span class="cat-tab-title">{{ cat.title }}</span>
@@ -121,12 +137,17 @@ const toggleQ = (key: string) => {
             type="button"
             class="faq-q"
             :aria-expanded="activeIndex === `${activeCategory}-${idx}`"
+            :aria-controls="`faq-answer-${activeCategory}-${idx}`"
             @click="toggleQ(`${activeCategory}-${idx}`)"
           >
             <span class="q-text">{{ q.title }}</span>
             <span class="q-icon">{{ activeIndex === `${activeCategory}-${idx}` ? '▲' : '▼' }}</span>
           </button>
-          <div class="faq-body-wrapper">
+          <div
+            v-show="activeIndex === `${activeCategory}-${idx}`"
+            :id="`faq-answer-${activeCategory}-${idx}`"
+            class="faq-body-wrapper"
+          >
             <div class="faq-body-inner">
               <div class="faq-a" v-html="q.ans ? q.ans.replace(/\n/g, '<br>') : ''"></div>
             </div>
@@ -139,10 +160,25 @@ const toggleQ = (key: string) => {
 
 <style scoped>
 .faq-page-wrapper {
-  max-width: 900px;
+  max-width: 1080px;
   margin: 0 auto;
-  padding-top: 15px;
-  padding-bottom: 20px;
+  padding: 8px 18px 48px;
+}
+
+.faq-document-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 0 0 14px;
+  border-bottom: 1px solid var(--bd);
+  color: var(--txt-muted);
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+}
+
+.faq-document-meta span:first-child {
+  color: var(--pri);
 }
 .dt-only {
   display: block;
@@ -152,26 +188,73 @@ const toggleQ = (key: string) => {
 }
 
 .content-card {
-  background: var(--card-bg);
+  background: transparent;
   border: 1px solid var(--bd);
-  border-radius: 16px;
-  padding: 30px;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+  border-radius: calc(var(--radius-lg) + 8px);
+  padding: clamp(18px, 4vw, 42px);
+  box-shadow: var(--shadow-card);
+  background-image:
+    radial-gradient(circle at 100% 0, var(--pri-glow-soft), transparent 28%),
+    linear-gradient(var(--card-bg), var(--card-bg));
 }
-.page-title {
-  font-size: 2.2rem;
-  margin: 0 0 20px 0;
-  color: var(--txt);
-  line-height: 1.2;
+
+.faq-intro {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(250px, 0.6fr);
+  gap: clamp(24px, 6vw, 72px);
+  align-items: end;
+  margin-bottom: 28px;
+  padding-bottom: 28px;
   border-bottom: 1px solid var(--bd);
-  padding-bottom: 15px;
+}
+
+.faq-kicker {
+  margin-bottom: 10px;
+  color: var(--pri);
+  font-size: 0.74rem;
+  font-weight: 900;
+  letter-spacing: 0.15em;
+}
+
+.faq-intro h1 {
+  font-size: clamp(2.2rem, 6vw, 5.2rem);
+  margin: 0;
+  color: var(--txt);
+  line-height: 0.98;
+  letter-spacing: -0.055em;
+}
+
+.faq-intro p {
+  max-width: 650px;
+  margin: 16px 0 0;
+  color: var(--txt-muted);
+  line-height: 1.75;
+}
+
+.faq-route-map {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.faq-route-map a {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--control-min-height);
+  padding: 10px 12px;
+  border: 1px solid var(--bd);
+  border-radius: var(--radius-sm);
+  color: var(--txt);
+  font-size: 0.82rem;
+  font-weight: 800;
+  text-decoration: none;
 }
 
 /* ── 分類 Tab ── */
 .cat-tabs {
   display: flex;
   gap: 8px;
-  margin-bottom: 20px;
+  margin-bottom: 24px;
   flex-wrap: wrap;
 }
 .cat-tab {
@@ -183,6 +266,7 @@ const toggleQ = (key: string) => {
   justify-content: center;
   gap: 2px;
   padding: 10px 12px;
+  min-height: var(--control-min-height);
   border-radius: 10px;
   border: 1px solid var(--bd);
   background: var(--card-bg);
@@ -190,10 +274,6 @@ const toggleQ = (key: string) => {
   cursor: pointer;
   transition: 0.2s;
   opacity: 0.65;
-}
-.cat-tab:hover {
-  opacity: 0.9;
-  border-color: var(--bd-hover);
 }
 .cat-tab.active {
   background: var(--pri);
@@ -223,7 +303,7 @@ const toggleQ = (key: string) => {
 .faq-item {
   background: var(--card-bg);
   border: 1px solid var(--bd);
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   overflow: hidden;
   transition: 0.25s;
 }
@@ -235,6 +315,7 @@ const toggleQ = (key: string) => {
 .faq-q {
   width: 100%;
   padding: 16px 18px;
+  min-height: var(--control-min-height);
   cursor: pointer;
   font-weight: bold;
   display: flex;
@@ -269,12 +350,7 @@ const toggleQ = (key: string) => {
 }
 
 .faq-body-wrapper {
-  display: grid;
-  grid-template-rows: 0fr;
-  transition: grid-template-rows 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
-}
-.faq-item.active .faq-body-wrapper {
-  grid-template-rows: 1fr;
+  display: block;
 }
 .faq-body-inner {
   overflow: hidden;
@@ -297,14 +373,23 @@ const toggleQ = (key: string) => {
     display: flex !important;
   }
   .faq-page-wrapper {
-    padding-top: 0;
+    padding: 0 10px 32px;
   }
   .content-card {
-    padding: 12px;
+    padding: 14px;
     border-radius: 12px;
   }
   .cat-tabs {
     gap: 6px;
+  }
+  .faq-intro {
+    grid-template-columns: 1fr;
+    gap: 18px;
+    margin-bottom: 18px;
+    padding-bottom: 20px;
+  }
+  .faq-route-map {
+    grid-template-columns: 1fr 1fr;
   }
   .cat-tab {
     padding: 8px 6px;
@@ -324,5 +409,220 @@ const toggleQ = (key: string) => {
     padding: 12px;
     font-size: 0.88rem;
   }
+}
+
+@media (min-width: 768px) and (hover: hover) and (pointer: fine) {
+  .faq-route-map a:hover {
+    border-color: var(--bd-hover);
+    color: var(--pri);
+  }
+
+  .cat-tab:hover {
+    opacity: 0.9;
+    border-color: var(--bd-hover);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cat-tab,
+  .faq-item,
+  .faq-q,
+  .q-icon,
+  .faq-body-wrapper {
+    transition: none;
+  }
+}
+/* FAQ 以分隔線取代卡片堆疊，讓問題與答案更接近索引頁。 */
+.faq-page-wrapper,
+.content-card,
+.faq-intro,
+.faq-item {
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.faq-intro h1,
+.faq-q {
+  font-family: 'Noto Serif TC', serif;
+  letter-spacing: -0.025em;
+}
+
+.faq-list {
+  counter-reset: faq-answer;
+  gap: 0;
+  border-top: 1px solid var(--bd);
+}
+
+.faq-item {
+  counter-increment: faq-answer;
+  border-width: 0 0 1px;
+}
+
+.faq-q::before {
+  content: counter(faq-answer, decimal-leading-zero);
+  flex: 0 0 34px;
+  color: var(--pri);
+  font-size: 0.7rem;
+  font-weight: 850;
+  letter-spacing: 0.08em;
+}
+
+.cat-tab,
+.faq-route-map a,
+.faq-q {
+  border-radius: 2px;
+  box-shadow: none;
+}
+
+/* FAQ 採索引式手風琴，分類和答案由細線與橘色 active state 區分。 */
+.content-card {
+  padding: 32px 0;
+  border-width: 1px 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.faq-route-map {
+  gap: 0;
+  border-top: 1px solid var(--bd);
+  border-left: 1px solid var(--bd);
+}
+
+.faq-route-map a {
+  border-width: 0 1px 1px 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.cat-tabs {
+  gap: 0;
+  margin-bottom: 28px;
+  border-bottom: 1px solid var(--bd);
+}
+
+.cat-tab {
+  border-width: 0 0 2px;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  opacity: 1;
+}
+
+.cat-tab.active {
+  border-color: var(--pri);
+  background: transparent;
+  color: var(--pri);
+  box-shadow: none;
+}
+
+.faq-item,
+.faq-item.active {
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.faq-item.active {
+  border-color: var(--pri);
+}
+
+.faq-item.active .faq-q,
+.faq-a {
+  background: transparent;
+}
+
+.faq-q {
+  padding-left: 0;
+  padding-right: 0;
+}
+
+.faq-a {
+  padding-left: 0;
+  padding-right: 0;
+}
+
+@media (max-width: 768px) {
+  .content-card {
+    padding: 20px 0;
+  }
+
+  .faq-route-map {
+    border-left: 0;
+  }
+
+  .faq-route-map a {
+    padding-left: 8px;
+    padding-right: 8px;
+  }
+}
+/* FAQ 使用完整寬度的文字列，操作與正文分層。 */
+.faq-page-wrapper {
+  padding: 8px 18px 28px;
+}
+.content-card {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+.faq-intro {
+  padding: 20px 0;
+  margin-bottom: 18px;
+  gap: 24px;
+}
+.faq-intro h1 {
+  font-family: var(--font-heading-zh);
+  font-size: clamp(2rem, 4.5vw, 3.7rem);
+  line-height: 1.3;
+}
+.faq-route-map {
+  border: 0;
+  gap: 8px;
+}
+.faq-route-map a {
+  border: 1px solid var(--txt);
+  border-radius: 2px;
+  min-height: 44px;
+}
+.faq-q {
+  font-family: var(--font-body-zh);
+  letter-spacing: normal;
+  gap: 10px;
+}
+.q-icon {
+  opacity: 1;
+  color: var(--pri);
+}
+.cat-tab-title {
+  white-space: nowrap;
+}
+.cat-tabs {
+  margin-bottom: 16px;
+}
+.faq-a {
+  padding: 12px 0 18px 44px;
+  border-top: 0;
+}
+.faq-a :deep(a) {
+  color: var(--pri);
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+@media (max-width: 768px) {
+  .faq-a {
+    padding-left: 0;
+  }
+}
+/* 本頁返回與次要操作使用同一按鈕形式。 */
+:deep(.app-back-btn),
+.btn-app {
+  border-radius: 2px;
+  min-height: 44px;
+  box-shadow: none;
+  font-family: var(--font-body-zh);
+}
+:deep(.app-back-btn) {
+  border: 1px solid var(--txt);
 }
 </style>

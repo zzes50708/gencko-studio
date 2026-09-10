@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, onUnmounted, computed } from 'vue'
+import { ref, onMounted, onUnmounted, computed, watch } from 'vue'
 import { useMediaQuery } from '@vueuse/core'
 import Atropos from 'atropos'
 
@@ -28,14 +28,16 @@ const props = defineProps({
    * 靜態基礎姿勢（預設微斜放），hover 時回正
    */
   baseRotateY: { type: Number, default: 0 },
-  baseRotateX: { type: Number, default: 0 },
+  baseRotateX: { type: Number, default: 0 }
 })
 
 const rootEl = ref(null)
 const instance = ref(null)
 
-const isFineHover = useMediaQuery('(hover: hover) and (pointer: fine)')
+const isFineHover = useMediaQuery('(min-width: 768px) and (hover: hover) and (pointer: fine)')
+const prefersReducedMotion = useMediaQuery('(prefers-reduced-motion: reduce)')
 const canRun = computed(() => props.enabled && isFineHover.value)
+const isMounted = ref(false)
 
 const destroy = () => {
   try {
@@ -59,7 +61,7 @@ const init = () => {
     highlight: props.highlight,
     shadow: props.shadow,
     // 讓 hover 的回正感更俐落
-    duration: 180,
+    duration: prefersReducedMotion.value ? 0 : 180
   })
 }
 
@@ -67,7 +69,18 @@ const onEnter = () => {
   if (props.lazyInit) init()
 }
 
+const hoverEvents = computed(() =>
+  props.lazyInit && canRun.value ? { pointerenter: onEnter } : {}
+)
+
+watch(canRun, (enabled) => {
+  if (!isMounted.value) return
+  if (enabled && !props.lazyInit) init()
+  if (!enabled) destroy()
+})
+
 onMounted(() => {
+  isMounted.value = true
   if (!props.lazyInit) init()
 })
 
@@ -82,9 +95,9 @@ onUnmounted(() => {
     class="atropos atropos-base"
     :style="{
       '--base-rotate-y': `${baseRotateY}deg`,
-      '--base-rotate-x': `${baseRotateX}deg`,
+      '--base-rotate-x': `${baseRotateX}deg`
     }"
-    @pointerenter="onEnter"
+    v-on="hoverEvents"
   >
     <div class="atropos-scale">
       <div class="atropos-rotate">
@@ -97,16 +110,22 @@ onUnmounted(() => {
 </template>
 
 <style scoped>
-@media (hover: hover) and (pointer: fine) {
+@media (min-width: 768px) and (hover: hover) and (pointer: fine) {
   .atropos-base {
     transform-style: preserve-3d;
     transform: rotateY(var(--base-rotate-y)) rotateX(var(--base-rotate-x));
     transition: transform 180ms ease;
-    will-change: transform;
   }
   .atropos-base:hover,
   .atropos-base:focus-within {
     transform: rotateY(0deg) rotateX(0deg);
+    will-change: transform;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .atropos-base {
+    transition: none;
   }
 }
 </style>

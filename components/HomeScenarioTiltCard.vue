@@ -4,17 +4,24 @@ import AtroposCard from '~/components/AtroposCard.vue'
 
 const props = defineProps({
   index: { type: Number, required: true },
-  to: { type: String, default: '' },
+  to: { type: String, default: '' }
 })
 
 const attrs = useAttrs()
 </script>
 
 <template>
-  <AtroposCard :rotate="14" :highlight="false" :shadow="false" :base-rotate-y="14" :base-rotate-x="2">
+  <AtroposCard
+    :rotate="14"
+    :highlight="false"
+    :shadow="false"
+    :base-rotate-y="14"
+    :base-rotate-x="2"
+  >
     <component
       :is="to ? 'NuxtLink' : 'div'"
       :to="to || undefined"
+      :no-prefetch="to ? true : undefined"
       class="scenario-card stack-tilt-card"
       :style="{ '--stack-i': String(index) }"
       v-bind="attrs"
@@ -42,7 +49,9 @@ const attrs = useAttrs()
   .stack-tilt-card:hover,
   .stack-tilt-card:focus-visible {
     transform: translateX(calc(var(--stack-i, 0) * -10px)) translateY(-6px);
-    box-shadow: 0 14px 40px rgba(0, 0, 0, 0.35), 0 0 0 1px var(--bd-hover);
+    box-shadow:
+      0 14px 40px rgba(0, 0, 0, 0.35),
+      0 0 0 1px var(--bd-hover);
     border-color: var(--bd-hover);
     z-index: 999;
   }

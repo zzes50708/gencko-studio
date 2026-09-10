@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref, onMounted, onUnmounted, watch } from 'vue'
+import { computed, ref, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { useRoute } from 'vue-router'
 import { useHead, useAsyncData, useSupabaseClient } from '#imports'
 import { useMainStore } from '~/stores/useMainStore'
@@ -27,7 +27,7 @@ const { data: currentAuction, pending } = await useAsyncData(`auction-${auctionI
 })
 
 const realBids = ref([])
-let bidsSubscription = null
+let bidsRefreshTimer = null
 
 const isPlacingBid = ref(false)
 
@@ -63,7 +63,10 @@ watch(
 
 const loadBids = async (id) => {
   try {
-    const { data, error } = await supabase.from('auction_bids').select('*').eq('auction_id', id)
+    const { data, error } = await supabase
+      .from('auction_bids')
+      .select('id, auction_id, user_name, amount, bid_time')
+      .eq('auction_id', id)
     if (error) throw error
     realBids.value = data || []
   } catch (err) {
@@ -71,24 +74,10 @@ const loadBids = async (id) => {
   }
 }
 
-const subscribeToBids = (id) => {
+const startBidsRefresh = (id) => {
   if (!import.meta.client) return
-  if (bidsSubscription) supabase.removeChannel(bidsSubscription)
-  bidsSubscription = supabase
-    .channel(`public:auction_bids:${id}`)
-    .on(
-      'postgres_changes',
-      {
-        event: 'INSERT',
-        schema: 'public',
-        table: 'auction_bids',
-        filter: `auction_id=eq.${id}`
-      },
-      (payload) => {
-        realBids.value.push(payload.new)
-      }
-    )
-    .subscribe()
+  if (bidsRefreshTimer) clearInterval(bidsRefreshTimer)
+  bidsRefreshTimer = setInterval(() => void loadBids(id), 15000)
 }
 
 watch(
@@ -97,13 +86,13 @@ watch(
     if (newId) {
       if (import.meta.client) {
         await loadBids(newId)
-        subscribeToBids(newId)
+        startBidsRefresh(newId)
       }
     } else {
       realBids.value = []
-      if (import.meta.client && bidsSubscription) {
-        supabase.removeChannel(bidsSubscription)
-        bidsSubscription = null
+      if (import.meta.client && bidsRefreshTimer) {
+        clearInterval(bidsRefreshTimer)
+        bidsRefreshTimer = null
       }
     }
   },
@@ -124,7 +113,7 @@ onMounted(() => {
 onUnmounted(() => {
   if (import.meta.client) {
     if (timer) clearInterval(timer)
-    if (bidsSubscription) supabase.removeChannel(bidsSubscription)
+    if (bidsRefreshTimer) clearInterval(bidsRefreshTimer)
   }
 })
 
@@ -159,6 +148,12 @@ const formatTime = (isoString) => {
   if (!isoString) return ''
   const d = new Date(isoString)
   return `${d.getMonth() + 1}/${d.getDate()} ${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}:${d.getSeconds().toString().padStart(2, '0')}`
+}
+
+const formatPrice = (value) => {
+  const amount = Number(value)
+  if (!Number.isFinite(amount)) return 'NT$ —'
+  return `NT$ ${amount.toLocaleString('zh-TW')}`
 }
 
 const auctionPublisher = {
@@ -275,7 +270,12 @@ const siteData = computed(() => {
       '@context': 'https://schema.org',
       '@type': 'BreadcrumbList',
       itemListElement: [
-        { '@type': 'ListItem', position: 1, name: '首頁', item: 'https://www.genckobreeding.com/' },
+        {
+          '@type': 'ListItem',
+          position: 1,
+          name: '首頁',
+          item: 'https://www.genckobreeding.com/home'
+        },
         {
           '@type': 'ListItem',
           position: 2,
@@ -380,73 +380,47 @@ const placeBid = async () => {
     return
   }
 
-  if (myBidAmount.value < minNextBid.value) {
+  if (store.currentUser?.type !== 'google') {
+    alert('目前出價需使用 Google 登入；LINE 登入尚待完成伺服器身份驗證。')
+    return
+  }
+
+  if (!currentAuction.value || getAuctionStatus(currentAuction.value).status !== 'active') {
+    alert('此競標已結束，無法再出價。')
+    return
+  }
+
+  const amount = Number(myBidAmount.value)
+  if (!Number.isInteger(amount) || amount < minNextBid.value) {
     alert(`出價金額必須大於等於 ${minNextBid.value}`)
     return
   }
 
   isPlacingBid.value = true
-  const emailOrId = store.currentUser.email
 
   try {
-    const { data: blacklistData, error: blacklistError } = await supabase
-      .from('blacklist')
-      .select('email')
-      .eq('email', emailOrId)
-
-    if (blacklistError) throw blacklistError
-
-    if (blacklistData && blacklistData.length > 0) {
-      alert('⚠️ 您的帳號已被限制出價功能。若有疑問請聯絡官方管理員。')
-      isPlacingBid.value = false
-      return
-    }
-
-    let finalName = ''
-    if (customNickname.value && customNickname.value.trim() !== '') {
-      finalName = customNickname.value.trim()
-    } else {
-      if (store.currentUser.type === 'line') {
-        const name = store.currentUser.name
-        if (name.length <= 1) finalName = name + '***'
-        else if (name.length === 2) finalName = name.charAt(0) + '*'
-        else finalName = name.charAt(0) + 'O' + name.charAt(name.length - 1)
-      } else {
-        const emailPrefix = emailOrId.split('@')[0]
-        finalName =
-          emailPrefix.length > 3 ? `${emailPrefix.substring(0, 3)}***` : `${emailPrefix}***`
-      }
-    }
-
-    const { error: bidError } = await supabase.from('auction_bids').insert([
+    const result = await $fetch(
+      `/api/auctions/${encodeURIComponent(currentAuction.value.id)}/bid`,
       {
-        auction_id: currentAuction.value.id,
-        user_name: finalName,
-        amount: myBidAmount.value,
-        phone: emailOrId
+        method: 'POST',
+        body: { amount, nickname: customNickname.value }
       }
-    ])
-    if (bidError) throw bidError
+    )
 
-    const end_time = new Date(currentAuction.value.end_time).getTime()
-    if (end_time - new Date().getTime() <= 180000) {
-      const newEndTime = new Date(end_time + 180000).toISOString()
-      await supabase
-        .from('auctions')
-        .update({ end_time: newEndTime })
-        .eq('id', currentAuction.value.id)
-      // 🌟 Bug fix：同步更新本地 currentAuction，讓倒計時立即反映延長後的時間，無需重整頁面
-      currentAuction.value = { ...currentAuction.value, end_time: newEndTime }
-      alert('因在結標前三分鐘內出價，結標時間已自動延長 3 分鐘！')
-    } else {
-      alert('出價成功！')
+    if (result?.bid && !realBids.value.some((bid) => bid.id === result.bid.id)) {
+      realBids.value.push(result.bid)
     }
+    if (result?.auction?.end_time) {
+      currentAuction.value = { ...currentAuction.value, end_time: result.auction.end_time }
+    }
+
+    alert(result?.extended ? '因在結標前三分鐘內出價，結標時間已自動延長 3 分鐘！' : '出價成功！')
 
     isBidsExpanded.value = true
-    myBidAmount.value = myBidAmount.value + currentAuction.value.min_increment
+    myBidAmount.value = amount + currentAuction.value.min_increment
   } catch (err) {
-    alert('出價失敗，請稍後再試！')
-    console.error(err)
+    alert(err?.data?.message || err?.data?.statusMessage || '出價失敗，請稍後再試！')
+    console.error('出價失敗:', err)
   } finally {
     isPlacingBid.value = false
   }
@@ -490,6 +464,8 @@ const shareLink = async () => {
 // 🌟 方案二：生成正方形 IG 宣傳圖卡 (Canvas 升級版)
 const generatedImage = ref(null)
 const isGenerating = ref(false)
+const promoTriggerEl = ref(null)
+const promoDialogEl = ref(null)
 
 const generatePromo = async () => {
   if (!currentAuction.value) return
@@ -570,6 +546,8 @@ const generatePromo = async () => {
     ctx.fillText('STUDIO', 1030, 1000)
 
     generatedImage.value = canvas.toDataURL('image/jpeg', 0.9)
+    await nextTick()
+    promoDialogEl.value?.focus()
   } catch (err) {
     console.error('圖卡生成失敗', err)
     alert('圖片生成失敗，可能是因為網路跨域限制。')
@@ -577,10 +555,44 @@ const generatePromo = async () => {
     isGenerating.value = false
   }
 }
+
+const closePromo = async () => {
+  generatedImage.value = null
+  await nextTick()
+  promoTriggerEl.value?.focus()
+}
+
+const handlePromoKeydown = (event) => {
+  if (event.key === 'Escape') {
+    event.preventDefault()
+    void closePromo()
+    return
+  }
+  if (event.key !== 'Tab') return
+
+  const focusable = [
+    ...promoDialogEl.value.querySelectorAll('button, [href], input, select, textarea')
+  ].filter((element) => !element.disabled && element.offsetParent !== null)
+  if (!focusable.length) return
+
+  const first = focusable[0]
+  const last = focusable[focusable.length - 1]
+  if (event.shiftKey && document.activeElement === first) {
+    event.preventDefault()
+    last.focus()
+  } else if (!event.shiftKey && document.activeElement === last) {
+    event.preventDefault()
+    first.focus()
+  }
+}
 </script>
 
 <template>
   <div class="auction-page-wrapper">
+    <div class="common-document-meta" aria-label="競標詳情說明">
+      <span>GENCKO AUCTION RECORD</span>
+      <span>DETAIL / STATUS / ACTION</span>
+    </div>
     <!-- SEO：sr-only h1（爬蟲可讀、視覺隱藏；視覺主標題用 h2 維持原版面） -->
     <h1 v-if="currentAuction" class="sr-only">
       {{ currentAuction.morph }}
@@ -591,19 +603,17 @@ const generatePromo = async () => {
     </h1>
     <TheBackButton fallback="/auction" text="返回列表" />
 
-    <div
-      v-if="pending"
-      class="loading-state"
-      style="text-align: center; padding: 100px 0; color: var(--txt); opacity: 0.6"
-    >
-      <div class="loader" style="margin: 0 auto 20px auto"></div>
+    <div v-if="pending" class="loading-state">
+      <div class="loader"></div>
       <p>載入競標資料中...</p>
     </div>
 
     <div v-else-if="currentAuction" class="detail-layout">
       <div class="left-col">
-        <div
+        <button
+          type="button"
           class="main-img"
+          aria-label="放大競標商品圖片"
           @click="
             store.openLightbox(
               currentAuction.images && currentAuction.images.length
@@ -615,7 +625,6 @@ const generatePromo = async () => {
             )
           "
         >
-          <!-- 🌟 核心修正：將 NuxtImg 改為原生 img，並設為 eager 優先載入 -->
           <img
             :src="
               currentAuction.images && currentAuction.images.length
@@ -626,43 +635,29 @@ const generatePromo = async () => {
             loading="eager"
             decoding="async"
           />
-          <div class="zoom-hint">🔍 點擊放大圖片</div>
-        </div>
+          <div class="zoom-hint">點擊放大圖片</div>
+        </button>
         <div class="bid-history">
           <div class="history-header">
             <h3>出價紀錄 ({{ currentBids.length }})</h3>
             <button
+              type="button"
               v-if="currentBids.length > 1"
               @click="isBidsExpanded = !isBidsExpanded"
-              class="btn-toggle"
+              class="btn-app btn-app--ghost btn-app--sm btn-toggle"
             >
               {{ isBidsExpanded ? '收起' : '展開全部' }}
             </button>
           </div>
 
-          <div
-            v-if="currentBids.length === 0"
-            class="empty-history"
-            style="text-align: center; padding: 1.5rem 0; color: var(--txt); opacity: 0.6"
-          >
-            <div style="margin-bottom: 12px">目前尚無出價，搶先成為第一位！</div>
-            <div
-              style="
-                font-size: 0.85rem;
-                background: rgba(128, 128, 128, 0.1);
-                padding: 12px;
-                border-radius: 8px;
-                border: 1px dashed var(--bd);
-                display: inline-block;
-              "
-            >
-              💡 顯示範例：
+          <div v-if="currentBids.length === 0" class="empty-history">
+            <p>目前尚無出價，搶先成為第一位！</p>
+            <div class="bid-example">
+              <span class="bid-example__label">顯示範例</span>
               <br />
-              <span style="color: var(--txt); font-weight: bold; opacity: 1">
-                王O明 (或自訂暱稱)
-              </span>
+              <strong>王O明（或自訂暱稱）</strong>
               出價
-              <span style="color: var(--pri); font-weight: bold">${{ minNextBid }}</span>
+              <span>{{ formatPrice(minNextBid) }}</span>
             </div>
           </div>
           <ul v-else class="history-list">
@@ -673,14 +668,14 @@ const generatePromo = async () => {
                 :class="{ 'highest-bid': index === 0 }"
               >
                 <span class="bidder">{{ bid.user_name }}</span>
-                <span class="bid-amount">${{ bid.amount }}</span>
+                <span class="bid-amount">{{ formatPrice(bid.amount) }}</span>
                 <span class="bid-time">{{ formatTime(bid.bid_time) }}</span>
               </li>
             </template>
             <template v-else>
               <li class="highest-bid">
                 <span class="bidder">{{ currentBids[0].user_name }}</span>
-                <span class="bid-amount">${{ currentBids[0].amount }}</span>
+                <span class="bid-amount">{{ formatPrice(currentBids[0].amount) }}</span>
                 <span class="bid-time">{{ formatTime(currentBids[0].bid_time) }}</span>
               </li>
             </template>
@@ -691,7 +686,12 @@ const generatePromo = async () => {
       <div class="right-col">
         <div class="header-info">
           <ClientOnly>
-            <div class="status-badge" :class="getAuctionStatus(currentAuction).class">
+            <div
+              class="status-badge"
+              role="status"
+              :aria-label="`競標狀態：${getAuctionStatus(currentAuction).text}`"
+              :class="getAuctionStatus(currentAuction).class"
+            >
               {{ getAuctionStatus(currentAuction).text }}
             </div>
             <template #fallback>
@@ -706,35 +706,51 @@ const generatePromo = async () => {
           </h2>
         </div>
 
-        <!-- 🌟 行銷操作按鈕 (分享與產生圖卡) -->
-        <div class="action-sub-buttons" style="margin-bottom: 1.5rem">
-          <button class="btn-share" @click="shareLink">分享連結</button>
-          <button class="btn-promo" @click="generatePromo" :disabled="isGenerating">
-            {{ isGenerating ? '⏳ 生成中...' : '產生圖卡' }}
+        <div class="action-sub-buttons">
+          <button
+            type="button"
+            class="btn-app btn-app--ghost btn-app--md btn-share"
+            @click="shareLink"
+          >
+            分享連結
+          </button>
+          <button
+            ref="promoTriggerEl"
+            type="button"
+            class="btn-app btn-app--ghost btn-app--md btn-promo"
+            @click="generatePromo"
+            :disabled="isGenerating"
+          >
+            {{ isGenerating ? '生成中...' : '產生圖卡' }}
           </button>
         </div>
 
         <div class="price-dashboard">
           <div class="price-row">
             <span class="p-lbl">最高出價：</span>
-            <span class="highest-price">${{ highestBidAmount }}</span>
+            <span class="highest-price">{{ formatPrice(highestBidAmount) }}</span>
           </div>
           <div class="price-row sub">
-            <span>最低增額：${{ currentAuction.min_increment }}</span>
-            <span>直購價：${{ currentAuction.buy_now_price }}</span>
+            <span>最低增額：{{ formatPrice(currentAuction.min_increment) }}</span>
+            <span>直購價：{{ formatPrice(currentAuction.buy_now_price) }}</span>
           </div>
         </div>
 
         <ClientOnly>
-          <div class="timer-box" :class="{ 'ending-soon': isEndingSoon(currentAuction) }">
+          <div
+            class="timer-box"
+            role="timer"
+            aria-label="競標剩餘時間"
+            :class="{ 'ending-soon': isEndingSoon(currentAuction) }"
+          >
             <div class="timer-title">剩餘時間</div>
             <div class="timer-value">{{ getCountdownText(currentAuction) }}</div>
             <div class="timer-note">結標前3分鐘喊標自動延長。</div>
           </div>
           <template #fallback>
-            <div class="timer-box">
+            <div class="timer-box" role="timer" aria-label="競標剩餘時間">
               <div class="timer-title">剩餘時間</div>
-              <div class="timer-value">⏳ 計算中...</div>
+              <div class="timer-value">時間計算中</div>
             </div>
           </template>
         </ClientOnly>
@@ -744,10 +760,16 @@ const generatePromo = async () => {
             <template v-if="store.currentUser">
               <div class="user-info-box">
                 <span v-if="store.currentUser.type === 'line'" class="u-name">
-                  ✅ LINE：{{ store.currentUser.name }}
+                  LINE：{{ store.currentUser.name }}
                 </span>
-                <span v-else class="u-name">✅ Google：{{ store.currentUser.email }}</span>
-                <button @click="store.logout" class="btn-logout">登出</button>
+                <span v-else class="u-name">Google：{{ store.currentUser.email }}</span>
+                <button
+                  type="button"
+                  @click="store.logout"
+                  class="btn-app btn-app--ghost btn-app--xs btn-logout"
+                >
+                  登出
+                </button>
               </div>
               <div class="nick-input-wrap">
                 <input
@@ -760,7 +782,7 @@ const generatePromo = async () => {
                 />
               </div>
               <div class="input-group">
-                <span class="currency">$</span>
+                <span class="currency">NT$</span>
                 <input
                   type="number"
                   v-model="myBidAmount"
@@ -770,20 +792,29 @@ const generatePromo = async () => {
                 />
               </div>
               <div class="action-buttons">
-                <button class="btn-bid" @click="placeBid" :disabled="isPlacingBid">
+                <button
+                  type="button"
+                  class="btn-app btn-app--primary btn-app--md btn-bid"
+                  @click="placeBid"
+                  :disabled="isPlacingBid"
+                >
                   {{ isPlacingBid ? '處理中...' : '確認出價' }}
                 </button>
-                <button class="btn-buy-now" @click="buyNow">
-                  直購 (${{ currentAuction.buy_now_price }})
+                <button
+                  type="button"
+                  class="btn-app btn-app--secondary btn-app--md btn-buy-now"
+                  @click="buyNow"
+                >
+                  直購（{{ formatPrice(currentAuction.buy_now_price) }}）
                 </button>
               </div>
-              <div class="bid-hint">您的出價必須 ≥ ${{ minNextBid }}</div>
+              <div class="bid-hint">您的出價必須 ≥ {{ formatPrice(minNextBid) }}</div>
             </template>
 
             <template v-else>
               <div class="login-prompt">
-                <p>⚠️ 為遏止惡意棄標，請先登入</p>
-                <button @click="store.loginWithLine" class="btn-login-line">
+                <p>為遏止惡意棄標，請先登入</p>
+                <button type="button" @click="store.loginWithLine" class="btn-login-line">
                   <img
                     src="https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/line.png"
                     alt="LINE"
@@ -792,7 +823,7 @@ const generatePromo = async () => {
                   />
                   LINE 登入
                 </button>
-                <button @click="store.loginWithGoogle" class="btn-login-google">
+                <button type="button" @click="store.loginWithGoogle" class="btn-login-google">
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
                     <path
                       d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
@@ -819,7 +850,7 @@ const generatePromo = async () => {
           <div class="action-box ended" v-else>
             競標已結束，得標者為：
             <br />
-            <span style="color: var(--pri); font-size: 1.2rem; display: block; margin-top: 5px">
+            <span class="winner-name">
               {{
                 highestBidAmount > 0 && currentBids.length > 0 ? currentBids[0].user_name : '流標'
               }}
@@ -855,39 +886,44 @@ const generatePromo = async () => {
             </li>
           </ul>
           <div class="note-box" v-if="currentAuction.note">
-            <strong>📝 備註：</strong>
+            <strong>備註：</strong>
             {{ currentAuction.note }}
           </div>
         </div>
       </div>
     </div>
 
-    <div
-      v-else
-      class="not-found"
-      style="text-align: center; padding: 100px 0; color: var(--txt); opacity: 0.6"
-    >
+    <div v-else class="not-found">
       <h2>找不到此競標商品</h2>
-      <TheBackButton
-        fallback="/auction"
-        text="返回列表"
-        style="margin-top: 20px; justify-content: center"
-      />
+      <p>這筆競標可能已下架，或網址不正確。</p>
+      <TheBackButton fallback="/auction" text="返回列表" wrapper-class="not-found__action" />
     </div>
 
-    <!-- 🌟 宣傳圖卡彈窗 Modal -->
-    <div v-if="generatedImage" class="promo-modal-overlay" @click="generatedImage = null">
-      <div class="promo-modal-content" @click.stop>
-        <button class="btn-close-promo" @click="generatedImage = null">✕</button>
-        <h3 style="color: var(--txt); margin-top: 10px">📸 宣傳圖卡已生成</h3>
-        <p style="color: var(--txt); opacity: 0.8; font-size: 0.9rem">
-          請長按圖片儲存（或點擊右鍵另存），
-          <br />
-          即可完美分享至 IG 限時動態！
-        </p>
+    <div v-if="generatedImage" class="promo-modal-overlay" @click="closePromo">
+      <div
+        ref="promoDialogEl"
+        class="promo-modal-content"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="promo-dialog-title"
+        tabindex="-1"
+        @click.stop
+        @keydown="handlePromoKeydown"
+      >
+        <button
+          type="button"
+          class="btn-app btn-app--ghost btn-app--xs btn-close-promo"
+          aria-label="關閉宣傳圖卡"
+          @click="closePromo"
+        >
+          關閉
+        </button>
+        <p class="promo-modal-eyebrow">SHARE CARD</p>
+        <h3 id="promo-dialog-title">宣傳圖卡已生成</h3>
+        <p class="promo-modal-desc">長按圖片儲存，或在桌機點擊右鍵另存，即可分享至社群。</p>
         <img
           :src="generatedImage"
-          alt="Promo Result"
+          :alt="`${currentAuction?.morph || 'Gencko'} 競標宣傳圖卡`"
           class="promo-result-img"
           loading="lazy"
           decoding="async"
@@ -913,6 +949,7 @@ const generatePromo = async () => {
   margin-top: 10px;
 }
 .left-col .main-img {
+  display: block;
   position: relative;
   border-radius: 12px;
   overflow: hidden;
@@ -923,6 +960,15 @@ const generatePromo = async () => {
   background-color: var(--card-bg);
   border: 1px solid var(--bd);
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+  appearance: none;
+  padding: 0;
+  color: inherit;
+  font: inherit;
+  text-align: inherit;
+}
+.main-img:focus-visible {
+  outline: 3px solid var(--pri);
+  outline-offset: 3px;
 }
 .main-img img {
   width: 100%;
@@ -969,6 +1015,7 @@ const generatePromo = async () => {
   cursor: pointer;
   font-size: 0.85rem;
   transition: 0.2s;
+  min-height: var(--control-min-height);
 }
 .btn-toggle:hover {
   background: var(--pri);
@@ -1056,6 +1103,7 @@ const generatePromo = async () => {
   font-weight: bold;
   font-size: 0.95rem;
   white-space: nowrap;
+  min-height: var(--control-min-height);
 }
 .btn-share:hover,
 .btn-promo:hover {
@@ -1197,6 +1245,7 @@ const generatePromo = async () => {
   border-radius: 6px;
   cursor: pointer;
   transition: 0.2s;
+  min-height: var(--control-min-height);
 }
 .btn-logout:hover {
   opacity: 1;
@@ -1265,6 +1314,7 @@ const generatePromo = async () => {
   cursor: pointer;
   box-shadow: 0 4px 10px var(--pri-glow);
   transition: 0.2s;
+  min-height: var(--control-min-height);
 }
 .btn-bid:hover {
   transform: translateY(-2px);
@@ -1286,6 +1336,7 @@ const generatePromo = async () => {
   cursor: pointer;
   font-weight: bold;
   transition: 0.2s;
+  min-height: var(--control-min-height);
 }
 .btn-buy-now:hover {
   background: rgba(128, 128, 128, 0.1);
@@ -1323,6 +1374,7 @@ const generatePromo = async () => {
   width: 100%;
   gap: 10px;
   margin-bottom: 10px;
+  min-height: var(--control-min-height);
 }
 .btn-login-line img {
   width: 24px;
@@ -1343,6 +1395,7 @@ const generatePromo = async () => {
   width: 100%;
   gap: 10px;
   transition: 0.2s;
+  min-height: var(--control-min-height);
 }
 .btn-login-google:hover {
   background: rgba(128, 128, 128, 0.1);
@@ -1416,6 +1469,8 @@ const generatePromo = async () => {
   font-size: 1.4rem;
   cursor: pointer;
   opacity: 0.6;
+  min-width: var(--control-min-height);
+  min-height: var(--control-min-height);
 }
 .promo-result-img {
   width: 100%;
@@ -1630,6 +1685,664 @@ const generatePromo = async () => {
   .history-list li {
     padding: 8px 0;
     font-size: 0.85rem;
+  }
+}
+
+@media (hover: none), (pointer: coarse), (max-width: 768px) {
+  .btn-bid:hover,
+  .btn-buy-now:hover,
+  .btn-toggle:hover,
+  .btn-login-google:hover {
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .auction-page,
+  .btn-toggle,
+  .btn-share,
+  .btn-promo,
+  .btn-logout,
+  .btn-bid,
+  .btn-buy-now,
+  .btn-login-line,
+  .btn-login-google,
+  .btn-close-promo,
+  .timer-box,
+  .promo-modal-content {
+    transition: none;
+    animation: none;
+  }
+  .btn-bid:hover,
+  .btn-buy-now:hover,
+  .btn-toggle:hover {
+    transform: none;
+  }
+  .promo-modal-content {
+    transform: none;
+  }
+}
+
+/* 競標詳情以交易單據層級呈現，保留倒數與安全出價的狀態語意。 */
+.auction-page-wrapper,
+.main-img,
+.price-dashboard,
+.timer-box,
+.action-box,
+.info-section,
+.bid-history,
+.note-box,
+.promo-modal-content,
+.promo-result-img {
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.main-img,
+.price-dashboard,
+.timer-box,
+.action-box,
+.info-section,
+.bid-history {
+  background-image: none;
+}
+
+.price-dashboard,
+.timer-box,
+.action-box,
+.info-section,
+.bid-history {
+  border-width: 1px 0;
+}
+
+.price-row,
+.specs-list li,
+.note-box {
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.price-row {
+  padding-left: 0;
+  padding-right: 0;
+  background: transparent;
+}
+
+.specs-list {
+  gap: 0;
+  border-top: 1px solid var(--bd);
+  border-left: 1px solid var(--bd);
+}
+
+.specs-list li {
+  border-width: 0 1px 1px 0;
+  background: transparent;
+}
+
+.btn-share,
+.btn-promo,
+.btn-bid,
+.btn-buy-now,
+.btn-toggle,
+.nick-input,
+.input-group,
+.input-group input {
+  border-radius: 0;
+  box-shadow: none;
+}
+
+/* 與競標清單共用白底、品牌橘、細線及直角語彙。 */
+.auction-page-wrapper {
+  max-width: 1440px;
+  padding: clamp(18px, 2.5vw, 34px) clamp(20px, 5vw, 76px) clamp(44px, 6vw, 72px);
+}
+
+.auction-page-wrapper > .common-document-meta {
+  margin-bottom: 10px;
+  padding-bottom: 8px;
+}
+
+.auction-page-wrapper > :deep(.back-btn-wrap) {
+  margin-bottom: 10px;
+}
+
+.auction-page-wrapper :deep(.app-back-btn),
+.auction-page-wrapper .btn-app,
+.btn-login-line,
+.btn-login-google {
+  border-radius: var(--radius-sm);
+}
+
+.detail-layout {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: clamp(24px, 4vw, 56px);
+  margin-top: 0;
+}
+
+.left-col .main-img {
+  aspect-ratio: 1 / 1;
+  margin-bottom: 18px;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.zoom-hint {
+  padding: 9px 12px;
+  background: rgba(18, 15, 13, 0.76);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.bid-history,
+.price-dashboard,
+.timer-box,
+.action-box,
+.user-info-box,
+.specs-list li,
+.note-box {
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.bid-history {
+  padding: clamp(16px, 2vw, 22px) 0 0;
+  border-width: 1px 0 0;
+  background: transparent;
+}
+
+.history-header {
+  padding-bottom: 10px;
+  margin-bottom: 0;
+}
+
+.history-header h3 {
+  font-family: 'Noto Serif TC', serif;
+  font-size: clamp(1.15rem, 2vw, 1.4rem);
+}
+
+.btn-toggle {
+  flex: 0 0 auto;
+  padding-inline: 14px;
+}
+
+.history-list li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) max-content max-content;
+  gap: 14px;
+  align-items: baseline;
+  padding: 12px 0;
+  border-bottom-style: solid;
+}
+
+.bid-amount,
+.bid-time {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.empty-history {
+  padding: 20px 0 0;
+  color: var(--txt-muted);
+  text-align: left;
+}
+
+.empty-history > p {
+  margin: 0 0 12px;
+}
+
+.bid-example {
+  display: inline-block;
+  padding: 12px 14px;
+  border: 1px solid var(--bd);
+  color: var(--txt-muted);
+  font-size: 0.85rem;
+  line-height: 1.7;
+}
+
+.bid-example__label {
+  color: var(--pri);
+  font-size: 0.66rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+}
+
+.bid-example strong {
+  color: var(--txt);
+}
+
+.bid-example > span:last-child {
+  color: var(--pri);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.right-col .header-info {
+  align-items: baseline;
+  gap: 10px 14px;
+  margin-bottom: 14px;
+}
+
+.right-col h2 {
+  font-family: 'Noto Serif TC', serif;
+  font-size: clamp(2rem, 4vw, 3.4rem);
+  line-height: 1.15;
+  letter-spacing: -0.05em;
+}
+
+.m-gender {
+  color: var(--txt-muted);
+  font-size: 0.55em;
+  opacity: 1;
+  white-space: nowrap;
+}
+
+.status-badge {
+  padding: 5px 9px;
+  border: 1px solid currentColor;
+  border-radius: 0;
+  box-shadow: none;
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
+}
+
+.badge-active {
+  box-shadow: none;
+}
+
+.action-sub-buttons {
+  gap: 8px;
+  margin-bottom: 18px;
+}
+
+.btn-share,
+.btn-promo {
+  padding: 10px 14px;
+  font-size: 0.9rem;
+}
+
+.price-dashboard {
+  margin-bottom: 12px;
+  padding: 16px 0;
+  border-width: 1px 0;
+  background: transparent;
+}
+
+.price-row .highest-price {
+  color: var(--pri);
+  font-family: 'Noto Serif TC', serif;
+  font-size: clamp(2rem, 4vw, 3rem);
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  text-shadow: none;
+  white-space: nowrap;
+}
+
+.price-row.sub {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  padding-top: 10px;
+  border-top-style: solid;
+  color: var(--txt-muted);
+  opacity: 1;
+}
+
+.price-row.sub span:last-child {
+  text-align: right;
+}
+
+.timer-box {
+  margin-bottom: 12px;
+  padding: 16px 0;
+  border-width: 0 0 1px;
+  background: transparent;
+  text-align: left;
+}
+
+.timer-title,
+.timer-note {
+  color: var(--txt-muted);
+  opacity: 1;
+}
+
+.timer-value {
+  color: var(--txt);
+  font-family: inherit;
+  font-size: clamp(1.55rem, 3vw, 2.25rem);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0;
+}
+
+.timer-box.ending-soon {
+  padding-inline: 14px;
+  border: 1px solid #b42318;
+  color: #b42318;
+  background: transparent;
+  animation: none;
+}
+
+.timer-box.ending-soon .timer-title,
+.timer-box.ending-soon .timer-value,
+.timer-box.ending-soon .timer-note {
+  color: #b42318 !important;
+}
+
+.action-box {
+  margin-bottom: 18px;
+  padding: clamp(16px, 2vw, 22px);
+  border: 1px solid var(--pri);
+  background: transparent;
+}
+
+.action-box.ended {
+  padding: 18px 0;
+  border-width: 1px 0;
+  background: transparent;
+  text-align: left;
+  opacity: 1;
+}
+
+.winner-name {
+  display: block;
+  margin-top: 5px;
+  color: var(--pri);
+  font-family: 'Noto Serif TC', serif;
+  font-size: 1.35rem;
+}
+
+.user-info-box {
+  padding: 10px 0;
+  border-width: 0 0 1px;
+  background: transparent;
+}
+
+.nick-input,
+.input-group,
+.input-group .currency,
+.input-group input {
+  background: transparent;
+}
+
+.input-group .currency {
+  font-size: 0.78rem;
+  white-space: nowrap;
+}
+
+.action-buttons {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1.25fr);
+  gap: 8px;
+}
+
+.btn-bid,
+.btn-buy-now {
+  width: 100%;
+  min-width: 0;
+  padding: 12px 10px;
+  box-shadow: none;
+  white-space: nowrap;
+}
+
+.btn-bid:hover {
+  transform: none;
+}
+
+.login-prompt {
+  padding: 0;
+  text-align: left;
+}
+
+.login-prompt p {
+  margin: 0 0 14px;
+  color: var(--txt);
+}
+
+.btn-login-line,
+.btn-login-google {
+  box-shadow: none;
+}
+
+.info-section {
+  margin-bottom: 0;
+  padding-top: 2px;
+}
+
+.specs-list {
+  gap: 0;
+  border-top: 1px solid var(--bd);
+}
+
+.specs-list li {
+  padding: 12px 0;
+  border-width: 0 0 1px;
+  background: transparent;
+}
+
+.specs-list li:nth-child(odd) {
+  padding-right: 12px;
+}
+
+.specs-list li:nth-child(even) {
+  padding-left: 12px;
+}
+
+.note-box {
+  margin-top: 14px;
+  padding: 12px 0 12px 14px;
+  border-width: 0 0 0 2px;
+  background: transparent;
+}
+
+.loading-state,
+.not-found {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  min-height: 280px;
+  padding: clamp(40px, 7vw, 80px) 0;
+  border-top: 1px solid var(--bd);
+  color: var(--txt);
+  text-align: left;
+}
+
+.loading-state .loader {
+  margin: 0 0 16px;
+}
+
+.loading-state p,
+.not-found p {
+  margin: 0;
+  color: var(--txt-muted);
+}
+
+.not-found h2 {
+  margin: 0 0 8px;
+  font-family: 'Noto Serif TC', serif;
+  font-size: clamp(1.65rem, 3vw, 2.4rem);
+}
+
+.not-found > :deep(.not-found__action) {
+  justify-content: flex-start;
+  margin-top: 18px;
+}
+
+.promo-modal-overlay {
+  background: rgba(18, 15, 13, 0.72);
+  backdrop-filter: none;
+}
+
+.promo-modal-content {
+  max-width: 420px;
+  padding: 24px;
+  border: 1px solid var(--bd);
+  border-radius: 0;
+  box-shadow: none;
+  text-align: left;
+}
+
+.btn-close-promo {
+  top: 14px;
+  right: 14px;
+  width: auto;
+  padding-inline: 12px;
+  border: 1px solid var(--bd);
+  font-size: 0.78rem;
+  opacity: 1;
+}
+
+.promo-modal-eyebrow {
+  margin: 0 0 8px;
+  color: var(--pri);
+  font-size: 0.66rem;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+}
+
+.promo-modal-content h3 {
+  margin: 0;
+  padding-right: 64px;
+  color: var(--txt);
+  font-family: 'Noto Serif TC', serif;
+  font-size: 1.55rem;
+}
+
+.promo-modal-desc {
+  margin: 10px 0 0;
+  color: var(--txt-muted);
+  font-size: 0.9rem;
+  line-height: 1.7;
+}
+
+.promo-result-img {
+  margin-top: 16px;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .btn-share:hover,
+  .btn-promo:hover,
+  .btn-toggle:hover,
+  .btn-logout:hover,
+  .btn-buy-now:hover,
+  .btn-login-google:hover {
+    border-color: var(--pri);
+    color: var(--pri);
+    background: transparent;
+  }
+}
+
+@media (max-width: 768px) {
+  .auction-page-wrapper {
+    padding: 10px 16px 44px;
+  }
+
+  .auction-page-wrapper > .common-document-meta {
+    margin-bottom: 8px;
+  }
+
+  .auction-page-wrapper > :deep(.back-btn-wrap) {
+    margin-bottom: 8px;
+  }
+
+  .detail-layout {
+    grid-template-columns: minmax(104px, 34%) minmax(0, 1fr);
+    gap: 10px;
+  }
+
+  .main-img,
+  .status-badge,
+  .action-box,
+  .timer-box,
+  .bid-history,
+  .specs-list li {
+    border-radius: 0;
+  }
+
+  .right-col h2 {
+    font-size: clamp(1.1rem, 5.5vw, 1.4rem);
+  }
+
+  .status-badge {
+    padding: 3px 6px;
+  }
+
+  .action-sub-buttons {
+    gap: 5px;
+  }
+
+  .btn-share,
+  .btn-promo {
+    min-width: 0;
+    padding: 8px 5px;
+    font-size: 0.76rem;
+    white-space: nowrap;
+  }
+
+  .price-dashboard {
+    margin-top: 4px;
+    padding: 12px 0;
+  }
+
+  .price-row .highest-price {
+    font-size: 1.55rem;
+  }
+
+  .price-row.sub {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    font-size: 0.74rem;
+  }
+
+  .timer-box {
+    margin: 6px 0;
+    padding: 12px 0;
+  }
+
+  .timer-value {
+    font-size: clamp(1.25rem, 6vw, 1.55rem);
+    white-space: nowrap;
+  }
+
+  .action-box {
+    padding: 12px 0;
+    border-width: 1px 0;
+  }
+
+  .action-buttons {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .btn-bid,
+  .btn-buy-now {
+    padding-inline: 6px;
+    font-size: 0.78rem;
+  }
+
+  .bid-history {
+    padding: 14px 0 0;
+  }
+
+  .history-list li {
+    grid-template-columns: minmax(0, 1fr) max-content;
+    gap: 6px 10px;
+  }
+
+  .bid-time {
+    grid-column: 1 / -1;
+  }
+
+  .promo-modal-content {
+    padding: 20px;
+  }
+
+  .loading-state,
+  .not-found {
+    min-height: 220px;
+    padding: 36px 0;
   }
 }
 </style>

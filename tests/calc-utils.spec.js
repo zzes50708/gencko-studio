@@ -2,11 +2,28 @@ import { describe, it, expect } from 'vitest'
 import { calculateGenetics, getProbFraction } from '../utils/calcUtils'
 import { LeopardGeckoConfig } from '../utils/genetics/leopardgecko.config'
 import { ZYG } from '../utils/genes'
+import { getRouteTab } from '../utils/route-tab'
 
 const cfg = LeopardGeckoConfig
 
 const findByDesc = (outcomes, text) =>
   outcomes.find((o) => o.description === text || o.fullLabel === text || o.fullLabel.includes(text))
+
+describe('getRouteTab', () => {
+  it.each([
+    ['/', 'home'],
+    ['/home', 'home'],
+    ['/articles/example', 'articles'],
+    ['/start-here', 'care'],
+    ['/product/abc', 'shop'],
+    ['/auction', 'auction'],
+    ['/calculator', 'calculator'],
+    ['/profile', 'profile'],
+    ['/unknown-route', 'home']
+  ])('maps %s to %s', (path, tab) => {
+    expect(getRouteTab(path)).toBe(tab)
+  })
+})
 
 describe('getProbFraction', () => {
   it('returns "" for ~1.0', () => {

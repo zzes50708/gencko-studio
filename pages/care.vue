@@ -5,7 +5,6 @@ import { useMainStore } from '~/stores/useMainStore'
 import {
   PERSONAS,
   ANCHORS,
-  HERO_STATS,
   ENV_ITEMS,
   TEMP_GRADIENT,
   HUMIDITY_CONFIG,
@@ -20,8 +19,7 @@ import {
   BREEDING_NOTES,
   BREEDING_RELATED,
   DANGERS,
-  FAQ,
-  SPECIES_COMPARE
+  FAQ
 } from '~/utils/care'
 
 const store = useMainStore()
@@ -152,7 +150,7 @@ const breadcrumbLd = {
   '@context': 'https://schema.org',
   '@type': 'BreadcrumbList',
   itemListElement: [
-    { '@type': 'ListItem', position: 1, name: '首頁', item: 'https://www.genckobreeding.com/' },
+    { '@type': 'ListItem', position: 1, name: '首頁', item: 'https://www.genckobreeding.com/home' },
     {
       '@type': 'ListItem',
       position: 2,
@@ -164,7 +162,7 @@ const breadcrumbLd = {
 
 // JSON-LD：Article（整頁視為長文教學，給 LLM 吃 articleBody）
 const articleBodyText = [
-  `守宮飼養指南完整收錄環境配置、溫度梯度、濕度配置、餵食與營養、補充品劑量、繁殖預備、致命地雷、豹紋 vs 肥尾物種對照與新手常見問題。`,
+  `守宮飼養指南完整收錄環境配置、溫度梯度、濕度配置、餵食與營養、補充品劑量、繁殖預備、照護警示與新手常見問題。`,
   `環境配置：${ENV_ITEMS.map((e) => `${e.title}（${e.spec}）`).join('；')}。`,
   `溫度梯度：冷區 ${TEMP_GRADIENT.cold.range}、過渡區 ${TEMP_GRADIENT.middle.range}、熱區 ${TEMP_GRADIENT.hot.range}；${TEMP_GRADIENT.nightMin}；${TEMP_GRADIENT.danger}。`,
   `濕度配置：${HUMIDITY_CONFIG.map((h) => `${h.zone} ${h.range}（${h.desc}）`).join('；')}。`,
@@ -331,9 +329,29 @@ const recommendedArticles = computed(() => {
 })
 
 const sidebarAnchors = computed(() => {
-  const order = ['env', 'temp', 'humidity', 'food', 'breeding', 'danger', 'species', 'faq']
+  const order = ['env', 'temp', 'humidity', 'food', 'breeding', 'faq']
   return [...ANCHORS].sort((a, b) => order.indexOf(a.id) - order.indexOf(b.id))
 })
+
+const environmentWarnings = DANGERS.filter((item) => item.id === 'cohab')
+const temperatureWarnings = DANGERS.filter((item) => item.id === 'noTherm')
+const feedingWarnings = DANGERS.filter((item) => item.id === 'monoDiet')
+const environmentArticleIds = computed(() =>
+  [
+    ...ENV_ITEMS.flatMap((item) => item.related || []),
+    ...TEMP_GRADIENT.related,
+    ...HUMIDITY_RELATED,
+    ...environmentWarnings.flatMap((item) => item.related || []),
+    ...temperatureWarnings.flatMap((item) => item.related || [])
+  ].filter((id, index, list) => list.indexOf(id) === index)
+)
+const feedingArticleIds = computed(() =>
+  [
+    ...FEEDER_RELATED,
+    ...SUPPLEMENT_RELATED,
+    ...feedingWarnings.flatMap((item) => item.related || [])
+  ].filter((id, index, list) => list.indexOf(id) === index)
+)
 
 const scrollProgress = ref(0)
 
@@ -374,8 +392,6 @@ const openFaq = ref(null)
 const toggleFaq = (i) => {
   openFaq.value = openFaq.value === i ? null : i
 }
-
-const showSpeciesCompare = ref(false)
 </script>
 
 <template>
@@ -385,42 +401,43 @@ const showSpeciesCompare = ref(false)
     </div>
 
     <section class="care-hero">
-      <h1 class="care-hero-title">守宮飼養指南</h1>
-
-      <div class="care-hero-stats">
-        <button
-          v-for="s in HERO_STATS"
-          :key="s.label"
-          class="care-stat-card"
-          :style="{ '--accent': s.color }"
-          @click="scrollTo(s.target)"
-        >
-          <div class="care-stat-label">{{ s.label }}</div>
-          <div class="care-stat-value">{{ s.value }}</div>
-          <div class="care-stat-sub">{{ s.sub }}</div>
-        </button>
+      <div class="care-document-meta">
+        <span>GENCKO FIELD MANUAL</span>
+        <span>REV. 01 · 日常照護</span>
+      </div>
+      <div class="care-hero-copy">
+        <div class="care-hero-kicker">CARE MANUAL · 日常照護手冊</div>
+        <h1 class="care-hero-title">守宮飼養指南</h1>
+        <p class="care-hero-lead">
+          先把環境與日常照護做對；遇到異常時，再依狀況前往健康評估或特寵醫院。
+        </p>
       </div>
     </section>
 
-    <section
-      class="care-anchor-nav m-only"
-      :class="{ 'care-anchor-nav--nav-hidden': store.navHidden }"
-    >
-      <button
-        v-for="a in sidebarAnchors"
-        :key="a.id"
-        class="care-anchor-btn"
-        @click="scrollTo(a.id)"
-      >
-        <span>{{ a.icon }}</span>
-        <span>{{ a.label }}</span>
-      </button>
-    </section>
+    <nav class="care-decision-map" data-testid="care-decision-map" aria-label="照護決策入口">
+      <div class="care-map-label">依目前狀況前往</div>
+      <NuxtLink no-prefetch to="/start-here">第一次飼養</NuxtLink>
+      <NuxtLink no-prefetch to="/health">健康異常評估</NuxtLink>
+      <NuxtLink no-prefetch to="/hospital">尋找特寵醫院</NuxtLink>
+      <NuxtLink no-prefetch to="/articles">深入知識文章</NuxtLink>
+    </nav>
 
     <div class="care-body">
       <main class="care-main">
+        <section class="care-reading-index" aria-labelledby="care-reading-index-title">
+          <div>
+            <span>READING INDEX</span>
+            <h2 id="care-reading-index-title">從環境開始，依序建立每日照護</h2>
+          </div>
+          <div class="care-reading-index-links">
+            <button v-for="a in sidebarAnchors" :key="a.id" type="button" @click="scrollTo(a.id)">
+              <span>{{ a.icon }}</span>
+              {{ a.label }}
+            </button>
+          </div>
+        </section>
         <section id="env" class="care-section">
-          <h2 class="care-h">🏠 環境配置</h2>
+          <h2 class="care-h">環境配置</h2>
           <div class="care-env-grid">
             <div v-for="e in ENV_ITEMS" :key="e.id" class="care-env-card">
               <div class="care-env-head">
@@ -432,74 +449,78 @@ const showSpeciesCompare = ref(false)
               <div v-if="e.warn" class="care-env-warn">{{ e.warn }}</div>
               <div v-if="e.note" class="care-env-note">💡 {{ e.note }}</div>
               <div v-if="e.comingArticle" class="care-coming">📝 完整對照文章敬請期待</div>
-              <div v-if="e.related?.length" class="care-inline-chips">
-                <button
-                  v-for="aid in e.related"
-                  :key="aid"
-                  class="care-chip"
-                  @click="goArticle(aid)"
-                >
-                  → {{ articleById(aid)?.Title || '相關閱讀' }}
-                </button>
+            </div>
+          </div>
+          <div class="care-subh">環境警示</div>
+          <div class="care-danger-grid">
+            <div v-for="d in environmentWarnings" :key="d.id" class="care-danger-card">
+              <div class="care-danger-head">
+                <span class="care-danger-title">{{ d.title }}</span>
+              </div>
+              <div class="care-danger-consequence">後果：{{ d.consequence }}</div>
+              <div class="care-danger-why">{{ d.why }}</div>
+            </div>
+          </div>
+
+          <div id="temp" class="care-subsection">
+            <h3 class="care-subh">溫度梯度</h3>
+
+            <div class="care-temp-bar">
+              <div class="care-temp-zone" :style="{ background: TEMP_GRADIENT.cold.color }">
+                <span class="care-temp-zone-range">{{ TEMP_GRADIENT.cold.range }}</span>
+                <span class="care-temp-zone-label">{{ TEMP_GRADIENT.cold.label }}</span>
+              </div>
+              <div class="care-temp-zone" :style="{ background: TEMP_GRADIENT.middle.color }">
+                <span class="care-temp-zone-range">{{ TEMP_GRADIENT.middle.range }}</span>
+                <span class="care-temp-zone-label">{{ TEMP_GRADIENT.middle.label }}</span>
+              </div>
+              <div class="care-temp-zone" :style="{ background: TEMP_GRADIENT.hot.color }">
+                <span class="care-temp-zone-range">{{ TEMP_GRADIENT.hot.range }}</span>
+                <span class="care-temp-zone-label">{{ TEMP_GRADIENT.hot.label }}</span>
+              </div>
+            </div>
+
+            <div class="care-temp-notes">
+              <div class="care-temp-note">🌙 {{ TEMP_GRADIENT.nightMin }}</div>
+              <div class="care-temp-warn">{{ TEMP_GRADIENT.danger }}</div>
+            </div>
+
+            <div class="care-subh">加溫安全</div>
+            <div class="care-danger-grid">
+              <div v-for="d in temperatureWarnings" :key="d.id" class="care-danger-card">
+                <div class="care-danger-head">
+                  <span class="care-danger-title">{{ d.title }}</span>
+                </div>
+                <div class="care-danger-consequence">後果：{{ d.consequence }}</div>
+                <div class="care-danger-why">{{ d.why }}</div>
               </div>
             </div>
           </div>
-        </section>
 
-        <section id="temp" class="care-section">
-          <h2 class="care-h">🌡 溫度梯度</h2>
-
-          <div class="care-temp-bar">
-            <div class="care-temp-zone" :style="{ background: TEMP_GRADIENT.cold.color }">
-              <span class="care-temp-zone-range">{{ TEMP_GRADIENT.cold.range }}</span>
-              <span class="care-temp-zone-label">{{ TEMP_GRADIENT.cold.label }}</span>
-            </div>
-            <div class="care-temp-zone" :style="{ background: TEMP_GRADIENT.middle.color }">
-              <span class="care-temp-zone-range">{{ TEMP_GRADIENT.middle.range }}</span>
-              <span class="care-temp-zone-label">{{ TEMP_GRADIENT.middle.label }}</span>
-            </div>
-            <div class="care-temp-zone" :style="{ background: TEMP_GRADIENT.hot.color }">
-              <span class="care-temp-zone-range">{{ TEMP_GRADIENT.hot.range }}</span>
-              <span class="care-temp-zone-label">{{ TEMP_GRADIENT.hot.label }}</span>
+          <div id="humidity" class="care-subsection">
+            <h3 class="care-subh">濕度配置</h3>
+            <div class="care-humidity-grid">
+              <div
+                v-for="h in HUMIDITY_CONFIG"
+                :key="h.zone"
+                class="care-humidity-card"
+                :style="{ '--accent': h.color }"
+              >
+                <div class="care-humidity-zone">{{ h.zone }}</div>
+                <div class="care-humidity-range">{{ h.range }}</div>
+                <div class="care-humidity-desc">{{ h.desc }}</div>
+              </div>
             </div>
           </div>
 
-          <div class="care-temp-notes">
-            <div class="care-temp-note">🌙 {{ TEMP_GRADIENT.nightMin }}</div>
-            <div class="care-temp-warn">{{ TEMP_GRADIENT.danger }}</div>
-          </div>
+          <CareHabitatExplorer />
 
+          <div class="care-subh">環境延伸閱讀</div>
           <div class="care-inline-chips">
             <button
-              v-for="aid in TEMP_GRADIENT.related"
+              v-for="aid in environmentArticleIds"
               :key="aid"
-              class="care-chip"
-              @click="goArticle(aid)"
-            >
-              → {{ articleById(aid)?.Title || '相關閱讀' }}
-            </button>
-          </div>
-        </section>
-
-        <section id="humidity" class="care-section">
-          <h2 class="care-h">💧 濕度配置</h2>
-          <div class="care-humidity-grid">
-            <div
-              v-for="h in HUMIDITY_CONFIG"
-              :key="h.zone"
-              class="care-humidity-card"
-              :style="{ '--accent': h.color }"
-            >
-              <div class="care-humidity-zone">{{ h.zone }}</div>
-              <div class="care-humidity-range">{{ h.range }}</div>
-              <div class="care-humidity-desc">{{ h.desc }}</div>
-            </div>
-          </div>
-
-          <div class="care-inline-chips">
-            <button
-              v-for="aid in HUMIDITY_RELATED"
-              :key="aid"
+              type="button"
               class="care-chip"
               @click="goArticle(aid)"
             >
@@ -509,7 +530,7 @@ const showSpeciesCompare = ref(false)
         </section>
 
         <section id="food" class="care-section">
-          <h2 class="care-h">🍴 餵食與營養</h2>
+          <h2 class="care-h">餵食與營養</h2>
           <div class="care-subh">依年齡的餵食頻率</div>
           <div class="care-table care-table--feed">
             <div class="care-tr care-tr-head">
@@ -553,15 +574,15 @@ const showSpeciesCompare = ref(false)
             </div>
           </div>
 
-          <div class="care-inline-chips">
-            <button
-              v-for="aid in FEEDER_RELATED"
-              :key="aid"
-              class="care-chip"
-              @click="goArticle(aid)"
-            >
-              → {{ articleById(aid)?.Title || '相關閱讀' }}
-            </button>
+          <div class="care-subh">餵食警示</div>
+          <div class="care-danger-grid">
+            <div v-for="d in feedingWarnings" :key="d.id" class="care-danger-card">
+              <div class="care-danger-head">
+                <span class="care-danger-title">{{ d.title }}</span>
+              </div>
+              <div class="care-danger-consequence">後果：{{ d.consequence }}</div>
+              <div class="care-danger-why">{{ d.why }}</div>
+            </div>
           </div>
 
           <div class="care-subh">補充品劑量</div>
@@ -579,17 +600,6 @@ const showSpeciesCompare = ref(false)
           </div>
 
           <div class="care-supp-warn">{{ SUPPLEMENT_WARN }}</div>
-
-          <div class="care-inline-chips">
-            <button
-              v-for="aid in SUPPLEMENT_RELATED"
-              :key="aid"
-              class="care-chip"
-              @click="goArticle(aid)"
-            >
-              → {{ articleById(aid)?.Title || '相關閱讀' }}
-            </button>
-          </div>
 
           <div class="care-subh">拒食時先觀察還是就醫？</div>
           <section class="care-howto-card" aria-labelledby="care-appetite-title">
@@ -629,18 +639,13 @@ const showSpeciesCompare = ref(false)
               </div>
             </div>
           </section>
-        </section>
 
-        <section id="breeding" class="care-section">
-          <h2 class="care-h">🧬 繁殖預備</h2>
-          <ul class="care-bullet-list">
-            <li v-for="(b, i) in BREEDING_NOTES" :key="i">{{ b }}</li>
-          </ul>
-
+          <div class="care-subh">餵食延伸閱讀</div>
           <div class="care-inline-chips">
             <button
-              v-for="aid in BREEDING_RELATED"
+              v-for="aid in feedingArticleIds"
               :key="aid"
+              type="button"
               class="care-chip"
               @click="goArticle(aid)"
             >
@@ -649,52 +654,27 @@ const showSpeciesCompare = ref(false)
           </div>
         </section>
 
-        <section id="danger" class="care-section">
-          <h2 class="care-h">⚠️ 致命地雷</h2>
-          <div class="care-danger-grid">
-            <div v-for="d in DANGERS" :key="d.id" class="care-danger-card">
-              <div class="care-danger-head">
-                <span class="care-danger-icon">{{ d.icon }}</span>
-                <span class="care-danger-title">{{ d.title }}</span>
-              </div>
-              <div class="care-danger-consequence">後果：{{ d.consequence }}</div>
-              <div class="care-danger-why">{{ d.why }}</div>
-              <div v-if="d.related?.length" class="care-inline-chips">
-                <button
-                  v-for="aid in d.related"
-                  :key="aid"
-                  class="care-chip is-danger"
-                  @click="goArticle(aid)"
-                >
-                  → {{ articleById(aid)?.Title || '相關閱讀' }}
-                </button>
-              </div>
-            </div>
-          </div>
-        </section>
+        <section id="breeding" class="care-section">
+          <h2 class="care-h">繁殖預備</h2>
+          <ul class="care-bullet-list">
+            <li v-for="(b, i) in BREEDING_NOTES" :key="i">{{ b }}</li>
+          </ul>
 
-        <section id="species" class="care-section">
-          <h2 class="care-h">🦎 豹紋 vs 肥尾</h2>
-          <button class="care-toggle-btn" @click="showSpeciesCompare = !showSpeciesCompare">
-            {{ showSpeciesCompare ? '▲ 收合對照表' : '▼ 展開差異對照' }}
-          </button>
-
-          <div v-if="showSpeciesCompare" class="care-table care-table--species care-species-table">
-            <div class="care-tr care-tr-head care-tr-3">
-              <div>項目</div>
-              <div>豹紋</div>
-              <div>肥尾</div>
-            </div>
-            <div v-for="row in SPECIES_COMPARE" :key="row.feature" class="care-tr care-tr-3">
-              <div>{{ row.feature }}</div>
-              <div>{{ row.leopard }}</div>
-              <div>{{ row.fattail }}</div>
-            </div>
+          <div class="care-inline-chips">
+            <button
+              v-for="aid in BREEDING_RELATED"
+              :key="aid"
+              type="button"
+              class="care-chip"
+              @click="goArticle(aid)"
+            >
+              → {{ articleById(aid)?.Title || '相關閱讀' }}
+            </button>
           </div>
         </section>
 
         <section id="faq" class="care-section">
-          <h2 class="care-h">❓ 常見問題</h2>
+          <h2 class="care-h">常見問題</h2>
           <div class="care-faq-list">
             <div
               v-for="(item, i) in FAQ"
@@ -702,22 +682,30 @@ const showSpeciesCompare = ref(false)
               class="care-faq-item"
               :class="{ 'is-open': openFaq === i }"
             >
-              <button class="care-faq-q" @click="toggleFaq(i)">
+              <button
+                type="button"
+                class="care-faq-q"
+                :aria-expanded="openFaq === i"
+                :aria-controls="`care-faq-answer-${i}`"
+                @click="toggleFaq(i)"
+              >
                 <span class="care-faq-q-text">{{ item.q }}</span>
                 <span class="care-faq-q-icon">{{ openFaq === i ? '−' : '+' }}</span>
               </button>
-              <div v-if="openFaq === i" class="care-faq-a">
+              <div v-if="openFaq === i" :id="`care-faq-answer-${i}`" class="care-faq-a">
                 <div class="care-faq-summary">
                   {{ articleById(item.article)?.Summary || '完整內容請參考下方文章' }}
                 </div>
-                <button class="care-chip" @click="goArticle(item.article)">→ 閱讀完整文章</button>
+                <button type="button" class="care-chip" @click="goArticle(item.article)">
+                  → 閱讀完整文章
+                </button>
               </div>
             </div>
           </div>
         </section>
 
         <section id="related" class="care-section">
-          <h2 class="care-h">📚 完整知識庫</h2>
+          <h2 class="care-h">完整知識庫</h2>
           <div
             v-for="(arts, cat) in relatedByCategory"
             v-show="arts.length"
@@ -727,6 +715,7 @@ const showSpeciesCompare = ref(false)
             <div class="care-related-cat">{{ cat }}</div>
             <div class="care-related-grid">
               <NuxtLink
+                no-prefetch
                 v-for="a in arts"
                 :key="a.ID"
                 :to="`/articles/${a.ID}`"
@@ -743,34 +732,6 @@ const showSpeciesCompare = ref(false)
           我們將守宮視為需被妥善照護的生命，而非一般商品。本指南旨在協助飼主以正確、全面的知識理解守宮的行為與需求，並依其生理特性提供安全、穩定且適宜的環境。每個個體性格、反應與適應能力皆有差異，照護方式並無絕對標準，請依個體狀況彈性調整。
         </div>
       </main>
-
-      <aside class="care-sidebar dt-only">
-        <div class="care-sidebar-box">
-          <div class="care-sidebar-title">快速跳轉</div>
-          <button
-            v-for="a in sidebarAnchors"
-            :key="a.id"
-            class="care-sidebar-link"
-            @click="scrollTo(a.id)"
-          >
-            <span>{{ a.icon }}</span>
-            {{ a.label }}
-          </button>
-        </div>
-
-        <div class="care-sidebar-box">
-          <div class="care-sidebar-title">推薦文章</div>
-          <NuxtLink
-            v-for="a in recommendedArticles"
-            :key="a.ID"
-            :to="`/articles/${a.ID}`"
-            class="care-sidebar-art"
-          >
-            <span class="care-sidebar-art-cat">{{ a.Category }}</span>
-            <span class="care-sidebar-art-title">{{ a.Title }}</span>
-          </NuxtLink>
-        </div>
-      </aside>
     </div>
   </div>
 </template>
@@ -781,6 +742,71 @@ const showSpeciesCompare = ref(false)
   max-width: 1300px;
   padding: 0 20px 60px;
   position: relative;
+}
+
+.care-hero {
+  position: relative;
+  overflow: hidden;
+  margin-bottom: 14px;
+  padding: clamp(24px, 4vw, 48px) !important;
+  border: 1px solid var(--bd);
+  border-radius: calc(var(--radius-lg) + 8px);
+  background:
+    radial-gradient(circle at 88% 14%, var(--pri-glow-soft), transparent 28%),
+    repeating-linear-gradient(0deg, transparent 0 47px, var(--bd) 48px 49px), var(--card-bg);
+  box-shadow: var(--shadow-card);
+  text-align: left;
+}
+
+.care-hero-kicker {
+  margin-bottom: 8px;
+  color: var(--pri);
+  font-size: 0.74rem;
+  font-weight: 900;
+  letter-spacing: 0.16em;
+}
+
+.care-hero-lead {
+  max-width: 680px;
+  margin: 12px 0 24px;
+  color: var(--txt-muted);
+  line-height: 1.75;
+}
+
+.care-decision-map {
+  display: grid;
+  grid-template-columns: minmax(180px, 1.1fr) repeat(4, minmax(140px, 0.75fr));
+  gap: 1px;
+  overflow: hidden;
+  margin-bottom: 4px;
+  border: 1px solid var(--bd);
+  border-radius: var(--radius-md);
+  background: var(--bd);
+}
+
+.care-map-label,
+.care-decision-map a {
+  min-height: var(--control-min-height);
+  padding: 12px 14px;
+  background: var(--card-bg-solid);
+}
+
+.care-map-label {
+  display: flex;
+  align-items: center;
+  color: var(--pri);
+  font-size: 0.75rem;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+}
+
+.care-decision-map a {
+  display: flex;
+  align-items: center;
+  color: var(--txt);
+  font-size: 0.8rem;
+  font-weight: 800;
+  text-decoration: none;
 }
 
 .m-only {
@@ -826,16 +852,19 @@ const showSpeciesCompare = ref(false)
   font-size: 0.76rem;
   font-weight: 700;
   gap: 5px;
+  min-height: var(--control-min-height);
   padding: 6px 10px;
   white-space: nowrap;
 }
 
 .care-hero-title {
   color: var(--txt);
-  font-size: 1.8rem;
+  font-size: clamp(2.3rem, 6vw, 5.5rem);
   font-weight: 900;
   letter-spacing: 1px;
-  margin-bottom: 8px;
+  margin: 0;
+  line-height: 0.98;
+  letter-spacing: -0.05em;
 }
 
 .care-hero-stats {
@@ -854,6 +883,7 @@ const showSpeciesCompare = ref(false)
   cursor: pointer;
   font-family: inherit;
   overflow: hidden;
+  min-height: var(--control-min-height);
   padding: 10px 12px;
   position: relative;
   text-align: center;
@@ -868,12 +898,6 @@ const showSpeciesCompare = ref(false)
   position: absolute;
   right: 0;
   top: 0;
-}
-
-.care-stat-card:hover {
-  border-color: var(--accent);
-  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.1);
-  transform: translateY(-3px);
 }
 
 .care-stat-label {
@@ -910,8 +934,7 @@ const showSpeciesCompare = ref(false)
 @media (min-width: 1024px) {
   .care-hero {
     margin-right: 304px;
-    margin-top: -6px;
-    padding-bottom: 0;
+    margin-top: 0;
   }
 
   .care-body {
@@ -933,6 +956,13 @@ const showSpeciesCompare = ref(false)
     top: 108px;
     width: 264px;
     z-index: 40;
+  }
+}
+
+@media (min-width: 768px) and (hover: hover) and (pointer: fine) {
+  .care-decision-map a:hover {
+    color: var(--pri);
+    background: var(--pri-glow-soft);
   }
 }
 
@@ -965,15 +995,11 @@ const showSpeciesCompare = ref(false)
   font-family: inherit;
   font-size: 0.78rem;
   gap: 5px;
+  min-height: var(--control-min-height);
   padding: 5px 7px;
   text-align: left;
   transition: 0.15s;
   width: 100%;
-}
-
-.care-sidebar-link:hover {
-  background: rgba(255, 69, 0, 0.06);
-  color: var(--pri);
 }
 
 .care-sidebar-art {
@@ -982,15 +1008,10 @@ const showSpeciesCompare = ref(false)
   border-radius: 8px;
   color: var(--txt);
   display: block;
+  min-height: var(--control-min-height);
   padding: 7px 8px;
   text-decoration: none;
   transition: 0.15s;
-}
-
-.care-sidebar-art:hover {
-  background: rgba(255, 69, 0, 0.04);
-  border-color: var(--pri);
-  color: var(--pri);
 }
 
 .care-sidebar-art-title {
@@ -1120,24 +1141,15 @@ const showSpeciesCompare = ref(false)
   font-family: inherit;
   font-size: 0.8rem;
   font-weight: 600;
+  min-height: var(--control-min-height);
   padding: 4px 10px;
   transition: 0.2s;
-}
-
-.care-chip:hover {
-  background: var(--pri);
-  color: #fff;
 }
 
 .care-chip.is-danger {
   background: rgba(239, 68, 68, 0.08);
   border-color: rgba(239, 68, 68, 0.4);
   color: #ef4444;
-}
-
-.care-chip.is-danger:hover {
-  background: #ef4444;
-  color: #fff;
 }
 
 .care-env-grid {
@@ -1532,15 +1544,11 @@ const showSpeciesCompare = ref(false)
   font-family: inherit;
   font-size: 0.85rem;
   font-weight: 700;
+  min-height: var(--control-min-height);
   margin-bottom: 8px;
   padding: 7px;
   transition: 0.2s;
   width: 100%;
-}
-
-.care-toggle-btn:hover {
-  background: rgba(255, 69, 0, 0.05);
-  border-color: var(--pri);
 }
 
 .care-species-table .care-tr div:first-child {
@@ -1577,6 +1585,7 @@ const showSpeciesCompare = ref(false)
   font-size: 0.85rem;
   font-weight: 700;
   justify-content: space-between;
+  min-height: var(--control-min-height);
   padding: 9px 12px;
   text-align: left;
   width: 100%;
@@ -1642,12 +1651,6 @@ const showSpeciesCompare = ref(false)
   transition: 0.2s;
 }
 
-.care-related-card:hover {
-  background: rgba(255, 69, 0, 0.04);
-  border-color: var(--pri);
-  transform: translateY(-2px);
-}
-
 .care-related-title {
   color: var(--txt);
   font-size: 0.85rem;
@@ -1664,6 +1667,75 @@ const showSpeciesCompare = ref(false)
   opacity: 0.7;
   overflow: hidden;
   -webkit-box-orient: vertical;
+}
+
+.care-stat-card:focus-visible,
+.care-anchor-btn:focus-visible,
+.care-sidebar-link:focus-visible,
+.care-sidebar-art:focus-visible,
+.care-chip:focus-visible,
+.care-toggle-btn:focus-visible,
+.care-faq-q:focus-visible,
+.care-related-card:focus-visible {
+  outline: 3px solid var(--pri);
+  outline-offset: 3px;
+}
+
+@media (min-width: 768px) and (hover: hover) and (pointer: fine) {
+  .care-stat-card:hover {
+    border-color: var(--accent);
+    box-shadow: 0 8px 22px rgba(0, 0, 0, 0.1);
+    transform: translateY(-3px);
+  }
+
+  .care-sidebar-link:hover {
+    background: rgba(255, 69, 0, 0.06);
+    color: var(--pri);
+  }
+
+  .care-sidebar-art:hover {
+    background: rgba(255, 69, 0, 0.04);
+    border-color: var(--pri);
+    color: var(--pri);
+  }
+
+  .care-chip:hover {
+    background: var(--pri);
+    color: #fff;
+  }
+
+  .care-chip.is-danger:hover {
+    background: #ef4444;
+    color: #fff;
+  }
+
+  .care-toggle-btn:hover {
+    background: rgba(255, 69, 0, 0.05);
+    border-color: var(--pri);
+  }
+
+  .care-related-card:hover {
+    background: rgba(255, 69, 0, 0.04);
+    border-color: var(--pri);
+    transform: translateY(-2px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .care-stat-card,
+  .care-sidebar-link,
+  .care-sidebar-art,
+  .care-chip,
+  .care-toggle-btn,
+  .care-faq-item,
+  .care-related-card {
+    transition: none;
+  }
+
+  .care-stat-card:hover,
+  .care-related-card:hover {
+    transform: none;
+  }
 }
 
 .care-quote {
@@ -1715,6 +1787,12 @@ const showSpeciesCompare = ref(false)
   .care-page {
     padding-top: 48px;
   }
+  .care-decision-map {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .care-map-label {
+    grid-column: 1 / -1;
+  }
   .care-section {
     scroll-margin-top: 156px;
   }
@@ -1725,10 +1803,22 @@ const showSpeciesCompare = ref(false)
     padding: 48px 10px 24px;
   }
   .care-hero {
-    padding: 0;
+    padding: 22px 16px !important;
   }
   .care-hero-title {
-    font-size: 1.35rem;
+    font-size: clamp(2.2rem, 12vw, 3.5rem);
+  }
+  .care-hero-lead {
+    margin: 10px 0 18px;
+    font-size: 0.86rem;
+  }
+  .care-decision-map {
+    margin-bottom: 10px;
+  }
+  .care-map-label,
+  .care-decision-map a {
+    min-height: var(--control-min-height);
+    padding: 10px;
   }
   .care-hero-stats {
     gap: 6px;
@@ -1839,6 +1929,1399 @@ const showSpeciesCompare = ref(false)
   .care-quote {
     font-size: 0.75rem;
     padding: 10px 12px;
+  }
+}
+/* 照護手冊採取紙本閱讀感；警示與溫度色帶仍為資訊的一部分。 */
+.care-page,
+.care-hero,
+.care-decision-map,
+.care-section,
+.care-env-card,
+.care-humidity-card,
+.care-feeder-card,
+.care-danger-card,
+.care-howto-card,
+.care-sidebar-box {
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.care-hero-title,
+.care-h,
+.care-howto-title,
+.care-sidebar-title {
+  font-family: 'Noto Serif TC', serif;
+  letter-spacing: -0.03em;
+}
+
+.care-env-card,
+.care-humidity-card,
+.care-feeder-card,
+.care-howto-card {
+  background-image: none;
+}
+
+.care-chip,
+.care-toggle-btn,
+.care-anchor-btn,
+.care-faq-q {
+  border-radius: 2px;
+  box-shadow: none;
+}
+
+/* 完整手冊重構：文件抬頭、目錄與章節使用同一套閱讀節奏。 */
+.care-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(240px, 0.8fr);
+  gap: 32px;
+  padding: clamp(32px, 6vw, 88px) 0 !important;
+  border-width: 1px 0;
+  background: transparent;
+}
+
+.care-document-meta {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: space-between;
+  color: var(--txt-muted);
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.13em;
+}
+
+.care-hero-copy {
+  max-width: 680px;
+}
+
+.care-hero-stats {
+  align-self: end;
+  margin: 0;
+}
+
+.care-reading-index {
+  display: grid;
+  grid-template-columns: minmax(0, 0.75fr) minmax(0, 1.25fr);
+  gap: 24px;
+  padding: 32px 0;
+  border-bottom: 1px solid var(--bd);
+}
+
+.care-reading-index > div:first-child > span {
+  color: var(--pri);
+  font-size: 0.7rem;
+  font-weight: 900;
+  letter-spacing: 0.14em;
+}
+
+.care-reading-index h2 {
+  margin: 8px 0 0;
+  font-family: 'Noto Serif TC', serif;
+  font-size: clamp(1.4rem, 3vw, 2.2rem);
+  line-height: 1.2;
+}
+
+.care-reading-index-links {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  border-top: 1px solid var(--bd);
+  border-left: 1px solid var(--bd);
+}
+
+.care-reading-index-links button {
+  min-height: 48px;
+  padding: 8px 0;
+  border: 0;
+  border-right: 1px solid var(--bd);
+  border-bottom: 1px solid var(--bd);
+  background: transparent;
+  color: var(--txt);
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 750;
+  text-align: left;
+  cursor: pointer;
+}
+
+.care-reading-index-links button span {
+  color: var(--pri);
+  margin-right: 8px;
+}
+
+.care-section {
+  margin: 0;
+  padding: clamp(28px, 5vw, 56px) 0;
+  border-width: 0 0 1px;
+  background: transparent;
+}
+
+.care-main {
+  counter-reset: care-chapter;
+}
+
+.care-main > .care-section {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(132px, 0.22fr) minmax(0, 1fr);
+  column-gap: clamp(20px, 4vw, 64px);
+}
+
+.care-main > .care-section::before {
+  content: 'CHAPTER ' counter(care-chapter, decimal-leading-zero);
+  counter-increment: care-chapter;
+  grid-column: 1;
+  grid-row: 1;
+  color: var(--pri);
+  font-size: 0.7rem;
+  font-weight: 900;
+  letter-spacing: 0.13em;
+  padding-top: 8px;
+}
+
+.care-main > .care-section > * {
+  grid-column: 2;
+}
+
+.care-main > .care-section > .care-h {
+  grid-column: 2;
+}
+
+.care-env-grid,
+.care-humidity-grid,
+.care-feeder-grid,
+.care-danger-grid,
+.care-related-grid {
+  grid-column: 2;
+}
+
+.care-table,
+.care-temp-bar,
+.care-howto-card,
+.care-faq-list,
+.care-bullet-list {
+  grid-column: 2;
+}
+
+.care-inline-chips,
+.care-temp-notes,
+.care-feed-rule,
+.care-supp-warn,
+.care-quote {
+  grid-column: 2;
+}
+
+.care-h {
+  display: block;
+  width: 100%;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--bd);
+  font-family: 'Noto Serif TC', serif;
+  font-size: clamp(1.5rem, 3vw, 2.4rem);
+}
+
+@media (max-width: 768px) {
+  .care-hero,
+  .care-reading-index {
+    grid-template-columns: 1fr;
+    gap: 22px;
+  }
+
+  .care-document-meta {
+    font-size: 0.58rem;
+  }
+
+  .care-reading-index-links {
+    grid-template-columns: 1fr;
+  }
+
+  .care-main > .care-section {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .care-main > .care-section::before,
+  .care-main > .care-section > *,
+  .care-main > .care-section > .care-h {
+    grid-column: 1;
+  }
+}
+
+/* 照護內容採紙本手冊的章節節奏，不以浮起卡片切碎閱讀流程。 */
+.care-hero,
+.care-section,
+.care-sidebar-box,
+.care-howto-card,
+.care-env-card,
+.care-humidity-card,
+.care-feeder-card,
+.care-danger-card,
+.care-faq-item,
+.care-related-card,
+.care-quote {
+  border-radius: 0;
+  background-image: none;
+  box-shadow: none;
+}
+
+.care-hero {
+  padding: 32px 0;
+  border-width: 1px 0;
+  background: transparent;
+}
+
+.care-decision-map {
+  gap: 0;
+  border-top: 1px solid var(--bd);
+  border-bottom: 1px solid var(--bd);
+}
+
+.care-map-label,
+.care-decision-map a {
+  min-height: 68px;
+  border: 0;
+  border-right: 1px solid var(--bd);
+  border-radius: 0;
+  background: transparent;
+}
+
+.care-decision-map > :last-child {
+  border-right: 0;
+}
+
+.care-hero-stats {
+  gap: 0;
+  border-top: 1px solid var(--bd);
+}
+
+.care-stat-card {
+  border: 0;
+  border-right: 1px solid var(--bd);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.care-stat-card:last-child {
+  border-right: 0;
+}
+
+.care-stat-card::before {
+  display: none;
+}
+
+.care-section {
+  padding: 28px 0;
+  border-width: 1px 0 0;
+}
+
+.care-howto-steps,
+.care-env-grid,
+.care-humidity-grid,
+.care-feeder-grid,
+.care-danger-grid,
+.care-related-grid {
+  gap: 0;
+  border-top: 1px solid var(--bd);
+  border-left: 1px solid var(--bd);
+}
+
+.care-howto-step,
+.care-env-card,
+.care-humidity-card,
+.care-feeder-card,
+.care-danger-card,
+.care-related-card {
+  border-width: 0 1px 1px 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.care-howto-no,
+.care-related-cat,
+.care-feeder-tag {
+  border-radius: 0;
+  background: transparent;
+}
+
+.care-howto-no {
+  background: var(--pri);
+  color: #fff;
+}
+
+.care-chip,
+.care-toggle-btn,
+.care-anchor-btn,
+.care-faq-q {
+  border-radius: 0;
+  box-shadow: none;
+}
+
+@media (min-width: 768px) and (hover: hover) and (pointer: fine) {
+  .care-stat-card:hover,
+  .care-related-card:hover {
+    transform: none;
+    box-shadow: none;
+    background: color-mix(in srgb, var(--pri) 4%, transparent);
+  }
+}
+
+@media (max-width: 768px) {
+  .care-hero,
+  .care-section {
+    padding: 20px 0;
+  }
+
+  .care-decision-map,
+  .care-hero-stats,
+  .care-howto-steps,
+  .care-env-grid,
+  .care-humidity-grid,
+  .care-feeder-grid,
+  .care-danger-grid,
+  .care-related-grid {
+    gap: 0;
+  }
+
+  .care-map-label,
+  .care-decision-map a,
+  .care-stat-card {
+    border-right: 0;
+    border-bottom: 1px solid var(--bd);
+  }
+}
+
+/* 12 /care：單欄編輯式手冊，移除浮動導覽與卡片牆。 */
+.care-page {
+  max-width: 1180px;
+  padding: 0 clamp(18px, 4vw, 56px) clamp(28px, 5vw, 56px);
+}
+
+.care-progress-bar {
+  height: 2px;
+  background: transparent;
+}
+
+.care-progress-fill {
+  background: var(--pri);
+  box-shadow: none;
+}
+
+.care-hero {
+  grid-template-columns: minmax(0, 1.25fr) minmax(300px, 0.75fr);
+  gap: clamp(24px, 5vw, 72px);
+  margin: 0;
+  padding: clamp(18px, 3vw, 38px) 0 clamp(24px, 4vw, 46px) !important;
+  text-align: left;
+}
+
+.care-document-meta {
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--bd);
+}
+
+.care-hero-kicker {
+  margin-bottom: 14px;
+  font-size: 0.68rem;
+}
+
+.care-hero-title {
+  max-width: 8em;
+  font-size: clamp(2.8rem, 6vw, 5.4rem);
+  font-weight: 700;
+  line-height: 1.05;
+}
+
+.care-hero-lead {
+  max-width: 560px;
+  margin: 18px 0 0;
+  font-size: clamp(0.94rem, 1.2vw, 1.05rem);
+  line-height: 1.85;
+}
+
+.care-hero-media {
+  display: grid;
+  min-height: 150px;
+  place-content: center;
+  gap: 8px;
+  margin: 26px 0 0;
+  border-top: 1px solid var(--bd);
+  border-bottom: 1px solid var(--bd);
+  color: var(--txt-muted);
+  text-align: center;
+}
+
+.care-hero-media div {
+  color: var(--pri);
+  font-size: 0.68rem;
+  font-weight: 900;
+  letter-spacing: 0.16em;
+}
+
+.care-hero-media figcaption {
+  font-size: 0.76rem;
+}
+
+.care-hero-stats {
+  align-self: end;
+  grid-template-columns: 1fr;
+  border-top: 1px solid var(--bd);
+}
+
+.care-stat-card {
+  display: grid;
+  grid-template-columns: 4.5em minmax(0, 1fr) auto;
+  gap: 14px;
+  align-items: baseline;
+  min-height: 0;
+  padding: 13px 0;
+  border: 0;
+  border-bottom: 1px solid var(--bd);
+  color: var(--txt);
+  text-align: left;
+}
+
+.care-stat-label,
+.care-stat-sub {
+  margin: 0;
+  font-size: 0.68rem;
+}
+
+.care-stat-value {
+  margin: 0;
+  color: var(--txt);
+  font-family: var(--font-body-zh);
+  font-size: 1rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.care-decision-map {
+  grid-template-columns: minmax(160px, 1fr) repeat(4, minmax(0, 1fr));
+  margin: 0;
+  border: 0;
+  border-bottom: 1px solid var(--bd);
+  background: transparent;
+}
+
+.care-map-label,
+.care-decision-map a {
+  min-height: 50px;
+  padding: 13px 14px;
+  border-right: 1px solid var(--bd);
+  background: transparent;
+}
+
+.care-map-label {
+  padding-left: 0;
+}
+
+.care-body {
+  display: block;
+  padding-top: 0;
+}
+
+.care-reading-index {
+  grid-template-columns: minmax(230px, 0.7fr) minmax(0, 1.3fr);
+  gap: clamp(24px, 5vw, 64px);
+  padding: clamp(24px, 4vw, 46px) 0;
+}
+
+.care-reading-index-links {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  border: 0;
+  border-top: 1px solid var(--bd);
+}
+
+.care-reading-index-links button {
+  min-height: 46px;
+  padding: 10px 8px;
+  border-right: 0;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.care-main > .care-section {
+  grid-template-columns: minmax(118px, 0.18fr) minmax(0, 1fr);
+  column-gap: clamp(24px, 5vw, 70px);
+  padding: clamp(30px, 5vw, 58px) 0;
+}
+
+.care-h {
+  margin-bottom: clamp(18px, 3vw, 30px);
+  padding: 0;
+  border: 0;
+  font-size: clamp(1.7rem, 3.1vw, 2.7rem);
+  font-weight: 650;
+}
+
+.care-habitat-figure {
+  margin: 0 0 clamp(24px, 4vw, 40px);
+}
+
+.care-habitat-stage {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  min-height: 190px;
+  border: 1px solid var(--bd);
+}
+
+.care-habitat-zone {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 20px;
+  border-right: 1px solid rgba(23, 23, 20, 0.16);
+}
+
+.care-habitat-zone:last-child {
+  border-right: 0;
+}
+
+.care-habitat-zone span,
+.care-habitat-zone small {
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+.care-habitat-zone strong {
+  font-size: clamp(1.05rem, 2vw, 1.4rem);
+  font-variant-numeric: tabular-nums;
+}
+
+.care-habitat-zone--warm {
+  background: color-mix(in srgb, #fb923c 17%, transparent);
+}
+
+.care-habitat-zone--middle {
+  background: color-mix(in srgb, #facc15 10%, transparent);
+}
+
+.care-habitat-zone--cold {
+  background: color-mix(in srgb, #3b82f6 11%, transparent);
+}
+
+.care-habitat-figure figcaption {
+  margin-top: 9px;
+  color: var(--txt-muted);
+  font-size: 0.72rem;
+}
+
+.care-subsection {
+  margin-top: clamp(28px, 5vw, 52px);
+  scroll-margin-top: 90px;
+}
+
+.care-subsection > .care-subh:first-child {
+  margin-top: 0;
+  font-family: var(--font-heading-zh);
+  font-size: clamp(1.25rem, 2vw, 1.65rem);
+}
+
+.care-env-grid,
+.care-humidity-grid,
+.care-feeder-grid,
+.care-danger-grid,
+.care-related-grid,
+.care-howto-steps {
+  display: block;
+  border: 0;
+  border-top: 1px solid var(--bd);
+}
+
+.care-env-card,
+.care-humidity-card,
+.care-feeder-card,
+.care-danger-card,
+.care-related-card,
+.care-howto-step {
+  display: grid;
+  grid-template-columns: minmax(150px, 0.28fr) minmax(0, 1fr);
+  gap: 10px clamp(22px, 4vw, 54px);
+  padding: 20px 0;
+  border: 0;
+  border-bottom: 1px solid var(--bd);
+  background: transparent;
+}
+
+.care-env-head,
+.care-feeder-head,
+.care-danger-head {
+  grid-column: 1;
+  grid-row: 1 / span 5;
+  align-self: start;
+}
+
+.care-env-icon,
+.care-danger-icon {
+  display: none;
+}
+
+.care-env-title,
+.care-feeder-name,
+.care-danger-title,
+.care-humidity-zone,
+.care-related-title {
+  font-family: var(--font-heading-zh);
+  font-size: 1.08rem;
+  font-weight: 650;
+}
+
+.care-env-spec,
+.care-env-body,
+.care-env-warn,
+.care-env-note,
+.care-coming,
+.care-inline-chips,
+.care-feeder-stats,
+.care-feeder-row,
+.care-danger-consequence,
+.care-danger-why,
+.care-related-summary {
+  grid-column: 2;
+}
+
+.care-env-warn,
+.care-env-note,
+.care-coming,
+.care-feed-rule,
+.care-supp-warn,
+.care-danger-consequence {
+  border-radius: 0;
+  background: transparent;
+}
+
+.care-env-warn,
+.care-danger-consequence {
+  padding: 10px 0 10px 14px;
+  border-left: 2px solid #dc2626;
+}
+
+.care-env-note,
+.care-coming,
+.care-feed-rule,
+.care-supp-warn {
+  padding: 8px 0;
+  border: 0;
+}
+
+.care-humidity-card {
+  grid-template-columns: minmax(150px, 0.28fr) minmax(110px, 0.2fr) minmax(0, 1fr);
+  align-items: baseline;
+}
+
+.care-humidity-range {
+  color: var(--txt);
+  font-family: var(--font-body-zh);
+  font-size: 1.05rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.care-feeder-stats {
+  display: flex;
+  gap: 20px;
+  padding: 0;
+  border: 0;
+}
+
+.care-feeder-tag {
+  display: inline-block;
+  margin-top: 8px;
+  padding: 0;
+  border: 0;
+}
+
+.care-howto-card {
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+.care-howto-title {
+  margin-bottom: 16px;
+  font-size: 1.25rem;
+}
+
+.care-howto-step {
+  grid-template-columns: 52px minmax(0, 1fr);
+}
+
+.care-howto-no {
+  width: auto;
+  height: auto;
+  color: var(--pri);
+  background: transparent;
+  font-size: 0.72rem;
+}
+
+.care-table {
+  border: 0;
+  border-top: 1px solid var(--bd);
+}
+
+.care-tr {
+  padding: 13px 0;
+}
+
+.care-toggle-btn {
+  width: auto;
+  padding: 10px 0;
+  border: 0;
+  border-bottom: 1px solid var(--txt);
+  background: transparent;
+}
+
+.care-faq-item {
+  border: 0;
+  border-bottom: 1px solid var(--bd);
+  background: transparent;
+}
+
+.care-faq-q {
+  min-height: 58px;
+  padding: 14px 0;
+  border: 0;
+  background: transparent;
+}
+
+.care-faq-a {
+  padding: 0 0 18px;
+}
+
+.care-related-card {
+  color: inherit;
+  text-decoration: none;
+}
+
+.care-related-cat {
+  margin-top: 24px;
+  padding: 0 0 10px;
+  border: 0;
+  border-bottom: 1px solid var(--txt);
+  background: transparent;
+}
+
+.care-quote {
+  max-width: 760px;
+  margin: clamp(28px, 5vw, 56px) 0 0 auto;
+  padding: 0 0 0 20px;
+  border: 0;
+  border-left: 2px solid var(--pri);
+  background: transparent;
+  font-size: 0.88rem;
+  line-height: 1.8;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .care-stat-card:hover,
+  .care-decision-map a:hover,
+  .care-related-card:hover {
+    color: var(--pri);
+    background: transparent;
+  }
+}
+
+@media (max-width: 768px) {
+  .care-page {
+    padding: 0 18px 28px;
+  }
+
+  .care-hero {
+    display: block;
+    padding: 12px 0 24px !important;
+  }
+
+  .care-document-meta {
+    gap: 6px;
+    margin-bottom: 24px;
+  }
+
+  .care-hero-title {
+    font-size: clamp(2.45rem, 12vw, 3.6rem);
+  }
+
+  .care-hero-media {
+    min-height: 120px;
+    margin-top: 22px;
+  }
+
+  .care-hero-stats {
+    margin-top: 24px;
+  }
+
+  .care-stat-card {
+    grid-template-columns: 3.5em minmax(0, 1fr) auto;
+  }
+
+  .care-decision-map {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .care-map-label {
+    grid-column: 1 / -1;
+    padding-left: 0;
+  }
+
+  .care-decision-map a:nth-child(odd) {
+    border-right: 0;
+  }
+
+  .care-reading-index {
+    display: block;
+    padding: 24px 0;
+  }
+
+  .care-reading-index-links {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    margin-top: 20px;
+  }
+
+  .care-main > .care-section {
+    display: block;
+    padding: 30px 0;
+    scroll-margin-top: 78px;
+  }
+
+  .care-main > .care-section::before {
+    display: block;
+    margin-bottom: 9px;
+    padding: 0;
+  }
+
+  .care-h {
+    font-size: clamp(1.55rem, 7vw, 2rem);
+  }
+
+  .care-habitat-stage {
+    min-height: 150px;
+  }
+
+  .care-habitat-zone {
+    padding: 12px 8px;
+  }
+
+  .care-habitat-zone span,
+  .care-habitat-zone small {
+    font-size: 0.6rem;
+  }
+
+  .care-env-card,
+  .care-humidity-card,
+  .care-feeder-card,
+  .care-danger-card,
+  .care-related-card {
+    display: block;
+    padding: 18px 0;
+  }
+
+  .care-env-head,
+  .care-feeder-head,
+  .care-danger-head {
+    margin-bottom: 10px;
+  }
+
+  .care-env-spec,
+  .care-env-body,
+  .care-env-warn,
+  .care-env-note,
+  .care-coming,
+  .care-inline-chips,
+  .care-feeder-stats,
+  .care-feeder-row,
+  .care-danger-consequence,
+  .care-danger-why,
+  .care-related-summary {
+    margin-top: 8px;
+  }
+
+  .care-feeder-stats {
+    flex-wrap: wrap;
+    gap: 8px 16px;
+  }
+
+  .care-table--feed .care-tr,
+  .care-table--supp .care-tr,
+  .care-table--species .care-tr {
+    min-width: 0;
+    white-space: normal;
+  }
+
+  .care-table--feed .care-tr {
+    grid-template-columns: minmax(90px, 1fr) minmax(70px, 0.7fr) minmax(56px, 0.55fr) minmax(
+        140px,
+        1.4fr
+      );
+    min-width: 430px;
+  }
+
+  .care-table--supp .care-tr,
+  .care-table--species .care-tr {
+    grid-template-columns: minmax(90px, 0.7fr) repeat(2, minmax(155px, 1fr));
+    min-width: 420px;
+  }
+
+  .care-quote {
+    margin-top: 28px;
+    font-size: 0.82rem;
+  }
+}
+
+/* 使用者檢視修正：取消剩餘卡片感、色塊與過量留白。 */
+.care-hero {
+  column-gap: clamp(24px, 5vw, 72px);
+  row-gap: 22px;
+  padding-bottom: 26px !important;
+}
+
+.care-reading-index {
+  padding: 24px 0;
+}
+
+.care-reading-index-links button span {
+  display: none;
+}
+
+.care-main > .care-section {
+  display: block;
+  padding: clamp(24px, 3.5vw, 40px) 0;
+}
+
+.care-main > .care-section::before {
+  display: block;
+  margin-bottom: 7px;
+  padding: 0;
+}
+
+.care-main > .care-section > *,
+.care-main > .care-section > .care-h,
+.care-env-grid,
+.care-humidity-grid,
+.care-feeder-grid,
+.care-danger-grid,
+.care-related-grid,
+.care-table,
+.care-temp-bar,
+.care-howto-card,
+.care-faq-list,
+.care-bullet-list,
+.care-inline-chips,
+.care-temp-notes,
+.care-feed-rule,
+.care-supp-warn,
+.care-quote {
+  grid-column: auto;
+}
+
+.care-h {
+  margin-bottom: 18px;
+}
+
+.care-subsection {
+  margin-top: 30px;
+}
+
+.care-subh {
+  margin-top: 24px;
+  margin-bottom: 10px;
+}
+
+.care-temp-bar {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  overflow: visible;
+  border-top: 1px solid var(--bd);
+  border-bottom: 1px solid var(--bd);
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.care-temp-zone {
+  min-height: 88px;
+  justify-content: center;
+  padding: 14px 16px;
+  color: var(--txt) !important;
+  background: transparent !important;
+  border-right: 1px solid var(--bd);
+  text-shadow: none;
+}
+
+.care-temp-zone:last-child {
+  border-right: 0;
+}
+
+.care-temp-zone-range {
+  color: var(--txt);
+  font-family: var(--font-body-zh);
+  font-size: 1.05rem;
+  text-shadow: none;
+}
+
+.care-temp-zone-label {
+  color: var(--txt-muted);
+  text-shadow: none;
+}
+
+.care-temp-notes {
+  display: block;
+  margin-top: 8px;
+}
+
+.care-temp-note,
+.care-temp-warn {
+  padding: 9px 0;
+  border: 0;
+  border-bottom: 1px solid var(--bd);
+  border-radius: 0;
+  background: transparent !important;
+}
+
+.care-env-card,
+.care-humidity-card,
+.care-feeder-card,
+.care-danger-card,
+.care-related-card,
+.care-howto-step,
+.care-howto-card,
+.care-faq-item,
+.care-quote,
+.care-feed-rule,
+.care-supp-warn,
+.care-env-warn,
+.care-env-note,
+.care-coming {
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.care-env-card,
+.care-feeder-card,
+.care-danger-card,
+.care-related-card {
+  row-gap: 5px;
+  padding: 14px 0;
+}
+
+.care-env-spec,
+.care-env-body,
+.care-env-warn,
+.care-env-note,
+.care-coming,
+.care-feeder-stats,
+.care-feeder-row,
+.care-danger-consequence,
+.care-danger-why,
+.care-related-summary {
+  margin-top: 0;
+}
+
+.care-quote {
+  max-width: 100%;
+  margin-top: 24px;
+  padding: 14px 0 0;
+  border: 0;
+  border-top: 1px solid var(--bd);
+  color: var(--txt-muted);
+}
+
+.care-environment-image {
+  margin: 22px 0 0;
+  border-top: 1px solid var(--bd);
+  border-bottom: 1px solid var(--bd);
+}
+
+.care-environment-image > div {
+  display: flex;
+  min-height: 72px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.care-environment-image span {
+  color: var(--pri);
+  font-size: 0.68rem;
+  font-weight: 900;
+  letter-spacing: 0.14em;
+  white-space: nowrap;
+}
+
+.care-environment-image strong {
+  font-family: var(--font-heading-zh);
+  font-size: 1rem;
+  font-weight: 650;
+}
+
+.care-environment-image figcaption {
+  padding: 7px 0;
+  border-top: 1px solid var(--bd);
+  color: var(--txt-muted);
+  font-size: 0.72rem;
+}
+
+.care-hero {
+  display: block;
+  padding: 12px 0 22px !important;
+}
+
+.care-hero-copy {
+  max-width: 760px;
+  padding-top: 22px;
+}
+
+.care-reading-index {
+  padding: 16px 0;
+}
+
+.care-main > .care-section {
+  width: 100%;
+  margin: 0 !important;
+  padding: clamp(18px, 2.5vw, 28px) 0;
+  border: 0 !important;
+  border-bottom: 1px solid var(--bd) !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  filter: none !important;
+}
+
+.care-main,
+.care-body,
+.care-reading-index,
+.care-faq-list,
+.care-related-block,
+.care-related-grid {
+  background: transparent !important;
+  box-shadow: none !important;
+  filter: none !important;
+}
+
+.care-reading-index {
+  border: 0;
+  border-bottom: 1px solid var(--bd);
+}
+
+.care-decision-map {
+  display: flex;
+  align-items: center;
+  gap: clamp(16px, 3vw, 34px);
+  border: 0;
+  border-bottom: 1px solid var(--bd);
+}
+
+.care-map-label,
+.care-decision-map a {
+  min-height: 44px;
+  padding: 10px 0;
+  border: 0;
+  background: transparent !important;
+  white-space: nowrap;
+}
+
+.care-subsection {
+  margin-top: 20px;
+}
+
+.care-subh {
+  margin-top: 18px;
+}
+
+/* /care 第四版：互動層級與資訊列統一。 */
+.care-bullet-list {
+  margin: 0;
+  padding: 0;
+  border-top: 1px solid var(--bd);
+  list-style: none;
+}
+
+.care-bullet-list li {
+  position: relative;
+  margin: 0;
+  padding: 13px 0 13px 24px;
+  border: 0;
+  border-bottom: 1px solid var(--bd);
+  border-radius: 0;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.care-bullet-list li::before {
+  position: absolute;
+  top: 19px;
+  left: 2px;
+  width: 8px;
+  height: 2px;
+  background: var(--pri);
+  content: '';
+}
+
+.care-chip {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 10px 14px;
+  border: 1px solid var(--txt);
+  border-radius: 2px;
+  background: transparent;
+  color: var(--txt);
+  font-weight: 750;
+  line-height: 1.3;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.care-inline-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.care-decision-map a,
+.care-reading-index-links button {
+  position: relative;
+  color: var(--txt);
+  font-weight: 750;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.care-decision-map a::after,
+.care-reading-index-links button::after {
+  margin-left: 8px;
+  color: var(--pri);
+  content: '→';
+}
+
+.care-decision-map a {
+  border-bottom: 2px solid transparent;
+}
+
+.care-reading-index-links button {
+  border-bottom: 2px solid var(--bd);
+}
+
+.care-related-card {
+  position: relative;
+  padding-right: 42px;
+  cursor: pointer;
+}
+
+.care-related-card::after {
+  position: absolute;
+  top: 50%;
+  right: 4px;
+  color: var(--pri);
+  content: '→';
+  transform: translateY(-50%);
+}
+
+.care-faq-q {
+  cursor: pointer;
+}
+
+.care-environment-image {
+  display: grid;
+  min-height: 0;
+  place-content: center;
+  margin-top: 22px;
+  padding: 14px 0;
+  border: 0;
+  border-block: 1px solid var(--bd);
+  background: transparent;
+  text-align: center;
+}
+
+.care-environment-image > div {
+  display: grid;
+  min-height: 0;
+  place-items: center;
+  gap: 10px;
+  padding: 18px 24px;
+  background: var(--bg);
+}
+
+.care-environment-image figcaption {
+  max-width: 520px;
+  margin-top: 12px;
+  padding: 0;
+  border: 0;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .care-chip:hover {
+    border-color: var(--pri);
+    background: var(--pri) !important;
+    color: #fff;
+  }
+
+  .care-decision-map a:hover,
+  .care-reading-index-links button:hover {
+    border-bottom-color: var(--pri);
+    color: var(--pri);
+  }
+
+  .care-related-card:hover .care-related-title {
+    color: var(--pri);
+  }
+}
+
+.care-chip:focus-visible,
+.care-decision-map a:focus-visible,
+.care-reading-index-links button:focus-visible,
+.care-related-card:focus-visible,
+.care-faq-q:focus-visible {
+  outline: 2px solid var(--pri);
+  outline-offset: 3px;
+}
+
+@media (max-width: 768px) {
+  .care-hero,
+  .care-main > .care-section {
+    padding-block: 15px !important;
+  }
+
+  .care-reading-index {
+    padding: 14px 0;
+  }
+
+  .care-temp-zone {
+    min-height: 78px;
+    padding: 11px 7px;
+  }
+
+  .care-temp-zone-range {
+    font-size: 0.86rem;
+  }
+
+  .care-temp-zone-label {
+    font-size: 0.58rem;
+  }
+
+  .care-environment-image > div {
+    min-height: 0;
+  }
+
+  .care-environment-image {
+    min-height: 0;
+    padding: 12px 0;
+  }
+
+  .care-decision-map {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0 14px;
+  }
+
+  .care-map-label {
+    grid-column: 1 / -1;
+  }
+
+  .care-inline-chips {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .care-chip {
+    width: 100%;
   }
 }
 </style>

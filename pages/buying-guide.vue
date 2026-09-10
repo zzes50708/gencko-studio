@@ -72,12 +72,6 @@ const checkpoints = [
   }
 ]
 
-const nextActions = [
-  { label: '新手入門', to: '/start-here' },
-  { label: '信任保證', to: '/why-gencko' },
-  { label: '進入商店', to: '/shop', primary: true }
-]
-
 useHead({
   title: '購買流程｜從挑選到帶回家，會經過這幾步',
   meta: [
@@ -98,6 +92,10 @@ useHead({
 
 <template>
   <div class="flow-page">
+    <div class="flow-document-meta" aria-label="購買流程說明">
+      <span>GENCKO PURCHASE NOTES</span>
+      <span>PREPARE / REVIEW / DECIDE</span>
+    </div>
     <PageHero
       layout="stack"
       kicker="BUYING FLOW"
@@ -113,6 +111,21 @@ useHead({
         </template>
       </div>
     </PageHero>
+
+    <nav
+      class="purchase-decision-path"
+      data-testid="purchase-decision-path"
+      aria-label="購買決策入口"
+    >
+      <div class="decision-path-copy">
+        <span>BEFORE YOU DECIDE</span>
+        <strong>先確認資訊，再進入交易</strong>
+      </div>
+      <NuxtLink no-prefetch to="/why-gencko">了解品牌與資料</NuxtLink>
+      <NuxtLink no-prefetch to="/faq">閱讀購買問答</NuxtLink>
+      <NuxtLink no-prefetch to="/care">準備飼養環境</NuxtLink>
+      <NuxtLink no-prefetch to="/shop" class="is-primary">查看可選個體</NuxtLink>
+    </nav>
 
     <section class="content-grid">
       <Timeline :nodes="flowNodes" />
@@ -147,12 +160,6 @@ useHead({
         </div>
       </section>
     </section>
-
-    <NextCta
-      title="流程看完了嗎"
-      lead="詳細看看有哪些該注意的，或是直接看守宮"
-      :actions="nextActions"
-    />
   </div>
 </template>
 
@@ -160,12 +167,78 @@ useHead({
 .flow-page {
   max-width: 1120px;
   margin: 0 auto;
-  padding: 4px 12px 40px;
+  padding: 4px 18px 48px;
+}
+
+.flow-document-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 0 0 14px;
+  border-bottom: 1px solid var(--bd);
+  color: var(--txt-muted);
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+}
+
+.flow-document-meta span:first-child {
+  color: var(--pri);
 }
 
 .card {
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-card);
+}
+
+.purchase-decision-path {
+  display: grid;
+  grid-template-columns: minmax(220px, 1.35fr) repeat(4, minmax(130px, 0.65fr));
+  gap: 1px;
+  overflow: hidden;
+  margin-bottom: 18px;
+  border: 1px solid var(--bd);
+  border-radius: var(--radius-lg);
+  background: var(--bd);
+  box-shadow: var(--shadow-card);
+}
+
+.decision-path-copy,
+.purchase-decision-path a {
+  min-height: 76px;
+  padding: 14px 16px;
+  background: var(--card-bg-solid);
+}
+
+.decision-path-copy {
+  display: grid;
+  align-content: center;
+  gap: 4px;
+}
+
+.decision-path-copy span {
+  color: var(--pri);
+  font-size: 0.68rem;
+  font-weight: 900;
+  letter-spacing: 0.14em;
+}
+
+.decision-path-copy strong {
+  color: var(--txt);
+}
+
+.purchase-decision-path a {
+  display: flex;
+  align-items: center;
+  color: var(--txt);
+  font-size: 0.82rem;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.purchase-decision-path a.is-primary {
+  background: var(--pri);
+  color: #fff;
 }
 
 /* Hero 內的流程 pill 帶（slot 內容，樣式留在頁面） */
@@ -310,7 +383,12 @@ useHead({
   height: 12px;
 }
 
-@media (hover: hover) and (pointer: fine) {
+@media (min-width: 768px) and (hover: hover) and (pointer: fine) {
+  .purchase-decision-path a:not(.is-primary):hover {
+    color: var(--pri);
+    background: var(--pri-glow-soft);
+  }
+
   .check-card:hover {
     border-color: var(--bd-hover);
     transform: translateY(-3px);
@@ -319,6 +397,14 @@ useHead({
 }
 
 @media (max-width: 900px) {
+  .purchase-decision-path {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .decision-path-copy {
+    grid-column: 1 / -1;
+  }
+
   .content-grid {
     grid-template-columns: 1fr;
   }
@@ -327,7 +413,7 @@ useHead({
 @media (max-width: 640px) {
   .flow-page {
     font-size: 13px;
-    padding: 4px 12px 32px;
+    padding: 4px 10px 32px;
   }
 
   .hero-strip-item {
@@ -351,6 +437,11 @@ useHead({
   .check-item {
     font-size: 0.82rem;
   }
+
+  .purchase-decision-path a {
+    min-height: var(--control-min-height);
+    padding: 12px;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -358,8 +449,334 @@ useHead({
     transition: none;
   }
 
+  .purchase-decision-path a {
+    transition: none;
+  }
+
   .check-card:hover {
     transform: none;
   }
 }
+/* 選購導讀以檢查清單的理性結構呈現，避免色塊壓過內容。 */
+.buying-guide-page,
+.buying-hero,
+.decision-path,
+.check-panel,
+.check-card,
+.buying-cta {
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.buying-hero h1,
+.check-title,
+.decision-path-copy strong {
+  font-family: 'Noto Serif TC', serif;
+  letter-spacing: -0.03em;
+}
+
+.buying-hero,
+.decision-path,
+.check-panel {
+  background-image: none;
+}
+
+.check-card,
+.buying-cta {
+  border-radius: 2px;
+}
+
+.flow-page,
+.purchase-decision-path,
+.check-panel,
+.check-card {
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.flow-page .sec-title,
+.flow-page .check-title {
+  font-family: 'Noto Serif TC', serif;
+}
+
+.hero-strip-item,
+.purchase-decision-path a {
+  border-radius: 2px;
+}
+
+/* 購買流程改為交易前檢查表，讓每一步的先後關係比色塊更清楚。 */
+.hero-strip {
+  gap: 0;
+  padding: 12px 0;
+  border-width: 1px 0;
+}
+
+.hero-strip-item,
+.hero-strip-line {
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.hero-strip-item {
+  padding: 0 12px 0 0;
+  border: 0;
+}
+
+.hero-strip-line {
+  width: 22px;
+  background: var(--bd);
+}
+
+.purchase-decision-path {
+  gap: 0;
+  margin-bottom: 32px;
+  border-width: 1px 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.decision-path-copy,
+.purchase-decision-path a {
+  border-right: 1px solid var(--bd);
+  background: transparent;
+}
+
+.purchase-decision-path > :last-child {
+  border-right: 0;
+}
+
+.purchase-decision-path a.is-primary {
+  background: var(--pri);
+}
+
+.check-panel {
+  padding: 26px 0;
+  border-width: 1px 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.check-grid {
+  gap: 0;
+  border-top: 1px solid var(--bd);
+}
+
+.check-card {
+  padding: 16px 0;
+  border-width: 0 0 1px;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.check-badge,
+.panel-kicker::before {
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.check-badge {
+  border: 0;
+  background: var(--ok-text);
+  color: #fff;
+}
+
+@media (min-width: 768px) and (hover: hover) and (pointer: fine) {
+  .purchase-decision-path a:not(.is-primary):hover,
+  .check-card:hover {
+    transform: none;
+    background: transparent;
+    box-shadow: none;
+  }
+}
+
+@media (max-width: 900px) {
+  .decision-path-copy,
+  .purchase-decision-path a {
+    border-bottom: 1px solid var(--bd);
+  }
+
+  .purchase-decision-path > :last-child {
+    border-bottom: 0;
+  }
+}
+
+@media (min-width: 768px) and (hover: hover) and (pointer: fine) {
+  .check-card:hover {
+    transform: none;
+    box-shadow: none;
+  }
+}
+/* 流程與檢查點移除大型包框，只有操作入口保留按鈕。 */
+.flow-page {
+  padding: 8px 18px 28px;
+}
+.flow-page :deep(.page-hero) {
+  padding: 22px 0;
+  margin-bottom: 16px;
+  border: 0;
+}
+.flow-page :deep(.page-title) {
+  font-size: clamp(2rem, 4.5vw, 3.5rem);
+  line-height: 1.35;
+}
+.purchase-decision-path {
+  padding: 14px 0;
+  margin-bottom: 20px;
+  border: 0;
+  border-block: 1px solid var(--bd);
+  background: transparent;
+  box-shadow: none;
+  gap: 10px;
+}
+.purchase-decision-path a {
+  border: 1px solid var(--txt);
+  border-radius: 2px;
+  min-height: 44px;
+}
+.check-panel {
+  border: 0;
+  padding: 0;
+  background: transparent;
+  box-shadow: none;
+}
+.check-group {
+  border: 0;
+  border-bottom: 1px solid var(--bd);
+  padding: 14px 0;
+  background: transparent;
+}
+.content-grid {
+  margin-bottom: 20px;
+  gap: 28px;
+}
+.flow-page :deep(.poster) {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  border-radius: 0;
+}
+.flow-page :deep(.node-card) {
+  padding: 12px 0;
+  border: 0;
+  border-bottom: 1px solid var(--bd);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  transform: none;
+}
+.flow-page :deep(.node-no) {
+  border-radius: 0;
+  background: transparent;
+  color: var(--pri);
+  box-shadow: none;
+}
+.flow-page :deep(.node-line) {
+  background: var(--bd);
+}
+.flow-page :deep(.node-link) {
+  border: 1px solid var(--txt);
+  border-radius: 2px;
+  padding: 8px 14px;
+  width: fit-content;
+  color: var(--txt);
+}
+.check-grid {
+  border: 0;
+  gap: 0;
+}
+.check-card {
+  border: 0;
+  border-bottom: 1px solid var(--bd);
+  border-radius: 0;
+  padding: 14px 0;
+  background: transparent;
+  box-shadow: none;
+}
+.check-badge {
+  background: transparent;
+  color: var(--pri);
+  border: 0;
+  border-radius: 0;
+}
+.check-title {
+  font-family: var(--font-heading-zh);
+}
+.flow-page :deep(.node-link) {
+  justify-self: start;
+}
+.flow-page :deep(.page-hero) {
+  background: transparent !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+}
+.flow-page :deep(.page-title) {
+  border: 0;
+  padding-left: 0;
+  text-align: left;
+}
+.hero-strip {
+  gap: 12px;
+}
+.hero-strip-line {
+  min-width: 22px;
+  margin: 0;
+}
+.purchase-decision-path a {
+  min-height: 44px;
+  padding: 10px 14px;
+}
+.flow-page :deep(.sec-title) {
+  border: 0;
+  padding-left: 0;
+}
+.flow-page :deep(.node-title),
+.check-title {
+  text-align: left;
+}
+.flow-page :deep(.page-hero) {
+  background: transparent !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+}
+.flow-page :deep(.page-title) {
+  border: 0;
+  padding-left: 0;
+  text-align: left;
+}
+.hero-strip {
+  gap: 12px;
+}
+.hero-strip-line {
+  min-width: 22px;
+  margin: 0;
+}
+.purchase-decision-path a {
+  min-height: 44px;
+  padding: 10px 14px;
+}
+.flow-page :deep(.sec-title) {
+  border: 0;
+  padding-left: 0;
+}
+.flow-page :deep(.node-title),
+.check-title {
+  text-align: left;
+}
+/* 本頁返回與次要操作使用同一按鈕形式。 */
+:deep(.app-back-btn),
+.btn-app {
+  border-radius: 2px;
+  min-height: 44px;
+  box-shadow: none;
+  font-family: var(--font-body-zh);
+}
+:deep(.app-back-btn) {
+  border: 1px solid var(--txt);
+}
+.decision-path-copy { padding: 0; border: 0; }
+@media (max-width: 768px) { .purchase-decision-path .decision-path-copy { border: 0; padding: 0 0 10px; } }
 </style>

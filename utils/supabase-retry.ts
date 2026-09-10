@@ -1,7 +1,7 @@
 /**
  * Supabase 查詢的重試包裝。
  * - 暫時性錯誤（network error / 5xx / 429）：指數退避重試
- * - 客戶端錯誤（4xx）：直接拋，不重試（重試也沒用）
+ * - 不可恢復的客戶端錯誤（4xx）：直接回傳，不重試
  * - 全部失敗：丟回最後一次錯誤，呼叫端可決定 fallback
  *
  * 用法：
@@ -11,6 +11,8 @@
 export interface QueryResult<T = unknown> {
   data: T | null
   error: unknown
+  status?: number
+  statusText?: string
 }
 
 export interface RetryOptions {
@@ -34,10 +36,10 @@ export async function withRetry<T = unknown>(
       const err = res?.error
       if (!err) return res
 
-      // 4xx → 不重試
-      const e = err as { code?: number | string; status?: number }
-      const code = Number(e.code || e.status || 0)
-      if (code >= 400 && code < 500 && code !== 429) {
+      // 不可恢復的 4xx 不重試；408、409、429 仍可能是暫時性狀態
+      const e = err as { status?: number }
+      const status = Number(res?.status || e.status || 0)
+      if (status >= 400 && status < 500 && ![408, 409, 429].includes(status)) {
         return res
       }
 

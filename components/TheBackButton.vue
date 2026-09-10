@@ -24,7 +24,7 @@ const goBack = () => {
 
 <template>
     <div class="nav-action-row" :class="wrapperClass">
-        <button class="btn-app btn-app--ghost btn-app--md btn-app--pill app-back-btn" @click="goBack">
+        <button type="button" class="btn-app btn-app--ghost btn-app--md btn-app--pill app-back-btn" @click="goBack">
             <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round">
                 <polyline points="15 18 9 12 15 6"></polyline>
             </svg>
@@ -42,7 +42,14 @@ const goBack = () => {
     margin-bottom: 10px;
 }
 
-.app-back-btn { box-shadow: none; }
+.app-back-btn {
+    border: 1px solid var(--txt);
+    border-radius: 2px;
+    min-height: 44px;
+    font-family: var(--font-body-zh);
+    white-space: nowrap;
+    box-shadow: none;
+}
 
 /* 行動端自動微調內距與字體大小 */
 @media (max-width: 768px) {

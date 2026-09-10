@@ -6058,7 +6058,6 @@ const groupRef = shallowRef<THREE.Group>(group)
 const { onBeforeRender } = useLoop()
 const tres = useTresContext()
 let envRT: THREE.WebGLRenderTarget | null = null
-let roomEnvRT: THREE.WebGLRenderTarget | null = null
 let envDone = false
 let rendererRef: THREE.WebGLRenderer | null = null
 // 終章材質預熱：蛋殼碎片(反射玻璃)、金屬胚胎等 shader 較重，若等到轉場當下才首次繪製，
@@ -6830,7 +6829,9 @@ function initEnvMap() {
   webgl.localClippingEnabled = true
   webgl.setClearColor(0x07080a, 0)
   const pmrem = new THREE.PMREMGenerator(webgl)
-  envRT = pmrem.fromScene(new RoomEnvironment(), 0.04)
+  // 保留單一 PMREM prefilter；D3D11 driver 的 precision info log 屬 Three.js 內建 shader，
+  // 不以改變 PBR environment mapping 的方式隱藏它。
+  envRT = pmrem.fromScene(new RoomEnvironment(), 0)
   initialLogoMat.envMap = envRT.texture
   initialLogoMat.needsUpdate = true
   initialLogoBodyMat.envMap = envRT.texture
@@ -6843,18 +6844,8 @@ function initEnvMap() {
   eggShellMat.needsUpdate = true
   embryoMat.envMap = envRT.texture // 金屬胚胎的反射環境
   embryoMat.needsUpdate = true
-  // 碎片改用「房間本身」烘成的環境貼圖：反射到的就是畫面裡真正的暖房間 + 天花板燈，
-  // 不再反射 three.js 內建的通用棚房 → 反光才顯得真實、與場景一致。
-  const roomEnvScene = new THREE.Scene()
-  const roomEnvMat = new THREE.MeshBasicMaterial({
-    vertexColors: true,
-    side: THREE.BackSide
-  })
-  const roomEnvMesh = new THREE.Mesh(roomGeo, roomEnvMat) // 置於原點：往上看=天花板燈、往下=地板、四周=暖牆
-  roomEnvScene.add(roomEnvMesh)
-  roomEnvRT = pmrem.fromScene(roomEnvScene, 0.12) // 稍微模糊 → 玻璃反射柔和不刺
-  roomEnvMat.dispose()
-  eggShardMat.envMap = roomEnvRT.texture
+  // 碎片沿用同一張 PMREM 環境貼圖，避免再次編譯內建 GGX prefilter shader。
+  eggShardMat.envMap = envRT.texture
   eggShardMat.needsUpdate = true
   for (const item of heroCardItems) {
     item.coreMat.needsUpdate = true
@@ -8027,7 +8018,6 @@ onUnmounted(() => {
 
   disposables.forEach((item) => item.dispose())
   envRT?.dispose()
-  roomEnvRT?.dispose()
 
   if (typeof document !== 'undefined') {
     document.documentElement.style.removeProperty('--hero-exit-progress')

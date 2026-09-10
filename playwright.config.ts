@@ -1,8 +1,9 @@
 import { defineConfig, devices } from '@playwright/test'
 
-// 本機端口從 .env 或預設 3000；CI 環境 port 同
-const PORT = process.env.PORT ? Number(process.env.PORT) : 3000
+// E2E 使用獨立 port，避免誤接到既有 preview 或與開發者的 3000 互相干擾。
+const PORT = process.env.E2E_PORT ? Number(process.env.E2E_PORT) : 3001
 const BASE_URL = `http://localhost:${PORT}`
+const NPM_COMMAND = process.platform === 'win32' ? 'npm.cmd' : 'npm'
 
 export default defineConfig({
   testDir: './tests/e2e',
@@ -23,15 +24,13 @@ export default defineConfig({
     {
       name: 'chromium-mobile',
       use: { ...devices['Pixel 5'] },
-      grep: /Hero Lab/
+      grep: /Hero Lab|About/
     }
-  ]
-  // 由外部啟動的 dev server 接管；本機跑前請先 `npm run dev`
-  // 若想自動啟服，把下面解註並調整 reuseExistingServer
-  // webServer: {
-  //   command: 'npm run dev',
-  //   url: BASE_URL,
-  //   reuseExistingServer: !process.env.CI,
-  //   timeout: 180_000
-  // }
+  ],
+  webServer: {
+    command: `${NPM_COMMAND} run dev -- --port=${PORT} --host=127.0.0.1`,
+    url: BASE_URL,
+    reuseExistingServer: true,
+    timeout: 180_000
+  }
 })

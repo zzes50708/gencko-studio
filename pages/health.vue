@@ -174,7 +174,7 @@ const hBreadcrumbLd = {
   '@context': 'https://schema.org',
   '@type': 'BreadcrumbList',
   itemListElement: [
-    { '@type': 'ListItem', position: 1, name: '首頁', item: 'https://www.genckobreeding.com/' },
+    { '@type': 'ListItem', position: 1, name: '首頁', item: 'https://www.genckobreeding.com/home' },
     { '@type': 'ListItem', position: 2, name: '健康評估', item: hUrl }
   ]
 }
@@ -763,8 +763,22 @@ const copied = ref(false)
 
     <!-- ============ 入口頁 ============ -->
     <div v-if="mode === 'entry'" class="h-entry">
+      <div class="health-document-meta" aria-label="健康評估使用說明">
+        <span>GENCKO HEALTH DESK</span>
+        <span>OBSERVE / ASSESS / ACT</span>
+      </div>
       <h1 class="page-title">健康評估系統</h1>
       <p class="h-entry-sub">依目的選擇題組：緊急判斷、完整檢查或購入前評估。</p>
+      <nav class="health-tool-nav" aria-label="健康工具導覽">
+        <div class="health-tool-nav-copy">
+          <span>CARE PATH / 使用順序</span>
+          <strong>還沒飼養先評估準備度；已有症狀就直接找醫院。</strong>
+        </div>
+        <div class="health-tool-nav-links">
+          <NuxtLink no-prefetch to="/qs">先做飼養前自評</NuxtLink>
+          <NuxtLink no-prefetch to="/hospital">直接查找特寵醫院</NuxtLink>
+        </div>
+      </nav>
       <div class="h-entry-foot">
         <p>⚠️ 本工具僅供觀察參考，無法取代獸醫診斷。若守宮狀態急速惡化，請直接就醫。</p>
       </div>
@@ -804,7 +818,11 @@ const copied = ref(false)
       </section>
 
       <div class="h-card-grid">
-        <button class="h-entry-card h-entry-card--urgent" @click="startMode('triage')">
+        <button
+          type="button"
+          class="h-entry-card h-entry-card--urgent"
+          @click="startMode('triage')"
+        >
           <div class="h-entry-corner">
             <span class="h-entry-num">01</span>
             <span class="h-entry-tag h-tag--urgent">URGENT</span>
@@ -830,7 +848,7 @@ const copied = ref(false)
           </div>
         </button>
 
-        <button class="h-entry-card h-entry-card--full" @click="startMode('checkup')">
+        <button type="button" class="h-entry-card h-entry-card--full" @click="startMode('checkup')">
           <div class="h-entry-corner">
             <span class="h-entry-num">02</span>
             <span class="h-entry-tag h-tag--full">CHECKUP</span>
@@ -856,7 +874,11 @@ const copied = ref(false)
           </div>
         </button>
 
-        <button class="h-entry-card h-entry-card--purchase" @click="startMode('purchase')">
+        <button
+          type="button"
+          class="h-entry-card h-entry-card--purchase"
+          @click="startMode('purchase')"
+        >
           <div class="h-entry-corner">
             <span class="h-entry-num">03</span>
             <span class="h-entry-tag h-tag--purchase">PRE-BUY</span>
@@ -888,6 +910,7 @@ const copied = ref(false)
     <div v-else-if="!finished" class="h-quiz">
       <div class="h-quiz-head">
         <button
+          type="button"
           class="h-back-btn btn-app btn-app--ghost btn-app--md btn-app--pill"
           @click="exitToEntry"
         >
@@ -965,6 +988,7 @@ const copied = ref(false)
 
           <!-- multi 題下方加「下一題」按鈕 -->
           <button
+            type="button"
             v-if="
               q.type === 'multi' &&
               Array.isArray(currentAnswers[q.id]) &&
@@ -980,8 +1004,13 @@ const copied = ref(false)
       </div>
 
       <div class="h-quiz-foot">
-        <button class="h-reset-btn" @click="resetCurrent">🔄 全部重來</button>
-        <button class="h-submit-btn" :class="{ 'is-disabled': !allAnswered }" @click="submit">
+        <button type="button" class="h-reset-btn" @click="resetCurrent">🔄 全部重來</button>
+        <button
+          type="button"
+          class="h-submit-btn"
+          :class="{ 'is-disabled': !allAnswered }"
+          @click="submit"
+        >
           產出評估結果 →
         </button>
       </div>
@@ -991,6 +1020,7 @@ const copied = ref(false)
     <div v-else class="h-result">
       <div class="h-result-head">
         <button
+          type="button"
           class="h-back-btn btn-app btn-app--ghost btn-app--md btn-app--pill"
           @click="exitToEntry"
         >
@@ -1010,6 +1040,7 @@ const copied = ref(false)
           返回
         </button>
         <button
+          type="button"
           class="h-back-btn btn-app btn-app--ghost btn-app--md btn-app--pill"
           @click="resetCurrent"
         >
@@ -1119,7 +1150,7 @@ const copied = ref(false)
       <div v-if="mode !== 'purchase'" class="h-section h-section-report" id="health-report-area">
         <div class="h-report-head">
           <h3 class="h-section-title">📸 給獸醫看的報告（可截圖此區）</h3>
-          <button class="h-copy-btn" @click="copyReportText">
+          <button type="button" class="h-copy-btn" @click="copyReportText">
             {{ copied ? '✓ 已複製' : '📋 複製文字版' }}
           </button>
         </div>
@@ -1181,6 +1212,60 @@ const copied = ref(false)
   max-width: 1000px;
   margin: 0 auto;
   padding: 15px 20px 40px;
+}
+
+.health-tool-nav {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 20px;
+  align-items: center;
+  margin: 20px 0 24px;
+  padding: 16px 18px;
+  border: 1px solid var(--bd);
+  border-radius: var(--radius-lg);
+  background: radial-gradient(circle at 0 0, var(--pri-glow-soft), transparent 38%), var(--card-bg);
+  box-shadow: var(--shadow-card);
+}
+.health-tool-nav-copy {
+  display: grid;
+  gap: 5px;
+  color: var(--txt);
+}
+.health-tool-nav-copy span {
+  color: var(--pri);
+  font-size: 0.68rem;
+  font-weight: 900;
+  letter-spacing: 0.14em;
+}
+.health-tool-nav-copy strong {
+  line-height: 1.5;
+}
+.health-tool-nav-links {
+  display: flex;
+  gap: 8px;
+}
+.health-tool-nav-links a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--control-min-height);
+  padding: 0 14px;
+  border: 1px solid var(--bd-solid);
+  border-radius: var(--radius-sm);
+  background: var(--btn-secondary-bg);
+  color: var(--txt);
+  font-size: 0.82rem;
+  font-weight: 850;
+  text-decoration: none;
+}
+.health-tool-nav-links a:last-child {
+  border-color: var(--pri-btn);
+  background: var(--pri-btn);
+  color: #fff;
+}
+.health-tool-nav-links a:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: var(--focus-offset);
 }
 .health-container--nav-hidden {
   --health-nav-shift: -50px;
@@ -1383,6 +1468,22 @@ const copied = ref(false)
   color: currentColor;
   margin-top: 6px;
   transition: gap 0.3s;
+}
+
+.health-document-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 0 0 14px;
+  border-bottom: 1px solid var(--bd);
+  color: var(--txt-muted);
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.11em;
+}
+
+.health-document-meta span:first-child {
+  color: var(--pri);
 }
 .h-entry-card:hover .h-entry-cta {
   gap: 14px;
@@ -1778,6 +1879,7 @@ const copied = ref(false)
   color: var(--txt);
   opacity: 0.7;
   padding: 11px 18px;
+  min-height: var(--control-min-height);
   border-radius: 10px;
   font-size: 0.88rem;
   cursor: pointer;
@@ -1794,6 +1896,7 @@ const copied = ref(false)
   color: #fff;
   border: none;
   padding: 13px 28px;
+  min-height: var(--control-min-height);
   border-radius: 10px;
   font-weight: 800;
   font-size: 0.98rem;
@@ -2155,6 +2258,7 @@ const copied = ref(false)
   color: #fff;
   border: none;
   padding: 9px 16px;
+  min-height: var(--control-min-height);
   border-radius: 8px;
   font-size: 0.85rem;
   font-weight: 700;
@@ -2329,6 +2433,7 @@ const copied = ref(false)
   margin-top: 14px;
   width: 100%;
   padding: 12px;
+  min-height: var(--control-min-height);
   background: var(--pri);
   color: #fff;
   border: none;
@@ -2365,6 +2470,15 @@ const copied = ref(false)
 
 /* ============ RWD ============ */
 @media (max-width: 768px) {
+  .health-tool-nav {
+    grid-template-columns: 1fr;
+    gap: 14px;
+    padding: 14px;
+  }
+  .health-tool-nav-links {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
   .health-container {
     padding: 0 10px 14px;
   }
@@ -2599,4 +2713,524 @@ const copied = ref(false)
     transform: translateY(0);
   }
 }
+
+@media (hover: none), (pointer: coarse), (max-width: 768px) {
+  .h-entry-card:hover {
+    transform: none;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+  }
+  .h-entry-card:hover::before,
+  .h-entry-card:hover::after {
+    opacity: 0;
+  }
+  .h-entry-card--urgent:hover,
+  .h-entry-card--full:hover,
+  .h-entry-card--purchase:hover {
+    border-color: var(--bd);
+  }
+  .h-entry-card:hover .h-entry-cta {
+    gap: 6px;
+  }
+  .h-entry-card:hover .h-entry-cta-arrow,
+  .h-q-opt:hover,
+  .h-submit-btn:hover,
+  .h-hospital-btn:hover,
+  .h-copy-btn:hover,
+  .h-q-next-btn:hover {
+    transform: none;
+  }
+  .h-q-card:hover {
+    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.05);
+  }
+  .h-disease-card:hover {
+    background: rgba(128, 128, 128, 0.04);
+    transform: none;
+  }
+  .h-q-opt:hover {
+    border-color: var(--bd);
+    background: var(--card-bg);
+    box-shadow: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .h-entry-card,
+  .h-q-card,
+  .h-q-opt,
+  .h-q-opt-check,
+  .h-reset-btn,
+  .h-submit-btn,
+  .h-hospital-btn,
+  .h-copy-btn,
+  .h-q-next-btn,
+  .h-disease-card,
+  .h-item-row,
+  .h-result,
+  .h-entry-card::before,
+  .h-entry-card::after,
+  .h-hospital-btn::after {
+    transition: none;
+    animation: none;
+  }
+  .h-entry-card:hover,
+  .h-q-opt:hover,
+  .h-submit-btn:hover,
+  .h-hospital-btn:hover,
+  .h-copy-btn:hover,
+  .h-q-next-btn:hover,
+  .h-disease-card:hover {
+    transform: none;
+  }
+}
+/* 健康工具保留風險色彩，降低非語意性裝飾與浮動感。 */
+.health-page,
+.health-tool-nav,
+.h-entry-guide,
+.h-entry-card,
+.h-q-card,
+.h-result,
+.h-disease-card,
+.h-report-card {
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.health-title,
+.h-guide-title,
+.h-result-title,
+.h-disease-title {
+  font-family: 'Noto Serif TC', serif;
+  letter-spacing: -0.03em;
+}
+
+.h-entry-card,
+.h-q-card {
+  background-image: none;
+}
+
+.h-q-opt,
+.h-submit-btn,
+.h-reset-btn,
+.h-hospital-btn,
+.h-copy-btn,
+.h-q-next-btn {
+  border-radius: 2px;
+  box-shadow: none;
+}
+
+/* 健康頁以檢查表取代堆疊卡片，保留風險色作為判讀而非裝飾。 */
+.health-tool-nav,
+.h-entry-guide,
+.h-entry-foot,
+.h-progress-area,
+.h-quiz-head,
+.h-result-head,
+.h-section,
+.h-cat-block,
+.h-report-section {
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.health-tool-nav {
+  margin: 16px 0 32px;
+  padding: 16px 0;
+  border-width: 1px 0;
+}
+
+.health-tool-nav-links a,
+.h-entry-tag,
+.h-q-cat-pill,
+.h-item-tag,
+.h-sev-pill,
+.h-copy-btn,
+.h-back-btn,
+.h-reset-btn,
+.h-submit-btn,
+.h-q-next-btn,
+.h-hospital-btn {
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.h-entry-guide {
+  margin: 0 0 28px;
+  padding: 22px 0;
+  border-width: 1px 0;
+}
+
+.h-guide-steps {
+  gap: 0;
+}
+
+.h-guide-step {
+  padding: 14px 0;
+  border-bottom: 1px solid var(--bd);
+}
+
+.h-guide-step:last-child {
+  border-bottom: 0;
+}
+
+.h-guide-step-no {
+  border-radius: 0;
+  background: var(--pri);
+  color: #fff;
+}
+
+.h-card-grid {
+  gap: 0;
+  margin-bottom: 28px;
+  border-top: 1px solid var(--bd);
+  border-bottom: 1px solid var(--bd);
+}
+
+.h-entry-card {
+  min-height: 300px;
+  padding: 24px;
+  border: 0;
+  border-right: 1px solid var(--bd);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.h-entry-card:last-child {
+  border-right: 0;
+}
+
+.h-entry-card::before,
+.h-entry-card::after,
+.h-entry-quote::before,
+.h-verdict-card::before,
+.h-verdict-card::after,
+.h-section-report::before {
+  display: none;
+}
+
+.h-entry-card:hover,
+.h-entry-card:hover::before,
+.h-entry-card:hover::after {
+  transform: none;
+  box-shadow: none;
+  opacity: 1;
+}
+
+.h-entry-card--urgent:hover,
+.h-entry-card--full:hover,
+.h-entry-card--purchase:hover {
+  border-color: var(--bd);
+}
+
+.h-entry-tag,
+.h-q-cat-pill,
+.h-item-tag,
+.h-sev-pill {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--pri);
+  font-size: 0.68rem;
+  letter-spacing: 0.1em;
+}
+
+.h-entry-cta {
+  padding-top: 12px;
+  border-top: 1px solid var(--bd);
+}
+
+.h-q-list {
+  gap: 18px;
+}
+
+.h-q-card {
+  padding: 22px 0;
+  border-width: 1px 0 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.h-q-card:last-child {
+  border-bottom: 1px solid var(--bd);
+}
+
+.h-q-card.is-highlighted {
+  border-color: var(--pri);
+  box-shadow: none;
+}
+
+.h-q-opt {
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.h-q-opt:hover,
+.h-q-opt.is-selected {
+  border-color: var(--pri);
+  background: color-mix(in srgb, var(--pri) 5%, transparent);
+  box-shadow: none;
+}
+
+.h-q-opt-check,
+.h-q-opt.is-selected .h-q-opt-check {
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.h-result,
+.h-verdict-card,
+.h-disease-card,
+.h-item-row,
+.h-report-card,
+.h-report-diseases li {
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.h-verdict-card {
+  background: transparent;
+  border-width: 2px 0;
+}
+
+.h-section,
+.h-report-card {
+  padding-left: 0;
+  padding-right: 0;
+  background: transparent;
+}
+
+.h-disease-card,
+.h-item-row {
+  background: transparent;
+}
+
+.h-disease-card:hover,
+.h-item-row:hover {
+  transform: none;
+  background: transparent;
+}
+
+.h-report-table th:first-child,
+.h-report-table th:last-child {
+  border-radius: 0;
+}
+
+@media (max-width: 768px) {
+  .health-tool-nav,
+  .h-entry-guide {
+    padding: 14px 0;
+  }
+
+  .h-card-grid {
+    gap: 0;
+  }
+
+  .h-entry-card,
+  .h-entry-card:last-child {
+    min-height: auto;
+    padding: 16px 0;
+    border-right: 0;
+    border-bottom: 1px solid var(--bd);
+  }
+
+  .h-entry-card:last-child {
+    border-bottom: 0;
+  }
+
+  .h-entry-foot {
+    border-radius: 0;
+    background: transparent;
+  }
+}
+
+.h-entry-card {
+  position: relative;
+  padding-top: 48px;
+}
+
+.h-entry-card::after {
+  content: 'ASSESSMENT PATH';
+  position: absolute;
+  top: 18px;
+  left: 0;
+  color: var(--txt-muted);
+  font-size: 0.64rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+}
+
+@media (min-width: 768px) and (hover: hover) and (pointer: fine) {
+  .h-entry-card:hover,
+  .h-q-card:hover,
+  .h-disease-card:hover {
+    transform: none;
+    box-shadow: none;
+  }
+}
+/* 剩餘頁面統整：評估入口與報告採緊湊的編輯式結構。 */
+.health-container {
+  padding-top: 8px;
+  padding-bottom: 28px;
+}
+.h-entry .page-title {
+  font-family: var(--font-heading-zh);
+  font-size: clamp(2rem, 4.5vw, 3.7rem);
+  line-height: 1.3;
+  margin: 20px 0 10px;
+}
+.h-entry-guide,
+.h-entry-foot,
+.h-section,
+.h-note-block,
+.h-disease-card {
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  padding: 16px 0;
+  margin-block: 12px;
+}
+.h-guide-steps {
+  gap: 0 24px;
+}
+.h-guide-step {
+  border: 0;
+  border-bottom: 1px solid var(--bd);
+  padding: 14px 0;
+  background: transparent;
+}
+.h-guide-step-no {
+  background: transparent;
+  color: var(--pri);
+  border-radius: 0;
+}
+.h-card-grid {
+  gap: 20px;
+  border: 0;
+  margin-top: 20px;
+}
+.h-entry-card {
+  padding: 18px 0;
+  min-height: 0;
+  border: 0;
+  border-block: 1px solid var(--bd);
+  box-shadow: none;
+}
+.h-entry-card::after {
+  display: none;
+}
+.h-entry-title {
+  font-family: var(--font-heading-zh);
+  line-height: 1.4;
+}
+.h-entry-quote {
+  font-size: 1.05rem;
+  line-height: 1.6;
+  margin-block: 12px;
+}
+.h-entry-desc {
+  margin-block: 10px;
+}
+.h-entry-cta {
+  display: inline-flex;
+  align-self: start;
+  min-height: 44px;
+  align-items: center;
+  padding: 10px 16px;
+  border: 1px solid var(--txt);
+  border-radius: 2px;
+  color: var(--txt);
+  background: transparent;
+}
+.h-q-card,
+.h-verdict-card,
+.h-report-card {
+  border-radius: 0;
+  box-shadow: none !important;
+}
+.h-q-title {
+  font-family: var(--font-heading-zh);
+  line-height: 1.5;
+}
+.h-q-opt,
+.h-back-btn,
+.h-reset-btn,
+.h-submit-btn,
+.h-copy-btn,
+.h-hospital-btn,
+.h-q-next-btn {
+  border-radius: 2px;
+  box-shadow: none;
+  min-height: 44px;
+}
+.health-tool-nav-links a {
+  border: 1px solid var(--txt);
+  border-radius: 2px;
+  min-height: 44px;
+}
+@media (max-width: 768px) {
+  .h-card-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  .h-entry-card {
+    padding: 16px 0;
+  }
+  .h-guide-steps {
+    grid-template-columns: 1fr;
+  }
+}
+.h-entry .page-title,
+.h-entry-sub {
+  text-align: left;
+  border: 0;
+  padding-left: 0;
+}
+.h-entry-foot {
+  border: 0;
+  border-bottom: 1px solid var(--bd);
+  text-align: left;
+  margin-block: 10px;
+  padding: 12px 0;
+}
+.h-entry-guide .h-section-title {
+  font-family: var(--font-heading-zh);
+  font-size: 1.4rem;
+}
+.h-guide-steps {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.h-entry-num {
+  color: var(--pri);
+}
+@media (max-width: 768px) {
+  .h-guide-steps {
+    grid-template-columns: 1fr;
+  }
+}
+/* 本頁返回與次要操作使用同一按鈕形式。 */
+:deep(.app-back-btn),
+.btn-app {
+  border-radius: 2px;
+  min-height: 44px;
+  box-shadow: none;
+  font-family: var(--font-body-zh);
+}
+:deep(.app-back-btn) {
+  border: 1px solid var(--txt);
+}
+.h-section, .h-note-block, .h-disease-card { border: 0; border-bottom: 1px solid var(--bd); background: transparent !important; box-shadow: none !important; }
+.h-verdict-action, .h-disease-disclaimer, .h-item-row { border: 0; border-bottom: 1px solid var(--bd); background: transparent; border-radius: 0; padding: 12px 0; }
+.h-item-head { align-items: baseline; gap: 12px; }
+.h-item-tag { flex: 0 0 auto; white-space: nowrap; }
+.h-item-q { min-width: 0; line-height: 1.65; }
+.h-verdict-emoji { display: none; }
+.h-verdict-title { font-family: var(--font-heading-zh); color: var(--txt) !important; }
+.h-verdict-card { padding: 20px 0; }
+.h-section-title { text-align: left; }
+.h-hospital-btn { background: var(--pri); box-shadow: none; }
+.h-hospital-btn:hover { transform: none; box-shadow: none; }
+.h-hospital-btn::after { display: none; }
 </style>

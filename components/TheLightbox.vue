@@ -1,5 +1,5 @@
 ﻿<script setup>
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref } from 'vue'
 import { getCleanUrl } from '~/utils/image'
 
 const props = defineProps({
@@ -9,17 +9,7 @@ const props = defineProps({
 
 const emit = defineEmits(['close'])
 
-const onKeydown = (e) => {
-  if (e.key === 'Escape') emit('close')
-}
-
-onMounted(() => {
-  if (import.meta.client) window.addEventListener('keydown', onKeydown)
-})
-
-onUnmounted(() => {
-  if (import.meta.client) window.removeEventListener('keydown', onKeydown)
-})
+const dialog = useNativeModal(() => Boolean(props.item))
 
 // --- ?? PWA ?皛?餈質馱 ---
 const touchStartY = ref(0)
@@ -58,15 +48,14 @@ const getImgSrc = (item) => {
 </script>
 
 <template>
-  <div v-if="item" class="lightbox-overlay" @click="emit('close')">
+  <dialog v-if="item" ref="dialog" class="lightbox-overlay" aria-label="圖片預覽" @cancel.prevent="emit('close')" @click.self="emit('close')">
     <div
       class="lightbox-content-wrapper"
       :style="{
         transform: `translateY(${touchDeltaY}px)`,
-        transition: isDragging
-          ? 'none'
-          : 'transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1), opacity 0.3s ease',
-        opacity: Math.max(0, 1 - Math.abs(touchDeltaY) / 250)
+        transition: isDragging ? 'none' : 'transform 0.2s ease-out, opacity 0.2s ease-out',
+        opacity: Math.max(0, 1 - Math.abs(touchDeltaY) / 250),
+        willChange: isDragging ? 'transform, opacity' : 'auto'
       }"
       @touchstart="onTouchStart"
       @touchmove="onTouchMove"
@@ -106,24 +95,31 @@ const getImgSrc = (item) => {
         </a>
       </div>
     </div>
-  </div>
+  </dialog>
 </template>
 
 <style scoped>
 .lightbox-overlay {
+  margin: 0;
+  border: 0;
+  max-width: none;
+  max-height: none;
+  color: var(--txt);
   position: fixed;
   top: 0;
   left: 0;
   width: 100%;
-  height: 100%;
+  height: 100dvh;
   background: var(--card-bg);
-  backdrop-filter: blur(15px);
-  -webkit-backdrop-filter: blur(15px);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
   z-index: 999999;
   display: flex;
   justify-content: center;
   align-items: center;
   flex-direction: column;
+  padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px)
+    env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px);
 }
 
 .lightbox-close-btn {
@@ -132,11 +128,9 @@ const getImgSrc = (item) => {
   right: 12px;
   width: 44px;
   height: 44px;
-  border-radius: 50%;
-  border: 1.5px solid rgba(255, 255, 255, 0.18);
-  background: rgba(255, 255, 255, 0.08);
-  backdrop-filter: blur(20px) saturate(180%);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border-radius: 2px;
+  border: 1px solid var(--txt);
+  background: var(--card-bg);
   color: var(--txt);
   cursor: pointer;
   font-size: 1.4rem;
@@ -152,7 +146,7 @@ const getImgSrc = (item) => {
     color 0.25s cubic-bezier(0.4, 0, 0.2, 1),
     transform 0.25s cubic-bezier(0.4, 0, 0.2, 1),
     box-shadow 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  box-shadow: none;
 }
 
 @media (hover: hover) and (pointer: fine) {
@@ -160,14 +154,14 @@ const getImgSrc = (item) => {
     background: var(--pri);
     border-color: var(--pri);
     color: #fff;
-    transform: scale(1.08) rotate(90deg);
-    box-shadow: 0 8px 28px rgba(255, 69, 0, 0.4);
+    transform: none;
+    box-shadow: none;
   }
 }
 
 .lightbox-close-btn:active {
-  transform: scale(0.95) rotate(90deg);
-  box-shadow: 0 2px 10px rgba(255, 69, 0, 0.3);
+  transform: none;
+  box-shadow: none;
 }
 
 .lightbox-content-wrapper {
@@ -177,7 +171,6 @@ const getImgSrc = (item) => {
   justify-content: center;
   width: 100%;
   touch-action: none;
-  will-change: transform, opacity;
 }
 
 .swipe-hint-container {
@@ -186,7 +179,7 @@ const getImgSrc = (item) => {
   align-items: center;
   margin-bottom: 12px;
   opacity: 0.6;
-  animation: float 2s ease-in-out infinite;
+  animation: none;
 }
 
 @keyframes float {
@@ -221,8 +214,8 @@ const getImgSrc = (item) => {
   width: auto;
   height: auto;
   max-height: 70vh;
-  border-radius: 16px;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+  border-radius: 2px;
+  box-shadow: none;
   object-fit: contain;
   -webkit-touch-callout: none;
   -webkit-user-select: none;
@@ -240,15 +233,21 @@ const getImgSrc = (item) => {
 }
 
 .lightbox-title {
+  font-family: var(--font-heading-zh);
   color: var(--txt);
   margin: 0 0 15px 0;
   font-size: 1.5rem;
   font-weight: 900;
-  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+  text-shadow: none;
 }
 
 .app-btn-buy {
   z-index: 100001;
+  border-radius: 2px;
+  min-height: 44px;
+  font-family: var(--font-body-zh);
+  white-space: nowrap;
+  box-shadow: none;
 }
 
 @media (max-width: 768px) {

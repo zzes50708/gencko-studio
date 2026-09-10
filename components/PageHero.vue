@@ -27,45 +27,39 @@ defineProps({
 <style scoped>
 .page-hero {
   position: relative;
-  padding: 20px;
-  margin-bottom: 16px;
-  background: var(--card-bg);
-  overflow: hidden;
+  padding: clamp(28px, 5vw, 64px) 0;
+  margin-bottom: clamp(24px, 4vw, 48px);
+  border-block: 1px solid var(--bd);
+  background: transparent;
+  overflow: visible;
 }
 
 .card {
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-card);
+  border-radius: 0;
+  box-shadow: none;
 }
 
 .page-hero::before {
-  content: '';
-  position: absolute;
-  top: -45%;
-  right: -9%;
-  width: 57%;
-  height: 180%;
-  background: radial-gradient(closest-side, var(--pri-glow-soft), transparent 70%);
-  pointer-events: none;
+  display: none;
 }
 
 .page-hero--split {
   display: grid;
   grid-template-columns: minmax(0, 0.92fr) minmax(0, 1.08fr);
-  gap: 22px;
+  gap: var(--space-5);
   align-items: center;
 }
 
 .page-hero--stack {
   display: grid;
-  gap: 14px;
+  gap: var(--space-3);
 }
 
 .hero-copy {
   position: relative;
   z-index: 1;
   display: grid;
-  gap: 10px;
+  gap: var(--space-2);
 }
 
 .hero-aux {
@@ -76,7 +70,7 @@ defineProps({
 .hero-kicker {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
   color: var(--pri);
   font-weight: 900;
   font-size: 0.82rem;
@@ -87,9 +81,9 @@ defineProps({
   content: '';
   width: 7px;
   height: 7px;
-  border-radius: 999px;
+  border-radius: 0;
   background: var(--pri);
-  box-shadow: 0 0 0 4px var(--pri-glow-soft);
+  box-shadow: none;
 }
 
 .hero-lead {
@@ -103,13 +97,13 @@ defineProps({
 @media (max-width: 900px) {
   .page-hero--split {
     grid-template-columns: 1fr;
-    gap: 18px;
+    gap: var(--space-4);
   }
 }
 
 @media (max-width: 640px) {
   .page-hero {
-    padding: 16px;
+    padding: 24px 0;
   }
 
   .page-title {

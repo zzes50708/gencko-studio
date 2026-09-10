@@ -6,13 +6,13 @@ const props = withDefaults(defineProps(), {
   cols: 8,
   rows: 8,
   fillColor: 'rgba(232, 68, 10, 0.22)',
-  strokeColor: 'rgba(232, 68, 10, 0.14)',
+  strokeColor: 'rgba(232, 68, 10, 0.14)'
 })
 
 const { fillColor, strokeColor } = toRefs(props)
 
 const hoveredIndex = ref(null)
-const canHover = useMediaQuery('(hover: hover) and (pointer: fine)')
+const canHover = useMediaQuery('(min-width: 768px) and (hover: hover) and (pointer: fine)')
 
 const safeCols = computed(() => {
   const n = Number(props.cols)
@@ -30,8 +30,20 @@ const total = computed(() => safeCols.value * safeRows.value)
 const cellW = computed(() => 100 / safeCols.value)
 const cellH = computed(() => 100 / safeRows.value)
 
-function getX(i) { return (i % safeCols.value) * cellW.value }
-function getY(i) { return Math.floor(i / safeCols.value) * cellH.value }
+const getHoverEvents = (i) =>
+  canHover.value
+    ? {
+        mouseenter: () => onEnter(i),
+        mouseleave: onLeave
+      }
+    : {}
+
+function getX(i) {
+  return (i % safeCols.value) * cellW.value
+}
+function getY(i) {
+  return Math.floor(i / safeCols.value) * cellH.value
+}
 
 function onEnter(i) {
   if (!canHover.value) return
@@ -45,12 +57,7 @@ function onLeave() {
 </script>
 
 <template>
-  <svg
-    class="igp-svg"
-    viewBox="0 0 100 100"
-    preserveAspectRatio="none"
-    aria-hidden="true"
-  >
+  <svg class="igp-svg" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
     <rect
       v-for="i in total"
       :key="i"
@@ -62,8 +69,7 @@ function onLeave() {
       :stroke="strokeColor"
       stroke-width="0.3"
       class="igp-cell"
-      @mouseenter="onEnter(i)"
-      @mouseleave="onLeave()"
+      v-on="getHoverEvents(i)"
     />
   </svg>
 </template>
@@ -77,11 +83,18 @@ function onLeave() {
   pointer-events: none;
 }
 .igp-cell {
-  pointer-events: all;
-  transition: fill 80ms ease;
+  pointer-events: none;
 }
-/* 離開時慢速淡出 */
-.igp-cell:not(:hover) {
-  transition: fill 900ms ease;
+
+@media (min-width: 768px) and (hover: hover) and (pointer: fine) {
+  .igp-cell {
+    pointer-events: all;
+    transition: fill 80ms ease;
+  }
+
+  /* 離開時慢速淡出 */
+  .igp-cell:not(:hover) {
+    transition: fill 900ms ease;
+  }
 }
 </style>

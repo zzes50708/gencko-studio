@@ -1,5 +1,5 @@
 <script setup>
-import { computed } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useHead, useAsyncData, useSupabaseClient } from '#imports'
 import { useMainStore } from '~/stores/useMainStore'
@@ -16,6 +16,11 @@ const router = useRouter()
 const store = useMainStore()
 const supabase = useSupabaseClient()
 const articleId = route.params.id
+const isHydrated = ref(false)
+
+onMounted(() => {
+  isHydrated.value = true
+})
 
 // [SEO] 為了在伺服器端渲染 (SSR) 期間就能拿到該文章資料以產生正確的 Meta，
 // 我們使用 useAsyncData 獨立向 Supabase 請求單篇文章資料。
@@ -32,7 +37,7 @@ const { data: readingArticle, pending } = await useAsyncData(`article-${articleI
     .select('*')
     .eq('id', articleId)
     .ilike('status', 'published')
-    .single()
+    .maybeSingle()
 
   if (error || !data) return null
 
@@ -212,7 +217,12 @@ const siteData = computed(() => {
       '@context': 'https://schema.org',
       '@type': 'BreadcrumbList',
       itemListElement: [
-        { '@type': 'ListItem', position: 1, name: '首頁', item: 'https://www.genckobreeding.com/' },
+        {
+          '@type': 'ListItem',
+          position: 1,
+          name: '首頁',
+          item: 'https://www.genckobreeding.com/home'
+        },
         {
           '@type': 'ListItem',
           position: 2,
@@ -318,7 +328,7 @@ const relatedArticles = computed(() => {
 
 <template>
   <div>
-    <div v-if="pending" style="text-align: center; padding: 100px 0; color: #888">
+    <div v-if="isHydrated && pending" style="text-align: center; padding: 100px 0; color: #888">
       <div class="loader" style="margin: 0 auto 20px auto"></div>
       <p>文章載入中...</p>
     </div>
@@ -326,6 +336,7 @@ const relatedArticles = computed(() => {
     <div v-else-if="!readingArticle" style="text-align: center; padding: 100px 0; color: #888">
       <h2>找不到此文章或文章已下架</h2>
       <button
+        type="button"
         @click="goBack"
         class="btn-app btn-app--ghost btn-app--md btn-app--pill"
         style="margin: 20px auto; justify-content: center"
@@ -334,8 +345,25 @@ const relatedArticles = computed(() => {
       </button>
     </div>
 
-    <div v-else>
-      <button @click="goBack" class="btn-app btn-app--ghost btn-app--md btn-app--pill">
+    <div v-else class="article-page" data-testid="article-reader-shell">
+      <div class="article-document-meta" aria-label="文章閱讀說明">
+        <span>GENCKO FIELD JOURNAL</span>
+        <span>READ / SAVE / APPLY</span>
+      </div>
+      <nav class="reader-context-nav" aria-label="文章延伸路徑">
+        <NuxtLink no-prefetch to="/articles">知識文章</NuxtLink>
+        <span aria-hidden="true">/</span>
+        <NuxtLink no-prefetch to="/care">飼養指南</NuxtLink>
+        <span aria-hidden="true">/</span>
+        <NuxtLink no-prefetch to="/genes">基因資料庫</NuxtLink>
+        <span aria-hidden="true">/</span>
+        <NuxtLink no-prefetch to="/hospital">特寵醫院</NuxtLink>
+      </nav>
+      <button
+        type="button"
+        @click="goBack"
+        class="btn-app btn-app--ghost btn-app--md btn-app--pill"
+      >
         返回列表
       </button>
       <article class="reader-container">
@@ -343,28 +371,20 @@ const relatedArticles = computed(() => {
           <img
             :src="getCleanUrl(readingArticle.ImageURL)"
             :alt="readingArticle.Title"
-            style="
-              width: 100%;
-              height: auto;
-              max-height: 200px;
-              object-fit: cover;
-              border-radius: 8px;
-              margin-bottom: 0px;
-            "
             loading="eager"
           />
         </div>
-        <h1 style="color: var(--txt); font-size: 2rem; margin-bottom: 15px">
-          {{ readingArticle.Title }}
-        </h1>
-        <div style="color: #666; font-size: 0.9rem; margin-bottom: 20px">
-          <time :datetime="readingArticle.PublishDate">
-            {{ fmtDate(readingArticle.PublishDate) }}
-          </time>
-          <span style="margin-left: 15px">{{ readingArticle.Author }}</span>
-          <span style="margin-left: 15px">{{ readingArticle.Category }}</span>
-        </div>
-        <hr style="border-color: rgba(255, 255, 255, 0.1); margin: 0px 0" />
+        <header class="reader-header">
+          <div class="reader-category">{{ readingArticle.Category }}</div>
+          <h1>{{ readingArticle.Title }}</h1>
+          <div class="reader-meta">
+            <time :datetime="readingArticle.PublishDate">
+              {{ fmtDate(readingArticle.PublishDate) }}
+            </time>
+            <span>{{ readingArticle.Author }}</span>
+            <span>GENCKO FIELD NOTE</span>
+          </div>
+        </header>
         <div class="reader-content" v-html="readingArticle.Content"></div>
 
         <!-- 🌟 E-E-A-T 作者資訊卡：提升 AI 引用可信度 & 品牌識別 -->
@@ -401,7 +421,7 @@ const relatedArticles = computed(() => {
               >
                 Facebook
               </a>
-              <NuxtLink to="/about" class="author-link">關於我們</NuxtLink>
+              <NuxtLink no-prefetch to="/about" class="author-link">關於我們</NuxtLink>
             </div>
           </div>
         </div>
@@ -411,6 +431,7 @@ const relatedArticles = computed(() => {
         <h2 class="related-title">延伸閱讀</h2>
         <div class="related-articles-grid">
           <NuxtLink
+            no-prefetch
             v-for="art in relatedArticles"
             :key="art.ID"
             :to="`/articles/${art.ID}`"
@@ -436,6 +457,7 @@ const relatedArticles = computed(() => {
       </section>
 
       <button
+        type="button"
         @click="goBack"
         class="btn-app btn-app--ghost btn-app--md btn-app--pill"
         style="margin: 20px auto; justify-content: center"
@@ -447,6 +469,173 @@ const relatedArticles = computed(() => {
 </template>
 
 <style scoped>
+.article-page {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 8px 18px 48px;
+}
+
+.article-document-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 0 0 14px;
+  border-bottom: 1px solid var(--bd);
+  color: var(--txt-muted);
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+}
+
+.article-document-meta span:first-child {
+  color: var(--pri);
+}
+
+.reader-context-nav {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 14px;
+  color: var(--txt-muted);
+  font-size: 0.8rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+
+.reader-context-nav a {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--control-min-height);
+  color: var(--txt);
+  text-decoration: none;
+}
+
+.reader-container {
+  position: relative;
+  max-width: 900px;
+  margin: 18px auto 0;
+  overflow: hidden;
+  border: 1px solid var(--bd);
+  border-radius: calc(var(--radius-lg) + 8px);
+  background: var(--card-bg);
+  box-shadow: var(--shadow-card);
+}
+
+.article-hero-image {
+  position: relative;
+  min-height: 260px;
+  max-height: 520px;
+  overflow: hidden;
+  border-bottom: 1px solid var(--bd);
+}
+
+.article-hero-image::after {
+  content: '';
+  position: absolute;
+  inset: auto 0 0;
+  height: 45%;
+  background: linear-gradient(transparent, rgba(0, 0, 0, 0.5));
+  pointer-events: none;
+}
+
+.article-hero-image img {
+  display: block;
+  width: 100%;
+  height: clamp(260px, 46vw, 520px);
+  object-fit: cover;
+}
+
+.reader-header {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: clamp(28px, 6vw, 68px) clamp(20px, 6vw, 72px) 26px;
+  border-bottom: 1px solid var(--bd);
+}
+
+.reader-category {
+  display: inline-flex;
+  margin-bottom: 16px;
+  padding: 5px 10px;
+  border: 1px solid var(--bd-hover);
+  border-radius: 999px;
+  color: var(--pri);
+  font-size: 0.75rem;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+}
+
+.reader-header h1 {
+  margin: 0;
+  color: var(--txt);
+  font-size: clamp(2rem, 5vw, 4.4rem);
+  line-height: 1.08;
+  letter-spacing: -0.045em;
+}
+
+.reader-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+  margin-top: 20px;
+  color: var(--txt-muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.reader-content {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 34px clamp(20px, 6vw, 72px) 10px;
+  color: var(--txt);
+  font-size: clamp(1rem, 1.25vw, 1.08rem);
+  line-height: 1.95;
+}
+
+.reader-content :deep(h2),
+.reader-content :deep(h3) {
+  color: var(--txt);
+  line-height: 1.3;
+  text-wrap: balance;
+}
+
+.reader-content :deep(h2) {
+  margin: 2.4em 0 0.7em;
+  padding-left: 14px;
+  border-left: 4px solid var(--pri);
+  font-size: clamp(1.35rem, 2.4vw, 1.9rem);
+}
+
+.reader-content :deep(h3) {
+  margin: 2em 0 0.6em;
+  font-size: clamp(1.12rem, 2vw, 1.4rem);
+}
+
+.reader-content :deep(p),
+.reader-content :deep(ul),
+.reader-content :deep(ol) {
+  margin: 0 0 1.35em;
+}
+
+.reader-content :deep(blockquote) {
+  margin: 2em 0;
+  padding: 20px 24px;
+  border: 0;
+  border-left: 4px solid var(--pri);
+  border-radius: 0 var(--radius-md) var(--radius-md) 0;
+  background: var(--pri-glow-soft);
+  color: var(--txt);
+  font-weight: 700;
+}
+
+.reader-content :deep(img) {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin: 28px auto;
+  border-radius: var(--radius-lg);
+}
+
 /* ── 自動內部連結（基因名 → /genes/<name>）── */
 .reader-content :deep(.auto-gene-link) {
   color: var(--pri);
@@ -456,16 +645,14 @@ const relatedArticles = computed(() => {
   font-weight: 600;
   transition: opacity 0.2s;
 }
-.reader-content :deep(.auto-gene-link:hover) {
-  opacity: 0.75;
-}
 
 /* ── E-E-A-T 作者資訊卡 ── */
 .author-card {
   display: flex;
   gap: 16px;
   align-items: flex-start;
-  margin-top: 36px;
+  max-width: 720px;
+  margin: 36px auto 0;
   padding: 20px;
   background: var(--card-bg);
   border: 1px solid var(--bd);
@@ -519,13 +706,36 @@ const relatedArticles = computed(() => {
   border-radius: 20px;
   transition: 0.2s;
 }
-.author-link:hover {
-  opacity: 1;
-  border-color: var(--pri);
-  color: var(--pri);
-}
 
 @media (max-width: 768px) {
+  .article-page {
+    padding: 4px 10px 32px;
+  }
+
+  .reader-container {
+    margin-top: 12px;
+    border-radius: var(--radius-lg);
+  }
+
+  .article-hero-image,
+  .article-hero-image img {
+    min-height: 210px;
+    height: 210px;
+  }
+
+  .reader-header {
+    padding: 24px 18px 20px;
+  }
+
+  .reader-header h1 {
+    font-size: clamp(1.8rem, 9vw, 2.8rem);
+  }
+
+  .reader-content {
+    padding: 24px 18px 8px;
+    line-height: 1.85;
+  }
+
   .author-card {
     flex-direction: column;
     gap: 12px;
@@ -571,10 +781,6 @@ const relatedArticles = computed(() => {
     border-color var(--transition);
   cursor: pointer;
 }
-.related-art-card:hover {
-  transform: translateY(-3px);
-  border-color: var(--bd-hover);
-}
 .related-art-img-wrap {
   aspect-ratio: 16 / 9;
   overflow: hidden;
@@ -585,9 +791,6 @@ const relatedArticles = computed(() => {
   height: 100%;
   object-fit: cover;
   transition: transform var(--transition);
-}
-.related-art-card:hover .related-art-img-wrap img {
-  transform: scale(1.04);
 }
 .related-art-img-placeholder {
   width: 100%;
@@ -620,5 +823,210 @@ const relatedArticles = computed(() => {
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
+}
+
+.btn-app:focus-visible,
+.author-link:focus-visible,
+.related-art-card:focus-visible {
+  outline: 3px solid var(--pri);
+  outline-offset: 3px;
+}
+
+@media (min-width: 768px) and (hover: hover) and (pointer: fine) {
+  .reader-context-nav a:hover {
+    color: var(--pri);
+  }
+  .reader-content :deep(.auto-gene-link:hover) {
+    opacity: 0.75;
+  }
+
+  .author-link:hover {
+    opacity: 1;
+    border-color: var(--pri);
+    color: var(--pri);
+  }
+
+  .related-art-card:hover {
+    transform: translateY(-3px);
+    border-color: var(--bd-hover);
+  }
+
+  .related-art-card:hover .related-art-img-wrap img {
+    transform: scale(1.04);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reader-context-nav a,
+  .reader-content :deep(.auto-gene-link),
+  .author-link,
+  .related-art-card,
+  .related-art-img-wrap img {
+    transition: none;
+  }
+}
+/* 文章內容頁降低外框存在感，讓圖片與內文成為主體。 */
+.article-page,
+.article-hero-image,
+.article-content,
+.related-article-card {
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.article-title,
+.article-content h2,
+.related-articles-section h2 {
+  font-family: 'Noto Serif TC', serif;
+  letter-spacing: -0.035em;
+}
+
+.article-hero-image {
+  aspect-ratio: 1;
+}
+
+.article-hero-image img {
+  object-fit: cover;
+}
+
+/* 閱讀頁移除裝飾膠囊與浮卡，讓標題、內文、作者資訊連成單一篇章。 */
+.reader-container,
+.reader-category,
+.reader-content :deep(blockquote),
+.reader-content :deep(img),
+.author-card,
+.author-link,
+.related-art-card,
+.related-art-img-wrap,
+.related-art-cat {
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.reader-category,
+.related-art-cat {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--pri);
+}
+
+.reader-content :deep(blockquote) {
+  background: transparent;
+}
+
+.author-card {
+  padding: 20px 0;
+  border-width: 1px 0 1px 3px;
+  background: transparent;
+}
+
+.author-link {
+  padding: 0 0 2px;
+  border-width: 0 0 1px;
+}
+
+.related-articles-grid {
+  gap: 0;
+  border-top: 1px solid var(--bd);
+  border-left: 1px solid var(--bd);
+}
+
+.related-art-card {
+  border-width: 0 1px 1px 0;
+  background: transparent;
+}
+
+.related-art-img-wrap {
+  aspect-ratio: 1;
+}
+
+@media (min-width: 768px) and (hover: hover) and (pointer: fine) {
+  .related-art-card:hover {
+    transform: none;
+    border-color: var(--pri);
+  }
+}
+/* 閱讀頁保留正文內容格式，移除閱讀器與作者的外框。 */
+.article-page {
+  padding-top: 8px;
+  padding-bottom: 24px;
+}
+.reader-container {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  padding: 20px 0;
+}
+.reader-header {
+  padding-block: 18px;
+  margin-bottom: 18px;
+}
+.reader-header h1 {
+  font-family: var(--font-heading-zh);
+  font-size: clamp(1.9rem, 4vw, 3.4rem);
+  line-height: 1.4;
+}
+.reader-content {
+  max-width: 800px;
+  margin-inline: auto;
+}
+.reader-content :deep(h2),
+.reader-content :deep(h3) {
+  font-family: var(--font-heading-zh);
+  line-height: 1.5;
+}
+.reader-content :deep(p),
+.reader-content :deep(li) {
+  font-family: var(--font-body-zh);
+  line-height: 1.85;
+}
+.reader-content :deep(a),
+.author-link,
+.reader-context-nav a {
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+.reader-content :deep(img) {
+  max-width: 100%;
+  height: auto;
+  border-radius: 0;
+}
+.author-card {
+  border: 0;
+  border-block: 1px solid var(--bd);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  padding: 18px 0;
+  margin-top: 24px;
+}
+.related-articles-section {
+  margin-top: 24px;
+}
+.related-art-card {
+  border-radius: 0;
+  box-shadow: none;
+}
+.related-art-title {
+  font-family: var(--font-heading-zh);
+  line-height: 1.5;
+}
+@media (max-width: 768px) {
+  .reader-container {
+    padding: 14px 0;
+  }
+}
+/* 本頁返回與次要操作使用同一按鈕形式。 */
+:deep(.app-back-btn),
+.btn-app {
+  border-radius: 2px;
+  min-height: 44px;
+  box-shadow: none;
+  font-family: var(--font-body-zh);
+}
+:deep(.app-back-btn) {
+  border: 1px solid var(--txt);
 }
 </style>

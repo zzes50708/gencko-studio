@@ -10,6 +10,8 @@ export const useMainStore = defineStore('main', () => {
 
   // --- 核心狀態 ---
   const loading = ref(false)
+  const dataError = ref(null)
+  const inventoryLoaded = ref(false)
   const isDayMode = ref(true)
   const curTab = ref('home')
 
@@ -79,8 +81,11 @@ export const useMainStore = defineStore('main', () => {
   const lineLink = ref('https://line.me/R/ti/p/@219abdzn')
 
   // --- Actions (Data Loading) ---
-  async function loadDataFromAPI() {
+  let inventoryLoadPromise = null
+
+  async function performInventoryLoad() {
     loading.value = true
+    dataError.value = null
 
     // 1. animals（核心資料，控制 loading 狀態）＋ site_settings（展場模式）平行載入，
     //    讓展場設定在卡片渲染前就備妥，避免價格「先顯示原價再切成提示」的閃爍
@@ -131,12 +136,17 @@ export const useMainStore = defineStore('main', () => {
       }))
 
       hotList.value = inv.value.filter((i) => i.IsHot === true)
+      inventoryLoaded.value = true
     } catch (e) {
       console.error('讀取個體資料失敗:', e)
+      dataError.value = e?.message || '商品資料載入失敗'
+      inventoryLoaded.value = false
     } finally {
       loading.value = false
     }
+  }
 
+  async function loadSecondaryData() {
     // 2. 次要資料表：平行獨立載入，互不影響
     const [merchResult, artResult, geneResult, configResult] = await Promise.allSettled([
       withRetry(() => supabase.from('merchandise').select('*'), { label: 'merchandise' }),
@@ -203,6 +213,26 @@ export const useMainStore = defineStore('main', () => {
     } else if (configResult.status === 'rejected' || configResult.value?.error) {
       console.error('讀取跑馬燈設定失敗:', configResult.reason || configResult.value?.error)
     }
+  }
+
+  function loadInventory() {
+    if (inventoryLoadPromise) return inventoryLoadPromise
+
+    const request = performInventoryLoad()
+    inventoryLoadPromise = request
+    request.finally(() => {
+      if (inventoryLoadPromise === request) inventoryLoadPromise = null
+    })
+    return request
+  }
+
+  function loadDataFromAPI() {
+    return Promise.all([loadInventory(), loadSecondaryData()])
+  }
+
+  function ensureInventoryLoaded() {
+    if (inventoryLoaded.value && !dataError.value) return Promise.resolve()
+    return loadInventory()
   }
 
   // 展場模式：enabled 且（無日期或現在落在起訖區間內）
@@ -560,6 +590,8 @@ export const useMainStore = defineStore('main', () => {
 
   return {
     loading,
+    dataError,
+    inventoryLoaded,
     isDayMode,
     curTab,
     inv,
@@ -595,6 +627,7 @@ export const useMainStore = defineStore('main', () => {
     toggleCompare,
     clearCompare,
     loadDataFromAPI,
+    ensureInventoryLoaded,
     loadAuctions,
     initLiff,
     hasPendingLineAuth,

@@ -8,14 +8,14 @@
   <link rel="icon" href="https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/11.png" />
   <style>
     :root {
-      --pri: #E8440A;
+      --pri: #c8340a;
       --bg: #18120E;
       --txt: #f1ece6;
       --card: rgba(255,255,255,0.04);
       --bd: rgba(255,255,255,0.12);
     }
     @media (prefers-color-scheme: light) {
-      :root { --bg: #e6e3e3; --txt: #1d1410; --card: rgba(0,0,0,0.03); --bd: rgba(0,0,0,0.12); }
+      :root { --bg: #fff; --txt: #1d1410; --card: transparent; --bd: rgba(0,0,0,0.12); }
     }
     * { box-sizing: border-box; }
     html, body {
@@ -26,60 +26,62 @@
     }
     .wrap {
       max-width: 560px; margin: 0 auto;
-      padding: 100px 24px 60px 24px; text-align: center;
+      padding: 40px 24px 32px; text-align: left;
     }
     .icon {
-      width: 96px; height: 96px;
-      border-radius: 50%;
-      background: var(--card);
-      border: 1px solid var(--bd);
-      margin: 0 auto 24px auto;
+      width: 48px; height: 48px;
+      margin: 0 0 16px;
       display: flex; align-items: center; justify-content: center;
       font-size: 2.5rem;
-      animation: pulse 2.4s ease-in-out infinite;
+      animation: none;
     }
     @keyframes pulse {
       0%, 100% { transform: scale(1); opacity: 0.9; }
       50% { transform: scale(1.06); opacity: 1; }
     }
-    h1 { font-size: 1.6rem; font-weight: 900; margin: 0 0 12px 0; }
+    h1 { font-family: 'Noto Serif TC', 'Songti TC', 'PMingLiU', serif; font-size: clamp(1.6rem, 6vw, 2.2rem); font-weight: 700; margin: 0 0 12px; }
     p { font-size: 0.95rem; line-height: 1.7; opacity: 0.8; margin: 0 0 8px 0; }
     .status {
       display: inline-block; margin-top: 18px;
-      padding: 4px 12px; border-radius: 20px;
+      padding: 8px 0; border-radius: 0;
       font-size: 0.8rem; font-weight: bold;
-      background: rgba(232, 68, 10, 0.12);
+      background: transparent;
       color: var(--pri);
-      border: 1px solid rgba(232, 68, 10, 0.3);
+      border-bottom: 1px solid var(--bd);
     }
     .status.online {
-      background: rgba(40, 180, 90, 0.15);
-      color: #2eb464;
-      border-color: rgba(40, 180, 90, 0.35);
+      background: transparent;
+      color: var(--txt);
     }
     .actions {
       display: flex; gap: 10px; flex-wrap: wrap;
-      justify-content: center; margin-top: 28px;
+      justify-content: flex-start; margin-top: 20px;
     }
     .btn {
       display: inline-flex; align-items: center; justify-content: center;
       min-width: 140px; padding: 11px 22px;
-      border-radius: 999px;
+      border-radius: 2px;
+      min-height: 44px;
+      font-family: inherit;
+      white-space: nowrap;
       border: 1px solid var(--bd);
       background: transparent; color: var(--txt);
       font-size: 0.95rem; font-weight: bold; cursor: pointer;
       text-decoration: none;
       transition: transform 0.15s, background 0.15s, border-color 0.15s;
     }
-    .btn:hover { transform: translateY(-1px); border-color: var(--pri); color: var(--pri); }
+    @media (hover: hover) and (pointer: fine) {
+      .btn:hover { border-color: var(--pri); color: var(--pri); }
+    }
+    .btn:focus-visible { outline: 2px solid var(--pri); outline-offset: 3px; }
     .btn.primary {
       background: var(--pri); color: #fff; border-color: var(--pri);
-      box-shadow: 0 8px 24px rgba(232, 68, 10, 0.35);
+      box-shadow: none;
     }
     .btn.primary:hover { color: #fff; opacity: 0.92; }
-    .tip { font-size: 0.85rem; opacity: 0.6; margin-top: 30px; }
+    .tip { font-size: 0.85rem; opacity: 0.8; margin-top: 24px; padding-top: 16px; border-top: 1px solid var(--bd); }
     @media (max-width: 480px) {
-      .wrap { padding: 70px 18px 40px 18px; }
+      .wrap { padding: 32px 18px 24px; }
       .btn { width: 100%; }
     }
   </style>

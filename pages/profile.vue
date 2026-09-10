@@ -18,9 +18,11 @@ useHead({
       content:
         'Gencko Studio 個人專屬儀表板。管理您的守宮收藏清單、特寵醫院地圖書籤與即時競標紀錄。'
     },
+    { name: 'robots', content: 'noindex, nofollow' },
     { property: 'og:title', content: '我的專區 | Gencko Studio' },
     { property: 'og:url', content: 'https://www.genckobreeding.com/profile' }
-  ]
+  ],
+  link: [{ rel: 'canonical', href: 'https://www.genckobreeding.com/profile' }]
 })
 
 // 狀態管理
@@ -32,8 +34,8 @@ const isLoadingBids = ref(false)
 watch(
   () => store.currentUser,
   (user) => {
-    if (user && user.email) {
-      fetchMyBids(user.email)
+    if (user?.type === 'google') {
+      fetchMyBids()
     } else {
       myBids.value = []
     }
@@ -41,17 +43,11 @@ watch(
   { immediate: true }
 )
 
-// 抓取使用者的競標紀錄（兩段式查詢，不需要 DB 外鍵）
-const fetchMyBids = async (emailOrId) => {
-  if (!emailOrId) return
+// 由伺服器端身份取得自己的競標紀錄，不讓瀏覽器以 phone/email 查詢。
+const fetchMyBids = async () => {
   isLoadingBids.value = true
   try {
-    // Step 1：查詢出價紀錄
-    const { data: bidsData, error: bidsError } = await supabase
-      .from('auction_bids')
-      .select('auction_id, amount, bid_time')
-      .eq('phone', emailOrId)
-      .order('bid_time', { ascending: false })
+    const { data: bidsData, error: bidsError } = await supabase.rpc('get_my_auction_bids')
 
     if (bidsError) throw bidsError
     if (!bidsData || bidsData.length === 0) {
@@ -152,12 +148,18 @@ const getMapLink = (h) => {
 </script>
 
 <template>
-  <div class="profile-page-wrapper">
-    <!-- 標題 -->
-    <h1 class="page-title dt-only">
-      我的專區
-      <span>Personal Dashboard</span>
-    </h1>
+  <div class="profile-page-wrapper" data-testid="member-dashboard">
+    <div class="profile-document-meta" aria-label="會員專區說明">
+      <span>GENCKO MEMBER DESK</span>
+      <span>SAVED / VIEWED / CONNECTED</span>
+    </div>
+    <header class="profile-heading">
+      <div>
+        <div class="profile-kicker">PERSONAL FIELD DESK</div>
+        <h1>我的專區</h1>
+      </div>
+      <p>收藏、瀏覽、醫院與競標紀錄集中在同一處；登入後可查看帳號專屬資料。</p>
+    </header>
 
     <!-- 🌟 App-like 使用者資訊卡片 (包含訪客狀態) -->
     <div class="user-card" :class="{ 'guest-card': !store.currentUser }">
@@ -194,9 +196,16 @@ const getMapLink = (h) => {
       </div>
 
       <div class="header-actions">
-        <button v-if="store.currentUser" @click="store.logout" class="btn-logout">登出</button>
+        <button v-if="store.currentUser" type="button" @click="store.logout" class="btn-logout">
+          登出
+        </button>
         <div v-else class="quick-login-row">
-          <button @click="store.loginWithLine" class="btn-quick line" title="LINE 登入">
+          <button
+            type="button"
+            @click="store.loginWithLine"
+            class="btn-quick line"
+            title="LINE 登入"
+          >
             <img
               src="https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/line.png"
               alt="LINE"
@@ -204,7 +213,12 @@ const getMapLink = (h) => {
               decoding="async"
             />
           </button>
-          <button @click="store.loginWithGoogle" class="btn-quick google" title="Google 登入">
+          <button
+            type="button"
+            @click="store.loginWithGoogle"
+            class="btn-quick google"
+            title="Google 登入"
+          >
             <svg
               width="18"
               height="18"
@@ -235,11 +249,13 @@ const getMapLink = (h) => {
     </div>
 
     <!-- 🌟 App-like 分段切換器 (新增歷史紀錄) -->
-    <div class="segmented-tabs">
+    <div class="segmented-tabs" role="tablist" aria-label="會員資料分類">
       <button
         type="button"
         class="seg-tab"
         :class="{ active: activeTab === 'wishlist' }"
+        role="tab"
+        :aria-selected="activeTab === 'wishlist'"
         @click="activeTab = 'wishlist'"
       >
         收藏
@@ -249,6 +265,8 @@ const getMapLink = (h) => {
         type="button"
         class="seg-tab"
         :class="{ active: activeTab === 'history' }"
+        role="tab"
+        :aria-selected="activeTab === 'history'"
         @click="activeTab = 'history'"
       >
         瀏覽
@@ -258,6 +276,8 @@ const getMapLink = (h) => {
         type="button"
         class="seg-tab"
         :class="{ active: activeTab === 'hospitals' }"
+        role="tab"
+        :aria-selected="activeTab === 'hospitals'"
         @click="activeTab = 'hospitals'"
       >
         醫院
@@ -267,6 +287,8 @@ const getMapLink = (h) => {
         type="button"
         class="seg-tab"
         :class="{ active: activeTab === 'bids' }"
+        role="tab"
+        :aria-selected="activeTab === 'bids'"
         @click="activeTab = 'bids'"
       >
         競標
@@ -282,13 +304,19 @@ const getMapLink = (h) => {
         <div v-if="wishlistItems.length === 0" class="empty-state">
           <div class="empty-icon">❤</div>
           <p>您的收藏清單空空如也，趕快去商城逛逛吧！</p>
-          <button class="btn-hero" @click="router.push('/shop')" style="margin-top: 15px">
+          <button
+            type="button"
+            class="btn-hero"
+            @click="router.push('/shop')"
+            style="margin-top: 15px"
+          >
             前往商城
           </button>
         </div>
 
         <div v-else class="grid photo-grid">
           <NuxtLink
+            no-prefetch
             :to="`/product/${i.ID}`"
             class="card slim-card"
             v-for="i in wishlistItems"
@@ -349,13 +377,19 @@ const getMapLink = (h) => {
         <div v-if="historyItems.length === 0" class="empty-state">
           <div class="empty-icon">👀</div>
           <p>您還沒有看過任何守宮喔！</p>
-          <button class="btn-hero" @click="router.push('/shop')" style="margin-top: 15px">
+          <button
+            type="button"
+            class="btn-hero"
+            @click="router.push('/shop')"
+            style="margin-top: 15px"
+          >
             前往商城探索
           </button>
         </div>
 
         <div v-else class="grid photo-grid">
           <NuxtLink
+            no-prefetch
             :to="`/product/${i.ID}`"
             class="card slim-card"
             v-for="i in historyItems"
@@ -417,7 +451,12 @@ const getMapLink = (h) => {
         <div v-if="hospWishlistItems.length === 0" class="empty-state">
           <div class="empty-icon">🏥</div>
           <p>您尚未收藏任何特寵醫院。</p>
-          <button class="btn-hero" @click="router.push('/hospital')" style="margin-top: 15px">
+          <button
+            type="button"
+            class="btn-hero"
+            @click="router.push('/hospital')"
+            style="margin-top: 15px"
+          >
             前往醫院地圖
           </button>
         </div>
@@ -470,8 +509,10 @@ const getMapLink = (h) => {
               <div class="hosp-actions">
                 <div style="display: flex; align-items: center; gap: 8px">
                   <span class="hosp-tag">{{ h.city }} {{ h.district }}</span>
-                  <span
+                  <button
+                    type="button"
                     class="fav-btn active"
+                    :aria-label="`取消收藏 ${h.name}`"
                     @click.stop.prevent="toggleHospWishlist(h.id)"
                     style="
                       position: relative;
@@ -482,7 +523,7 @@ const getMapLink = (h) => {
                     "
                   >
                     ❤
-                  </span>
+                  </button>
                 </div>
                 <a
                   :href="'tel:' + h.phone.replace(/[^\d]/g, '')"
@@ -508,7 +549,7 @@ const getMapLink = (h) => {
           </p>
 
           <div class="login-buttons">
-            <button @click="store.loginWithLine" class="btn-login line">
+            <button type="button" @click="store.loginWithLine" class="btn-login line">
               <img
                 src="https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/line.png"
                 alt="LINE"
@@ -518,7 +559,7 @@ const getMapLink = (h) => {
               />
               使用 LINE 帳號登入
             </button>
-            <button @click="store.loginWithGoogle" class="btn-login google">
+            <button type="button" @click="store.loginWithGoogle" class="btn-login google">
               <svg
                 width="20"
                 height="20"
@@ -556,13 +597,19 @@ const getMapLink = (h) => {
         <div v-else-if="myBids.length === 0" class="empty-state">
           <div class="empty-icon">🔨</div>
           <p>您尚未參與任何競標活動。</p>
-          <button class="btn-hero" @click="router.push('/auction')" style="margin-top: 15px">
+          <button
+            type="button"
+            class="btn-hero"
+            @click="router.push('/auction')"
+            style="margin-top: 15px"
+          >
             去競標區看看
           </button>
         </div>
 
         <div v-else class="bid-list">
           <NuxtLink
+            no-prefetch
             :to="`/auction/${bid.auction_id}`"
             class="bid-card"
             v-for="bid in myBids"
@@ -615,10 +662,61 @@ const getMapLink = (h) => {
   已清除所有重複的宣告與不必要的 :global(body.day-mode) 覆寫。
 */
 .profile-page-wrapper {
-  max-width: 900px;
+  max-width: 1080px;
   margin: 0 auto;
-  padding: 20px 15px;
+  padding: 8px 18px 48px;
   min-height: 70vh;
+}
+
+.profile-document-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 0 0 14px;
+  border-bottom: 1px solid var(--bd);
+  color: var(--txt-muted);
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+}
+
+.profile-document-meta span:first-child {
+  color: var(--pri);
+}
+
+.profile-heading {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 0.65fr);
+  gap: 30px;
+  align-items: end;
+  margin-bottom: 16px;
+  padding: clamp(24px, 5vw, 48px);
+  border: 1px solid var(--bd);
+  border-radius: calc(var(--radius-lg) + 8px);
+  background:
+    radial-gradient(circle at 90% 10%, var(--pri-glow-soft), transparent 35%), var(--card-bg);
+  box-shadow: var(--shadow-card);
+}
+
+.profile-kicker {
+  color: var(--pri);
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 0.16em;
+}
+
+.profile-heading h1 {
+  margin: 8px 0 0;
+  color: var(--txt);
+  font-size: clamp(2.4rem, 6vw, 5rem);
+  line-height: 0.96;
+  letter-spacing: -0.055em;
+}
+
+.profile-heading p {
+  margin: 0;
+  color: var(--txt-muted);
+  line-height: 1.75;
 }
 .dt-only {
   display: block;
@@ -638,9 +736,9 @@ const getMapLink = (h) => {
   align-items: center;
   background: var(--card-bg);
   border: 1px solid var(--pri);
-  border-radius: 12px;
-  padding: 15px 20px;
-  margin-bottom: 25px;
+  border-radius: var(--radius-lg);
+  padding: 18px 20px;
+  margin-bottom: 16px;
   box-shadow: 0 4px 15px rgba(255, 69, 0, 0.05);
 }
 .user-card.guest-card {
@@ -688,6 +786,7 @@ const getMapLink = (h) => {
   align-items: center;
 }
 .btn-logout {
+  min-height: var(--control-min-height);
   background: transparent;
   border: 1px solid var(--bd);
   color: var(--txt);
@@ -699,12 +798,6 @@ const getMapLink = (h) => {
   font-weight: bold;
   transition: 0.2s;
 }
-.btn-logout:hover {
-  border-color: #f44336;
-  color: #f44336;
-  background: rgba(244, 67, 54, 0.1);
-  opacity: 1;
-}
 
 .quick-login-row {
   display: flex;
@@ -712,7 +805,9 @@ const getMapLink = (h) => {
 }
 .btn-quick {
   width: 36px;
-  height: 36px;
+  min-width: var(--control-min-height);
+  min-height: var(--control-min-height);
+  height: var(--control-min-height);
   border-radius: 50%;
   border: none;
   display: flex;
@@ -733,17 +828,13 @@ const getMapLink = (h) => {
   background: var(--card-bg);
   border: 1px solid var(--bd);
 }
-.btn-quick:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
-}
 
 /* App-like 頁籤 (Segmented Control) */
 .segmented-tabs {
   display: flex;
   background: rgba(128, 128, 128, 0.05);
   border: 1px solid var(--bd);
-  border-radius: 30px;
+  border-radius: var(--radius-lg);
   padding: 4px;
   margin-bottom: 20px;
   overflow-x: auto;
@@ -755,6 +846,7 @@ const getMapLink = (h) => {
 
 .seg-tab {
   flex: 1;
+  min-height: var(--control-min-height);
   text-align: center;
   padding: 10px 0;
   border-radius: 25px;
@@ -824,6 +916,7 @@ const getMapLink = (h) => {
   gap: 15px;
 }
 .btn-login {
+  min-height: var(--control-min-height);
   padding: 12px;
   border-radius: 8px;
   font-size: 1rem;
@@ -840,19 +933,10 @@ const getMapLink = (h) => {
   background: #06c755;
   color: #fff;
 }
-.btn-login.line:hover {
-  background: #05b04a;
-  transform: translateY(-2px);
-}
 .btn-login.google {
   background: var(--card-bg);
   color: var(--txt);
   border: 1px solid var(--bd);
-}
-.btn-login.google:hover {
-  background: rgba(128, 128, 128, 0.05);
-  transform: translateY(-2px);
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
 }
 
 /* 競標列表 */
@@ -869,11 +953,6 @@ const getMapLink = (h) => {
   overflow: hidden;
   text-decoration: none;
   transition: 0.2s;
-}
-.bid-card:hover {
-  transform: translateY(-3px);
-  border-color: var(--pri);
-  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
 }
 .bid-img {
   width: 120px;
@@ -916,11 +995,6 @@ const getMapLink = (h) => {
   border-radius: 10px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 }
-.hosp-card:hover {
-  border-color: var(--pri);
-  transform: translateY(-2px);
-  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
-}
 .hosp-content-row {
   display: flex;
   justify-content: space-between;
@@ -959,9 +1033,6 @@ const getMapLink = (h) => {
   display: flex;
   align-items: center;
 }
-.hosp-link:hover {
-  color: var(--pri);
-}
 .hosp-actions {
   display: flex;
   flex-direction: column;
@@ -997,9 +1068,29 @@ const getMapLink = (h) => {
   align-items: center;
   justify-content: center;
 }
-.hosp-call-btn:hover {
-  background: var(--pri);
-  color: #fff;
+.hosp-actions .fav-btn {
+  min-width: var(--control-min-height);
+  min-height: var(--control-min-height);
+}
+.btn-hero,
+.fav-btn {
+  min-height: var(--control-min-height);
+}
+.fav-btn {
+  min-width: var(--control-min-height);
+}
+
+.btn-hero:focus-visible,
+.btn-logout:focus-visible,
+.btn-quick:focus-visible,
+.seg-tab:focus-visible,
+.fav-btn:focus-visible,
+.btn-login:focus-visible,
+.hosp-call-btn:focus-visible,
+.bid-card:focus-visible,
+.hosp-link:focus-visible {
+  outline: 3px solid var(--pri);
+  outline-offset: 2px;
 }
 
 /* Mobile Optimizations */
@@ -1009,7 +1100,13 @@ const getMapLink = (h) => {
   }
 
   .profile-page-wrapper {
-    padding-top: 5px;
+    padding: 4px 10px 32px;
+  }
+
+  .profile-heading {
+    grid-template-columns: 1fr;
+    gap: 12px;
+    padding: 22px 16px;
   }
 
   .user-card {
@@ -1074,4 +1171,266 @@ const getMapLink = (h) => {
     max-width: 280px;
   }
 }
+
+@media (min-width: 768px) and (hover: hover) and (pointer: fine) {
+  .btn-logout:hover {
+    border-color: #f44336;
+    color: #f44336;
+    background: rgba(244, 67, 54, 0.1);
+    opacity: 1;
+  }
+  .btn-quick:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+  }
+  .btn-login.line:hover {
+    background: #05b04a;
+    transform: translateY(-2px);
+  }
+  .btn-login.google:hover {
+    background: rgba(128, 128, 128, 0.05);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+  }
+  .bid-card:hover {
+    transform: translateY(-3px);
+    border-color: var(--pri);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+  }
+  .hosp-card:hover {
+    border-color: var(--pri);
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+  }
+  .hosp-link:hover {
+    color: var(--pri);
+  }
+  .hosp-call-btn:hover {
+    background: var(--pri);
+    color: #fff;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .btn-logout,
+  .btn-quick,
+  .seg-tab,
+  .btn-hero,
+  .fav-btn,
+  .btn-login,
+  .bid-card,
+  .hosp-card,
+  .hosp-link,
+  .hosp-call-btn {
+    transition: none !important;
+    animation: none !important;
+  }
+}
+/* 會員工具保留資料密度，改用規整面板與小圓角呈現。 */
+.profile-page-wrapper,
+.profile-heading,
+.profile-panel,
+.profile-card,
+.profile-empty,
+.profile-modal {
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.profile-heading h1,
+.profile-section-title {
+  font-family: 'Noto Serif TC', serif;
+  letter-spacing: -0.03em;
+}
+
+.profile-heading,
+.profile-card {
+  background-image: none;
+}
+
+.profile-tab,
+.profile-action,
+.profile-input,
+.profile-select {
+  border-radius: 2px;
+  box-shadow: none;
+}
+
+.user-card,
+.segmented-tabs,
+.content-section,
+.fav-card,
+.profile-page-wrapper .card {
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.seg-tab,
+.btn-logout,
+.profile-page-wrapper input,
+.profile-page-wrapper select,
+.profile-page-wrapper button:not(.btn-quick) {
+  border-radius: 2px;
+  box-shadow: none;
+}
+
+/* 帳戶頁以帳務清單取代 app 式浮卡，保留登入與操作控制的可辨識性。 */
+.profile-heading {
+  padding: 32px 0;
+  border-width: 1px 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.user-card,
+.segmented-tabs,
+.content-section,
+.empty-state,
+.login-prompt-box {
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.user-card {
+  padding: 18px 0;
+  border-width: 1px 0;
+}
+
+.segmented-tabs {
+  padding: 0;
+  border-width: 0 0 1px;
+}
+
+.seg-tab {
+  border-width: 0 0 2px;
+  border-radius: 0;
+  box-shadow: none;
+  opacity: 1;
+}
+
+.seg-tab.active {
+  border-color: var(--pri);
+  background: transparent;
+  color: var(--pri);
+  box-shadow: none;
+}
+
+.seg-tab span,
+.seg-tab.active span {
+  border-radius: 0;
+  background: transparent;
+  color: inherit;
+}
+
+.bid-list,
+.hosp-list {
+  gap: 0;
+  border-top: 1px solid var(--bd);
+}
+
+.bid-card,
+.hosp-card {
+  border-width: 0 0 1px;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.bid-detail-row,
+.hosp-tag,
+.hosp-call-btn,
+.btn-logout,
+.btn-login {
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.bid-detail-row {
+  padding-left: 0;
+  padding-right: 0;
+  border-width: 1px 0;
+  background: transparent;
+}
+
+@media (min-width: 768px) and (hover: hover) and (pointer: fine) {
+  .bid-card:hover,
+  .hosp-card:hover,
+  .btn-login.line:hover,
+  .btn-login.google:hover {
+    transform: none;
+    box-shadow: none;
+  }
+}
+/* 帳戶頁依據動作與資料分層，不以大型空框包住全部內容。 */
+.profile-page-wrapper {
+  padding: 8px 18px 28px;
+}
+.profile-heading {
+  padding: 20px 0;
+  margin-bottom: 18px;
+}
+.profile-heading h1 {
+  font-family: var(--font-heading-zh);
+  font-size: clamp(2rem, 4.5vw, 3.5rem);
+  line-height: 1.3;
+}
+.user-card {
+  margin-bottom: 18px;
+}
+.login-prompt-box {
+  padding: 22px 0;
+  border: 0;
+  border-bottom: 1px solid var(--bd);
+}
+.empty-state {
+  padding: 28px 0;
+  min-height: 0;
+}
+.btn-login,
+.btn-quick,
+.btn-logout,
+.btn-hero,
+.hosp-call-btn {
+  min-height: 44px;
+  border-radius: 2px;
+  box-shadow: none;
+}
+.seg-tab {
+  min-height: 44px;
+  white-space: nowrap;
+}
+.segmented-tabs {
+  overflow-x: auto;
+}
+.slim-title,
+.hosp-name {
+  font-family: var(--font-heading-zh);
+  line-height: 1.5;
+}
+.slim-price {
+  font-family: var(--font-body-zh);
+  font-variant-numeric: tabular-nums;
+}
+.slim-card {
+  border-radius: 0;
+  box-shadow: none;
+}
+.hosp-link {
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+/* 本頁返回與次要操作使用同一按鈕形式。 */
+:deep(.app-back-btn),
+.btn-app {
+  border-radius: 2px;
+  min-height: 44px;
+  box-shadow: none;
+  font-family: var(--font-body-zh);
+}
+:deep(.app-back-btn) {
+  border: 1px solid var(--txt);
+}
+.empty-state { border: 0; border-bottom: 1px solid var(--bd); }
 </style>

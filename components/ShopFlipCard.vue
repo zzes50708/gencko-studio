@@ -1,10 +1,8 @@
 <script setup>
 import { computed, ref } from 'vue'
-import { useRouter } from 'vue-router'
 import { useMainStore } from '~/stores/useMainStore'
 import { getCleanUrl } from '~/utils/image'
 
-const router = useRouter()
 const store = useMainStore()
 
 const props = defineProps({
@@ -18,6 +16,9 @@ const props = defineProps({
   showWishlist: { type: Boolean, default: true },
   showStatusBadge: { type: Boolean, default: true },
   showBackPrice: { type: Boolean, default: true },
+  showMobileMeta: { type: Boolean, default: false },
+  showMobileGenes: { type: Boolean, default: true },
+  showInteractiveGrid: { type: Boolean, default: true },
   onToggleWishlist: { type: Function, required: true },
   onToggleCompare: { type: Function, default: () => {} }
 })
@@ -29,25 +30,27 @@ const normalizeSpace = (s) =>
     .replace(/\s+/g, ' ')
     .trim()
 
-// 已售/自留個體導向同品系在售搜尋，避免卡片成為死路（#U4）
-const findSimilar = () => {
-  const kw = normalizeSpace(props.item?.Morph || '')
-  router.push(kw ? { path: '/shop', query: { kw } } : { path: '/shop' })
-}
-
 const genderText = computed(() => {
   const t = normalizeSpace(props.item?.GenderType || '')
   if (!t) return '未登錄'
   if (t === '溫控') {
     const v = normalizeSpace(props.item?.GenderValue || '')
-    return v ? `孵化溫度:${v}度` : '孵化溫度'
+    return v ? `孵化溫度:${v}度（不保證性別）` : '孵化溫度（不保證性別）'
   }
   return t
 })
 
+const mobileGenderText = computed(() => genderText.value.replace('（不保證性別）', ''))
+const isIncubationTemperature = computed(() => props.item?.GenderType === '溫控')
+
 const birthdayText = computed(() => {
   const b = normalizeSpace(props.item?.Birthday || '')
   return b || '未登錄'
+})
+
+const geneText = computed(() => {
+  if (!Array.isArray(props.item?.Genes)) return ''
+  return props.item.Genes.filter(Boolean).join(' · ')
 })
 
 const uploadedText = computed(() => {
@@ -71,21 +74,23 @@ const onImgLoad = () => {
 </script>
 
 <template>
-  <NuxtLink
-    :to="linkTo"
-    class="flip-card card slim-card"
-    style="text-decoration: none; color: inherit"
-  >
+  <article class="flip-card card slim-card">
+    <NuxtLink
+      no-prefetch
+      :to="linkTo"
+      class="flip-card-link"
+      :aria-label="`查看 ${item.Morph} 詳情`"
+    >
+      <span class="sr-only">查看 {{ item.Morph }} 詳情</span>
+    </NuxtLink>
+
     <div class="flip-inner">
-      <!-- 正面 -->
       <div class="flip-face flip-front">
         <div v-if="item.Status === 'Sold'" class="sold-stamp">SOLD</div>
 
         <div style="position: relative">
-          <!-- 桌機限定：互動格線 hover 特效 -->
-          <InteractiveGridPattern class="igp-overlay" />
+          <InteractiveGridPattern v-if="showInteractiveGrid" class="igp-overlay" />
 
-          <!-- 桌機：背面按鈕已選擇時，正面也要有標示（手機不顯示，避免重複） -->
           <div
             v-if="isWishlisted || isCompared"
             class="flip-front-indicators dt-only"
@@ -93,31 +98,6 @@ const onImgLoad = () => {
           >
             <span v-if="isWishlisted" class="flip-indicator">已收藏</span>
             <span v-if="isCompared" class="flip-indicator">比較中</span>
-          </div>
-
-          <!-- 手機/無 hover：按鈕維持在照片上（因為沒有背面翻牌） -->
-          <div class="card-action-stack flip-front-actions">
-            <button
-              v-if="showWishlist"
-              type="button"
-              class="btn-app btn-app--ghost btn-app--xs btn-app--pill card-action-btn"
-              :class="{ 'card-action-btn--active': isWishlisted }"
-              @click.stop.prevent="onToggleWishlist(item.ID)"
-            >
-              收藏
-            </button>
-
-            <button
-              v-if="showCompare && item.Status !== 'Sold'"
-              type="button"
-              class="btn-app btn-app--ghost btn-app--xs btn-app--pill card-action-btn"
-              :class="{ 'card-action-btn--active': isCompared }"
-              :disabled="compareDisabled"
-              @click.stop.prevent="onToggleCompare(item.ID)"
-              :title="isCompared ? '移出比較' : compareDisabled ? '最多 3 隻' : '加入比較'"
-            >
-              加入比較
-            </button>
           </div>
 
           <img
@@ -149,31 +129,32 @@ const onImgLoad = () => {
 
         <div class="card-body slim-body">
           <h3 class="slim-title" style="margin: 0">{{ item.Morph }}</h3>
+          <div v-if="showMobileMeta" class="mobile-card-meta" aria-label="種群資料">
+            <span v-if="genderText !== '未登錄'" class="mobile-card-meta__item">
+              性別 {{ mobileGenderText }}
+              <span v-if="isIncubationTemperature" class="mobile-card-meta__note">
+                （不保證性別）
+              </span>
+            </span>
+            <span v-if="birthdayText !== '未登錄'" class="mobile-card-meta__item">
+              生日 {{ birthdayText }}
+            </span>
+            <span
+              v-if="showMobileGenes && geneText"
+              class="mobile-card-meta__item mobile-card-meta__item--gene"
+            >
+              {{ geneText }}
+            </span>
+          </div>
           <div class="slim-price-row" style="margin-top: 4px">
             <template v-if="item.Status === 'Sold'">
               <span class="status-badge s-sold">售出</span>
-              <button
-                type="button"
-                class="find-similar-btn"
-                @click.stop.prevent="findSimilar"
-                aria-label="找相似在售個體"
-              >
-                找相似 →
-              </button>
             </template>
             <template v-else-if="item.Status === 'Auction' && hasAuction">
               <span class="status-badge s-auction">競標中</span>
             </template>
             <template v-else-if="item.Status === 'SelfKeep'">
               <span v-if="showStatusBadge" class="status-badge s-nfs">自留</span>
-              <button
-                type="button"
-                class="find-similar-btn"
-                @click.stop.prevent="findSimilar"
-                aria-label="找相似在售個體"
-              >
-                找相似 →
-              </button>
             </template>
             <template v-else>
               <span v-if="store.isExhibitionMode" class="exhibition-note">
@@ -185,7 +166,6 @@ const onImgLoad = () => {
         </div>
       </div>
 
-      <!-- 背面（僅桌機 hover 才會翻到） -->
       <div class="flip-face flip-back" aria-hidden="true">
         <div class="flip-back-inner">
           <div class="flip-back-title">{{ item.Morph }}</div>
@@ -205,56 +185,82 @@ const onImgLoad = () => {
             <span class="k">價格</span>
             <span class="v">{{ priceText }}</span>
           </div>
-
-          <div class="flip-back-actions">
-            <button
-              v-if="showWishlist"
-              type="button"
-              class="btn-app btn-app--ghost btn-app--xs btn-app--pill flip-action-btn"
-              :class="{ 'flip-action-btn--active': isWishlisted }"
-              @click.stop.prevent="onToggleWishlist(item.ID)"
-            >
-              收藏
-            </button>
-
-            <button
-              v-if="showCompare && item.Status !== 'Sold'"
-              type="button"
-              class="btn-app btn-app--ghost btn-app--xs btn-app--pill flip-action-btn"
-              :class="{ 'flip-action-btn--active': isCompared }"
-              :disabled="compareDisabled"
-              @click.stop.prevent="onToggleCompare(item.ID)"
-              :title="isCompared ? '移出比較' : compareDisabled ? '最多 3 隻' : '加入比較'"
-            >
-              加入比較
-            </button>
-          </div>
         </div>
       </div>
     </div>
-  </NuxtLink>
+
+    <!-- 控制項與整卡連結同層，保持鍵盤與觸控操作獨立。 -->
+    <div class="card-action-stack flip-front-actions">
+      <button
+        v-if="showWishlist"
+        type="button"
+        class="btn-app btn-app--ghost btn-app--xs btn-app--pill card-action-btn"
+        :class="{ 'card-action-btn--active': isWishlisted }"
+        @click="onToggleWishlist(item.ID)"
+      >
+        收藏
+      </button>
+
+      <button
+        v-if="showCompare && item.Status !== 'Sold'"
+        type="button"
+        class="btn-app btn-app--ghost btn-app--xs btn-app--pill card-action-btn"
+        :class="{ 'card-action-btn--active': isCompared }"
+        :disabled="compareDisabled"
+        @click="onToggleCompare(item.ID)"
+        :title="isCompared ? '移出比較' : compareDisabled ? '最多 3 隻' : '加入比較'"
+      >
+        加入比較
+      </button>
+    </div>
+
+    <div class="flip-back-actions flip-back-actions--overlay">
+      <button
+        v-if="showWishlist"
+        type="button"
+        class="btn-app btn-app--ghost btn-app--xs btn-app--pill flip-action-btn"
+        :class="{ 'flip-action-btn--active': isWishlisted }"
+        @click="onToggleWishlist(item.ID)"
+      >
+        收藏
+      </button>
+
+      <button
+        v-if="showCompare && item.Status !== 'Sold'"
+        type="button"
+        class="btn-app btn-app--ghost btn-app--xs btn-app--pill flip-action-btn"
+        :class="{ 'flip-action-btn--active': isCompared }"
+        :disabled="compareDisabled"
+        @click="onToggleCompare(item.ID)"
+        :title="isCompared ? '移出比較' : compareDisabled ? '最多 3 隻' : '加入比較'"
+      >
+        加入比較
+      </button>
+    </div>
+  </article>
 </template>
 
 <style scoped>
 .flip-card {
+  position: relative;
   perspective: 1200px;
 }
 
-/* 已售/自留卡的「找相似」出口（#U4）：色彩沿用 --pri（#27 已確保兩模式對比 AA） */
-.find-similar-btn {
-  margin-left: 8px;
-  padding: 0;
-  background: none;
-  border: none;
-  font-size: 0.78rem;
-  font-weight: 700;
-  color: var(--pri);
-  cursor: pointer;
-  vertical-align: middle;
+.flip-card-link {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  color: inherit;
+  text-decoration: none;
 }
-.find-similar-btn:hover,
-.find-similar-btn:focus-visible {
-  text-decoration: underline;
+
+.flip-card-link:focus-visible {
+  outline: 3px solid var(--pri);
+  outline-offset: 3px;
+}
+
+.mobile-card-meta {
+  display: none;
 }
 
 /* 展場模式：價格改顯示提示文字（#task4） */
@@ -272,7 +278,7 @@ const onImgLoad = () => {
 }
 
 /* will-change 只在 hover 時才啟用，避免所有卡片同時佔用 GPU 合成層 */
-@media (hover: hover) and (pointer: fine) {
+@media (min-width: 769px) and (hover: hover) and (pointer: fine) {
   .flip-card:hover .flip-inner {
     will-change: transform;
   }
@@ -288,6 +294,10 @@ const onImgLoad = () => {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .flip-inner {
+    transition: none;
+  }
+
   .flip-img {
     transition: none;
     opacity: 1;
@@ -358,6 +368,15 @@ const onImgLoad = () => {
   pointer-events: auto;
 }
 
+.flip-back-actions--overlay {
+  display: none;
+  position: absolute;
+  right: 14px;
+  bottom: 12px;
+  left: 14px;
+  z-index: 30;
+}
+
 .flip-action-btn {
   opacity: 1;
 }
@@ -392,7 +411,7 @@ const onImgLoad = () => {
 .igp-overlay {
   display: none;
 }
-@media (hover: hover) and (pointer: fine) {
+@media (min-width: 769px) and (hover: hover) and (pointer: fine) {
   .igp-overlay {
     display: block;
     position: absolute;
@@ -405,7 +424,7 @@ const onImgLoad = () => {
 .dt-only {
   display: none;
 }
-@media (hover: hover) and (pointer: fine) {
+@media (min-width: 769px) and (hover: hover) and (pointer: fine) {
   .dt-only {
     display: flex;
   }
@@ -427,6 +446,33 @@ const onImgLoad = () => {
 
 /* 手機/無 hover：白底黑字，已選擇維持主色 */
 @media (hover: none), (pointer: coarse), (max-width: 768px) {
+  .mobile-card-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 3px 8px;
+    margin-top: 5px;
+    color: var(--txt);
+    font-size: 0.7rem;
+    line-height: 1.35;
+    opacity: 0.75;
+  }
+
+  .mobile-card-meta__item {
+    min-width: 0;
+  }
+
+  .mobile-card-meta__note {
+    display: block;
+    white-space: nowrap;
+  }
+
+  .mobile-card-meta__item--gene {
+    flex-basis: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
   .flip-front-actions .card-action-btn {
     opacity: 1;
     padding: 2px 7px;
@@ -446,7 +492,7 @@ const onImgLoad = () => {
 }
 
 /* 僅限桌機：hover 翻牌 */
-@media (hover: hover) and (pointer: fine) {
+@media (min-width: 769px) and (hover: hover) and (pointer: fine) {
   .flip-back {
     display: block;
   }
@@ -456,8 +502,14 @@ const onImgLoad = () => {
     display: none;
   }
 
-  .flip-card:hover .flip-inner {
+  .flip-card:hover .flip-inner,
+  .flip-card:focus-within .flip-inner {
     transform: rotateY(180deg);
+  }
+
+  .flip-card:hover .flip-back-actions--overlay,
+  .flip-card:focus-within .flip-back-actions--overlay {
+    display: flex;
   }
 }
 </style>

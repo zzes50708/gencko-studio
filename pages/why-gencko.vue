@@ -47,20 +47,25 @@ const overviewBlocks = [
   }
 ]
 
-const nextActions = [
-  { label: '新手入門', to: '/start-here' },
-  { label: '購買流程', to: '/buying-guide' },
-  { label: '進入商店', to: '/shop', primary: true }
+const purchasePaths = [
+  {
+    label: '了解購買流程',
+    body: '先看挑選、詢問、確認與交付的現有流程說明。',
+    to: '/buying-guide'
+  },
+  { label: '認識 Gencko', body: '了解工作室的品牌理念、服務與專業背景。', to: '/about' },
+  { label: '查看可選個體', body: '回到現有商品頁確認個體資料與頁面所列條件。', to: '/shop' },
+  { label: '聯絡與常見問題', body: '從常見問題找到客服方式與購買前常見解答。', to: '/faq' }
 ]
 
 useHead({
-  title: '信任保證｜Gencko 專業的地方在哪',
+  title: '品牌與購買｜選擇 Gencko 前先了解',
   meta: [
     {
       name: 'description',
       content: 'Gencko 有完整的個體資料、飼養教學、特寵醫院資訊乃至繁殖說明，讓你看完再決定。'
     },
-    { property: 'og:title', content: '信任保證｜Gencko 專業的地方在哪' },
+    { property: 'og:title', content: '品牌與購買｜選擇 Gencko 前先了解' },
     {
       property: 'og:description',
       content: '個體資料、飼養教學、特寵醫院資訊乃至繁殖說明，讓你看完再決定。'
@@ -72,7 +77,11 @@ useHead({
 </script>
 
 <template>
-  <div class="trust-page">
+  <div class="trust-page" data-testid="trust-evidence-map">
+    <div class="trust-document-meta" aria-label="品牌資料說明">
+      <span>GENCKO BRAND FILE</span>
+      <span>DATA / CARE / CONTINUITY</span>
+    </div>
     <PageHero
       kicker="WHY GENCKO"
       title="買之前該知道的，我們都先給你看"
@@ -100,8 +109,29 @@ useHead({
       </div>
     </PageHero>
 
+    <section class="purchase-hub" aria-labelledby="purchase-hub-title">
+      <div class="hub-heading">
+        <span>PURCHASE PATH</span>
+        <h2 id="purchase-hub-title">從品牌、流程到個體資料，一次找到入口</h2>
+      </div>
+      <div class="purchase-grid">
+        <NuxtLink
+          no-prefetch
+          v-for="item in purchasePaths"
+          :key="item.to"
+          :to="item.to"
+          class="purchase-card card"
+        >
+          <h3>{{ item.label }}</h3>
+          <p>{{ item.body }}</p>
+          <span aria-hidden="true">前往 →</span>
+        </NuxtLink>
+      </div>
+    </section>
+
     <section class="overview-grid">
       <NuxtLink
+        no-prefetch
         v-for="item in overviewBlocks"
         :key="item.tag"
         :to="item.to"
@@ -119,12 +149,6 @@ useHead({
         </div>
       </NuxtLink>
     </section>
-
-    <NextCta
-      title="看完了嗎"
-      lead="提供你飼養過程最全面的陪伴，接下來看你了"
-      :actions="nextActions"
-    />
   </div>
 </template>
 
@@ -132,12 +156,98 @@ useHead({
 .trust-page {
   max-width: 1120px;
   margin: 0 auto;
-  padding: 4px 12px 40px;
+  padding: 4px 18px 48px;
+}
+
+.trust-document-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 0 0 14px;
+  border-bottom: 1px solid var(--bd);
+  color: var(--txt-muted);
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+}
+
+.trust-document-meta span:first-child {
+  color: var(--pri);
 }
 
 .card {
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-card);
+}
+
+.purchase-hub {
+  position: relative;
+  overflow: hidden;
+  margin-bottom: 22px;
+  padding: clamp(20px, 3vw, 32px);
+  border: 1px solid var(--bd);
+  border-radius: calc(var(--radius-lg) + 8px);
+  background: linear-gradient(130deg, var(--pri-glow-soft), transparent 55%), var(--card-bg);
+  box-shadow: var(--shadow-card);
+}
+
+.hub-heading {
+  display: grid;
+  gap: 5px;
+  margin-bottom: 12px;
+}
+
+.hub-heading span {
+  color: var(--pri);
+  font-size: 0.74rem;
+  font-weight: 900;
+  letter-spacing: 0.16em;
+}
+
+.hub-heading h2 {
+  margin: 0;
+  color: var(--txt);
+  max-width: 720px;
+  font-size: clamp(1.5rem, 3vw, 2.35rem);
+  line-height: 1.1;
+  letter-spacing: -0.035em;
+}
+
+.purchase-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.purchase-card {
+  display: grid;
+  gap: 8px;
+  min-height: 138px;
+  padding: 16px;
+  color: var(--txt);
+  text-decoration: none;
+  background: var(--card-bg);
+  border: 1px solid var(--bd);
+  transition:
+    transform var(--transition),
+    border-color var(--transition),
+    box-shadow var(--transition);
+}
+
+.purchase-card h3,
+.purchase-card p {
+  margin: 0;
+}
+
+.purchase-card p {
+  color: var(--txt-muted);
+  line-height: 1.55;
+}
+
+.purchase-card span {
+  color: var(--pri);
+  font-size: 0.82rem;
+  font-weight: 850;
 }
 
 /* ---------- Hero 內的信任理由（slot 內容，樣式留在頁面） ---------- */
@@ -207,6 +317,7 @@ useHead({
 .overview-card {
   display: grid;
   gap: 8px;
+  min-height: var(--control-min-height);
   padding: 18px;
   background: var(--card-bg);
   color: inherit;
@@ -215,6 +326,12 @@ useHead({
     transform var(--transition),
     border-color var(--transition),
     box-shadow var(--transition);
+}
+
+.purchase-card:focus-visible,
+.overview-card:focus-visible {
+  outline: 3px solid var(--pri);
+  outline-offset: 3px;
 }
 
 .overview-head {
@@ -271,7 +388,7 @@ useHead({
   user-select: none;
 }
 
-@media (hover: hover) and (pointer: fine) {
+@media (min-width: 768px) and (hover: hover) and (pointer: fine) {
   .reason-row:hover,
   .overview-card:hover {
     border-color: var(--bd-hover);
@@ -288,12 +405,16 @@ useHead({
   .hero-reasons {
     gap: 10px;
   }
+
+  .purchase-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 640px) {
   .trust-page {
     font-size: 13px;
-    padding: 4px 12px 32px;
+    padding: 4px 10px 32px;
   }
 
   .hero-reasons {
@@ -303,6 +424,18 @@ useHead({
   .overview-grid {
     grid-template-columns: 1fr;
     gap: 12px;
+  }
+
+  .purchase-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .purchase-hub {
+    padding: 18px 14px;
+  }
+
+  .purchase-card {
+    min-height: 0;
   }
 
   .overview-card {
@@ -321,6 +454,7 @@ useHead({
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .purchase-card,
   .reason-row,
   .overview-card {
     transition: none;
@@ -330,5 +464,224 @@ useHead({
   .overview-card:hover {
     transform: none;
   }
+}
+/* 品牌信任頁採用清晰的目錄式結構，保留原始內容與連結。 */
+.trust-page,
+.trust-hero,
+.purchase-hub,
+.purchase-card,
+.reason-row,
+.overview-card {
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.trust-hero h1,
+.purchase-title,
+.overview-title,
+.reason-head {
+  font-family: 'Noto Serif TC', serif;
+  letter-spacing: -0.035em;
+}
+
+.trust-hero,
+.purchase-hub {
+  background-image: none;
+}
+
+.overview-card img {
+  aspect-ratio: 1;
+  object-fit: cover;
+}
+
+/* 品牌信任資訊使用連續編輯格線，避免承諾內容變成一疊宣傳卡。 */
+.purchase-hub {
+  padding: 30px 0;
+  border-width: 1px 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.hero-reasons,
+.purchase-grid,
+.overview-grid {
+  gap: 0;
+  border-top: 1px solid var(--bd);
+  border-left: 1px solid var(--bd);
+}
+
+.reason-row,
+.purchase-card,
+.overview-card {
+  border-width: 0 1px 1px 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.reason-check,
+.overview-tag {
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.reason-check {
+  border: 0;
+  background: var(--ok-text);
+  color: #fff;
+}
+
+.overview-tag {
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+.preview-shell {
+  border-radius: 0;
+  background: transparent;
+}
+
+@media (min-width: 768px) and (hover: hover) and (pointer: fine) {
+  .reason-row:hover,
+  .overview-card:hover {
+    transform: none;
+    border-color: var(--pri);
+    background: transparent;
+    box-shadow: none;
+  }
+}
+
+@media (min-width: 768px) and (hover: hover) and (pointer: fine) {
+  .reason-row:hover,
+  .overview-card:hover {
+    transform: none;
+    box-shadow: none;
+  }
+}
+/* 品牌資訊以連續欄位呈現，保留預覽圖片與明確入口。 */
+.trust-page {
+  padding: 8px 18px 28px;
+}
+.trust-page :deep(.page-hero) {
+  padding: 22px 0;
+  margin-bottom: 20px;
+  border: 0;
+}
+.trust-page :deep(.page-title) {
+  font-size: clamp(2rem, 4.5vw, 3.5rem);
+  line-height: 1.35;
+}
+.hero-reasons,
+.purchase-grid,
+.overview-grid {
+  border: 0;
+  gap: 0 24px;
+}
+.reason-row,
+.purchase-card,
+.overview-card {
+  border: 0;
+  border-bottom: 1px solid var(--bd);
+  padding: 16px 0;
+  min-height: 0;
+  background: transparent;
+  box-shadow: none;
+}
+.reason-row:hover,
+.overview-card:hover {
+  border-color: var(--bd);
+}
+.reason-check {
+  color: var(--pri);
+  background: transparent;
+}
+.purchase-hub {
+  padding: 20px 0;
+  margin: 0;
+  border: 0;
+}
+.hub-heading h2 {
+  font-size: clamp(1.4rem, 2.5vw, 2rem);
+  line-height: 1.45;
+}
+.overview-grid {
+  margin-top: 18px;
+}
+.overview-title {
+  font-size: 1.4rem;
+  line-height: 1.5;
+}
+.overview-cta,
+.purchase-card > span {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  width: fit-content;
+  text-decoration: underline;
+  text-underline-offset: 5px;
+  white-space: nowrap;
+}
+.preview-shell {
+  border: 0;
+  margin-top: 12px;
+}
+.overview-card img {
+  aspect-ratio: auto;
+  object-fit: contain;
+}
+.trust-page :deep(.page-hero) {
+  background: transparent !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+}
+.trust-page :deep(.page-title) {
+  border: 0;
+  padding-left: 0;
+  text-align: left;
+}
+.reason-head,
+.reason-body {
+  text-align: left;
+}
+.hero-reasons {
+  align-self: stretch;
+}
+.trust-page h2,
+.trust-page h3 {
+  text-align: left;
+}
+.trust-page :deep(.page-hero) {
+  background: transparent !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+}
+.trust-page :deep(.page-title) {
+  border: 0;
+  padding-left: 0;
+  text-align: left;
+}
+.reason-head,
+.reason-body {
+  text-align: left;
+}
+.hero-reasons {
+  align-self: stretch;
+}
+.trust-page h2,
+.trust-page h3 {
+  text-align: left;
+}
+/* 本頁返回與次要操作使用同一按鈕形式。 */
+:deep(.app-back-btn),
+.btn-app {
+  border-radius: 2px;
+  min-height: 44px;
+  box-shadow: none;
+  font-family: var(--font-body-zh);
+}
+:deep(.app-back-btn) {
+  border: 1px solid var(--txt);
 }
 </style>

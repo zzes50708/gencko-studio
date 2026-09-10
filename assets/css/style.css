@@ -23,8 +23,8 @@
   --pri: #e8440a;
   --pri-dark: #c0300a;
   --pri-light: #ff5a1f;
-  --pri-glow: rgba(232, 68, 10, 0.4);
-  --pri-glow-soft: rgba(232, 68, 10, 0.15);
+  --pri-glow: rgba(232, 68, 10, 0.22);
+  --pri-glow-soft: rgba(232, 68, 10, 0.08);
   /* 按鈕底色（橘底白字需 WCAG AA ≥4.5:1）：兩模式皆用較深的 #CC3B08（白字 5.0:1） */
   --pri-btn: #cc3b08;
   /* 語意綠（成功/新手/保固）：深底用較亮、白底需 ≥4.5，故日間覆寫；fill 兩模式皆深綠供白字 */
@@ -32,11 +32,11 @@
   --ok-fill: #2e7d32;
 
   /* ── 背景層 ── */
-  --bg-dark: #0d0b0a; /* 暖調極深黑 */
-  --card-bg: rgba(28, 20, 14, 0.86);
+  --bg-dark: #11110f;
+  --card-bg: rgba(25, 24, 21, 0.96);
   /* 按鈕用實色（避免透明度/半透明背景） */
-  --card-bg-solid: #1c140e;
-  --gb-inner-bg: #130d08;
+  --card-bg-solid: #191815;
+  --gb-inner-bg: #191815;
   /* 首頁情境卡（快速導覽）硬邊陰影：深色模式用橘色凸起感 */
   --scenario-shadow: rgba(255, 110, 10, 0.32);
   --bd-solid: #3a2f28;
@@ -45,21 +45,33 @@
   --btn-secondary-active-bg: #2b1d14;
 
   /* ── 文字 ── */
-  --txt: #f0ede8; /* 帶暖調的白 */
-  --txt-muted: #a3a3a3; /* 次要/說明文字（深底 ≥7:1）；日間覆寫為深灰 */
+  --txt: #f4f1e9;
+  --txt-muted: #a6a198;
 
   /* ── 邊框 ── */
   --bd: rgba(255, 255, 255, 0.08);
   --bd-hover: rgba(232, 68, 10, 0.45);
 
   /* ── 系統工具變數 ── */
-  --radius-sm: 8px;
-  --radius-md: 12px;
-  --radius-lg: 16px;
+  --radius-sm: 3px;
+  --radius-md: 6px;
+  --radius-lg: 10px;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --control-min-height: 44px;
+  --focus-ring: 2px solid var(--pri);
+  --focus-offset: 3px;
   --transition: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-  --shadow-card: 0 2px 12px rgba(0, 0, 0, 0.4), 0 1px 3px rgba(0, 0, 0, 0.3);
-  --shadow-hover: 0 8px 28px rgba(0, 0, 0, 0.5), 0 0 0 1px var(--bd-hover);
-  --shadow-btn: 0 4px 14px var(--pri-glow);
+  --shadow-card: 0 1px 0 rgba(255, 255, 255, 0.05);
+  --shadow-hover: 0 18px 50px rgba(0, 0, 0, 0.22);
+  --shadow-btn: none;
+
+  /* ── 全站字型契約：宋體負責標題，黑體負責閱讀與操作 ── */
+  --font-heading-zh: 'Noto Serif TC', 'Songti TC', serif;
+  --font-body-zh: 'Noto Sans TC', sans-serif;
 }
 
 /* 日間模式：暖白底視覺，所有關鍵變數一起覆寫 */
@@ -68,24 +80,24 @@ html.day-mode {
      深色模式仍保留亮橘 #E8440A（深底 4.92:1）。裝飾性橘（光暈 rgba）不受影響。 */
   --pri: #cc3b08;
   /* 卡片/區塊背景 */
-  --card-bg: rgba(255, 255, 255, 0.92);
+  --card-bg: rgba(255, 255, 255, 0.96);
   --card-bg-solid: #ffffff;
   --gb-inner-bg: #ffffff;
   /* 文字 */
-  --txt: #1a1210;
-  --txt-muted: #666666; /* 白底次要文字 ≥5:1（取代寫死的 #888/#999/#aaa）；於 #eee 灰底亦 ≥5 */
+  --txt: #171714;
+  --txt-muted: #6f6a63;
   --ok-text: #2e7d32; /* 白底綠字 ≥4.5（深色模式用較亮的 #4CAF50） */
   /* 邊框 */
-  --bd: rgba(0, 0, 0, 0.09);
+  --bd: rgba(23, 23, 20, 0.14);
   --bd-hover: rgba(232, 68, 10, 0.4);
-  --bd-solid: #dddddd;
+  --bd-solid: #d8d3ca;
   --bd-hover-solid: rgba(232, 68, 10, 0.55);
   /* 按鈕 */
-  --btn-secondary-bg: #f5f5f5;
-  --btn-secondary-active-bg: #eeeeee;
+  --btn-secondary-bg: #ebe7df;
+  --btn-secondary-active-bg: #e2ddd3;
   /* 陰影（日間降低對比） */
-  --shadow-card: 0 2px 12px rgba(0, 0, 0, 0.1), 0 1px 3px rgba(0, 0, 0, 0.06);
-  --shadow-hover: 0 8px 28px rgba(0, 0, 0, 0.14), 0 0 0 1px var(--bd-hover);
+  --shadow-card: 0 1px 0 rgba(23, 23, 20, 0.08);
+  --shadow-hover: 0 20px 54px rgba(35, 31, 25, 0.12);
   /* 首頁情境卡（快速導覽）硬邊陰影：亮色模式用黑色凸起感 */
   --scenario-shadow: rgba(0, 0, 0, 0.3);
 }
@@ -113,6 +125,7 @@ html.day-mode .btn-app--secondary {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  min-height: var(--control-min-height);
   gap: 8px;
   font-weight: 800;
   letter-spacing: 0.2px;
@@ -120,7 +133,8 @@ html.day-mode .btn-app--secondary {
   position: relative;
   overflow: hidden;
   border-radius: var(--radius-sm);
-  font-family: inherit;
+  font-family: var(--font-body-zh);
+  white-space: nowrap;
   transition:
     transform var(--transition),
     box-shadow var(--transition),
@@ -131,7 +145,7 @@ html.day-mode .btn-app--secondary {
 }
 
 .btn-app--pill {
-  border-radius: 999px;
+  border-radius: 2px;
 }
 .btn-app--sm {
   padding: 8px 12px;
@@ -167,42 +181,21 @@ html.day-mode .btn-app--secondary {
   transform: scale(0.98);
 }
 
-/* Primary（Shimmer） */
+/* 主要操作以品牌色與清楚邊界識別，不使用掃光或浮動。 */
 .btn-app--primary {
   background: var(--pri-btn);
   color: #fff;
   border-color: var(--bd-solid);
-  box-shadow:
-    0 6px 22px var(--pri-glow),
-    0 2px 6px rgba(0, 0, 0, 0.3);
+  box-shadow: none;
 }
 .btn-app--primary::after {
-  content: '';
-  position: absolute;
-  top: -50%;
-  left: -60%;
-  width: 40%;
-  height: 200%;
-  transform: rotate(25deg);
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.55), transparent);
-  opacity: 0;
+  content: none;
 }
 @media (hover: hover) and (pointer: fine) {
   .btn-app--primary:hover {
-    transform: translateY(-2px);
-    box-shadow:
-      0 10px 28px var(--pri-glow),
-      0 2px 8px rgba(0, 0, 0, 0.3);
-  }
-  /* 桌機預設就有低頻 Shimmer（讓使用者不需要 hover 也能看到動畫） */
-  .btn-app--primary::after {
-    opacity: 0.22;
-    animation: btnShimmer 3.8s ease-in-out infinite;
-  }
-  /* hover 時加強亮度與頻率 */
-  .btn-app--primary:hover::after {
-    opacity: 0.9;
-    animation-duration: 1.6s;
+    transform: none;
+    box-shadow: none;
+    background: color-mix(in srgb, var(--pri-btn) 90%, #000);
   }
 }
 .btn-app--primary:active {
@@ -224,12 +217,12 @@ html.day-mode .btn-app--secondary {
   }
 }
 
-/* Secondary（Ripple：以 CSS 簡化版呈現，手機也可用） */
+/* 次要操作維持描邊與低干擾底色。 */
 .btn-app--secondary {
   background: var(--btn-secondary-bg);
   color: var(--txt);
   border-color: var(--bd-solid);
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.18);
+  box-shadow: none;
 }
 @media (hover: hover) and (pointer: fine) {
   .btn-app--secondary:hover {
@@ -271,19 +264,27 @@ html,
 body {
   overflow-x: hidden;
   width: 100%;
-  font-family: 'Noto Sans TC', sans-serif;
+  font-family: var(--font-body-zh);
   margin: 0;
   /* 🌟 導入底部安全區，預留給導航列與系統海苔條 */
   padding-bottom: calc(80px + env(safe-area-inset-bottom, 0px));
-  background-color: transparent;
+  background-color: var(--bg-dark);
   color: var(--txt);
   min-height: 100vh;
+  min-height: 100dvh;
   transition: color 0.3s ease-in-out;
   position: relative;
   z-index: 0;
 }
 
-/* ── 純 CSS 背景（蜂巢六邊形，不依賴 CDN 圖片）── */
+/* 中文頁面的大標題與章節標題預設使用宋體；局部特殊場景可用自身明確規格覆寫。 */
+h1,
+h2,
+h3 {
+  font-family: var(--font-heading-zh);
+}
+
+/* 極簡精品底色：不使用重複圖騰，讓攝影與內容成為視覺主體。 */
 body::before {
   content: '';
   position: fixed;
@@ -293,30 +294,23 @@ body::before {
   height: 100vh;
   z-index: -1;
   pointer-events: none;
-  transition: background-color 0.4s ease;
-
-  background-color: #0d0b0a;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='70' height='120'%3E%3Cpolygon points='35,0 70,20 70,60 35,80 0,60 0,20' fill='rgba(255,255,255,0.06)' stroke='rgba(255,110,10,0.15)' stroke-width='1.2' stroke-linejoin='round'/%3E%3Cpolygon points='0,60 35,80 35,120 0,140 -35,120 -35,60' fill='rgba(255,255,255,0.06)' stroke='rgba(255,110,10,0.15)' stroke-width='1.2' stroke-linejoin='round'/%3E%3Cpolygon points='70,60 105,80 105,120 70,140 35,120 35,80' fill='rgba(255,255,255,0.06)' stroke='rgba(255,110,10,0.15)' stroke-width='1.2' stroke-linejoin='round'/%3E%3C/svg%3E");
-  background-size: 70px 120px;
-  background-repeat: repeat;
+  background: #11110f;
+  transition: background-color 0.35s ease;
 }
 
-/* 日間模式：暖白底 + 淡橘蜂巢（與深色模式同構，降低對比） */
+/* 日間模式使用帶紙張溫度的暖白，而不是純白科技模板。 */
 html.day-mode body::before {
-  background-color: #ffffff;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='70' height='120'%3E%3Cpolygon points='35,0 70,20 70,60 35,80 0,60 0,20' fill='none' stroke='rgba(255,110,10,0.10)' stroke-width='1.2' stroke-linejoin='round'/%3E%3Cpolygon points='0,60 35,80 35,120 0,140 -35,120 -35,60' fill='none' stroke='rgba(255,110,10,0.10)' stroke-width='1.2' stroke-linejoin='round'/%3E%3Cpolygon points='70,60 105,80 105,120 70,140 35,120 35,80' fill='none' stroke='rgba(255,110,10,0.10)' stroke-width='1.2' stroke-linejoin='round'/%3E%3C/svg%3E");
-  background-size: 70px 120px;
-  background-repeat: repeat;
+  background: #ffffff;
 }
 
 /* 🌟 Body 上方內距加上系統頂部安全區 (瀏海) */
 body {
-  padding-top: calc(90px + env(safe-area-inset-top, 0px));
+  padding-top: calc(64px + env(safe-area-inset-top, 0px));
 }
 .cont {
-  max-width: 1300px;
+  max-width: 1380px;
   margin: 0 auto;
-  padding: 0 15px 20px 15px;
+  padding: 0 clamp(18px, 4vw, 64px) 32px;
   position: relative;
   z-index: 2;
   width: 100%;
@@ -2144,10 +2138,12 @@ html.day-mode .care-h {
   text-shadow: none;
 }
 html.day-mode .hero-content h1 {
-  color: #d84315 !important;
+  color: var(--txt) !important;
+  text-shadow: none !important;
 }
 html.day-mode .hero-content p {
-  color: #222 !important;
+  color: var(--txt-muted) !important;
+  text-shadow: none !important;
 }
 
 html.day-mode .hero-box {
@@ -2157,11 +2153,11 @@ html.day-mode .hero-box {
   backdrop-filter: blur(8px);
 }
 html.day-mode .hero-main-title {
-  color: #d84315;
-  text-shadow: 0 0 25px rgba(216, 67, 21, 0.3);
+  color: var(--txt);
+  text-shadow: none;
 }
 html.day-mode .hero-content p {
-  color: #444;
+  color: var(--txt-muted);
   text-shadow: none;
 }
 html.day-mode .btn-hero.btn-soc {
@@ -2452,7 +2448,7 @@ html.day-mode .std-desc {
   background-image: linear-gradient(90deg, #1a1410 0%, #2c1f16 40%, #1a1410 100%);
   background-size: 200% 100%;
   animation: shimmer 1.8s ease-in-out infinite;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
 }
 @keyframes shimmer {
   0% {
@@ -2465,7 +2461,7 @@ html.day-mode .std-desc {
 .sk-card {
   height: 100%;
   border: 1px solid var(--bd);
-  border-radius: 12px;
+  border-radius: var(--radius-md);
   overflow: hidden;
   background: var(--card-bg);
   display: flex;
@@ -2477,7 +2473,7 @@ html.day-mode .std-desc {
   flex-shrink: 0;
 }
 .sk-body {
-  padding: 18px;
+  padding: var(--space-4);
   flex: 1;
   display: flex;
   flex-direction: column;
@@ -2715,14 +2711,12 @@ html.day-mode .skeleton {
   position: fixed;
   bottom: calc(20px + env(safe-area-inset-bottom, 0px));
   right: 20px;
-  background: linear-gradient(135deg, var(--pri), var(--pri-dark));
+  background: var(--pri-btn);
   color: #fff;
   padding: 13px 22px;
-  border-radius: 50px;
+  border-radius: 2px;
   font-weight: 700;
-  box-shadow:
-    0 6px 22px var(--pri-glow),
-    0 2px 6px rgba(0, 0, 0, 0.3);
+  box-shadow: none;
   z-index: 9999;
   display: flex;
   align-items: center;
@@ -2735,10 +2729,8 @@ html.day-mode .skeleton {
   letter-spacing: 0.2px;
 }
 .floating-inquire-btn:hover {
-  transform: translateY(-2px) scale(1.04);
-  box-shadow:
-    0 10px 28px var(--pri-glow),
-    0 2px 8px rgba(0, 0, 0, 0.3);
+  transform: none;
+  box-shadow: none;
 }
 
 html.day-mode .scenario-card {
@@ -2818,7 +2810,51 @@ html.day-mode .g-count {
 
 /* ── 全域 focus-visible：鍵盤導覽焦點環（WCAG 2.4.7）──────────────────────── */
 :focus-visible {
-  outline: 2px solid var(--pri);
-  outline-offset: 2px;
+  outline: var(--focus-ring);
+  outline-offset: var(--focus-offset);
   border-radius: 3px;
+}
+
+/* 使用者要求降低動態效果時，保留狀態切換但移除可感知的動畫負擔。 */
+.common-document-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  max-width: 1180px;
+  margin: 0 auto 20px;
+  padding: 0 0 14px;
+  border-bottom: 1px solid var(--bd);
+  color: var(--txt-muted);
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  line-height: 1.3;
+}
+
+.common-document-meta span:first-child {
+  color: var(--pri);
+}
+
+@media (max-width: 640px) {
+  .common-document-meta {
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 16px;
+  }
+}
+
+/* 使用者要求降低動態效果時，保留狀態切換但移除可感知的動畫負擔。 */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto !important;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
 }

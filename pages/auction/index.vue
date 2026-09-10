@@ -1,12 +1,10 @@
 <script setup>
 import { computed, ref, onMounted, onUnmounted } from 'vue'
-import { useRouter } from 'vue-router'
 import { useHead, useAsyncData, useSupabaseClient } from '#imports'
 import { useMainStore } from '~/stores/useMainStore'
 import { getCleanUrl } from '~/utils/image'
 
 const store = useMainStore()
-const router = useRouter()
 const supabase = useSupabaseClient()
 
 // SSR：抓取進行中的競標（給 schema 用）
@@ -116,7 +114,7 @@ const auctionBreadcrumbLd = {
   '@context': 'https://schema.org',
   '@type': 'BreadcrumbList',
   itemListElement: [
-    { '@type': 'ListItem', position: 1, name: '首頁', item: 'https://www.genckobreeding.com/' },
+    { '@type': 'ListItem', position: 1, name: '首頁', item: 'https://www.genckobreeding.com/home' },
     { '@type': 'ListItem', position: 2, name: '守宮競標', item: auctionUrl }
   ]
 }
@@ -263,99 +261,133 @@ const getCountdownText = (item) => {
   return res
 }
 
-const goToDetail = (id) => {
-  router.push(`/auction/${id}`)
+const formatPrice = (value, fallback) => {
+  if (value === null || value === undefined || value === '') return fallback
+  const amount = Number(value)
+  if (!Number.isFinite(amount)) return fallback
+  return `NT$ ${amount.toLocaleString('zh-TW')}`
 }
 </script>
 
 <template>
   <div class="auction-page">
-    <!-- 🌟 引入全域共用的 App-like 返回按鈕 (僅手機版顯示) -->
+    <div class="common-document-meta" aria-label="競標目錄說明">
+      <span>GENCKO AUCTION DESK</span>
+      <span>WATCH / BID / REVIEW</span>
+    </div>
     <TheBackButton wrapper-class="m-only" fallback="/" text="返回" />
 
-    <div v-if="loading && displayAuctions.length === 0" class="auction-container">
-      <div class="auction-grid">
-        <div v-for="n in 6" :key="n" class="auction-card">
-          <SkeletonCard :img-height="200" />
+    <div class="auction-container">
+      <header class="auction-intro">
+        <div>
+          <p class="auction-eyebrow">LIVE AUCTIONS</p>
+          <h1 class="auction-mobile-heading"><span>線上競標</span></h1>
         </div>
-      </div>
-    </div>
+        <p class="auction-mobile-desc">限時競標，結標前 3 分鐘出價自動延長。</p>
+      </header>
 
-    <div v-else class="auction-container">
-      <!-- SEO：頁面唯一 h1（sr-only 含完整關鍵字，全裝置都讓爬蟲讀到） -->
-      <h1 class="sr-only">線上守宮競標｜限時拍賣專區 - Gencko Breeding Studio</h1>
-      <!-- 視覺主標保留為 div（桌機可見、手機隱藏） -->
-      <div class="page-title dt-only" aria-hidden="true">
-        線上競標
-        <span>Live Auctions</span>
-      </div>
-      <p class="page-desc dt-only">限時競標，結標前 3 分鐘出價自動延長。</p>
-
-      <div class="auction-grid">
-        <div
-          v-for="item in displayAuctions"
-          :key="item.id"
-          class="auction-card"
-          @click="goToDetail(item.id)"
-        >
-          <div class="card-img-box">
-            <!-- 🌟 核心修正：將 NuxtImg 替換為原生 img -->
-            <img
-              :src="
-                item.images && item.images.length
-                  ? getCleanUrl(item.images[0], 400)
-                  : 'https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/placeholder.jpg'
-              "
-              :alt="item.morph"
-              loading="lazy"
-              decoding="async"
-            />
-            <!-- 🌟 狀態標籤也依賴時間，包覆 ClientOnly -->
-            <ClientOnly>
-              <div class="status-badge" :class="getAuctionStatus(item).class">
-                {{ getAuctionStatus(item).text }}
-              </div>
-              <template #fallback>
-                <div class="status-badge badge-active">計算中</div>
-              </template>
-            </ClientOnly>
+      <section class="auction-catalog-stage" aria-labelledby="auction-live-catalog-title">
+        <header class="auction-stage-heading">
+          <span>01</span>
+          <div>
+            <p>LIVE AUCTION RECORDS</p>
+            <h2 id="auction-live-catalog-title">目前可參與的競標</h2>
           </div>
-          <div class="card-info">
-            <h3 class="morph-name">
-              {{ item.morph }}
-              <span class="gender-tag" v-if="item.gender && item.gender !== '未定'">
-                ({{ item.gender }})
-              </span>
-            </h3>
-            <p class="morph-desc" v-if="item.note">
-              {{ item.note.substring(0, 20) }}{{ item.note.length > 20 ? '...' : '' }}
-            </p>
-            <div class="price-info">
-              <div class="price-col">
-                <span class="price-label">起標價</span>
-                <strong class="price-val">${{ item.start_price }}</strong>
-              </div>
-              <div class="price-divider"></div>
-              <div class="price-col">
-                <span class="price-label">直購價</span>
-                <strong class="price-val">${{ item.buy_now_price }}</strong>
-              </div>
+        </header>
+        <div v-if="loading && displayAuctions.length === 0" class="auction-grid" aria-busy="true">
+          <div v-for="n in 6" :key="n" class="auction-card auction-card--loading">
+            <SkeletonCard :square="true" />
+          </div>
+        </div>
+
+        <div v-else-if="displayAuctions.length" class="auction-grid">
+          <NuxtLink
+            v-for="item in displayAuctions"
+            :key="item.id"
+            no-prefetch
+            :to="`/auction/${item.id}`"
+            class="auction-card"
+            :aria-label="`查看 ${item.morph} 競標詳情`"
+          >
+            <div class="card-img-box">
+              <img
+                :src="
+                  item.images && item.images.length
+                    ? getCleanUrl(item.images[0], 400)
+                    : 'https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/placeholder.jpg'
+                "
+                :alt="item.morph"
+                loading="lazy"
+                decoding="async"
+              />
+              <ClientOnly>
+                <div
+                  class="status-badge"
+                  role="status"
+                  :aria-label="`競標狀態：${getAuctionStatus(item).text}`"
+                  :class="getAuctionStatus(item).class"
+                >
+                  {{ getAuctionStatus(item).text }}
+                </div>
+                <template #fallback>
+                  <div class="status-badge badge-active" role="status">計算中</div>
+                </template>
+              </ClientOnly>
             </div>
-
-            <!-- 🌟 倒數計時包覆 ClientOnly 解決 Hydration 報錯 -->
-            <ClientOnly>
-              <div class="countdown" :class="{ 'ending-soon': isEndingSoon(item) }">
-                ⏳ {{ getCountdownText(item) }}
+            <div class="card-info">
+              <h3 class="morph-name">
+                {{ item.morph }}
+                <span class="gender-tag" v-if="item.gender && item.gender !== '未定'">
+                  ({{ item.gender }})
+                </span>
+              </h3>
+              <p class="morph-desc" v-if="item.note">
+                {{ item.note.substring(0, 20) }}{{ item.note.length > 20 ? '...' : '' }}
+              </p>
+              <div class="price-info">
+                <div class="price-col">
+                  <span class="price-label">起標價</span>
+                  <strong class="price-val">{{ formatPrice(item.start_price, '尚未設定') }}</strong>
+                </div>
+                <div class="price-divider"></div>
+                <div class="price-col">
+                  <span class="price-label">直購價</span>
+                  <strong class="price-val">
+                    {{ formatPrice(item.buy_now_price, '未提供直購') }}
+                  </strong>
+                </div>
               </div>
-              <template #fallback>
-                <div class="countdown">⏳ 計算時間中...</div>
-              </template>
-            </ClientOnly>
-          </div>
-        </div>
-      </div>
 
-      <div v-if="displayAuctions.length === 0" class="empty-state">目前尚無開放中的競標商品。</div>
+              <ClientOnly>
+                <div
+                  class="countdown"
+                  role="timer"
+                  aria-label="競標剩餘時間"
+                  :class="{ 'ending-soon': isEndingSoon(item) }"
+                >
+                  <span>剩餘</span>
+                  <strong>{{ getCountdownText(item) }}</strong>
+                </div>
+                <template #fallback>
+                  <div class="countdown" role="timer" aria-label="競標剩餘時間">
+                    <span>剩餘</span>
+                    <strong>時間計算中</strong>
+                  </div>
+                </template>
+              </ClientOnly>
+            </div>
+          </NuxtLink>
+        </div>
+
+        <div v-else class="empty-state">
+          <p class="empty-state__eyebrow">NO LIVE AUCTIONS</p>
+          <h3>目前沒有進行中的競標</h3>
+          <p>新場次開放後會在此顯示；你可以先瀏覽目前在售的守宮個體。</p>
+          <NuxtLink no-prefetch to="/shop" class="btn-app btn-app--primary btn-app--md">
+            瀏覽在售個體
+          </NuxtLink>
+        </div>
+      </section>
     </div>
   </div>
 </template>
@@ -394,10 +426,77 @@ const goToDetail = (id) => {
   margin-bottom: 2rem;
 }
 
+.auction-mobile-heading,
+.auction-mobile-desc {
+  display: none !important;
+}
+.auction-mobile-heading {
+  align-items: baseline;
+  gap: 0.5rem;
+  margin: 0.75rem 0 0.25rem;
+  color: var(--txt);
+  font-size: 1.35rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+.auction-mobile-heading small {
+  font-size: 0.72rem;
+  font-weight: 700;
+  opacity: 0.5;
+}
+.auction-mobile-desc {
+  color: var(--txt);
+  opacity: 0.65;
+  margin: 0 0 1rem;
+  font-size: 0.8rem;
+}
+
 .auction-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   gap: 1.5rem;
+}
+
+.auction-catalog-stage {
+  margin-top: clamp(28px, 5vw, 56px);
+  padding-top: 20px;
+  border-top: 1px solid var(--bd);
+}
+
+.auction-stage-heading {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr);
+  gap: 14px;
+  align-items: start;
+  margin-bottom: 22px;
+}
+
+.auction-stage-heading > span {
+  display: inline-grid;
+  place-items: center;
+  width: 34px;
+  height: 28px;
+  border: 1px solid var(--pri);
+  color: var(--pri);
+  font-size: 0.68rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+}
+
+.auction-stage-heading p {
+  margin: 0 0 4px;
+  color: var(--txt-muted);
+  font-size: 0.66rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+}
+
+.auction-stage-heading h2 {
+  margin: 0;
+  color: var(--txt);
+  font-family: 'Noto Serif TC', serif;
+  font-size: clamp(1.25rem, 2vw, 1.75rem);
+  letter-spacing: -0.04em;
 }
 .auction-card {
   display: flex;
@@ -411,10 +510,9 @@ const goToDetail = (id) => {
     transform 0.2s,
     box-shadow 0.2s;
 }
-.auction-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
-  border-color: var(--pri);
+.auction-card:focus-visible {
+  outline: 3px solid var(--pri);
+  outline-offset: 3px;
 }
 
 .card-img-box {
@@ -566,6 +664,12 @@ const goToDetail = (id) => {
   .auction-page {
     padding: 5px 10px 15px 10px;
   }
+  .auction-mobile-heading {
+    display: flex !important;
+  }
+  .auction-mobile-desc {
+    display: block !important;
+  }
   .auction-grid {
     grid-template-columns: repeat(2, 1fr) !important;
     gap: 8px;
@@ -624,6 +728,410 @@ const goToDetail = (id) => {
   .countdown {
     padding: 4px;
     font-size: 0.75rem;
+  }
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .auction-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
+    border-color: var(--pri);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .auction-card {
+    transition: none;
+  }
+  .countdown.ending-soon {
+    animation: none;
+  }
+}
+
+.auction-page {
+  max-width: 1440px;
+  padding: clamp(38px, 6vw, 88px) clamp(20px, 5vw, 76px) 100px;
+}
+
+.auction-intro {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 460px);
+  align-items: end;
+  gap: 40px;
+  margin-bottom: 36px;
+  padding-bottom: 30px;
+  border-bottom: 1px solid var(--bd);
+}
+
+.auction-eyebrow {
+  margin: 0 0 12px;
+  color: var(--pri);
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+}
+
+.auction-mobile-heading {
+  display: block !important;
+  margin: 0;
+  color: var(--txt);
+  font-family: 'Noto Serif TC', serif;
+  font-size: clamp(2.7rem, 6vw, 5.8rem);
+  line-height: 0.96;
+  letter-spacing: -0.06em;
+}
+
+.auction-mobile-desc {
+  display: block !important;
+  margin: 0;
+  color: var(--txt-muted);
+  font-size: 0.94rem;
+  line-height: 1.9;
+  opacity: 1;
+}
+
+.auction-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: clamp(24px, 3vw, 44px) clamp(14px, 2vw, 28px);
+}
+
+.auction-card {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.card-img-box {
+  aspect-ratio: 1 / 1;
+  border: 0;
+  border-radius: 0;
+}
+
+.card-info {
+  padding: 14px 0 0;
+}
+
+.morph-name {
+  font-family: 'Noto Serif TC', serif;
+}
+
+.price-info,
+.countdown {
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .auction-card:hover {
+    transform: none;
+    border-color: transparent;
+    box-shadow: none;
+  }
+
+  .auction-card:hover .card-img-box img {
+    opacity: 0.92;
+  }
+}
+
+@media (max-width: 768px) {
+  .auction-page {
+    padding: 16px 16px 48px;
+  }
+
+  .auction-intro {
+    grid-template-columns: 1fr;
+    gap: 16px;
+    margin-bottom: 22px;
+    padding-bottom: 22px;
+  }
+
+  .auction-mobile-heading {
+    margin: 0;
+    font-size: clamp(2.5rem, 14vw, 4rem);
+  }
+
+  .auction-mobile-desc {
+    margin: 0;
+    font-size: 0.84rem;
+    line-height: 1.7;
+  }
+
+  .auction-grid {
+    gap: 28px 10px !important;
+  }
+}
+
+/* 頁面驗收：與選購鏈共用白底、品牌橘、細線及直角語彙。 */
+.auction-page {
+  padding-top: clamp(18px, 2.5vw, 34px);
+  padding-bottom: clamp(44px, 6vw, 72px);
+}
+
+.auction-page > .common-document-meta {
+  margin-bottom: clamp(12px, 2vw, 20px);
+  padding-bottom: 8px;
+}
+
+.auction-page :deep(.app-back-btn) {
+  border-radius: var(--radius-sm);
+}
+
+.auction-intro {
+  gap: clamp(20px, 4vw, 40px);
+  margin-bottom: 0;
+  padding-bottom: clamp(18px, 2.4vw, 28px);
+}
+
+.auction-catalog-stage {
+  margin-top: 0;
+  padding-top: clamp(16px, 2.5vw, 24px);
+  border-top: 0;
+}
+
+.auction-stage-heading {
+  margin-bottom: clamp(16px, 2.5vw, 24px);
+}
+
+.auction-card {
+  color: inherit;
+  text-decoration: none;
+}
+
+.auction-card--loading {
+  pointer-events: none;
+}
+
+.status-badge {
+  top: 8px;
+  left: 8px;
+  padding: 5px 9px;
+  border: 1px solid currentColor;
+  border-radius: 0;
+  box-shadow: none;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+.badge-active {
+  color: #fff;
+  background: var(--pri);
+  box-shadow: none;
+}
+
+.badge-ended {
+  color: #fff;
+  background: #595959;
+}
+
+.morph-name {
+  min-width: 0;
+  margin-bottom: 6px;
+  font-size: clamp(1.05rem, 1.7vw, 1.3rem);
+  line-height: 1.35;
+}
+
+.morph-desc {
+  margin: 0 0 12px;
+  color: var(--txt-muted);
+  opacity: 1;
+}
+
+.price-info {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 1px minmax(0, 1fr);
+  gap: 12px;
+  align-items: stretch;
+  margin: auto 0 8px;
+  padding: 10px 0;
+  border-width: 1px 0;
+}
+
+.price-col,
+.price-col:last-child {
+  min-width: 0;
+  align-items: flex-start;
+}
+
+.price-label {
+  margin-bottom: 3px;
+  color: var(--txt-muted);
+  opacity: 1;
+}
+
+.price-val {
+  max-width: 100%;
+  color: var(--pri);
+  font-size: clamp(0.95rem, 1.5vw, 1.12rem);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+
+.price-divider {
+  width: 1px;
+  height: auto;
+  margin: 0;
+}
+
+.countdown {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 9px 0;
+  border-width: 0 0 1px;
+  color: var(--txt);
+  text-align: left;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.countdown span {
+  flex: 0 0 auto;
+  color: var(--txt-muted);
+  font-size: 0.68rem;
+  letter-spacing: 0.08em;
+}
+
+.countdown strong {
+  min-width: 0;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.countdown.ending-soon {
+  color: #b42318;
+  background: transparent;
+  border-color: #b42318;
+  animation: none;
+}
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  min-height: 0;
+  padding: clamp(30px, 5vw, 56px) 0 0;
+  border-top: 1px solid var(--bd);
+  color: var(--txt);
+  text-align: left;
+  opacity: 1;
+}
+
+.empty-state__eyebrow {
+  margin: 0 0 8px;
+  color: var(--pri);
+  font-size: 0.66rem;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+}
+
+.empty-state h3 {
+  margin: 0;
+  font-family: 'Noto Serif TC', serif;
+  font-size: clamp(1.45rem, 3vw, 2.2rem);
+  line-height: 1.35;
+}
+
+.empty-state > p:not(.empty-state__eyebrow) {
+  max-width: 580px;
+  margin: 10px 0 18px;
+  color: var(--txt-muted);
+  line-height: 1.75;
+}
+
+.empty-state .btn-app {
+  border-radius: var(--radius-sm);
+}
+
+@media (max-width: 768px) {
+  .auction-page {
+    padding-top: 10px;
+    padding-bottom: 44px;
+  }
+
+  .auction-page > .common-document-meta {
+    margin-bottom: 8px;
+  }
+
+  .auction-intro {
+    gap: 10px;
+    margin-bottom: 0;
+    padding-bottom: 16px;
+  }
+
+  .auction-catalog-stage {
+    padding-top: 14px;
+  }
+
+  .auction-stage-heading {
+    grid-template-columns: 34px minmax(0, 1fr);
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+
+  .auction-stage-heading > span {
+    width: 30px;
+    height: 26px;
+  }
+
+  .status-badge {
+    top: 5px;
+    left: 5px;
+    padding: 3px 5px;
+    border-radius: 0;
+  }
+
+  .card-info {
+    padding: 9px 0 0;
+  }
+
+  .morph-name {
+    margin-bottom: 4px;
+    font-size: 0.9rem;
+  }
+
+  .price-info {
+    grid-template-columns: 1fr;
+    gap: 6px;
+    padding: 8px 0;
+  }
+
+  .price-divider {
+    display: none;
+  }
+
+  .price-val {
+    font-size: 0.88rem;
+    overflow-wrap: normal;
+    white-space: nowrap;
+  }
+
+  .countdown {
+    display: block;
+    padding: 7px 0;
+    font-size: 0.7rem;
+  }
+
+  .countdown span {
+    display: block;
+    margin-bottom: 2px;
+  }
+
+  .countdown strong {
+    display: block;
+    text-align: left;
+    white-space: nowrap;
+  }
+
+  .empty-state {
+    padding-top: 28px;
+  }
+
+  .empty-state .btn-app {
+    width: 100%;
   }
 }
 </style>

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
 import { onBeforeRouteLeave } from 'vue-router'
+import { useMediaQuery } from '@vueuse/core'
 import DnaGeckoParticles from '@/components/DnaGeckoParticles.vue'
 import GalleryGlitchScreen from '@/components/GalleryGlitchScreen.vue'
 import HeroScrollProgress from '@/components/HeroScrollProgress.vue'
@@ -18,6 +19,7 @@ interface HeroGalleryCard {
 }
 
 const bottomRenderMode = ref<'always' | 'manual'>('always')
+const hero3dEnabled = useMediaQuery('(min-width: 768px) and (hover: hover) and (pointer: fine)')
 const compactViewport = ref(false)
 const canvasDpr = computed<[number, number]>(() => (compactViewport.value ? [1, 1] : [1, 1.5]))
 const ambientLightIntensity = computed(() => (compactViewport.value ? 0.68 : 0.5))
@@ -373,13 +375,14 @@ onBeforeUnmount(() => {
       <div class="band-logo-stage" aria-hidden="true">
         <div class="band-logo-rig">
           <ClientOnly>
-            <HeroLogoDisc src="/logo.png" flip />
+            <HeroLogoDisc v-if="hero3dEnabled" src="/logo.png" flip />
+            <img v-else class="band-logo-static" src="/logo.png" alt="" />
           </ClientOnly>
         </div>
       </div>
     </div>
 
-    <div class="hero-canvas-shell">
+    <div v-if="hero3dEnabled" class="hero-canvas-shell">
       <TresCanvas
         class="hero-canvas"
         clear-color="#07080a"
@@ -418,13 +421,34 @@ onBeforeUnmount(() => {
       </TresCanvas>
     </div>
 
-    <div class="scroll-cue" aria-hidden="true">
+    <div v-else class="hero-mobile-fallback">
+      <div class="hero-mobile-fallback__content">
+        <p class="hero-mobile-fallback__eyebrow">GENCKO STUDIO</p>
+        <h2 class="hero-mobile-fallback__title">
+          科學繁育
+          <br />
+          專業守宮
+        </h2>
+        <p class="hero-mobile-fallback__lead">以基因紀錄與日常照護，陪你找到適合的守宮。</p>
+        <nav class="hero-mobile-fallback__links" aria-label="Gencko 快速導覽">
+          <a
+            v-for="destination in heroAccessibleDestinations"
+            :key="destination.to"
+            :href="destination.to"
+          >
+            {{ destination.title }}
+          </a>
+        </nav>
+      </div>
+    </div>
+
+    <div v-if="hero3dEnabled" class="scroll-cue" aria-hidden="true">
       <span class="scroll-cue__line" />
       <span class="scroll-cue__text">SCROLL</span>
     </div>
 
     <HeroScrollProgress
-      v-show="!selectedCard"
+      v-if="hero3dEnabled && !selectedCard"
       :progress="journeyProgress"
       :segments="journeySegments"
       @scrub="onScrub"
@@ -583,6 +607,90 @@ onBeforeUnmount(() => {
   clip-path: var(--hero-clip, polygon(0 0, 100% 0, 100% 100%, 0 100%));
   mix-blend-mode: var(--hero-canvas-blend, normal);
   will-change: clip-path;
+}
+
+.hero-mobile-fallback {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  padding: max(1.5rem, env(safe-area-inset-top)) max(1.25rem, env(safe-area-inset-right))
+    max(1.5rem, env(safe-area-inset-bottom)) max(1.25rem, env(safe-area-inset-left));
+  overflow: auto;
+  background:
+    radial-gradient(circle at 50% 34%, rgba(232, 68, 10, 0.24), transparent 28%),
+    linear-gradient(145deg, #17191d 0%, #08090b 58%, #11151a 100%);
+  color: #f7efe4;
+}
+
+.hero-mobile-fallback__content {
+  display: grid;
+  gap: 1rem;
+  width: min(100%, 28rem);
+  text-align: center;
+}
+
+.hero-mobile-fallback__eyebrow {
+  margin: 0;
+  color: #ffb278;
+  font:
+    0.72rem/1.4 'Courier New',
+    monospace;
+  letter-spacing: 0.28em;
+}
+
+.hero-mobile-fallback__title {
+  margin: 0;
+  font-size: clamp(2.25rem, 12vw, 4.5rem);
+  line-height: 1.05;
+  letter-spacing: -0.06em;
+  text-wrap: balance;
+}
+
+.hero-mobile-fallback__lead {
+  max-width: 22rem;
+  margin: 0 auto;
+  color: rgba(247, 239, 228, 0.72);
+  font-size: 0.92rem;
+  line-height: 1.7;
+}
+
+.hero-mobile-fallback__links {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.55rem;
+  margin-top: 0.6rem;
+}
+
+.hero-mobile-fallback__links a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--control-min-height);
+  padding: 0.65rem 0.55rem;
+  border: 1px solid rgba(255, 178, 120, 0.28);
+  border-radius: 999px;
+  color: #f7efe4;
+  background: rgba(255, 255, 255, 0.04);
+  font-size: 0.82rem;
+  font-weight: 800;
+  text-decoration: none;
+  transition:
+    background-color var(--transition),
+    border-color var(--transition);
+}
+
+.hero-mobile-fallback__links a:focus-visible {
+  outline: 3px solid #ffb278;
+  outline-offset: 3px;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .hero-mobile-fallback__links a:hover {
+    border-color: rgba(255, 178, 120, 0.72);
+    background: rgba(255, 178, 120, 0.12);
+  }
 }
 
 :deep(canvas.hero-canvas) {
@@ -974,6 +1082,10 @@ onBeforeUnmount(() => {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .hero-mobile-fallback__links a {
+    transition: none;
+  }
+
   .scroll-cue__line,
   .gallery-noise,
   .gallery-screen__image::before,
@@ -1421,6 +1533,13 @@ onBeforeUnmount(() => {
   transform-origin: center;
   filter: brightness(0.9) saturate(0.98) drop-shadow(0 24px 58px rgba(255, 122, 40, 0.3))
     drop-shadow(0 10px 30px rgba(255, 90, 30, 0.2));
+}
+
+.band-logo-static {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
 }
 
 .intro-meta {

@@ -3,6 +3,7 @@ import { computed, onMounted, onUnmounted, onBeforeUnmount, watch, ref } from 'v
 import { useRoute, useRouter } from 'vue-router'
 import { useHead, useNuxtApp } from '#imports'
 import { useMainStore } from '~/stores/useMainStore'
+import { getRouteTab } from '~/utils/route-tab'
 // #U6：Lenis / gsap 改為動態 import（見 initGlobalLenis），把 ~528KB 移出每頁初始關鍵路徑，
 // 平滑捲動於 mount 後才啟用（漸進增強，不阻擋 LCP）。首頁（about）本就不啟用全域 Lenis。
 
@@ -11,6 +12,8 @@ const route = useRoute()
 const router = useRouter()
 const { $pwa } = useNuxtApp()
 const nuxtApp = useNuxtApp()
+const iosDialog = useNativeModal(() => store.showIOSGuide)
+const isDevelopment = import.meta.dev
 
 // ── 全域 Lenis Smooth Scroll（非自訂 scroll-driven 場景使用）────────────────
 // /about 與 /hero-lab 都有自己的滾動/時間軸系統，此處必須讓路
@@ -117,7 +120,7 @@ const clearAndReload = (clearErr) => {
 // PWA：registerType 改為 'autoUpdate'，Service Worker 背景靜默更新，無提示
 // isUpdating ref 與 handlePwaUpdate 已移除
 
-// 靽格迤 FOUC ????
+// 避免主題切換時出現 FOUC（樣式閃爍）
 useHead({
   script: [
     {
@@ -145,33 +148,8 @@ watch(
       store.readingArticle = null
     }
 
-    // 隞亥楝敺?startsWith ?Ⅱ??嚗??鞈?route.name ?芸??賢?銝帘摰???
-    if (newPath === '/') store.curTab = 'home'
-    else if (newPath.startsWith('/articles')) store.curTab = 'articles'
-    else if (newPath.startsWith('/start-here')) store.curTab = 'care'
-    else if (
-      newPath.startsWith('/shop') ||
-      newPath.startsWith('/product') ||
-      newPath.startsWith('/identity') ||
-      newPath.startsWith('/buying-guide') ||
-      newPath.startsWith('/why-gencko') ||
-      newPath.startsWith('/stories')
-    )
-      store.curTab = 'shop'
-    else if (newPath.startsWith('/auction')) store.curTab = 'auction'
-    else if (newPath.startsWith('/breeders')) store.curTab = 'breeders'
-    else if (newPath.startsWith('/merch')) store.curTab = 'merch'
-    else if (newPath.startsWith('/genes')) store.curTab = 'genes'
-    else if (newPath.startsWith('/calculator')) store.curTab = 'calculator'
-    else if (newPath.startsWith('/health')) store.curTab = 'health'
-    else if (newPath.startsWith('/hospital')) store.curTab = 'hospital'
-    else if (newPath.startsWith('/qs')) store.curTab = 'qs'
-    else if (newPath.startsWith('/about')) store.curTab = 'about'
-    else if (newPath.startsWith('/care')) store.curTab = 'care'
-    else if (newPath.startsWith('/guide')) store.curTab = 'guide'
-    else if (newPath.startsWith('/faq')) store.curTab = 'faq'
-    else if (newPath.startsWith('/profile')) store.curTab = 'profile'
-    else store.curTab = 'home'
+    // 依路由前綴同步目前分頁，分類規則集中於 route-tab module
+    store.curTab = getRouteTab(newPath)
   }
 )
 
@@ -191,7 +169,7 @@ onMounted(() => {
   if (store.hasPendingLineAuth() || hadLineSession) store.initLiff()
   store.initPWAInstallPrompt()
 
-  // ?? Vue / JS runtime error嚗?蝡撅??⊥??斗?孵?
+  // 收集 Vue / JS 執行階段錯誤，方便在開發環境定位問題
   if (import.meta.client) {
     try {
       nuxtApp.vueApp.config.errorHandler = (err) => {
@@ -244,15 +222,13 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <BackgroundInteractiveGrid />
-
   <!-- Skip to content：鍵盤 Tab 第一站即可跳過全站 nav 直達主內容（WCAG 2.4.1） -->
   <a href="#main-content" class="skip-to-content">跳至主要內容</a>
 
   <div class="cont">
     <VitePwaManifest />
 
-    <!-- Debug overlay嚗??runtime error ??閮憿舐內?箔?嚗靘踹???-->
+    <!-- 除錯 overlay：顯示執行階段錯誤的詳細內容，方便定位問題 -->
     <div
       v-if="lastRuntimeError"
       style="
@@ -268,27 +244,27 @@ onBeforeUnmount(() => {
     >
       <div
         style="
-          background: rgba(20, 20, 20, 0.96);
-          color: #fff;
-          border: 1px solid rgba(255, 255, 255, 0.18);
-          border-radius: 12px;
+          background: var(--card-bg-solid);
+          color: var(--txt);
+          border: 1px solid var(--bd);
+          border-radius: 2px;
           padding: 12px 12px 10px 12px;
-          box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+          box-shadow: none;
           pointer-events: auto;
         "
       >
-        <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px">
-          <strong style="font-size: 0.95rem">Runtime error嚗?銝?批捆鞎潛策??</strong>
+        <div role="alert" style="display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap">
+          <strong style="font-size: 0.95rem">{{ isDevelopment ? '執行階段錯誤，請檢查下方資訊' : '頁面發生錯誤' }}</strong>
           <div style="display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end">
             <button
-              class="btn-hero"
+              class="btn-app btn-app--ghost"
               style="padding: 6px 10px; font-size: 0.85rem"
               @click="clearRuntimeError()"
             >
               關閉
             </button>
             <button
-              class="btn-hero"
+              class="btn-app btn-app--primary"
               style="padding: 6px 10px; font-size: 0.85rem; opacity: 0.9"
               @click="goHomeFromError()"
             >
@@ -297,6 +273,7 @@ onBeforeUnmount(() => {
           </div>
         </div>
         <pre
+          v-if="isDevelopment"
           style="
             margin: 10px 0 0 0;
             white-space: pre-wrap;
@@ -312,15 +289,18 @@ onBeforeUnmount(() => {
       </div>
     </div>
 
-    <!-- iOS 銝?摰??飛敶? -->
-    <div
+    <!-- iOS 安裝提示視窗 -->
+    <dialog
       v-if="store.showIOSGuide"
+      ref="iosDialog"
       class="ios-install-guide-overlay"
-      @click="store.showIOSGuide = false"
+      aria-labelledby="ios-guide-title"
+      @cancel.prevent="store.showIOSGuide = false"
+      @click.self="store.showIOSGuide = false"
     >
       <div class="ios-guide-box" @click.stop>
         <button class="btn-close-guide" @click="store.showIOSGuide = false">關閉</button>
-        <h3>安裝 Gencko App（iOS）</h3>
+        <h3 id="ios-guide-title">安裝 Gencko App（iOS）</h3>
         <p>iOS 需要手動將網站加入主畫面，以下為操作步驟：</p>
         <ol class="ios-steps">
           <li>1. 使用 Safari 開啟網站，點右下角「分享」按鈕</li>
@@ -331,7 +311,7 @@ onBeforeUnmount(() => {
         </p>
         <div class="ios-arrow-down">↓</div>
       </div>
-    </div>
+    </dialog>
 
     <TheLightbox
       :item="store.lightboxItem"
@@ -339,8 +319,6 @@ onBeforeUnmount(() => {
       @close="store.closeLightbox"
     />
     <TheToast :show="store.showToast" />
-    <TheMarquee :list="store.marqueeList" />
-
     <TheNavbar
       :nav-hidden="store.navHidden"
       :is-day-mode="store.isDayMode"
@@ -351,10 +329,11 @@ onBeforeUnmount(() => {
       @scroll-top="scrollToTop"
     />
 
-    <main id="main-content" style="padding-top: 0; min-height: 80vh">
+    <main id="main-content" style="padding-top: 0">
       <!--
-        1) 撘瑕 NuxtPage 靘?fullPath ???嚗??CSR 撠???Ｗ祕靘??典??渲????恍?⊥香
-        2) NuxtErrorBoundary嚗?銝? runtime error ??敺??渡?撠?賢?抵??航?撠?甈?      -->
+        1) NuxtPage 以 fullPath 作為 key，query 變動時仍可保留頁面狀態。
+        2) NuxtErrorBoundary 捕捉頁面 runtime error，避免整個應用程式直接中斷。
+      -->
       <NuxtErrorBoundary>
         <!-- 避免 query 變動（例如選購切換物種/篩選）就整頁卸載重掛，造成「噸級閃爍」 -->
         <NuxtPage :page-key="route.path" />
@@ -364,22 +343,23 @@ onBeforeUnmount(() => {
             style="
               max-width: 920px;
               margin: 0 auto;
-              padding: 80px 16px;
-              text-align: center;
+              padding: 32px 16px;
+              text-align: left;
               color: var(--txt);
             "
           >
-            <h2 style="margin: 0 0 10px 0">?頛?潛??航炊</h2>
+            <h2 style="margin: 0 0 10px 0">頁面發生錯誤</h2>
             <p style="opacity: 0.8; margin: 0 0 18px 0">
-              ?虜?航楝?勗????????辣???嚗??臭誑??擐?嚗???脣閰脤???
+              載入頁面時發生問題，請返回首頁或重新整理後再試。
             </p>
             <pre
+              v-if="isDevelopment"
               style="
                 white-space: pre-wrap;
                 text-align: left;
                 background: var(--card-bg);
                 border: 1px solid var(--bd);
-                border-radius: 12px;
+                border-radius: 2px;
                 padding: 12px;
                 max-height: 220px;
                 overflow: auto;
@@ -387,12 +367,12 @@ onBeforeUnmount(() => {
               "
               >{{ error?.message || String(error) }}</pre
             >
-            <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap">
-              <button class="btn-hero" style="min-width: 140px" @click="clearAndGoHome(clearError)">
+            <div style="display: flex; gap: 10px; justify-content: flex-start; flex-wrap: wrap">
+              <button class="btn-app btn-app--primary" style="min-width: 140px" @click="clearAndGoHome(clearError)">
                 回到首頁
               </button>
               <button
-                class="btn-hero"
+                class="btn-app btn-app--ghost"
                 style="min-width: 140px; opacity: 0.85"
                 @click="clearAndReload(clearError)"
               >
@@ -417,6 +397,7 @@ onBeforeUnmount(() => {
       "
       target="_blank"
       class="btn-app btn-app--primary btn-app--md btn-app--pill floating-inquire-btn"
+      :class="{ 'floating-inquire-btn--with-compare': route.path === '/shop' && store.compareList.length > 0 }"
     >
       <span>已選 {{ store.wishlist.length }} 隻｜一次詢問</span>
     </a>
@@ -428,6 +409,12 @@ onBeforeUnmount(() => {
 
 <style scoped>
 /* Skip to content：預設離屏，鍵盤聚焦時才顯示 */
+.floating-inquire-btn.floating-inquire-btn--with-compare {
+  top: calc(76px + env(safe-area-inset-top, 0px));
+  bottom: auto !important;
+  max-width: calc(100vw - 32px);
+}
+
 .skip-to-content {
   position: fixed;
   top: -100px;
@@ -451,13 +438,18 @@ onBeforeUnmount(() => {
 }
 
 .ios-install-guide-overlay {
+  margin: 0;
+  border: 0;
+  padding: 0;
+  max-width: none;
+  max-height: none;
   position: fixed;
   top: 0;
   left: 0;
   width: 100%;
-  height: 100vh;
+  height: 100dvh;
   background: rgba(0, 0, 0, 0.6);
-  backdrop-filter: blur(5px);
+  backdrop-filter: none;
   z-index: 999999;
   display: flex;
   align-items: flex-end;
@@ -465,31 +457,37 @@ onBeforeUnmount(() => {
 }
 .ios-guide-box {
   background: var(--card-bg);
-  border: 1px solid var(--pri);
-  border-radius: 20px 20px 0 0;
-  padding: 30px 20px 40px 20px;
+  border: 1px solid var(--bd);
+  border-radius: 2px 2px 0 0;
+  padding: 20px 20px calc(20px + env(safe-area-inset-bottom, 0px));
+  max-height: 90dvh;
+  overflow-y: auto;
   width: 100%;
   max-width: 500px;
   color: var(--txt);
   position: relative;
   animation: slideUp 0.3s ease-out;
-  box-shadow: 0 -10px 30px rgba(255, 69, 0, 0.2);
+  box-shadow: none;
 }
 .btn-close-guide {
-  position: absolute;
-  top: 15px;
-  right: 15px;
+  display: block;
+  margin: 0 0 16px auto;
+  min-height: 44px;
+  padding: 8px 14px;
   background: transparent;
-  border: none;
+  border: 1px solid var(--txt);
+  border-radius: 2px;
+  font-family: var(--font-body-zh);
   color: var(--txt);
-  font-size: 1.2rem;
+  font-size: 0.9rem;
   cursor: pointer;
-  opacity: 0.6;
+  opacity: 1;
 }
 .ios-guide-box h3 {
   margin: 0 0 10px 0;
   color: var(--pri);
-  text-align: center;
+  text-align: left;
+  font-family: var(--font-heading-zh);
 }
 .ios-guide-box p {
   margin: 0 0 15px 0;
@@ -500,9 +498,8 @@ onBeforeUnmount(() => {
   list-style: none;
   padding: 0;
   margin: 0;
-  background: rgba(128, 128, 128, 0.1);
-  border-radius: 12px;
-  padding: 15px;
+  background: transparent;
+  border-radius: 0;
 }
 .ios-steps li {
   margin-bottom: 12px;
@@ -517,7 +514,7 @@ onBeforeUnmount(() => {
   font-size: 2rem;
   color: var(--pri);
   margin-top: 15px;
-  animation: bounce 1s infinite;
+  display: none;
 }
 
 @keyframes slideUp {
@@ -546,19 +543,15 @@ onBeforeUnmount(() => {
 </style>
 
 <style>
-/* ?函?頝舐?? */
+/* 頁面轉場效果 */
 .page-enter-active,
 .page-leave-active {
-  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+  transition: opacity 0.18s ease-out;
 }
 .page-enter-from {
   opacity: 0;
-  transform: translateY(15px) scale(0.98);
-  filter: blur(2px);
 }
 .page-leave-to {
   opacity: 0;
-  transform: translateY(-15px) scale(0.98);
-  filter: blur(2px);
 }
 </style>

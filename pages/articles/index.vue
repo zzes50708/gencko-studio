@@ -210,7 +210,7 @@ const artsBreadcrumbLd = {
   '@context': 'https://schema.org',
   '@type': 'BreadcrumbList',
   itemListElement: [
-    { '@type': 'ListItem', position: 1, name: '首頁', item: 'https://www.genckobreeding.com/' },
+    { '@type': 'ListItem', position: 1, name: '首頁', item: 'https://www.genckobreeding.com/home' },
     { '@type': 'ListItem', position: 2, name: '飼養知識專欄', item: artsUrl }
   ]
 }
@@ -301,58 +301,84 @@ const fmtDate = (d) => {
 
 <template>
   <div class="articles-page-wrapper">
-    <!-- SEO：頁面唯一 h1 為 sr-only 含關鍵字版本（mobile+desktop 一致）；視覺主標保留為 div 不影響爬蟲 H1 階層 -->
-    <h1 class="sr-only">守宮文章知識庫｜新手必看、健康、環境、餵食完整指南</h1>
-    <div class="page-title dt-only" aria-hidden="true">文章知識庫</div>
-
-    <div class="search-bar-wrap">
-      <span class="search-icon">🔎</span>
-      <input
-        v-model="searchQuery"
-        type="text"
-        placeholder="搜尋關鍵字、症狀、主題..."
-        class="search-input"
-        aria-label="搜尋文章"
-      />
-      <button
-        v-if="searchQuery"
-        class="btn-app btn-app--ghost btn-app--xs btn-app--pill clear-btn"
-        aria-label="清除搜尋"
-        @click="searchQuery = ''"
-      >
-        清除
-      </button>
+    <div class="articles-document-meta" aria-label="文章資料庫說明">
+      <span>GENCKO FIELD JOURNAL</span>
+      <span>SEARCH / READ / APPLY</span>
     </div>
-
-    <div class="category-nav-row">
-      <div
-        v-for="cat in fixedCats"
-        :key="cat.value"
-        class="nav-chip"
-        :class="{ active: artCat === cat.value, beginner: cat.value === 'Beginner' }"
-        role="button"
-        tabindex="0"
-        @click="setCategory(cat.value)"
-        @keydown.enter.space.prevent="setCategory(cat.value)"
-      >
-        {{ cat.label }}
+    <header class="articles-masthead" data-testid="articles-editorial-stage">
+      <div class="masthead-copy">
+        <div class="masthead-kicker">GENCKO FIELD NOTES · 守宮知識誌</div>
+        <h1>守宮文章知識庫</h1>
+        <p>從飼養情境、健康觀察到行為與營養，用可以立即採取行動的文章整理每一個問題。</p>
       </div>
-    </div>
+      <nav class="masthead-routes" aria-label="文章閱讀入口">
+        <NuxtLink no-prefetch to="/start-here">
+          新手閱讀路徑
+          <span>01</span>
+        </NuxtLink>
+        <NuxtLink no-prefetch to="/care">
+          完整飼養指南
+          <span>02</span>
+        </NuxtLink>
+        <NuxtLink no-prefetch to="/health">
+          健康狀況評估
+          <span>03</span>
+        </NuxtLink>
+      </nav>
+    </header>
 
-    <div v-if="popularTags.length > 0" class="quick-tags">
-      <span class="tag-label">熱門主題</span>
-      <div class="tags-scroll">
-        <span
-          v-for="t in popularTags"
-          :key="t"
-          class="q-tag"
-          :class="{ active: searchQuery === t }"
-          @click="toggleQuickTag(t)"
+    <section class="article-control-deck" aria-label="文章搜尋與分類">
+      <div class="search-bar-wrap">
+        <span class="search-icon" aria-hidden="true">⌕</span>
+        <input
+          v-model="searchQuery"
+          type="search"
+          placeholder="搜尋關鍵字、症狀、主題..."
+          class="search-input"
+          aria-label="搜尋文章"
+        />
+        <button
+          v-if="searchQuery"
+          type="button"
+          class="btn-app btn-app--ghost btn-app--xs btn-app--pill clear-btn"
+          aria-label="清除搜尋"
+          @click="searchQuery = ''"
         >
-          {{ t }}
-        </span>
+          清除
+        </button>
       </div>
-    </div>
+
+      <div class="category-nav-row" aria-label="文章分類">
+        <button
+          v-for="cat in fixedCats"
+          :key="cat.value"
+          type="button"
+          class="nav-chip"
+          :class="{ active: artCat === cat.value, beginner: cat.value === 'Beginner' }"
+          :aria-pressed="artCat === cat.value"
+          @click="setCategory(cat.value)"
+        >
+          {{ cat.label }}
+        </button>
+      </div>
+
+      <div v-if="popularTags.length > 0" class="quick-tags">
+        <span class="tag-label">熱門主題</span>
+        <div class="tags-scroll">
+          <button
+            v-for="t in popularTags"
+            :key="t"
+            type="button"
+            class="q-tag"
+            :class="{ active: searchQuery === t }"
+            :aria-pressed="searchQuery === t"
+            @click="toggleQuickTag(t)"
+          >
+            {{ t }}
+          </button>
+        </div>
+      </div>
+    </section>
 
     <div v-if="searchQuery || artCat !== 'All'" class="main-list-head">
       <h2 class="list-title">
@@ -372,6 +398,7 @@ const fmtDate = (d) => {
         <div>目前沒有符合條件的文章</div>
         <button
           v-if="searchQuery || artCat !== 'All'"
+          type="button"
           class="btn-app btn-app--primary btn-app--sm btn-app--pill"
           style="margin-top: 12px"
           @click="resetFilters()"
@@ -381,9 +408,13 @@ const fmtDate = (d) => {
       </div>
 
       <div v-for="[cat, items] in groupedFilteredArticles" v-else :key="cat" class="article-group">
-        <div class="article-group-cat">{{ cat }}</div>
+        <div class="article-group-heading">
+          <div class="article-group-cat">{{ cat }}</div>
+          <span>{{ items.length }} 篇</span>
+        </div>
         <div class="grid article-group-grid">
           <NuxtLink
+            no-prefetch
             v-for="item in items"
             :key="item.ID"
             class="card article-card"
@@ -396,10 +427,11 @@ const fmtDate = (d) => {
                 :src="getCleanUrl(item.ImageURL, 600)"
                 :alt="item.Title"
                 class="card-img"
-                style="height: 180px"
                 loading="lazy"
               />
-              <div v-else class="card-img article-thumb-fallback" style="height: 180px">📝</div>
+              <div v-else class="card-img article-thumb-fallback" aria-hidden="true">
+                FIELD NOTE
+              </div>
               <div class="art-cat-tag">{{ item.Category }}</div>
             </div>
             <div class="card-body" style="flex: 1">
@@ -420,7 +452,118 @@ const fmtDate = (d) => {
 .articles-page-wrapper {
   margin: 0 auto;
   max-width: 1300px;
-  padding-bottom: 30px;
+  padding: 6px 18px 48px;
+}
+
+.articles-document-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 0 0 14px;
+  border-bottom: 1px solid var(--bd);
+  color: var(--txt-muted);
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+}
+
+.articles-document-meta span:first-child {
+  color: var(--pri);
+}
+
+.articles-masthead {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1.45fr) minmax(300px, 0.55fr);
+  gap: clamp(28px, 6vw, 90px);
+  overflow: hidden;
+  margin-bottom: 18px;
+  padding: clamp(28px, 5vw, 64px);
+  border: 1px solid var(--bd);
+  border-radius: calc(var(--radius-lg) + 8px);
+  background:
+    linear-gradient(120deg, var(--pri-glow-soft), transparent 48%),
+    repeating-linear-gradient(90deg, transparent 0 78px, var(--bd) 79px 80px), var(--card-bg);
+  box-shadow: var(--shadow-card);
+}
+
+.articles-masthead::after {
+  content: '05';
+  position: absolute;
+  right: -0.03em;
+  bottom: -0.28em;
+  color: var(--pri);
+  font-family: 'Black Ops One', monospace, sans-serif;
+  font-size: clamp(7rem, 19vw, 16rem);
+  line-height: 1;
+  opacity: 0.06;
+  pointer-events: none;
+}
+
+.masthead-copy,
+.masthead-routes {
+  position: relative;
+  z-index: 1;
+}
+
+.masthead-kicker {
+  margin-bottom: 12px;
+  color: var(--pri);
+  font-size: 0.76rem;
+  font-weight: 900;
+  letter-spacing: 0.17em;
+}
+
+.masthead-copy h1 {
+  max-width: 720px;
+  margin: 0;
+  color: var(--txt);
+  font-size: clamp(2.35rem, 6vw, 5.8rem);
+  line-height: 0.95;
+  letter-spacing: -0.055em;
+}
+
+.masthead-copy p {
+  max-width: 640px;
+  margin: 22px 0 0;
+  color: var(--txt-muted);
+  font-size: clamp(0.98rem, 1.4vw, 1.15rem);
+  line-height: 1.8;
+}
+
+.masthead-routes {
+  display: grid;
+  align-content: end;
+}
+
+.masthead-routes a {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: var(--control-min-height);
+  padding: 13px 2px;
+  border-bottom: 1px solid var(--bd);
+  color: var(--txt);
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.masthead-routes span {
+  color: var(--pri);
+  font-family: 'Black Ops One', monospace, sans-serif;
+  font-size: 0.78rem;
+}
+
+.article-control-deck {
+  position: sticky;
+  top: 8px;
+  z-index: 20;
+  margin-bottom: 28px;
+  padding: 12px;
+  border: 1px solid var(--bd);
+  border-radius: var(--radius-lg);
+  background: var(--card-bg-solid);
+  box-shadow: var(--shadow-card);
 }
 
 .dt-only {
@@ -428,7 +571,7 @@ const fmtDate = (d) => {
 }
 
 .search-bar-wrap {
-  margin-bottom: 15px;
+  margin-bottom: 10px;
   position: relative;
   width: 100%;
 }
@@ -444,14 +587,15 @@ const fmtDate = (d) => {
 }
 
 .search-input {
-  background: var(--card-bg);
+  background: rgba(128, 128, 128, 0.055);
   border: 1px solid var(--bd);
-  border-radius: 12px;
+  border-radius: var(--radius-md);
   color: var(--txt);
   font-size: 1rem;
   font-weight: 700;
   outline: none;
-  padding: 14px 45px;
+  min-height: 52px;
+  padding: 14px 48px;
   transition: 0.3s;
   width: 100%;
 }
@@ -463,7 +607,7 @@ const fmtDate = (d) => {
 
 .clear-btn {
   height: auto;
-  min-height: 30px;
+  min-height: var(--control-min-height);
   padding: 6px 10px;
   position: absolute;
   right: 15px;
@@ -475,7 +619,7 @@ const fmtDate = (d) => {
   display: flex;
   flex-wrap: nowrap;
   gap: 8px;
-  margin-bottom: 15px;
+  margin-bottom: 0;
   overflow-x: auto;
   padding-bottom: 5px;
   scrollbar-width: none;
@@ -495,11 +639,20 @@ const fmtDate = (d) => {
   font-size: 0.9rem;
   font-weight: 700;
   min-width: max-content;
+  min-height: var(--control-min-height);
   opacity: 0.7;
   padding: 10px 12px;
   text-align: center;
   transition: 0.2s;
   white-space: nowrap;
+  font-family: inherit;
+}
+
+.nav-chip:focus-visible,
+.q-tag:focus-visible,
+.clear-btn:focus-visible {
+  outline: 3px solid var(--pri);
+  outline-offset: 2px;
 }
 
 .nav-chip.active {
@@ -526,7 +679,7 @@ const fmtDate = (d) => {
   background: rgba(128, 128, 128, 0.05);
   border-radius: 8px;
   display: flex;
-  margin-bottom: 25px;
+  margin: 10px 0 0;
   padding: 8px 12px;
 }
 
@@ -556,6 +709,8 @@ const fmtDate = (d) => {
   color: var(--txt);
   cursor: pointer;
   font-size: 0.8rem;
+  font-family: inherit;
+  min-height: var(--control-min-height);
   padding: 4px 10px;
   white-space: nowrap;
 }
@@ -575,11 +730,25 @@ const fmtDate = (d) => {
 }
 
 .article-group {
-  margin-bottom: 12px;
+  margin-bottom: 36px;
 }
 
 .article-group:last-child {
   margin-bottom: 0;
+}
+
+.article-group-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+  border-bottom: 1px solid var(--bd);
+}
+
+.article-group-heading > span {
+  color: var(--txt-muted);
+  font-size: 0.78rem;
+  font-weight: 700;
 }
 
 .article-group-cat {
@@ -590,8 +759,9 @@ const fmtDate = (d) => {
   font-size: 0.72rem;
   font-weight: 800;
   letter-spacing: 1px;
-  margin-bottom: 6px;
-  padding: 3px 9px;
+  margin-bottom: -1px;
+  padding: 9px 4px;
+  border-bottom: 2px solid var(--pri);
 }
 
 .article-group-grid {
@@ -599,15 +769,27 @@ const fmtDate = (d) => {
 }
 
 .article-thumb-wrap {
+  min-height: 180px;
+  border-bottom: 1px solid var(--bd);
   overflow: hidden;
   position: relative;
+}
+
+.article-thumb-wrap .card-img {
+  width: 100%;
+  height: 210px;
+  object-fit: cover;
+  transition: transform var(--transition);
 }
 
 .article-thumb-fallback {
   align-items: center;
   background: #1a1a1a;
   display: flex;
-  font-size: 3rem;
+  color: var(--pri);
+  font-family: 'Black Ops One', monospace, sans-serif;
+  font-size: 1rem;
+  letter-spacing: 0.14em;
   justify-content: center;
 }
 
@@ -648,12 +830,91 @@ const fmtDate = (d) => {
   overflow: hidden;
 }
 
+.article-card {
+  overflow: hidden;
+  border: 1px solid var(--bd);
+  border-radius: var(--radius-lg);
+  background: var(--card-bg);
+  transition:
+    transform var(--transition),
+    border-color var(--transition),
+    box-shadow var(--transition);
+}
+
+.article-card .card-body {
+  padding: 18px;
+}
+
+@media (min-width: 769px) {
+  .article-group-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .article-group-grid .article-card:first-child {
+    grid-column: span 2;
+  }
+
+  .article-group-grid .article-card:first-child .article-thumb-wrap .card-img {
+    height: 320px;
+  }
+
+  .article-group-grid .article-card:first-child .morph-title {
+    font-size: clamp(1.35rem, 2.5vw, 2rem);
+    line-height: 1.15;
+  }
+}
+
+@media (min-width: 768px) and (hover: hover) and (pointer: fine) {
+  .masthead-routes a:hover {
+    color: var(--pri);
+  }
+
+  .article-card:hover {
+    transform: translateY(-5px);
+    border-color: var(--bd-hover);
+    box-shadow: var(--shadow-hover);
+  }
+
+  .article-card:hover .article-thumb-wrap .card-img {
+    transform: scale(1.025);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .search-input,
+  .nav-chip,
+  .q-tag,
+  .article-card,
+  .clear-btn,
+  .article-thumb-wrap .card-img {
+    transition: none;
+  }
+
+  .article-card:hover,
+  .article-card:hover .article-thumb-wrap .card-img {
+    transform: none;
+  }
+}
+
 @media (max-width: 768px) {
   .dt-only {
     display: none !important;
   }
   .articles-page-wrapper {
-    padding: 5px 10px;
+    padding: 5px 10px 32px;
+  }
+  .articles-masthead {
+    grid-template-columns: 1fr;
+    gap: 24px;
+    padding: 24px 18px;
+    background: linear-gradient(145deg, var(--pri-glow-soft), transparent 55%), var(--card-bg);
+  }
+  .masthead-copy h1 {
+    font-size: clamp(2.25rem, 14vw, 4rem);
+  }
+  .article-control-deck {
+    position: relative;
+    top: auto;
   }
   .nav-chip {
     border-radius: 6px;
@@ -662,10 +923,10 @@ const fmtDate = (d) => {
   }
   .grid.article-group-grid {
     gap: 8px !important;
-    grid-template-columns: repeat(2, 1fr) !important;
+    grid-template-columns: 1fr !important;
   }
   .card-img {
-    height: 120px !important;
+    height: 150px !important;
   }
   .morph-title {
     font-size: 0.9rem !important;
@@ -673,5 +934,180 @@ const fmtDate = (d) => {
     text-overflow: ellipsis;
     white-space: nowrap;
   }
+}
+/* 文章索引以期刊目錄感呈現，影像與文字維持同等權重。 */
+.articles-page-wrapper,
+.articles-masthead,
+.article-control-deck,
+.article-card,
+.article-thumb-wrap {
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.articles-masthead h1,
+.article-group-heading,
+.article-card .card-title {
+  font-family: 'Noto Serif TC', serif;
+  letter-spacing: -0.03em;
+}
+
+.articles-masthead,
+.article-control-deck,
+.article-card {
+  background-image: none;
+}
+
+.article-thumb-wrap,
+.article-thumb-wrap .card-img {
+  aspect-ratio: 1;
+}
+
+.category-nav-row a,
+.article-card {
+  border-radius: 2px;
+}
+
+/* 文章入口改為期刊目錄，分類與文章列皆以細線連續排列。 */
+.articles-masthead,
+.article-control-deck {
+  padding: 28px 0;
+  border-width: 1px 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.category-nav-row {
+  gap: 0;
+  border-bottom: 1px solid var(--bd);
+}
+
+.nav-chip,
+.q-tag,
+.quick-tags {
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.nav-chip {
+  border-width: 0 0 2px;
+  opacity: 1;
+}
+
+.nav-chip.active {
+  background: transparent;
+  color: var(--pri);
+  box-shadow: none;
+}
+
+.quick-tags {
+  margin-top: 16px;
+  padding: 10px 0;
+  border-width: 1px 0;
+}
+
+.article-group-grid {
+  gap: 0;
+  border-top: 1px solid var(--bd);
+  border-left: 1px solid var(--bd);
+}
+
+.article-card {
+  border-width: 0 1px 1px 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.article-card .card-body {
+  padding: 18px 0 0;
+}
+
+@media (min-width: 768px) and (hover: hover) and (pointer: fine) {
+  .article-card:hover {
+    transform: none;
+    border-color: var(--pri);
+    box-shadow: none;
+  }
+}
+
+@media (min-width: 768px) and (hover: hover) and (pointer: fine) {
+  .article-card:hover {
+    transform: none;
+    box-shadow: none;
+  }
+}
+/* 期刊以圖片、標題與細線建立層級。 */
+.articles-page-wrapper {
+  padding: 8px 18px 28px;
+}
+.articles-masthead {
+  margin-bottom: 18px;
+  padding-block: 22px;
+  gap: 24px;
+}
+.articles-masthead h1 {
+  font-family: var(--font-heading-zh);
+  font-size: clamp(2rem, 4.5vw, 3.7rem);
+  line-height: 1.3;
+}
+.article-control-deck {
+  padding: 16px 0;
+  margin-bottom: 20px;
+  background: transparent;
+  border-radius: 0;
+  box-shadow: none;
+}
+.masthead-routes a {
+  min-height: 44px;
+}
+.nav-chip,
+.q-tag {
+  border-radius: 2px;
+  box-shadow: none;
+  min-height: 44px;
+  white-space: nowrap;
+}
+.article-group {
+  margin-block: 24px;
+}
+.article-card {
+  border: 0;
+  border-bottom: 1px solid var(--bd);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+.article-card:hover {
+  transform: none;
+  box-shadow: none;
+}
+.article-card .card-body {
+  padding: 14px 0;
+}
+.article-card .morph-title {
+  font-family: var(--font-heading-zh);
+  line-height: 1.5;
+}
+.article-card .card-img {
+  border-radius: 0;
+}
+.article-card .morph-title::after {
+  content: ' →';
+  color: var(--pri);
+  white-space: nowrap;
+}
+/* 本頁返回與次要操作使用同一按鈕形式。 */
+:deep(.app-back-btn),
+.btn-app {
+  border-radius: 2px;
+  min-height: 44px;
+  box-shadow: none;
+  font-family: var(--font-body-zh);
+}
+:deep(.app-back-btn) {
+  border: 1px solid var(--txt);
 }
 </style>

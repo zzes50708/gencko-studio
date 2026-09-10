@@ -123,7 +123,11 @@ export const ROUTE_LABELS: Record<string, string> = {
   '/breeders': '種群展示',
   '/compare': '個體比較',
   '/faq': '常見問題 FAQ',
-  '/home': '首頁'
+  '/home': '首頁',
+  '/start-here': '新手入門',
+  '/buying-guide': '購買流程',
+  '/why-gencko': '選擇 Gencko',
+  '/stories': '客戶案例'
 }
 
 /**
@@ -134,13 +138,13 @@ export const ROUTE_LABELS: Record<string, string> = {
  *
  * @example
  *   getBreadcrumbForPath('/articles')
- *   // → [{name:'首頁',url:'/'}, {name:'飼養知識專欄',url:'/articles'}]
+ *   // → [{name:'首頁',url:'/home'}, {name:'飼養知識專欄',url:'/articles'}]
  */
 export const getBreadcrumbForPath = (path: string, lastLabel?: string): BreadcrumbItem[] => {
-  if (!path || path === '/') return [{ name: ROUTE_LABELS['/'], url: '/' }]
+  if (!path || path === '/') return [{ name: 'Hero Lab', url: '/' }]
 
   const segs = path.split('?')[0].split('#')[0].split('/').filter(Boolean)
-  const items: BreadcrumbItem[] = [{ name: ROUTE_LABELS['/'], url: '/' }]
+  const items: BreadcrumbItem[] = [{ name: '首頁', url: '/home' }]
   let cur = ''
   for (let i = 0; i < segs.length; i++) {
     cur += '/' + segs[i]

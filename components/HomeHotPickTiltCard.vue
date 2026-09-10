@@ -23,6 +23,7 @@ const imageAlt = computed(() => `${props.item?.Morph || ''} 守宮`)
   >
     <div class="hot-card-item hot-card-tilt">
       <NuxtLink
+        no-prefetch
         :to="`/product/${item.ID}`"
         style="display: block; text-decoration: none; color: inherit; height: 100%"
       >

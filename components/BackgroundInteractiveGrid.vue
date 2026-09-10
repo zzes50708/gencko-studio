@@ -1,12 +1,13 @@
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
+import { useMediaQuery } from '@vueuse/core'
 
 const HW = 35
 const HH = 40
 const COL_W = 70
 const ROW_H = 60
 const EVEN_X = 35
-const ODD_X  = 0
+const ODD_X = 0
 const ORIG_Y = 40
 
 function rowParity(row) {
@@ -20,12 +21,14 @@ function hexCenter(row, col) {
 }
 
 function hexPoints(cx, cy) {
-  return `${cx},${cy-HH} ${cx+HW},${cy-HH/2} ${cx+HW},${cy+HH/2} ${cx},${cy+HH} ${cx-HW},${cy+HH/2} ${cx-HW},${cy-HH/2}`
+  return `${cx},${cy - HH} ${cx + HW},${cy - HH / 2} ${cx + HW},${cy + HH / 2} ${cx},${cy + HH} ${cx - HW},${cy + HH / 2} ${cx - HW},${cy - HH / 2}`
 }
 
 function pixelToHex(px, py) {
   const rowApprox = (py - ORIG_Y) / ROW_H
-  let bestRow = 0, bestCol = 0, bestDist = Infinity
+  let bestRow = 0,
+    bestCol = 0,
+    bestDist = Infinity
   for (let dr = -2; dr <= 2; dr++) {
     const row = Math.round(rowApprox) + dr
     const xOrig = rowParity(row) === 0 ? EVEN_X : ODD_X
@@ -34,7 +37,11 @@ function pixelToHex(px, py) {
       const col = Math.round(colApprox) + dc
       const { x, y } = hexCenter(row, col)
       const dist = Math.hypot(px - x, py - y)
-      if (dist < bestDist) { bestDist = dist; bestRow = row; bestCol = col }
+      if (dist < bestDist) {
+        bestDist = dist
+        bestRow = row
+        bestCol = col
+      }
     }
   }
   return { row: bestRow, col: bestCol }
@@ -42,7 +49,9 @@ function pixelToHex(px, py) {
 
 const hovRow = ref(null)
 const hovCol = ref(null)
+const canHover = useMediaQuery('(min-width: 768px) and (hover: hover) and (pointer: fine)')
 let rafId = null
+let listenersAttached = false
 
 function onMouseMove(e) {
   if (rafId) return
@@ -61,6 +70,25 @@ function onMouseLeave() {
   hovCol.value = null
 }
 
+function attachPointerListeners() {
+  if (!import.meta.client || listenersAttached || !canHover.value) return
+  window.addEventListener('mousemove', onMouseMove, { passive: true })
+  document.documentElement.addEventListener('mouseleave', onMouseLeave)
+  listenersAttached = true
+}
+
+function detachPointerListeners() {
+  if (!import.meta.client || !listenersAttached) return
+  window.removeEventListener('mousemove', onMouseMove)
+  document.documentElement.removeEventListener('mouseleave', onMouseLeave)
+  listenersAttached = false
+  onMouseLeave()
+  if (rafId) {
+    cancelAnimationFrame(rafId)
+    rafId = null
+  }
+}
+
 const hovPolygon = computed(() => {
   if (hovRow.value === null) return null
   const { x, y } = hexCenter(hovRow.value, hovCol.value)
@@ -68,24 +96,22 @@ const hovPolygon = computed(() => {
 })
 
 onMounted(() => {
-  window.addEventListener('mousemove', onMouseMove, { passive: true })
-  document.documentElement.addEventListener('mouseleave', onMouseLeave)
+  attachPointerListeners()
 })
 
 onUnmounted(() => {
-  window.removeEventListener('mousemove', onMouseMove)
-  document.documentElement.removeEventListener('mouseleave', onMouseLeave)
-  if (rafId) cancelAnimationFrame(rafId)
+  detachPointerListeners()
+})
+
+watch(canHover, (enabled) => {
+  if (enabled) attachPointerListeners()
+  else detachPointerListeners()
 })
 </script>
 
 <template>
   <svg class="bg-hex-grid" aria-hidden="true">
-    <polygon
-      v-if="hovPolygon"
-      :points="hovPolygon"
-      class="bg-hex-cell"
-    />
+    <polygon v-if="hovPolygon" :points="hovPolygon" class="bg-hex-cell" />
   </svg>
 </template>
 
@@ -105,6 +131,8 @@ onUnmounted(() => {
   transition: opacity 600ms ease;
 }
 @media (hover: none), (pointer: coarse) {
-  .bg-hex-grid { display: none; }
+  .bg-hex-grid {
+    display: none;
+  }
 }
 </style>

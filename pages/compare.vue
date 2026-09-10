@@ -95,7 +95,7 @@ const cmpBreadcrumbLd = {
   '@context': 'https://schema.org',
   '@type': 'BreadcrumbList',
   itemListElement: [
-    { '@type': 'ListItem', position: 1, name: '首頁', item: 'https://www.genckobreeding.com/' },
+    { '@type': 'ListItem', position: 1, name: '首頁', item: 'https://www.genckobreeding.com/home' },
     {
       '@type': 'ListItem',
       position: 2,
@@ -149,6 +149,7 @@ useHead({
       content:
         'Gencko 線上個體比較工具：最多 3 隻守宮並排對照，自動標示共有與獨有基因、性別、孵化日、狀態與價格，幫助你快速判讀差異做出選購決策。'
     },
+    { name: 'robots', content: 'noindex, follow' },
     { name: 'keywords', content: '守宮比較, 豹紋守宮比較, 基因比對, 守宮選購, 個體並排' },
     // Open Graph
     { property: 'og:title', content: '守宮個體並排比較｜基因 × 性別 × 價格 一次看' },
@@ -239,147 +240,188 @@ const removeItem = (id) => {
 </script>
 
 <template>
-  <div class="compare-page">
-    <div class="compare-header">
-      <NuxtLink
-        to="/shop"
-        class="btn-app btn-app--ghost btn-app--sm btn-app--pill back-btn"
-        style="text-decoration: none"
-      >
-        返回商城
-      </NuxtLink>
-      <h1 class="page-title" style="margin: 0">個體並排比較</h1>
-      <button
-        v-if="store.compareList.length > 0"
-        class="btn-app btn-app--ghost btn-app--sm btn-app--pill clear-all-btn"
-        @click="clearAndGoShop()"
-      >
-        清空
-      </button>
+  <main class="compare-page" data-phase3-surface="compare">
+    <div class="common-document-meta" aria-label="比較工作台說明">
+      <span>GENCKO COMPARISON DESK</span>
+      <span>SELECT / REVIEW / DECIDE</span>
     </div>
+    <header class="compare-header">
+      <div class="compare-header__copy">
+        <p class="compare-eyebrow">Decision table</p>
+        <h1 class="page-title">個體比較</h1>
+        <p>相似個體挑選，看看喜歡哪個。</p>
+      </div>
+      <div class="compare-header__actions">
+        <span class="compare-count">已選擇 {{ items.length }} / 3 隻</span>
+        <NuxtLink no-prefetch to="/shop" class="btn-app btn-app--ghost btn-app--sm back-btn">
+          返回商城
+        </NuxtLink>
+        <button
+          v-if="items.length > 0"
+          type="button"
+          class="btn-app btn-app--secondary btn-app--sm clear-all-btn"
+          @click="clearAndGoShop()"
+        >
+          清空並重選
+        </button>
+      </div>
+    </header>
 
-    <div v-if="items.length === 0" class="empty-compare">
-      <div style="font-size: 3rem; margin-bottom: 16px">🦎</div>
-      <p>尚未選擇任何個體</p>
-      <NuxtLink
-        to="/shop"
-        class="btn-hero"
-        style="text-decoration: none; display: inline-block; margin-top: 12px"
-      >
+    <section v-if="items.length === 0" class="empty-compare" aria-labelledby="empty-title">
+      <p class="empty-compare__index" aria-hidden="true">00 / 03</p>
+      <h2 id="empty-title">尚未選擇任何個體</h2>
+      <p>回到商城加入最多三隻個體，就能在這裡直接比較基因與價格。</p>
+      <NuxtLink no-prefetch to="/shop" class="btn-app btn-app--primary btn-app--md">
         前往選購
       </NuxtLink>
-    </div>
+    </section>
 
-    <div v-else class="compare-layout" :class="`cols-${items.length}`">
-      <!-- 圖片列 -->
-      <div class="compare-row header-row">
-        <div class="row-label">個體</div>
-        <div v-for="item in items" :key="item.ID" class="col-cell img-cell">
-          <button class="remove-btn" @click="removeItem(item.ID)" title="移除">✕</button>
-          <NuxtLink :to="`/product/${item.ID}`" style="display: block; text-decoration: none">
-            <img
-              v-if="item.ImageURL"
-              :src="getCleanUrl(item.ImageURL, 400)"
-              :alt="item.Morph"
-              class="compare-img"
-              loading="lazy"
-              decoding="async"
-            />
-            <div v-else class="compare-img-placeholder">🦎</div>
-            <div class="item-morph">{{ item.Morph }}</div>
-            <div class="item-id">ID: {{ item.ID }}</div>
-          </NuxtLink>
-        </div>
-      </div>
-
-      <!-- 物種 -->
-      <div class="compare-row">
-        <div class="row-label">物種</div>
-        <div v-for="item in items" :key="item.ID" class="col-cell">{{ item.Species }}</div>
-      </div>
-
-      <!-- 性別 -->
-      <div class="compare-row">
-        <div class="row-label">性別</div>
-        <div v-for="item in items" :key="item.ID" class="col-cell">{{ fmtSex(item) }}</div>
-      </div>
-
-      <!-- 出生 -->
-      <div class="compare-row">
-        <div class="row-label">出生日期</div>
-        <div v-for="item in items" :key="item.ID" class="col-cell">
-          {{ item.Birthday || '未登錄' }}
-        </div>
-      </div>
-
-      <!-- 基因 -->
-      <div class="compare-row">
-        <div class="row-label">基因</div>
-        <div v-for="item in items" :key="item.ID" class="col-cell gene-cell">
-          <span
-            v-for="g in Array.isArray(item.Genes) ? item.Genes : []"
-            :key="g"
-            class="gene-tag"
-            :class="{
-              shared: allGenes.find((ag) => ag.gene === g)?.shared,
-              unique: allGenes.find((ag) => ag.gene === g)?.owners === 1
-            }"
-          >
-            {{ g }}
+    <template v-else>
+      <div class="compare-toolbar">
+        <div class="gene-legend" aria-label="基因標記說明">
+          <span>
+            <i class="legend-dot shared" aria-hidden="true"></i>
+            所有個體共有
           </span>
-          <span v-if="!item.Genes || item.Genes.length === 0" style="opacity: 0.4">-</span>
-        </div>
-      </div>
-
-      <!-- 狀態 -->
-      <div class="compare-row">
-        <div class="row-label">狀態</div>
-        <div v-for="item in items" :key="item.ID" class="col-cell">
-          <span
-            class="status-badge"
-            :class="{
-              's-for-sale': item.Status === 'ForSale',
-              's-auction': item.Status === 'Auction' && hasActiveAuction(item.ID),
-              's-sold': item.Status === 'Sold'
-            }"
-          >
-            {{ fmtStatus(item) }}
+          <span>
+            <i class="legend-dot unique" aria-hidden="true"></i>
+            單一個體獨有
           </span>
         </div>
+        <p class="compare-scroll-hint">可左右滑動查看完整比較</p>
       </div>
 
-      <!-- 售價 -->
-      <div class="compare-row price-row">
-        <div class="row-label">售價</div>
-        <div v-for="item in items" :key="item.ID" class="col-cell price-cell">
-          {{ fmtPrice(item) }}
-        </div>
-      </div>
-
-      <!-- 操作 -->
-      <div class="compare-row action-row">
-        <div class="row-label"></div>
-        <div v-for="item in items" :key="item.ID" class="col-cell">
-          <NuxtLink
-            v-if="item.Status === 'ForSale'"
-            :href="store.lineLink"
-            target="_blank"
-            class="btn-action"
-          >
-            💬 私訊購買
-          </NuxtLink>
-          <NuxtLink
-            v-else-if="item.Status === 'Auction' && hasActiveAuction(item.ID)"
-            :to="getAuctionLink(item.ID)"
-            class="btn-action btn-auction"
-          >
-            🔨 前往競標
-          </NuxtLink>
-          <NuxtLink :to="`/product/${item.ID}`" class="btn-action btn-detail">查看詳頁</NuxtLink>
-        </div>
-      </div>
-    </div>
-  </div>
+      <section class="compare-scroll" role="region" aria-label="個體比較表" tabindex="0">
+        <table class="compare-table" :class="`cols-${items.length}`">
+          <caption class="sr-only">
+            所選守宮個體的物種、性別、出生日期、基因、狀態與售價比較
+          </caption>
+          <thead>
+            <tr>
+              <th scope="col" class="row-label row-label--corner">比較欄位</th>
+              <th v-for="item in items" :key="item.ID" scope="col" class="item-heading">
+                <button
+                  type="button"
+                  class="btn-app btn-app--ghost btn-app--xs remove-btn"
+                  @click="removeItem(item.ID)"
+                  :aria-label="`移除 ${item.Morph} 比較項目`"
+                >
+                  <span aria-hidden="true">✕</span>
+                </button>
+                <NuxtLink
+                  no-prefetch
+                  :to="`/product/${item.ID}`"
+                  class="item-link"
+                  :aria-label="`查看 ${item.Morph} 詳細資料`"
+                >
+                  <img
+                    v-if="item.ImageURL"
+                    :src="getCleanUrl(item.ImageURL, 400)"
+                    :alt="item.Morph"
+                    class="compare-img"
+                    loading="lazy"
+                    decoding="async"
+                  />
+                  <div v-else class="compare-img-placeholder" aria-hidden="true">無圖片</div>
+                  <span class="item-morph">{{ item.Morph }}</span>
+                  <span class="item-id">ID {{ item.ID }}</span>
+                </NuxtLink>
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <th scope="row" class="row-label">物種</th>
+              <td v-for="item in items" :key="item.ID">{{ item.Species || '未登錄' }}</td>
+            </tr>
+            <tr>
+              <th scope="row" class="row-label">性別</th>
+              <td v-for="item in items" :key="item.ID">{{ fmtSex(item) }}</td>
+            </tr>
+            <tr>
+              <th scope="row" class="row-label">出生日期</th>
+              <td v-for="item in items" :key="item.ID" class="numeric-cell">
+                {{ item.Birthday || '未登錄' }}
+              </td>
+            </tr>
+            <tr>
+              <th scope="row" class="row-label">基因</th>
+              <td v-for="item in items" :key="item.ID">
+                <div class="gene-cell">
+                  <span
+                    v-for="g in Array.isArray(item.Genes) ? item.Genes : []"
+                    :key="g"
+                    class="gene-tag"
+                    :class="{
+                      shared: allGenes.find((gene) => gene.gene === g)?.shared,
+                      unique: allGenes.find((gene) => gene.gene === g)?.owners === 1
+                    }"
+                  >
+                    {{ g }}
+                  </span>
+                  <span v-if="!item.Genes || item.Genes.length === 0" class="empty-value">
+                    未登錄
+                  </span>
+                </div>
+              </td>
+            </tr>
+            <tr>
+              <th scope="row" class="row-label">狀態</th>
+              <td v-for="item in items" :key="item.ID">
+                <span
+                  class="status-badge"
+                  :class="{
+                    's-for-sale': item.Status === 'ForSale',
+                    's-auction': item.Status === 'Auction' && hasActiveAuction(item.ID),
+                    's-sold': item.Status === 'Sold'
+                  }"
+                >
+                  {{ fmtStatus(item) }}
+                </span>
+              </td>
+            </tr>
+            <tr class="compare-price-row">
+              <th scope="row" class="row-label">售價</th>
+              <td v-for="item in items" :key="item.ID" class="price-cell">
+                {{ fmtPrice(item) }}
+              </td>
+            </tr>
+            <tr class="action-row">
+              <th scope="row" class="row-label">下一步</th>
+              <td v-for="item in items" :key="item.ID">
+                <div class="action-stack">
+                  <NuxtLink
+                    no-prefetch
+                    v-if="item.Status === 'ForSale'"
+                    :href="store.lineLink"
+                    target="_blank"
+                    class="btn-app btn-app--primary btn-app--sm btn-action"
+                  >
+                    私訊購買
+                  </NuxtLink>
+                  <NuxtLink
+                    no-prefetch
+                    v-else-if="item.Status === 'Auction' && hasActiveAuction(item.ID)"
+                    :to="getAuctionLink(item.ID)"
+                    class="btn-app btn-app--primary btn-app--sm btn-action btn-auction"
+                  >
+                    前往競標
+                  </NuxtLink>
+                  <NuxtLink
+                    no-prefetch
+                    :to="`/product/${item.ID}`"
+                    class="btn-app btn-app--secondary btn-app--sm btn-action btn-detail"
+                  >
+                    查看詳頁
+                  </NuxtLink>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+    </template>
+  </main>
 </template>
 
 <style scoped>
@@ -406,12 +448,9 @@ const removeItem = (id) => {
   white-space: nowrap;
   transition: 0.2s;
 }
-.back-btn:hover {
-  opacity: 1;
-  color: var(--pri);
-}
 .clear-all-btn {
   margin-left: auto;
+  min-height: var(--control-min-height);
   background: transparent;
   border: 1px solid var(--bd);
   color: var(--txt);
@@ -422,11 +461,6 @@ const removeItem = (id) => {
   opacity: 0.7;
   transition: 0.2s;
   white-space: nowrap;
-}
-.clear-all-btn:hover {
-  opacity: 1;
-  border-color: #e74c3c;
-  color: #e74c3c;
 }
 
 .empty-compare {
@@ -503,8 +537,9 @@ const removeItem = (id) => {
   position: absolute;
   top: 8px;
   right: 8px;
-  width: 24px;
-  height: 24px;
+  width: var(--control-min-height);
+  min-height: var(--control-min-height);
+  height: var(--control-min-height);
   border-radius: 50%;
   background: rgba(231, 76, 60, 0.15);
   border: 1px solid rgba(231, 76, 60, 0.3);
@@ -516,10 +551,6 @@ const removeItem = (id) => {
   justify-content: center;
   transition: 0.2s;
   z-index: 10;
-}
-.remove-btn:hover {
-  background: #e74c3c;
-  color: #fff;
 }
 .compare-img {
   width: 100%;
@@ -608,7 +639,7 @@ const removeItem = (id) => {
   font-size: 0.82rem;
 }
 
-.price-row .price-cell {
+.compare-price-row .price-cell {
   font-size: 1.1rem;
   font-weight: 900;
   color: var(--pri);
@@ -622,6 +653,7 @@ const removeItem = (id) => {
 }
 .btn-action {
   display: block;
+  min-height: var(--control-min-height);
   text-align: center;
   padding: 9px 12px;
   border-radius: 8px;
@@ -635,10 +667,6 @@ const removeItem = (id) => {
   box-shadow: 0 2px 8px var(--pri-glow);
   transition: 0.2s;
 }
-.btn-action:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 14px var(--pri-glow);
-}
 .btn-auction {
   background: #e67e22;
   box-shadow: 0 2px 8px rgba(230, 126, 34, 0.4);
@@ -650,11 +678,14 @@ const removeItem = (id) => {
   box-shadow: none;
   opacity: 0.7;
 }
-.btn-detail:hover {
-  opacity: 1;
-  border-color: var(--bd-hover);
-}
 
+.clear-all-btn:focus-visible,
+.remove-btn:focus-visible,
+.btn-action:focus-visible,
+.back-btn:focus-visible {
+  outline: 3px solid var(--pri);
+  outline-offset: 2px;
+}
 /* Mobile */
 @media (max-width: 768px) {
   .compare-page {
@@ -697,6 +728,483 @@ const removeItem = (id) => {
   .gene-tag {
     font-size: 0.68rem;
     padding: 1px 5px;
+  }
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .back-btn:hover {
+    opacity: 1;
+    color: var(--pri);
+  }
+  .clear-all-btn:hover {
+    opacity: 1;
+    border-color: #e74c3c;
+    color: #e74c3c;
+  }
+  .remove-btn:hover {
+    background: #e74c3c;
+    color: #fff;
+  }
+  .btn-action:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 14px var(--pri-glow);
+  }
+  .btn-detail:hover {
+    opacity: 1;
+    border-color: var(--bd-hover);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .back-btn,
+  .clear-all-btn,
+  .remove-btn,
+  .btn-action {
+    transition: none !important;
+    animation: none !important;
+  }
+}
+
+/* Phase 3 focused redesign：保留比較規則，改以語意表格呈現。 */
+.compare-page {
+  width: min(100%, 1180px);
+  padding: 1rem 1.25rem 5rem;
+  overflow: visible;
+}
+
+.compare-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 2rem;
+  align-items: end;
+  margin-bottom: 0;
+  padding: clamp(1.5rem, 4vw, 3.5rem) 0 2rem;
+}
+
+.compare-header__copy {
+  max-width: 48rem;
+}
+
+.compare-eyebrow {
+  margin: 0 0 0.75rem;
+  color: var(--pri);
+  font-size: 0.75rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.compare-header .page-title {
+  margin: 0;
+  font-size: clamp(2.3rem, 6vw, 5.25rem);
+  line-height: 1;
+  text-wrap: balance;
+}
+
+.compare-header__copy > p:last-child {
+  max-width: 60ch;
+  margin: 1rem 0 0;
+  color: var(--txt);
+  line-height: 1.7;
+  opacity: 0.68;
+  text-wrap: pretty;
+}
+
+.compare-header__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.6rem;
+  max-width: 20rem;
+}
+
+.compare-count {
+  flex-basis: 100%;
+  color: var(--txt);
+  font-size: 0.82rem;
+  font-weight: 800;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.compare-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem 0;
+}
+
+.gene-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  color: var(--txt);
+  font-size: 0.75rem;
+  opacity: 0.7;
+}
+
+.gene-legend > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.legend-dot {
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: 50%;
+  background: var(--bd);
+}
+
+.legend-dot.shared {
+  background: var(--pri);
+}
+
+.legend-dot.unique {
+  background: #2f7da1;
+}
+
+.compare-scroll-hint {
+  margin: 0;
+  color: var(--txt);
+  font-size: 0.75rem;
+  opacity: 0.52;
+}
+
+.compare-scroll {
+  max-width: 100%;
+  overflow-x: auto;
+  border: 1px solid var(--bd);
+  border-radius: 1rem;
+  background: var(--card-bg);
+  overscroll-behavior-inline: contain;
+  scrollbar-gutter: stable;
+}
+
+.compare-scroll:focus-visible {
+  outline: 3px solid var(--pri);
+  outline-offset: 3px;
+}
+
+.compare-table {
+  width: 100%;
+  min-width: 42rem;
+  border-collapse: separate;
+  border-spacing: 0;
+  table-layout: fixed;
+  color: var(--txt);
+}
+
+.compare-table.cols-1 {
+  min-width: 28rem;
+}
+
+.compare-table.cols-3 {
+  min-width: 58rem;
+}
+
+.compare-table th,
+.compare-table td {
+  padding: 0.7rem 0.75rem;
+  border: 0;
+  border-bottom: 1px solid var(--bd);
+  vertical-align: top;
+  text-align: left;
+}
+
+.compare-table tbody tr:last-child > * {
+  border-bottom: 0;
+}
+
+.compare-table tbody tr:nth-child(even) > * {
+  background: color-mix(in srgb, var(--bd) 22%, transparent);
+}
+
+.compare-table .row-label {
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  width: 8rem;
+  padding: 0.7rem 0.75rem;
+  background: var(--card-bg) !important;
+  color: var(--txt);
+  font-size: 0.75rem;
+  font-weight: 800;
+  opacity: 1;
+}
+
+.compare-table .row-label--corner {
+  z-index: 3;
+  vertical-align: bottom;
+  opacity: 0.52;
+}
+
+.item-heading {
+  position: relative;
+  min-width: 13rem;
+  background: color-mix(in srgb, var(--card-bg) 92%, var(--bd));
+}
+
+.item-link {
+  display: grid;
+  gap: 0.35rem;
+  color: inherit;
+  text-decoration: none;
+}
+
+.item-link:focus-visible {
+  outline: 3px solid var(--pri);
+  outline-offset: 3px;
+}
+
+.compare-table .remove-btn {
+  top: 0.5rem;
+  right: 0.5rem;
+  z-index: 1;
+  width: var(--control-min-height);
+  height: var(--control-min-height);
+  min-height: var(--control-min-height);
+  padding: 0;
+  border-radius: 2px;
+  background: var(--card-bg-solid);
+  border-color: var(--bd-solid);
+  color: var(--txt);
+  opacity: 0.72;
+  box-shadow: none;
+}
+
+.compare-table .compare-img,
+.compare-table .compare-img-placeholder {
+  width: 100%;
+  max-width: none;
+  margin: 0 0 0.6rem;
+  aspect-ratio: 1 / 1;
+  border-radius: 0;
+}
+
+.compare-header .page-title {
+  font-family: 'Noto Serif TC', serif;
+  font-weight: 700;
+  letter-spacing: -0.06em;
+}
+
+.compare-scroll {
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.gene-tag,
+.compare-table .status-badge,
+.btn-action,
+.clear-all-btn {
+  border-radius: 2px;
+}
+
+.compare-table .compare-img-placeholder {
+  display: grid;
+  place-items: center;
+  color: var(--txt);
+  font-size: 0.72rem;
+  opacity: 0.45;
+}
+
+.compare-table .item-morph {
+  margin: 0;
+  padding-right: 2rem;
+  font-size: 1rem;
+  line-height: 1.3;
+  text-wrap: balance;
+}
+
+.compare-table .item-id {
+  font-variant-numeric: tabular-nums;
+}
+
+.compare-table td {
+  font-size: 0.88rem;
+  line-height: 1.55;
+}
+
+.numeric-cell,
+.price-cell {
+  font-variant-numeric: tabular-nums;
+}
+
+.gene-cell {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.gene-tag {
+  border-radius: 0.45rem;
+}
+
+.gene-tag.unique {
+  color: #2f7da1;
+  border-color: color-mix(in srgb, #2f7da1 36%, transparent);
+  background: color-mix(in srgb, #2f7da1 12%, transparent);
+}
+
+.empty-value {
+  opacity: 0.45;
+}
+
+.compare-table .status-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 1.75rem;
+  border-radius: 0.45rem;
+}
+
+.compare-table .price-cell {
+  color: var(--pri);
+  font-size: 1.1rem;
+  font-weight: 900;
+  line-height: 1.25;
+  white-space: nowrap;
+}
+
+.compare-table .compare-price-row > * {
+  vertical-align: middle;
+}
+
+.action-stack {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.compare-table .btn-action {
+  display: inline-flex;
+  width: 100%;
+  min-height: var(--control-min-height);
+  border-radius: 2px;
+  box-shadow: none;
+  opacity: 1;
+}
+
+.compare-table .btn-detail {
+  background: var(--btn-secondary-bg);
+  color: var(--txt);
+  border-color: var(--bd-solid);
+}
+
+.compare-header__actions .btn-app,
+.empty-compare > .btn-app {
+  border-radius: 2px;
+}
+
+.compare-header__actions .back-btn {
+  opacity: 1;
+}
+
+.compare-header__actions .clear-all-btn {
+  margin-left: 0;
+  background: var(--btn-secondary-bg);
+  color: var(--txt);
+  border-color: var(--bd-solid);
+  opacity: 1;
+  box-shadow: none;
+}
+
+.empty-compare {
+  display: grid;
+  justify-items: start;
+  max-width: 40rem;
+  padding: clamp(3rem, 10vw, 7rem) 0;
+  text-align: left;
+  opacity: 1;
+}
+
+.empty-compare__index {
+  margin: 0 0 1rem;
+  color: var(--pri);
+  font-size: 3rem;
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+}
+
+.empty-compare h2 {
+  margin: 0;
+  font-size: clamp(1.8rem, 5vw, 3rem);
+  text-wrap: balance;
+}
+
+.empty-compare > p:not(.empty-compare__index) {
+  margin: 0.8rem 0 1.5rem;
+  line-height: 1.7;
+  opacity: 0.68;
+}
+
+@media (max-width: 768px) {
+  .compare-page {
+    padding: 0.5rem 0.75rem 4rem;
+    overflow: visible;
+  }
+
+  .compare-header {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+    padding-top: 0.75rem;
+  }
+
+  .compare-header__actions {
+    justify-content: flex-start;
+    max-width: none;
+  }
+
+  .compare-count {
+    text-align: left;
+  }
+
+  .compare-toolbar {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 0.65rem;
+  }
+
+  .compare-scroll-hint {
+    color: var(--pri);
+    font-weight: 700;
+    opacity: 1;
+  }
+
+  .compare-table th,
+  .compare-table td,
+  .compare-table .row-label {
+    padding: 0.58rem 0.6rem;
+  }
+
+  .compare-table .row-label {
+    width: 5.75rem;
+  }
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .compare-table .remove-btn:hover {
+    border-color: #e74c3c;
+    background: color-mix(in srgb, #e74c3c 12%, var(--card-bg-solid));
+    color: #e74c3c;
+    opacity: 1;
+    transform: none;
+  }
+
+  .compare-table .btn-action:hover {
+    box-shadow: none;
+  }
+
+  .compare-table .btn-detail:hover,
+  .compare-header__actions .clear-all-btn:hover {
+    border-color: var(--bd-hover-solid);
+    color: var(--pri);
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .item-link,
+  .compare-scroll {
+    scroll-behavior: auto !important;
   }
 }
 </style>

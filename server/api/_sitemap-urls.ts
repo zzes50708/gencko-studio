@@ -1,5 +1,6 @@
 import { serverSupabaseClient } from '#supabase/server'
 import { getCleanUrl } from '~/utils/image'
+import { PUBLIC_SITEMAP_ROUTES } from '~/utils/site-seo'
 
 type SitemapImage = { loc: string }
 type SitemapUrl = {
@@ -21,27 +22,7 @@ export default defineEventHandler(async (event) => {
   const supabase = await serverSupabaseClient(event)
   const urls: SitemapUrl[] = []
 
-  // 定義基礎靜態路由
-  const staticRoutes = [
-    { loc: '/', changefreq: 'daily', priority: 1.0 },
-    { loc: '/shop', changefreq: 'hourly', priority: 0.9 },
-    { loc: '/articles', changefreq: 'daily', priority: 0.9 },
-    { loc: '/genes', changefreq: 'weekly', priority: 0.8 },
-    { loc: '/calculator', changefreq: 'monthly', priority: 0.8 },
-    { loc: '/hospital', changefreq: 'monthly', priority: 0.8 },
-    { loc: '/about', changefreq: 'monthly', priority: 0.5 },
-    { loc: '/guide', changefreq: 'monthly', priority: 0.8 },
-    { loc: '/care', changefreq: 'monthly', priority: 0.6 },
-    { loc: '/faq', changefreq: 'monthly', priority: 0.5 },
-    { loc: '/breeders', changefreq: 'monthly', priority: 0.7 },
-    { loc: '/merch', changefreq: 'weekly', priority: 0.8 },
-    { loc: '/auction', changefreq: 'hourly', priority: 0.9 },
-    { loc: '/qs', changefreq: 'monthly', priority: 0.5 },
-    { loc: '/compare', changefreq: 'monthly', priority: 0.5 },
-    { loc: '/health', changefreq: 'monthly', priority: 0.5 }
-    // /profile 與 /identity/ 已在 robots.txt Disallow，不放入 sitemap
-  ]
-  urls.push(...staticRoutes)
+  urls.push(...PUBLIC_SITEMAP_ROUTES)
 
   // 1. 抓取商品與電子身分證 (Inventory)
   // 嚴格還原舊版寫法：只抓 id 與 status，把過濾邏輯放回 JS 處理

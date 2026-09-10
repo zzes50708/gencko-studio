@@ -27,14 +27,14 @@ const props = defineProps({
   position: fixed;
   top: 0;
   left: 0;
-  /* 確保背景維持品牌主色，並用漸層增加立體感 */
-  background: linear-gradient(90deg, #cc3700, var(--pri-btn), #cc3700);
+  background: #171714;
   width: 100%;
   overflow: hidden;
   z-index: 1001;
-  box-shadow: 0 2px 10px rgba(255, 69, 0, 0.3);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: none;
   /* 配合手機頂部安全區 (瀏海) 延伸背景色 */
-  height: calc(40px + env(safe-area-inset-top, 0px));
+  height: calc(32px + env(safe-area-inset-top, 0px));
   padding-top: env(safe-area-inset-top, 0px);
   display: flex;
   align-items: center;
@@ -53,11 +53,11 @@ const props = defineProps({
 }
 
 .marquee-item {
-  color: #fff;
-  font-weight: 900;
-  letter-spacing: 1px;
-  font-size: 0.95rem;
-  margin-right: 40px;
+  color: rgba(255, 255, 255, 0.78);
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  font-size: 0.68rem;
+  margin-right: 24px;
   display: inline-flex;
   align-items: center;
 }
@@ -66,15 +66,15 @@ const props = defineProps({
   cursor: pointer;
   color: #fff;
   text-decoration: none;
-  border-bottom: 1px dashed rgba(255, 255, 255, 0.8);
+  border-bottom: 0;
   transition:
     border-bottom-color 0.2s,
     opacity 0.2s;
 }
 
 .marquee-link:hover {
-  border-bottom: 1px solid #fff;
-  opacity: 0.9;
+  border-bottom: 0;
+  opacity: 1;
 }
 
 @keyframes marquee {
@@ -89,7 +89,14 @@ const props = defineProps({
 /* 🌟 Mobile Optimizations */
 @media (max-width: 768px) {
   .marquee-item {
-    font-size: 0.85rem;
+    font-size: 0.64rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .marquee-content {
+    animation: none;
+    padding-left: 0;
   }
 }
 </style>

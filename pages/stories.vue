@@ -31,6 +31,7 @@ useHead({
       name: 'description',
       content: '這是未來要放客戶案例、展覽照片與真實飼養故事的預備頁，先保留內容位置與結構。'
     },
+    { name: 'robots', content: 'noindex, follow' },
     { property: 'og:title', content: '客戶案例｜展覽與真實飼養故事預備頁' },
     {
       property: 'og:description',
@@ -43,18 +44,23 @@ useHead({
 </script>
 
 <template>
-  <div class="stories-page">
+  <div class="stories-page" data-testid="stories-holding-page">
+    <div class="stories-document-meta" aria-label="故事頁面說明">
+      <span>GENCKO STORY ARCHIVE</span>
+      <span>REAL RECORDS IN PREPARATION</span>
+    </div>
     <header class="hero card">
       <div>
         <div class="eyebrow">STORIES</div>
-        <h1 class="page-title">客戶案例</h1>
+        <h1 class="page-title">真實故事，內容整理中</h1>
         <p class="lead">
-          這頁先作為預備頁使用。等你後續參展、補拍客戶案例與展覽素材後，可以直接把真實照片與故事掛上來。
+          我們只會在取得可公開的真實照片與紀錄後發布案例。整理完成前，先從現有飼養內容與個體資料認識
+          Gencko。
         </p>
       </div>
       <div class="hero-state">
-        <div class="hero-state-badge">目前狀態</div>
-        <p>已先建立頁面結構，之後可直接替換成展覽照片、到家紀錄與案例內容，不需要重做導覽。</p>
+        <div class="hero-state-badge">內容整理中</div>
+        <p>目前沒有以示意心得冒充客戶見證；本頁維持預備狀態，並保留前往既有公開內容的入口。</p>
       </div>
     </header>
 
@@ -76,7 +82,13 @@ useHead({
           <h2 class="sec-title">這段期間可以先導去哪裡</h2>
         </div>
         <div class="action-grid">
-          <NuxtLink v-for="item in currentActions" :key="item.to" :to="item.to" class="link-chip">
+          <NuxtLink
+            no-prefetch
+            v-for="item in currentActions"
+            :key="item.to"
+            :to="item.to"
+            class="link-chip"
+          >
             {{ item.label }}
           </NuxtLink>
         </div>
@@ -87,17 +99,40 @@ useHead({
 
 <style scoped>
 .stories-page {
-  max-width: 1120px;
+  max-width: 1180px;
   margin: 0 auto;
-  padding: 0 12px 28px;
+  padding: clamp(24px, 4vw, 56px) 18px 72px;
+}
+
+.stories-document-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 0 0 14px;
+  border-bottom: 1px solid var(--bd);
+  color: var(--txt-muted);
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+}
+
+.stories-document-meta span:first-child {
+  color: var(--pri);
 }
 
 .hero {
   display: grid;
   grid-template-columns: minmax(0, 1.5fr) minmax(280px, 0.9fr);
-  gap: 12px;
-  padding: 16px;
-  margin-bottom: 12px;
+  gap: clamp(28px, 5vw, 72px);
+  position: relative;
+  overflow: hidden;
+  padding: clamp(26px, 5vw, 68px) 0;
+  margin-bottom: clamp(40px, 6vw, 80px);
+  border: 0;
+  border-block: 1px solid var(--bd);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
 }
 
 .eyebrow {
@@ -115,16 +150,28 @@ useHead({
   line-height: 1.78;
 }
 
+.page-title {
+  max-width: 760px;
+  margin: 8px 0 18px;
+  color: var(--txt);
+  font-family: 'Noto Serif TC', 'Songti TC', serif;
+  font-size: clamp(2.5rem, 6vw, 5.8rem);
+  font-weight: 600;
+  line-height: 1.04;
+  letter-spacing: -0.045em;
+}
+
 .hero-state,
 .content-card {
   padding: 14px;
 }
 
 .hero-state {
-  border: 1px dashed var(--bd-hover);
-  border-radius: 16px;
-  background:
-    linear-gradient(180deg, rgba(232, 68, 10, 0.1), transparent 60%), rgba(128, 128, 128, 0.04);
+  align-self: end;
+  border: 1px solid var(--bd);
+  border-left: 2px solid var(--pri);
+  border-radius: 2px;
+  background: var(--card-bg);
 }
 
 .hero-state-badge,
@@ -135,57 +182,94 @@ useHead({
 
 .hero-state-badge {
   display: inline-flex;
-  padding: 5px 8px;
-  border-radius: 999px;
-  background: rgba(232, 68, 10, 0.14);
+  padding: 0;
+  border-radius: 0;
+  background: transparent;
   color: var(--pri);
-  margin-bottom: 8px;
+  margin-bottom: 10px;
+  font-size: 0.68rem;
+  letter-spacing: 0.12em;
 }
 
 .content-section {
-  margin-bottom: 12px;
+  margin-bottom: clamp(44px, 7vw, 88px);
 }
 
 .story-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 10px;
+  gap: 0;
+  border-top: 1px solid var(--bd);
 }
 
 .story-card {
-  padding: 14px;
+  min-height: 210px;
+  padding: clamp(20px, 3vw, 34px);
+  border: 0;
+  border-right: 1px solid var(--bd);
+  border-bottom: 1px solid var(--bd);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.story-card:last-child {
+  border-right: 0;
 }
 
 .story-title {
   margin: 0 0 8px;
-  font-size: 1.12rem;
+  font-family: 'Noto Serif TC', 'Songti TC', serif;
+  font-size: 1.24rem;
+  font-weight: 600;
+  letter-spacing: -0.025em;
 }
 
 .content-card {
-  padding: 14px;
+  padding: clamp(24px, 4vw, 48px) 0 0;
+  border: 0;
+  border-top: 1px solid var(--bd);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
 }
 
 .action-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
+  gap: 0;
+  border: 1px solid var(--bd);
 }
 
 .link-chip {
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 52px;
+  min-height: var(--control-min-height);
   padding: 8px 10px;
-  border-radius: 12px;
-  border: 1px solid var(--bd);
-  background: rgba(128, 128, 128, 0.06);
+  border-radius: 0;
+  border: 0;
+  border-right: 1px solid var(--bd);
+  background: transparent;
   color: var(--txt);
   text-decoration: none;
   font-weight: 800;
+  transition:
+    border-color var(--transition),
+    color var(--transition),
+    background-color var(--transition);
 }
 
-@media (hover: hover) and (pointer: fine) {
+.link-chip:last-child {
+  border-right: 0;
+}
+
+.link-chip:focus-visible {
+  outline: 3px solid var(--pri);
+  outline-offset: 3px;
+}
+
+@media (min-width: 768px) and (hover: hover) and (pointer: fine) {
   .link-chip:hover {
     border-color: var(--bd-hover);
     color: var(--pri);
@@ -198,5 +282,82 @@ useHead({
   .action-grid {
     grid-template-columns: 1fr;
   }
+
+  .stories-page {
+    padding: 4px 10px 32px;
+  }
+
+  .story-card,
+  .story-card:last-child,
+  .link-chip,
+  .link-chip:last-child {
+    border-right: 0;
+    border-bottom: 1px solid var(--bd);
+  }
+
+  .action-grid {
+    border-bottom: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .link-chip {
+    transition: none;
+  }
+}
+/* 預備內容維持普通章節，不製造空白卡片。 */
+.stories-page {
+  padding: 8px 18px 28px;
+}
+.hero {
+  padding: 22px 0;
+  margin-bottom: 20px;
+  border-top: 0;
+  gap: 24px;
+}
+.page-title {
+  font-size: clamp(2rem, 4.5vw, 3.7rem);
+  line-height: 1.3;
+}
+.hero-state {
+  padding: 14px 0;
+  border: 0;
+  border-top: 1px solid var(--bd);
+  background: transparent;
+}
+.content-section {
+  margin-bottom: 22px;
+}
+.story-grid {
+  gap: 0 24px;
+}
+.story-card {
+  padding: 18px 0;
+  min-height: 0;
+  border-right: 0;
+}
+.content-card {
+  padding-top: 18px;
+}
+.action-grid {
+  gap: 8px;
+  border: 0;
+}
+.link-chip,
+.link-chip:last-child {
+  min-height: 44px;
+  border: 1px solid var(--txt);
+  border-radius: 2px;
+}
+/* 本頁返回與次要操作使用同一按鈕形式。 */
+:deep(.app-back-btn),
+.btn-app {
+  border-radius: 2px;
+  min-height: 44px;
+  box-shadow: none;
+  font-family: var(--font-body-zh);
+}
+:deep(.app-back-btn) {
+  border: 1px solid var(--txt);
 }
 </style>

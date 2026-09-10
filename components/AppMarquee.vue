@@ -13,14 +13,14 @@ const props = defineProps({
   // 無縫循環接縫修正（可用 calc(...)；預設 0px）
   seamOffset: { type: String, default: '0px' },
   // 可選：提供 aria-label
-  ariaLabel: { type: String, default: '' },
+  ariaLabel: { type: String, default: '' }
 })
 
 const styleVars = computed(() => ({
   '--marquee-duration': `${props.duration}s`,
   '--marquee-gap': `${props.gapPx}px`,
   '--marquee-direction': props.reverse ? 'reverse' : 'normal',
-  '--marquee-seam-offset': props.seamOffset,
+  '--marquee-seam-offset': props.seamOffset
 }))
 </script>
 
@@ -79,6 +79,7 @@ const styleVars = computed(() => ({
   .app-marquee__track {
     animation: none;
     transform: none;
+    will-change: auto;
   }
 }
 </style>

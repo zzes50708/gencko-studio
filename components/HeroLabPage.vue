@@ -64,10 +64,19 @@ function scheduleInitialScrollReset() {
   }
 }
 
-useHead(() => ({
-  title: route.path === '/' ? 'Gencko Studio' : 'Hero Lab',
-  meta: route.path === '/' ? [] : [{ name: 'robots', content: 'noindex, nofollow' }]
-}))
+useHead(() => {
+  const isCanonicalRoute = route.path === '/'
+  const canonicalUrl = 'https://www.genckobreeding.com/'
+  return {
+    title: isCanonicalRoute ? 'Gencko Studio' : 'Hero Lab',
+    titleTemplate: isCanonicalRoute ? '%s' : '%s | Gencko Studio',
+    meta: [
+      { property: 'og:url', content: canonicalUrl },
+      ...(!isCanonicalRoute ? [{ name: 'robots', content: 'noindex, follow' }] : [])
+    ],
+    link: [{ rel: 'canonical', href: canonicalUrl }]
+  }
+})
 
 onMounted(() => {
   heroDocumentStateRestored = false
@@ -133,6 +142,7 @@ onBeforeUnmount(() => {
     </ClientOnly>
   </div>
   <NuxtLink
+    no-prefetch
     to="/home"
     class="hero-lab-home-link btn-app btn-app--ghost btn-app--sm btn-app--pill"
     aria-label="前往首頁"
@@ -168,7 +178,13 @@ onBeforeUnmount(() => {
   top: max(18px, calc(env(safe-area-inset-top) + 8px));
   right: max(24px, calc(env(safe-area-inset-right) + 12px));
   z-index: 3600;
+  min-height: var(--control-min-height);
   text-decoration: none;
+}
+
+.hero-lab-home-link:focus-visible {
+  outline: 3px solid var(--pri);
+  outline-offset: 3px;
 }
 
 .hero-lab-scroll-space {
@@ -186,9 +202,9 @@ onBeforeUnmount(() => {
     height: 100dvh;
   }
 
-  /* 手機旅程比桌機短，讓同一段手指滑動可推進更多動畫；仍用 svh 避免網址列伸縮造成跳動。 */
+  /* 手機只顯示靜態 fallback，不保留桌機 3D 的長距離捲動旅程。 */
   .hero-lab-scroll-space {
-    height: 1100svh;
+    height: 0;
   }
 
   .hero-lab-home-link {
@@ -221,5 +237,26 @@ onBeforeUnmount(() => {
 :global(body.hero-lab-active::before) {
   content: none !important;
   background: none !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-lab-home-link {
+    transition: none;
+  }
+}
+/* 根路由與替代入口共用相同、可清楚辨識的首頁按鈕。 */
+.hero-lab-home-link {
+  border-radius: 2px;
+  border: 1px solid var(--pri);
+  min-height: 44px;
+  background: var(--pri);
+  color: #fff;
+  box-shadow: none;
+  white-space: nowrap;
+  font-family: var(--font-body-zh);
+}
+.hero-lab-home-link:hover {
+  background: var(--pri);
+  color: #fff;
 }
 </style>

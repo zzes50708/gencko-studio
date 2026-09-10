@@ -1,35 +1,39 @@
 import { readFile, writeFile } from 'node:fs/promises'
 import { resolve } from 'pathe'
 
-const piniaMjsPath = resolve('node_modules/pinia/dist/pinia.mjs')
+const piniaPaths = [
+  resolve('node_modules/pinia/dist/pinia.mjs'),
+  resolve('node_modules/pinia/dist/pinia.prod.cjs')
+]
 
 const before = '!isPlainObject(obj) || !obj.hasOwnProperty(skipHydrateSymbol)'
 const after = '!isPlainObject(obj) || !Object.prototype.hasOwnProperty.call(obj, skipHydrateSymbol)'
 
 async function main() {
-  let content
-  try {
-    content = await readFile(piniaMjsPath, 'utf8')
-  } catch (e) {
-    console.error(`[patch-pinia] 找不到檔案：${piniaMjsPath}`)
-    console.error(e)
-    process.exit(0)
+  let patched = 0
+
+  for (const piniaPath of piniaPaths) {
+    let content
+    try {
+      content = await readFile(piniaPath, 'utf8')
+    } catch (e) {
+      throw new Error(`[patch-pinia] 找不到必要檔案：${piniaPath}`, { cause: e })
+    }
+
+    if (content.includes(after)) continue
+
+    if (!content.includes(before)) {
+      throw new Error(`[patch-pinia] 未找到可驗證的 shouldHydrate 片段：${piniaPath}`)
+    }
+
+    await writeFile(piniaPath, content.replace(before, after), 'utf8')
+    patched += 1
   }
 
-  if (content.includes(after)) {
-    console.log('[patch-pinia] 已套用過，略過')
-    return
-  }
-
-  if (!content.includes(before)) {
-    console.warn('[patch-pinia] 未找到預期片段，未修改（可能 Pinia 已更新）')
-    return
-  }
-
-  content = content.replace(before, after)
-  await writeFile(piniaMjsPath, content, 'utf8')
-  console.log('[patch-pinia] 已套用 shouldHydrate 修補')
+  console.log(`[patch-pinia] shouldHydrate 修補完成，更新 ${patched} 個 bundle`)
 }
 
-main()
-
+main().catch((error) => {
+  console.error(error.message)
+  process.exitCode = 1
+})

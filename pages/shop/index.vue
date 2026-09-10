@@ -1,5 +1,5 @@
 ﻿<script setup>
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onBeforeUnmount, onMounted, watch, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useHead, useAsyncData, useSupabaseClient } from '#imports'
 import { useMainStore } from '~/stores/useMainStore'
@@ -17,7 +17,9 @@ const { data: ssrForSale } = await useAsyncData('shop-forsale-seo-v1', async () 
   try {
     const { data, error } = await supabase
       .from('animals')
-      .select('id, species, morph, genes, gender_type, listing_price, image_url, status')
+      .select(
+        'id, species, morph, genes, gender_type, gender_value, listing_price, image_url, status'
+      )
       .eq('status', 'ForSale')
     if (error || !data) return []
     return data.map((a) => ({
@@ -26,6 +28,7 @@ const { data: ssrForSale } = await useAsyncData('shop-forsale-seo-v1', async () 
       Morph: a.morph,
       Genes: Array.isArray(a.genes) ? a.genes : [],
       GenderType: a.gender_type,
+      GenderValue: a.gender_value,
       ListingPrice: a.listing_price,
       ImageURL: a.image_url
     }))
@@ -49,6 +52,8 @@ const fil = ref({
   beginner: false
 })
 const showMobileFilter = ref(false)
+const filterPanelEl = ref(null)
+const filterTriggerEl = ref(null)
 const openFCat = ref(null)
 const sortOrder = ref('price_desc')
 const showOnlyFav = ref(false)
@@ -86,6 +91,12 @@ const itemListSchema = computed(() => {
     itemListElement: forSaleItems.map((item, idx) => {
       const productUrl = `https://www.genckobreeding.com/product/${item.ID}`
       const geneStr = (item.Genes || []).join('、')
+      const genderText =
+        item.GenderType === '溫控'
+          ? item.GenderValue
+            ? `孵化溫度:${item.GenderValue}度（不保證性別）`
+            : '孵化溫度（不保證性別）'
+          : item.GenderType || ''
       return {
         '@type': 'ListItem',
         position: idx + 1,
@@ -98,7 +109,7 @@ const itemListSchema = computed(() => {
           image: item.ImageURL ? getCleanUrl(item.ImageURL) : shopImg,
           sku: item.ID,
           category: `寵物 > 爬蟲 > 守宮 > ${item.Species}`,
-          description: `${item.Species || ''} ${item.Morph || ''}（${item.GenderType || ''}）${geneStr ? '，基因：' + geneStr : ''}`,
+          description: `${item.Species || ''} ${item.Morph || ''}${genderText ? `（${genderText}）` : ''}${geneStr ? '，基因：' + geneStr : ''}`,
           brand: {
             '@type': 'Brand',
             name: 'Gencko Breeding Studio',
@@ -106,9 +117,7 @@ const itemListSchema = computed(() => {
           },
           additionalProperty: [
             ...(geneStr ? [{ '@type': 'PropertyValue', name: '基因組合', value: geneStr }] : []),
-            ...(item.GenderType
-              ? [{ '@type': 'PropertyValue', name: '性別', value: item.GenderType }]
-              : []),
+            ...(genderText ? [{ '@type': 'PropertyValue', name: '性別', value: genderText }] : []),
             ...(item.Species
               ? [{ '@type': 'PropertyValue', name: '物種', value: item.Species }]
               : [])
@@ -133,7 +142,7 @@ const shopBreadcrumbLd = {
   '@context': 'https://schema.org',
   '@type': 'BreadcrumbList',
   itemListElement: [
-    { '@type': 'ListItem', position: 1, name: '首頁', item: 'https://www.genckobreeding.com/' },
+    { '@type': 'ListItem', position: 1, name: '首頁', item: 'https://www.genckobreeding.com/home' },
     { '@type': 'ListItem', position: 2, name: '線上選購', item: shopUrl }
   ]
 }
@@ -149,7 +158,7 @@ const shopWebPageLd = computed(() => ({
   primaryImageOfPage: { '@type': 'ImageObject', url: shopImg },
   speakable: {
     '@type': 'SpeakableSpecification',
-    cssSelector: ['.page-title']
+    cssSelector: ['.shop-intro__title']
   },
   publisher: shopSeller,
   about: [
@@ -170,26 +179,27 @@ const shopWebPageLd = computed(() => ({
 }))
 
 useHead({
-  title: '線上選購守宮｜豹紋與肥尾守宮個體 - Gencko Breeding Studio',
+  titleTemplate: '%s | Gencko Breeding Studio',
+  title: '線上選購守宮｜豹紋與肥尾守宮個體',
   meta: [
     {
       name: 'description',
       content:
-        'Gencko Breeding Studio 線上選購頁，提供豹紋守宮與肥尾守宮在售個體，可依基因品系、性別、價格篩選。每隻個體均有完整基因紀錄與健康保證，支援私訊購買與配送。'
+        'Gencko Breeding Studio 線上選購頁，提供豹紋守宮與肥尾守宮在售個體，可依基因品系、性別、價格篩選。每隻個體均有健康保證，支援私訊購買。'
     },
     {
       name: 'keywords',
-      content: '豹紋守宮選購, 肥尾守宮選購, 守宮販售, 守宮價格, 特殊基因品系, Gencko Studio'
+      content: '豹紋守宮購買, 肥尾守宮購買, 守宮購買, 守宮價格, 守宮品系, Gencko Studio'
     },
     // Open Graph
-    { property: 'og:title', content: '線上選購守宮｜豹紋與肥尾守宮個體 - Gencko Breeding Studio' },
+    { property: 'og:title', content: '線上選購守宮｜豹紋與肥尾守宮個體 Gencko Breeding Studio' },
     {
       property: 'og:description',
       content:
-        '線上選購豹紋守宮與肥尾守宮在售個體，可依基因品系、性別、價格篩選，每隻附完整基因紀錄與健康保證。'
+        '線上選購豹紋守宮與肥尾守宮在售個體，可依基因品系、性別、價格篩選，每隻個體均有健康保證。'
     },
     { property: 'og:image', content: shopImg },
-    { property: 'og:image:alt', content: 'Gencko 守宮線上選購 - 豹紋守宮與肥尾守宮在售個體' },
+    { property: 'og:image:alt', content: 'Gencko 守宮線上選購 豹紋守宮與肥尾守宮在售個體' },
     { property: 'og:url', content: shopUrl },
     { property: 'og:type', content: 'website' },
     // Twitter Card
@@ -211,6 +221,8 @@ useHead({
 const tags = {}
 
 onMounted(() => {
+  store.ensureInventoryLoaded()
+
   const q = route.query
   if (q.sp) sp.value = q.sp
   if (q.kw) kw.value = q.kw
@@ -226,7 +238,7 @@ onMounted(() => {
   if (q.sort) sortOrder.value = q.sort
 
   if (q.beginner === 'true') {
-    showMobileFilter.value = true
+    openMobileFilter()
   }
 })
 
@@ -237,7 +249,7 @@ watch(
     if (sp.value !== '豹紋守宮') query.sp = sp.value
     if (kw.value) query.kw = kw.value
     if (!fil.value.stock) query.stock = 'false'
-    if (fil.value.sold) query.sold = 'true'
+    if (!fil.value.sold) query.sold = 'false'
     if (fil.value.minP) query.minP = fil.value.minP
     if (fil.value.maxP) query.maxP = fil.value.maxP
     if (!fil.value.sexM) query.sexM = 'false'
@@ -353,8 +365,16 @@ const shopList = computed(() => {
     return true
   })
 
-  if (kw.value)
-    l = l.filter((i) => JSON.stringify(i).toLowerCase().includes(kw.value.toLowerCase()))
+  if (kw.value) {
+    const query = kw.value.toLowerCase()
+    l = l.filter((i) =>
+      [i.ID, i.Morph, i.Species, ...(Array.isArray(i.Genes) ? i.Genes : [])]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase()
+        .includes(query)
+    )
+  }
   if (showOnlyFav.value) l = l.filter((i) => (store.wishlist || []).includes(i.ID))
   if (showOnlyHistory.value) l = l.filter((i) => (store.history || []).includes(i.ID))
 
@@ -399,7 +419,7 @@ const onSearchInput = (e) => {
   }, 300)
 }
 
-const resetFilters = () => {
+const resetFilters = ({ closePanel = true, scrollTop = true } = {}) => {
   fil.value = {
     stock: true,
     sold: true,
@@ -416,12 +436,14 @@ const resetFilters = () => {
   showOnlyFav.value = false
   showOnlyHistory.value = false
   store.displayLimit = 20
-  showMobileFilter.value = false
+  if (closePanel) closeMobileFilter()
 
   router.replace({ query: {} }).catch(() => {})
 
-  if (import.meta.client) window.scrollTo({ top: 0, behavior: 'smooth' })
+  if (import.meta.client && scrollTop) window.scrollTo({ top: 0, behavior: 'smooth' })
 }
+
+const retryData = () => store.loadDataFromAPI()
 
 const toggleWishlist = (id) => {
   if (!store.wishlist) store.wishlist = []
@@ -440,7 +462,7 @@ const compareItems = computed(() =>
 const activeFilterCount = computed(() => {
   let n = 0
   if (!fil.value.stock) n++
-  if (fil.value.sold) n++
+  if (!fil.value.sold) n++
   if (fil.value.minP) n++
   if (fil.value.maxP) n++
   if (!fil.value.sexM) n++
@@ -450,289 +472,443 @@ const activeFilterCount = computed(() => {
   n += fil.value.genes.length
   return n
 })
+
+const setMobileFilterLock = (locked) => {
+  if (!import.meta.client) return
+  document.body.classList.toggle('shop-filter-open', locked)
+}
+
+const closeMobileFilter = () => {
+  showMobileFilter.value = false
+  if (import.meta.client) {
+    nextTick(() => filterTriggerEl.value?.focus())
+  }
+}
+
+const openMobileFilter = async () => {
+  showMobileFilter.value = true
+  await nextTick()
+  filterPanelEl.value?.querySelector('button, input, select')?.focus()
+}
+
+const onFilterKeydown = (event) => {
+  if (event.key === 'Escape') {
+    event.preventDefault()
+    closeMobileFilter()
+    return
+  }
+
+  if (event.key !== 'Tab' || !filterPanelEl.value) return
+  const focusables = Array.from(
+    filterPanelEl.value.querySelectorAll(
+      'button:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])'
+    )
+  ).filter((element) => {
+    const style = window.getComputedStyle(element)
+    return (
+      style.display !== 'none' &&
+      style.visibility !== 'hidden' &&
+      element.getClientRects().length > 0
+    )
+  })
+  if (!focusables.length) return
+
+  const first = focusables[0]
+  const last = focusables[focusables.length - 1]
+  if (event.shiftKey && document.activeElement === first) {
+    event.preventDefault()
+    last.focus()
+  } else if (!event.shiftKey && document.activeElement === last) {
+    event.preventDefault()
+    first.focus()
+  }
+}
+
+watch(showMobileFilter, setMobileFilterLock)
+
+onBeforeUnmount(() => {
+  setMobileFilterLock(false)
+  if (searchTimer) clearTimeout(searchTimer)
+})
 </script>
 
 <template>
   <div class="shop-root-container">
     <div class="shop-page-wrapper">
-      <!-- SEO：頁面唯一 h1（sr-only 含完整關鍵字，全裝置都讓爬蟲讀到） -->
-      <h1 class="sr-only">線上選購守宮｜豹紋與肥尾守宮在售個體 - Gencko Breeding Studio</h1>
-      <!-- 視覺主標保留為 div（桌機可見、手機隱藏） -->
-      <div class="page-title dt-only" aria-hidden="true">選購守宮</div>
+      <div class="common-document-meta" aria-label="選購目錄說明">
+        <span>SELECTED GECKOS</span>
+        <span>VIEW / COMPARE / INQUIRE</span>
+      </div>
+      <header class="shop-intro">
+        <div>
+          <p class="shop-intro__eyebrow">AVAILABLE GECKOS</p>
+          <h1 class="shop-intro__title">選購守宮</h1>
+        </div>
+        <p class="shop-intro__copy">每一隻守宮皆保證健康無疑才上架販售。</p>
+      </header>
 
       <!-- 發色/照片時效警語（列表頁最上方，全裝置顯示） -->
       <div class="shop-photo-notice" role="note">
-        <span class="notice-icon" aria-hidden="true">📷</span>
+        <span class="notice-icon" aria-hidden="true">PHOTO NOTE</span>
         <span>
-          守宮發色以當下狀態為主；個體數量眾多，線上照片無法隨時更新，購買前歡迎私訊索取最新照片。
+          守宮發色以當下狀態為主；個體數量眾多，線上照片無法隨時更新，購買前歡迎私訊索取最新影片。
         </span>
       </div>
 
-      <div class="shop-layout">
-        <!-- 手機篩選遮罩 -->
-        <div
-          class="filter-backdrop m-only"
-          :class="{ 'filter-backdrop--show': showMobileFilter }"
-          @click="showMobileFilter = false"
-        />
+      <section class="shop-catalog-stage" aria-labelledby="shop-catalog-stage-title">
+        <header class="shop-stage-heading">
+          <span>01</span>
+          <div>
+            <p>COLLECTION FILTER</p>
+            <h2 id="shop-catalog-stage-title">設定條件</h2>
+          </div>
+        </header>
+        <div class="shop-layout">
+          <!-- 手機篩選遮罩 -->
+          <div
+            class="filter-backdrop m-only"
+            :class="{ 'filter-backdrop--show': showMobileFilter }"
+            @click="closeMobileFilter"
+          />
 
-        <div class="filter-panel" :class="{ 'm-show': showMobileFilter }">
-          <div class="f-header m-only">
-            <button class="btn-back-arrow" @click="showMobileFilter = false" aria-label="返回">
-              <svg
-                viewBox="0 0 24 24"
-                width="20"
-                height="20"
-                stroke="currentColor"
-                stroke-width="2.5"
-                fill="none"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              >
-                <polyline points="15 18 9 12 15 6" />
-              </svg>
-            </button>
-            <span class="f-header-title">
-              篩選條件
-              <span v-if="activeFilterCount > 0" class="f-active-badge">
-                {{ activeFilterCount }}
-              </span>
-            </span>
-            <button v-if="activeFilterCount > 0" class="btn-clear-inline" @click="resetFilters">
-              清除全部
-            </button>
-            <div v-else class="f-header-spacer" />
-          </div>
-
-          <div class="f-group">
-            <div class="f-label">快速篩選</div>
-            <label class="f-check" style="color: var(--pri); font-weight: bold">
-              <input type="checkbox" v-model="fil.beginner" />
-              新手推薦
-            </label>
-          </div>
-          <div class="f-group">
-            <div class="f-label">狀態</div>
-            <label class="f-check">
-              <input type="checkbox" v-model="fil.stock" />
-              販售中
-            </label>
-            <label class="f-check">
-              <input type="checkbox" v-model="fil.sold" />
-              已售出
-            </label>
-          </div>
-          <div v-if="!store.isExhibitionMode" class="f-group">
-            <div class="f-label">價格（最高 {{ maxPrice }}）</div>
-            <div style="display: flex; gap: 5px">
-              <input
-                type="number"
-                v-model="fil.minP"
-                class="f-inp"
-                placeholder="最低"
-                aria-label="最低價格"
-              />
-              <input
-                type="number"
-                v-model="fil.maxP"
-                class="f-inp"
-                placeholder="最高"
-                aria-label="最高價格"
-              />
-            </div>
-          </div>
-          <div class="f-group">
-            <div class="f-label">性別</div>
-            <label class="f-check">
-              <input type="checkbox" v-model="fil.sexM" />
-              公
-            </label>
-            <label class="f-check">
-              <input type="checkbox" v-model="fil.sexF" />
-              母
-            </label>
-          </div>
-          <div v-if="availableYears.length" class="f-group">
-            <div class="f-label">年份</div>
-            <label v-for="y in availableYears" :key="y" class="f-check">
-              <input type="checkbox" :value="y" v-model="fil.years" />
-              {{ y }} 年
-            </label>
-          </div>
-          <div class="f-group" style="padding-bottom: 30px">
-            <div class="f-label">基因篩選</div>
-            <div v-for="(list, cat) in GENES_DB[sp]" :key="cat">
-              <div class="f-cat" @click="openFCat = openFCat === cat ? null : cat">
-                <span>
-                  {{ cat }}
-                  <span v-if="fil.genes.some((g) => list.includes(g))" class="f-cat-count">
-                    {{ fil.genes.filter((g) => list.includes(g)).length }}
-                  </span>
-                </span>
-                <span class="f-cat-arrow" :class="{ 'f-cat-arrow--open': openFCat === cat }">
-                  ›
-                </span>
-              </div>
-              <div v-show="openFCat === cat" style="padding-left: 10px">
-                <div v-for="g in getSortedGenes(list)" :key="g" style="margin: 2px 0">
-                  <label class="f-check" :class="{ disabled: !isGeneAvail(g) }">
-                    <input
-                      type="checkbox"
-                      :value="g"
-                      v-model="fil.genes"
-                      :disabled="!isGeneAvail(g)"
-                    />
-                    {{ g }}
-                  </label>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div class="m-filter-actions m-only">
-            <button class="btn-clear" @click="resetFilters">清除</button>
-            <button class="btn-apply" @click="showMobileFilter = false">套用篩選</button>
-          </div>
-
-          <button
-            class="btn-hero dt-only"
-            style="width: 100%; margin-top: 20px; font-size: 0.9rem; padding: 10px"
-            @click="resetFilters"
+          <div
+            ref="filterPanelEl"
+            id="shop-filter-panel"
+            class="filter-panel"
+            :class="{ 'm-show': showMobileFilter }"
+            :role="showMobileFilter ? 'dialog' : 'region'"
+            :aria-modal="showMobileFilter ? 'true' : undefined"
+            aria-labelledby="shop-filter-title"
+            @keydown="onFilterKeydown"
           >
-            重置全部篩選
-          </button>
-        </div>
-
-        <div style="flex: 1; min-width: 0; display: flex; flex-direction: column">
-          <div class="search-filter-row">
-            <div class="inp-wrap">
-              <span class="search-icon" aria-hidden="true">🔍</span>
-              <input
-                class="inp"
-                :value="kw"
-                @input="onSearchInput"
-                placeholder="搜尋關鍵字或 ID..."
-                aria-label="搜尋關鍵字或編號"
-              />
-            </div>
-            <button
-              class="btn-filter-icon m-only"
-              :class="{ active: activeFilterCount > 0 }"
-              @click="showMobileFilter = true"
-              aria-label="篩選"
-            >
-              <svg
-                viewBox="0 0 24 24"
-                width="20"
-                height="20"
-                stroke="currentColor"
-                stroke-width="2"
-                fill="none"
-                stroke-linecap="round"
-                stroke-linejoin="round"
+            <div class="f-header m-only">
+              <button
+                type="button"
+                class="btn-app btn-app--ghost btn-app--md btn-back-arrow"
+                @click="closeMobileFilter"
+                aria-label="返回"
               >
-                <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
-              </svg>
-              <span v-if="activeFilterCount > 0" class="filter-count-badge">
-                {{ activeFilterCount }}
+                <svg
+                  viewBox="0 0 24 24"
+                  width="20"
+                  height="20"
+                  stroke="currentColor"
+                  stroke-width="2.5"
+                  fill="none"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <polyline points="15 18 9 12 15 6" />
+                </svg>
+              </button>
+              <span id="shop-filter-title" class="f-header-title">
+                篩選條件
+                <span v-if="activeFilterCount > 0" class="f-active-badge">
+                  {{ activeFilterCount }}
+                </span>
               </span>
+              <button
+                v-if="activeFilterCount > 0"
+                type="button"
+                class="btn-app btn-app--ghost btn-app--sm btn-clear-inline"
+                @click="resetFilters({ closePanel: false, scrollTop: false })"
+              >
+                清除全部
+              </button>
+              <div v-else class="f-header-spacer" />
+            </div>
+
+            <div class="f-group">
+              <div class="f-label">快速篩選</div>
+              <label class="f-check" style="color: var(--pri); font-weight: bold">
+                <input type="checkbox" v-model="fil.beginner" />
+                新手推薦
+              </label>
+            </div>
+            <div class="f-group">
+              <div class="f-label">狀態</div>
+              <label class="f-check">
+                <input type="checkbox" v-model="fil.stock" />
+                販售中
+              </label>
+              <label class="f-check">
+                <input type="checkbox" v-model="fil.sold" />
+                已售出
+              </label>
+            </div>
+            <div v-if="!store.isExhibitionMode" class="f-group">
+              <div class="f-label">價格（最高 {{ maxPrice }}）</div>
+              <div style="display: flex; gap: 5px">
+                <input
+                  type="number"
+                  v-model="fil.minP"
+                  class="f-inp"
+                  placeholder="最低"
+                  aria-label="最低價格"
+                />
+                <input
+                  type="number"
+                  v-model="fil.maxP"
+                  class="f-inp"
+                  placeholder="最高"
+                  aria-label="最高價格"
+                />
+              </div>
+            </div>
+            <div class="f-group">
+              <div class="f-label">性別</div>
+              <label class="f-check">
+                <input type="checkbox" v-model="fil.sexM" />
+                公
+              </label>
+              <label class="f-check">
+                <input type="checkbox" v-model="fil.sexF" />
+                母
+              </label>
+            </div>
+            <div v-if="availableYears.length" class="f-group">
+              <div class="f-label">年份</div>
+              <label v-for="y in availableYears" :key="y" class="f-check">
+                <input type="checkbox" :value="y" v-model="fil.years" />
+                {{ y }} 年
+              </label>
+            </div>
+            <div class="f-group" style="padding-bottom: 30px">
+              <div class="f-label">基因篩選</div>
+              <div v-for="(list, cat) in GENES_DB[sp]" :key="cat">
+                <button
+                  type="button"
+                  class="btn-app btn-app--ghost btn-app--md f-cat"
+                  :aria-expanded="openFCat === cat"
+                  @click="openFCat = openFCat === cat ? null : cat"
+                >
+                  <span>
+                    {{ cat }}
+                    <span v-if="fil.genes.some((g) => list.includes(g))" class="f-cat-count">
+                      {{ fil.genes.filter((g) => list.includes(g)).length }}
+                    </span>
+                  </span>
+                  <span class="f-cat-arrow" :class="{ 'f-cat-arrow--open': openFCat === cat }">
+                    ›
+                  </span>
+                </button>
+                <div v-show="openFCat === cat" style="padding-left: 10px">
+                  <div v-for="g in getSortedGenes(list)" :key="g" style="margin: 2px 0">
+                    <label class="f-check" :class="{ disabled: !isGeneAvail(g) }">
+                      <input
+                        type="checkbox"
+                        :value="g"
+                        v-model="fil.genes"
+                        :disabled="!isGeneAvail(g)"
+                      />
+                      {{ g }}
+                    </label>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="m-filter-actions m-only">
+              <button
+                type="button"
+                class="btn-app btn-app--ghost btn-app--md btn-clear"
+                @click="resetFilters({ closePanel: false, scrollTop: false })"
+              >
+                清除
+              </button>
+              <button
+                type="button"
+                class="btn-app btn-app--primary btn-app--md btn-apply"
+                @click="closeMobileFilter"
+              >
+                套用
+              </button>
+            </div>
+
+            <button
+              type="button"
+              class="btn-app btn-app--primary btn-app--md filter-reset-button dt-only"
+              style="width: 100%; margin-top: 20px; font-size: 0.9rem; padding: 10px"
+              @click="resetFilters"
+            >
+              重置全部篩選
             </button>
           </div>
 
-          <!-- 物種分類：獨立一列（一列兩個按鈕） -->
-          <div class="species-tabs-row">
-            <div
-              class="chip-tab main-tab"
-              :class="{ active: sp === '豹紋守宮' }"
-              role="button"
-              tabindex="0"
-              @click="selectSpecies('豹紋守宮')"
-              @keydown.enter.space.prevent="selectSpecies('豹紋守宮')"
-            >
-              豹紋守宮
-            </div>
-            <div
-              class="chip-tab main-tab"
-              :class="{ active: sp === '肥尾守宮' }"
-              role="button"
-              tabindex="0"
-              @click="selectSpecies('肥尾守宮')"
-              @keydown.enter.space.prevent="selectSpecies('肥尾守宮')"
-            >
-              肥尾守宮
-            </div>
-          </div>
-
-          <div class="scroll-chips-row">
-            <select v-model="sortOrder" class="chip-select" aria-label="排序方式">
-              <option value="price_desc">價格：高 → 低</option>
-              <option value="price_asc">價格：低 → 高</option>
-            </select>
-
-            <div
-              class="chip-toggle chip-toggle--history"
-              :class="{ active: showOnlyHistory }"
-              @click="showOnlyHistory = !showOnlyHistory"
-            >
-              歷史紀錄
-            </div>
-            <div
-              class="chip-toggle chip-toggle--fav"
-              :class="{ active: showOnlyFav }"
-              @click="showOnlyFav = !showOnlyFav"
-            >
-              只看收藏
-            </div>
-
-            <div class="chip-divider"></div>
-
-            <span
-              v-for="t in tags[sp] || []"
-              :key="t"
-              class="chip-tag"
-              :class="{ sel: kw === t }"
-              @click="toggleTag(t)"
-            >
-              {{ t }}
-            </span>
-          </div>
-
-          <h2 class="sr-only">{{ sp }} 商品列表</h2>
-          <div v-if="store.loading && !shopList.length" class="grid photo-grid">
-            <SkeletonCard v-for="n in 12" :key="n" :square="true" />
-          </div>
-          <Transition v-else name="sp-fade" mode="out-in">
-            <div :key="sp">
-              <transition-group tag="div" name="shoplist" class="grid photo-grid">
-                <div v-if="shopList.length === 0" key="empty-msg" class="shop-empty-state">
-                  <div class="empty-icon">無</div>
-                  <h3 style="color: var(--txt); margin-bottom: 10px">目前沒有符合條件的商品</h3>
-                  <p style="font-size: 0.9rem">請調整篩選條件或清除篩選後再試一次。</p>
-                  <button class="btn-hero" @click="resetFilters" style="margin-top: 20px">
-                    重置篩選
-                  </button>
-                </div>
-
-                <ShopFlipCard
-                  v-for="(i, index) in shopList"
-                  :key="i.ID"
-                  :item="i"
-                  :index="index"
-                  :is-wishlisted="(store.wishlist || []).includes(i.ID)"
-                  :is-compared="(store.compareList || []).includes(i.ID)"
-                  :compare-disabled="
-                    (store.compareList || []).length >= 3 &&
-                    !(store.compareList || []).includes(i.ID)
-                  "
-                  :has-auction="(store.auctionList || []).some((a) => a.animal_id === i.ID)"
-                  :on-toggle-wishlist="toggleWishlist"
-                  :on-toggle-compare="store.toggleCompare"
+          <div style="flex: 1; min-width: 0; display: flex; flex-direction: column">
+            <header class="shop-results-heading">
+              <span>02</span>
+              <div>
+                <p>AVAILABLE RECORDS</p>
+                <h2>守宮清單</h2>
+              </div>
+            </header>
+            <div class="search-filter-row">
+              <div class="inp-wrap">
+                <span class="search-icon" aria-hidden="true">搜尋</span>
+                <input
+                  type="search"
+                  class="inp"
+                  :value="kw"
+                  @input="onSearchInput"
+                  placeholder="搜尋關鍵字或 ID..."
+                  aria-label="搜尋關鍵字或編號"
+                  enterkeyhint="search"
+                  autocomplete="off"
                 />
-              </transition-group>
+              </div>
+              <button
+                type="button"
+                class="btn-app btn-app--ghost btn-app--md btn-filter-icon m-only"
+                :class="{ active: activeFilterCount > 0 }"
+                ref="filterTriggerEl"
+                :aria-expanded="showMobileFilter"
+                aria-controls="shop-filter-panel"
+                @click="openMobileFilter"
+                aria-label="篩選"
+              >
+                <svg
+                  viewBox="0 0 24 24"
+                  width="20"
+                  height="20"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  fill="none"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
+                </svg>
+                <span v-if="activeFilterCount > 0" class="filter-count-badge">
+                  {{ activeFilterCount }}
+                </span>
+              </button>
             </div>
-          </Transition>
+
+            <div class="catalog-summary" aria-live="polite">
+              <span>{{ sp }}</span>
+              <span>{{ shopList.length }} 隻個體</span>
+            </div>
+
+            <!-- 物種分類：獨立一列（一列兩個按鈕） -->
+            <div class="species-tabs-row">
+              <button
+                type="button"
+                class="btn-app btn-app--ghost btn-app--md chip-tab main-tab"
+                :class="{ active: sp === '豹紋守宮' }"
+                :aria-pressed="sp === '豹紋守宮'"
+                @click="selectSpecies('豹紋守宮')"
+              >
+                豹紋守宮
+              </button>
+              <button
+                type="button"
+                class="btn-app btn-app--ghost btn-app--md chip-tab main-tab"
+                :class="{ active: sp === '肥尾守宮' }"
+                :aria-pressed="sp === '肥尾守宮'"
+                @click="selectSpecies('肥尾守宮')"
+              >
+                肥尾守宮
+              </button>
+            </div>
+
+            <div class="scroll-chips-row">
+              <select v-model="sortOrder" class="chip-select" aria-label="排序方式">
+                <option value="price_desc">價格：高 → 低</option>
+                <option value="price_asc">價格：低 → 高</option>
+              </select>
+
+              <button
+                type="button"
+                class="btn-app btn-app--ghost btn-app--md chip-toggle chip-toggle--history"
+                :class="{ active: showOnlyHistory }"
+                :aria-pressed="showOnlyHistory"
+                @click="showOnlyHistory = !showOnlyHistory"
+              >
+                歷史紀錄
+              </button>
+              <button
+                type="button"
+                class="btn-app btn-app--ghost btn-app--md chip-toggle chip-toggle--fav"
+                :class="{ active: showOnlyFav }"
+                :aria-pressed="showOnlyFav"
+                @click="showOnlyFav = !showOnlyFav"
+              >
+                只看收藏
+              </button>
+
+              <div class="chip-divider"></div>
+
+              <button
+                v-for="t in tags[sp] || []"
+                :key="t"
+                type="button"
+                class="btn-app btn-app--ghost btn-app--md chip-tag"
+                :class="{ sel: kw === t }"
+                :aria-pressed="kw === t"
+                @click="toggleTag(t)"
+              >
+                {{ t }}
+              </button>
+            </div>
+
+            <h2 class="sr-only">{{ sp }} 商品列表</h2>
+            <div v-if="store.loading && !shopList.length" class="grid photo-grid">
+              <SkeletonCard v-for="n in 12" :key="n" :square="true" />
+            </div>
+            <Transition v-else name="sp-fade" mode="out-in">
+              <div :key="sp">
+                <transition-group tag="div" name="shoplist" class="grid photo-grid">
+                  <div v-if="store.dataError" key="error-msg" class="shop-empty-state">
+                    <div class="empty-icon">!</div>
+                    <h3>商品資料載入失敗</h3>
+                    <p>請檢查網路連線後再試一次。</p>
+                    <button
+                      type="button"
+                      class="btn-app btn-app--primary btn-app--md empty-state-action"
+                      @click="retryData"
+                    >
+                      重新載入
+                    </button>
+                  </div>
+                  <div v-else-if="shopList.length === 0" key="empty-msg" class="shop-empty-state">
+                    <div class="empty-icon">無</div>
+                    <h3 style="color: var(--txt); margin-bottom: 10px">目前沒有符合條件的商品</h3>
+                    <p style="font-size: 0.9rem">請調整篩選條件或清除篩選後再試一次。</p>
+                    <button
+                      type="button"
+                      class="btn-app btn-app--primary btn-app--md empty-state-action"
+                      @click="resetFilters"
+                      style="margin-top: 20px"
+                    >
+                      重置篩選
+                    </button>
+                  </div>
+
+                  <ShopFlipCard
+                    v-for="(i, index) in shopList"
+                    :key="i.ID"
+                    :item="i"
+                    :index="index"
+                    :is-wishlisted="(store.wishlist || []).includes(i.ID)"
+                    :is-compared="(store.compareList || []).includes(i.ID)"
+                    :compare-disabled="
+                      (store.compareList || []).length >= 3 &&
+                      !(store.compareList || []).includes(i.ID)
+                    "
+                    :has-auction="(store.auctionList || []).some((a) => a.animal_id === i.ID)"
+                    :show-mobile-meta="true"
+                    :show-mobile-genes="false"
+                    :show-interactive-grid="false"
+                    :on-toggle-wishlist="toggleWishlist"
+                    :on-toggle-compare="store.toggleCompare"
+                  />
+                </transition-group>
+              </div>
+            </Transition>
+          </div>
         </div>
-      </div>
+      </section>
     </div>
 
     <Teleport to="body">
@@ -749,7 +925,14 @@ const activeFilterCount = computed(() => {
               />
               <div v-else class="cmp-bar-placeholder">＋</div>
               <span class="cmp-bar-name">{{ item.Morph }}</span>
-              <button class="cmp-bar-remove" @click="store.toggleCompare(item.ID)"></button>
+              <button
+                type="button"
+                class="btn-app btn-app--ghost btn-app--sm cmp-bar-remove"
+                :aria-label="`移除 ${item.Morph} 比較項目`"
+                @click="store.toggleCompare(item.ID)"
+              >
+                <span aria-hidden="true">×</span>
+              </button>
             </div>
             <div
               v-for="n in 3 - (store.compareList || []).length"
@@ -761,12 +944,14 @@ const activeFilterCount = computed(() => {
           </div>
           <div class="cmp-bar-actions">
             <NuxtLink
+              no-prefetch
               :to="`/compare?ids=${(store.compareList || []).join(',')}`"
               class="btn-app btn-app--primary btn-app--sm btn-app--pill cmp-go-btn"
             >
               前往比較（{{ (store.compareList || []).length }}）
             </NuxtLink>
             <button
+              type="button"
               class="btn-app btn-app--ghost btn-app--sm btn-app--pill cmp-clear-btn"
               @click="store.clearCompare()"
             >
@@ -780,6 +965,10 @@ const activeFilterCount = computed(() => {
 </template>
 
 <style scoped>
+:global(body.shop-filter-open) {
+  overflow: hidden;
+}
+
 .shop-page-wrapper {
   display: flex;
   flex-direction: column;
@@ -875,8 +1064,9 @@ const activeFilterCount = computed(() => {
   border: 1px solid var(--bd);
   color: var(--txt);
   border-radius: 8px;
-  width: 40px;
-  height: 40px;
+  width: 44px;
+  min-height: var(--control-min-height);
+  height: var(--control-min-height);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -940,6 +1130,7 @@ const activeFilterCount = computed(() => {
 }
 
 .chip-tab {
+  min-height: var(--control-min-height);
   padding: 6px 12px;
   border-radius: 20px;
   font-size: 0.85rem;
@@ -948,6 +1139,8 @@ const activeFilterCount = computed(() => {
   border: 1px solid var(--bd);
   cursor: pointer;
   color: var(--txt);
+  font: inherit;
+  appearance: none;
   opacity: 0.7;
   transition: 0.2s;
   flex-shrink: 0;
@@ -989,13 +1182,13 @@ const activeFilterCount = computed(() => {
   background-position: right 12px center;
   transition: 0.2s;
 }
-.chip-select:hover,
 .chip-select:focus {
   border-color: var(--pri);
   color: var(--pri);
 }
 
 .chip-toggle {
+  min-height: var(--control-min-height);
   padding: 6px 10px;
   border-radius: 20px;
   border: 1px solid var(--bd);
@@ -1005,6 +1198,8 @@ const activeFilterCount = computed(() => {
   color: var(--txt);
   opacity: 0.7;
   background: var(--card-bg);
+  font: inherit;
+  appearance: none;
   transition: 0.2s;
   flex-shrink: 0;
 }
@@ -1022,6 +1217,7 @@ const activeFilterCount = computed(() => {
 }
 
 .chip-tag {
+  min-height: var(--control-min-height);
   font-size: 0.8rem;
   padding: 6px 10px;
   background: var(--card-bg);
@@ -1030,6 +1226,8 @@ const activeFilterCount = computed(() => {
   color: var(--txt);
   opacity: 0.8;
   cursor: pointer;
+  font: inherit;
+  appearance: none;
   transition: 0.3s;
   flex-shrink: 0;
 }
@@ -1069,14 +1267,17 @@ const activeFilterCount = computed(() => {
   align-items: center;
   gap: 6px;
   cursor: pointer;
-  padding: 2px 0;
+  min-height: var(--control-min-height);
+  padding: 5px 0;
   margin-bottom: 0;
   font-size: 0.8rem;
   color: var(--txt);
   opacity: 0.8;
 }
-.f-check:hover {
-  opacity: 1;
+.f-check input {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
 }
 .f-check.disabled {
   opacity: 0.3;
@@ -1084,6 +1285,8 @@ const activeFilterCount = computed(() => {
 }
 
 .f-cat {
+  width: 100%;
+  min-height: var(--control-min-height);
   cursor: pointer;
   padding: 10px 12px;
   background: var(--card-bg);
@@ -1092,6 +1295,10 @@ const activeFilterCount = computed(() => {
   border-radius: 8px;
   font-size: 0.9rem;
   font-weight: bold;
+  font: inherit;
+  color: var(--txt);
+  text-align: left;
+  appearance: none;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -1100,8 +1307,29 @@ const activeFilterCount = computed(() => {
     border-color 0.18s,
     background 0.18s;
 }
-.f-cat:hover {
-  border-color: var(--pri);
+
+@media (hover: hover) and (pointer: fine) {
+  .f-check:hover {
+    opacity: 1;
+  }
+  .f-cat:hover {
+    border-color: var(--pri);
+  }
+}
+
+.btn-filter-icon:focus-visible,
+.chip-tab:focus-visible,
+.chip-select:focus-visible,
+.chip-toggle:focus-visible,
+.chip-tag:focus-visible,
+.f-cat:focus-visible,
+.btn-clear-inline:focus-visible,
+.btn-clear:focus-visible,
+.btn-apply:focus-visible,
+.cmp-bar-remove:focus-visible,
+.cmp-clear-btn:focus-visible {
+  outline: 3px solid var(--pri);
+  outline-offset: 2px;
 }
 .f-cat-count {
   display: inline-flex;
@@ -1239,8 +1467,9 @@ const activeFilterCount = computed(() => {
     border: 1px solid var(--bd);
     color: var(--txt);
     border-radius: 50%;
-    width: 34px;
-    height: 34px;
+    width: 44px;
+    min-height: var(--control-min-height);
+    height: var(--control-min-height);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -1277,7 +1506,10 @@ const activeFilterCount = computed(() => {
     font-size: 0.88rem;
     font-weight: 700;
     cursor: pointer;
+    min-height: var(--control-min-height);
     padding: 4px 0;
+    display: inline-flex;
+    align-items: center;
     white-space: nowrap;
     flex-shrink: 0;
   }
@@ -1303,6 +1535,7 @@ const activeFilterCount = computed(() => {
   .btn-clear {
     flex: 1;
     padding: 13px;
+    min-height: var(--control-min-height);
     border-radius: 12px;
     background: transparent;
     border: 1px solid var(--bd);
@@ -1314,6 +1547,7 @@ const activeFilterCount = computed(() => {
   .btn-apply {
     flex: 2;
     padding: 13px;
+    min-height: var(--control-min-height);
     border-radius: 12px;
     background: var(--pri);
     border: none;
@@ -1548,8 +1782,9 @@ const activeFilterCount = computed(() => {
   position: absolute;
   top: -8px;
   right: -8px;
-  width: 24px;
-  height: 24px;
+  width: var(--control-min-height);
+  min-height: var(--control-min-height);
+  height: var(--control-min-height);
   border-radius: 50%;
   background: #e74c3c;
   border: none;
@@ -1588,6 +1823,7 @@ const activeFilterCount = computed(() => {
 .cmp-clear-btn {
   white-space: nowrap;
   width: 100%;
+  min-height: var(--control-min-height);
 }
 
 .cmp-bar-enter-active,
@@ -1600,5 +1836,535 @@ const activeFilterCount = computed(() => {
 .cmp-bar-leave-to {
   opacity: 0;
   transform: translateX(-50%) translateY(20px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .btn-filter-icon,
+  .chip-tab,
+  .chip-select,
+  .chip-toggle,
+  .chip-tag,
+  .f-cat,
+  .f-cat-arrow,
+  .filter-backdrop,
+  .cmp-bar-enter-active,
+  .cmp-bar-leave-active {
+    transition: none !important;
+    animation: none !important;
+  }
+  .filter-panel.m-show {
+    animation: none !important;
+  }
+}
+
+/* Boutique catalog shell */
+.shop-root-container {
+  min-height: 100vh;
+  background: var(--bg);
+}
+
+.shop-page-wrapper {
+  max-width: 1440px;
+  padding: clamp(38px, 6vw, 88px) clamp(20px, 5vw, 76px) 100px;
+}
+
+.shop-intro {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 460px);
+  align-items: end;
+  gap: 40px;
+  margin-bottom: 38px;
+  padding-bottom: 30px;
+  border-bottom: 1px solid var(--bd);
+}
+
+.shop-intro__eyebrow {
+  margin: 0 0 12px;
+  color: var(--pri);
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+}
+
+.shop-intro__title {
+  margin: 0;
+  color: var(--txt);
+  font-family: 'Noto Serif TC', serif;
+  font-size: clamp(2.7rem, 6vw, 5.8rem);
+  font-weight: 700;
+  line-height: 0.96;
+  letter-spacing: -0.06em;
+}
+
+.shop-intro__copy {
+  max-width: 32em;
+  margin: 0;
+  color: var(--txt-muted);
+  font-size: 0.94rem;
+  line-height: 1.9;
+}
+
+.shop-catalog-stage {
+  margin-top: clamp(28px, 5vw, 58px);
+  padding-top: 20px;
+  border-top: 1px solid var(--bd);
+}
+
+.shop-stage-heading,
+.shop-results-heading {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr);
+  gap: 14px;
+  align-items: start;
+  margin-bottom: 22px;
+}
+
+.shop-stage-heading > span,
+.shop-results-heading > span {
+  display: inline-grid;
+  place-items: center;
+  width: 34px;
+  height: 28px;
+  border: 1px solid var(--pri);
+  color: var(--pri);
+  font-size: 0.68rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+}
+
+.shop-stage-heading p,
+.shop-results-heading p {
+  margin: 0 0 4px;
+  color: var(--txt-muted);
+  font-size: 0.66rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+}
+
+.shop-stage-heading h2,
+.shop-results-heading h2 {
+  margin: 0;
+  color: var(--txt);
+  font-family: 'Noto Serif TC', serif;
+  font-size: clamp(1.25rem, 2vw, 1.75rem);
+  letter-spacing: -0.04em;
+}
+
+.shop-results-heading {
+  margin-bottom: 16px;
+}
+
+.shop-photo-notice {
+  align-items: center;
+  gap: 18px;
+  margin-bottom: 36px;
+  padding: 15px 0;
+  border: 0;
+  border-bottom: 1px solid var(--bd);
+  border-radius: 0;
+  background: transparent;
+  color: var(--txt-muted);
+  font-size: 0.78rem;
+}
+
+.shop-photo-notice .notice-icon {
+  color: var(--pri);
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  white-space: nowrap;
+}
+
+.shop-layout {
+  gap: clamp(28px, 4vw, 56px);
+}
+
+.filter-panel {
+  width: 220px;
+  padding: 0 24px 0 0;
+  border: 0;
+  border-right: 1px solid var(--bd);
+  border-radius: 0;
+  background: transparent;
+}
+
+.f-group {
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+}
+
+.f-label {
+  margin-bottom: 8px;
+  color: var(--txt);
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+.f-check {
+  padding: 3px 0;
+  font-size: 0.78rem;
+}
+
+.f-check input {
+  accent-color: var(--pri);
+}
+
+.f-cat {
+  padding: 7px 0;
+  border: 0;
+  border-bottom: 1px solid var(--bd);
+  border-radius: 0;
+  background: transparent;
+  font-size: 0.78rem;
+}
+
+.f-inp,
+.inp {
+  border: 0;
+  border-bottom: 1px solid var(--bd);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.f-inp:focus,
+.inp:focus {
+  border-color: var(--pri);
+  box-shadow: none;
+}
+
+.inp {
+  min-height: 50px;
+  padding: 10px 14px 10px 54px;
+  font-size: 0.86rem;
+}
+
+.search-icon {
+  left: 0;
+  color: var(--pri);
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  opacity: 1;
+}
+
+.species-tabs-row {
+  gap: 0;
+  margin: 12px 0 0;
+  border-bottom: 1px solid var(--bd);
+}
+
+.chip-tab,
+.chip-toggle,
+.chip-tag,
+.chip-select {
+  border: 0;
+  border-radius: 0;
+  background-color: transparent;
+  box-shadow: none;
+}
+
+.species-tabs-row .chip-tab {
+  border-bottom: 2px solid transparent;
+  color: var(--txt-muted);
+}
+
+.species-tabs-row .chip-tab.active {
+  border-color: var(--pri);
+  background: transparent;
+  box-shadow: none;
+  color: var(--pri);
+}
+
+.scroll-chips-row {
+  gap: 8px;
+  margin: 0 0 16px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--bd);
+}
+
+.chip-select,
+.chip-toggle,
+.chip-tag {
+  min-height: 38px;
+  padding-top: 6px;
+  padding-bottom: 6px;
+  font-size: 0.72rem;
+}
+
+.chip-toggle.active,
+.chip-tag.sel {
+  border-bottom: 1px solid var(--pri);
+  background: transparent;
+  color: var(--pri);
+}
+
+.catalog-summary {
+  display: flex;
+  justify-content: space-between;
+  margin: 4px 0 20px;
+  color: var(--txt-muted);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.photo-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: clamp(24px, 3vw, 44px) clamp(14px, 2vw, 28px);
+}
+
+:deep(.photo-grid .card-img),
+:deep(.photo-grid .slim-img) {
+  aspect-ratio: 1 / 1;
+}
+
+/* 選購型錄統一為直角展示，保留翻面與卡片內操作。 */
+:deep(.photo-grid .flip-card),
+:deep(.photo-grid .flip-face),
+:deep(.photo-grid .flip-back-inner),
+:deep(.photo-grid .card-img.slim-img),
+:deep(.photo-grid .slim-body) {
+  border-radius: 0 !important;
+}
+
+.compare-bar {
+  border: 1px solid var(--bd);
+  border-radius: 3px;
+  background: var(--card-bg-solid);
+  box-shadow: 0 18px 60px rgba(0, 0, 0, 0.16);
+  backdrop-filter: none;
+}
+
+@media (max-width: 768px) {
+  .shop-page-wrapper {
+    padding: 30px 16px 96px;
+  }
+
+  .shop-intro {
+    grid-template-columns: 1fr;
+    gap: 18px;
+    margin-bottom: 22px;
+    padding-bottom: 22px;
+  }
+
+  .shop-intro__title {
+    font-size: clamp(2.5rem, 14vw, 4rem);
+  }
+
+  .shop-intro__copy {
+    font-size: 0.84rem;
+    line-height: 1.7;
+  }
+
+  .shop-photo-notice {
+    align-items: flex-start;
+    margin: 0 0 22px;
+    padding: 12px 0;
+    font-size: 0.72rem;
+  }
+
+  .filter-panel {
+    padding: 0 18px calc(90px + env(safe-area-inset-bottom, 0px));
+    border: 0;
+    border-radius: 0;
+    background: var(--card-bg-solid);
+    box-shadow: 0 -12px 60px rgba(0, 0, 0, 0.16);
+  }
+
+  .filter-panel::before {
+    border-radius: 0;
+  }
+
+  .btn-back-arrow,
+  .btn-clear,
+  .btn-apply,
+  .btn-filter-icon {
+    border-radius: 2px;
+    box-shadow: none;
+  }
+
+  .grid.photo-grid {
+    gap: 28px 10px !important;
+  }
+
+  :deep(.card-img.slim-img) {
+    aspect-ratio: 1 / 1 !important;
+  }
+
+  .compare-bar {
+    width: calc(100vw - 24px);
+    min-width: 0;
+  }
+}
+
+/* 本頁驗收調整：緊縮頁首，並讓桌機篩選與結果共用同一條水平基準。 */
+.shop-page-wrapper {
+  padding-top: clamp(16px, 2vw, 28px);
+}
+
+.common-document-meta {
+  max-width: none;
+  margin-bottom: 10px;
+  padding-bottom: 8px;
+}
+
+.shop-intro {
+  gap: clamp(20px, 3vw, 36px);
+  margin-bottom: 12px;
+  padding-bottom: 16px;
+}
+
+.shop-intro__eyebrow {
+  margin-bottom: 8px;
+}
+
+.shop-photo-notice {
+  margin-bottom: 10px;
+  padding-block: 9px;
+}
+
+.shop-catalog-stage {
+  margin-top: 0;
+  padding-top: 12px;
+}
+
+.shop-stage-heading,
+.shop-results-heading {
+  margin-bottom: 14px;
+}
+
+.shop-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 24px;
+}
+
+.filter-reset-button {
+  width: auto !important;
+  margin-top: 0 !important;
+  justify-self: end;
+  padding-inline: 20px !important;
+  border-radius: 2px;
+}
+
+.empty-state-action {
+  margin-top: 20px;
+  border-radius: 2px;
+}
+
+.shop-empty-state h3 {
+  margin-bottom: 10px;
+  color: var(--txt);
+}
+
+.shop-empty-state p {
+  font-size: 0.9rem;
+}
+
+.cmp-bar-empty {
+  min-height: var(--control-min-height);
+  border-width: 1px;
+  border-radius: 2px;
+  background: transparent;
+  color: var(--txt-muted);
+  opacity: 1;
+}
+
+@media (min-width: 769px) {
+  .filter-panel {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 20px;
+    width: 100%;
+    padding: 0 0 20px;
+    border-right: 0;
+    border-bottom: 1px solid var(--bd);
+  }
+
+  .filter-panel > .f-group {
+    min-width: 0;
+    margin: 0;
+    padding: 0 18px 0 0;
+    border-right: 1px solid var(--bd);
+    border-bottom: 0;
+  }
+
+  .filter-panel > .f-group:last-of-type {
+    padding-right: 0;
+    border-right: 0;
+  }
+
+  .filter-panel .f-check {
+    min-height: 38px;
+  }
+
+  .filter-reset-button {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (min-width: 769px) and (max-width: 1100px) {
+  .filter-panel {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .filter-panel > .f-group:nth-of-type(4) {
+    padding-right: 0;
+    border-right: 0;
+  }
+}
+
+@media (max-width: 768px) {
+  .shop-page-wrapper {
+    padding-top: 14px;
+  }
+
+  .common-document-meta {
+    gap: 4px;
+    margin-bottom: 8px;
+    padding-bottom: 8px;
+  }
+
+  .shop-intro {
+    gap: 8px;
+    margin-bottom: 8px;
+    padding-bottom: 12px;
+  }
+
+  .shop-intro__eyebrow {
+    margin-bottom: 6px;
+  }
+
+  .shop-photo-notice {
+    margin-bottom: 8px;
+    padding-block: 8px;
+  }
+
+  .shop-catalog-stage {
+    padding-top: 8px;
+  }
+
+  .shop-stage-heading,
+  .shop-results-heading {
+    margin-bottom: 12px;
+  }
+
+  .filter-panel .f-group {
+    overflow: visible;
+  }
+
+  .filter-panel .f-check {
+    width: 100%;
+  }
+
+  .btn-clear,
+  .btn-apply,
+  .btn-back-arrow,
+  .btn-filter-icon,
+  .empty-state-action {
+    border-radius: 2px;
+  }
 }
 </style>
