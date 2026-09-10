@@ -58,7 +58,7 @@ test.describe('Hero Lab / 流暢度回歸', () => {
         { timeout: 30_000 }
       )
     } else {
-      await expect(page.locator('.hero-mobile-fallback')).toBeVisible()
+      await expect(page.locator('.hero-canvas-shell canvas')).toBeVisible()
     }
     ;(page as unknown as { __heroPageErrors?: Error[] }).__heroPageErrors = pageErrors
   })
@@ -201,11 +201,11 @@ test.describe('Hero Lab / 流暢度回歸', () => {
       .toBeGreaterThan(0)
   })
 
-  test('手機顯示輕量 fallback，不建立 Canvas 或長距離 scroll-space', async ({ page }) => {
-    test.skip((page.viewportSize()?.width ?? 1280) >= 768, '僅驗證手機 fallback')
-    await expect(page.locator('.hero-mobile-fallback')).toBeVisible()
-    await expect(page.locator('.hero-canvas-shell')).toHaveCount(0)
-    await expect(page.locator('.hero-lab-scroll-space')).toHaveCSS('height', '0px')
+  test('手機保留原有動畫與捲動空間', async ({ page }) => {
+    test.skip((page.viewportSize()?.width ?? 1280) >= 768, '僅驗證手機動畫')
+    await expect(page.locator('.hero-mobile-fallback')).toHaveCount(0)
+    await expect(page.locator('.hero-canvas-shell canvas')).toBeVisible()
+    await expect.poll(() => page.locator('.hero-lab-scroll-space').evaluate(el => el.getBoundingClientRect().height)).toBeGreaterThan(5000)
   })
 })
 

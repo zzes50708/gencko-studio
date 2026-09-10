@@ -8,7 +8,7 @@ import type { OrbitControls as ThreeOrbitControls } from 'three/examples/jsm/con
 import { createHabitatModel } from '~/utils/habitat-model'
 import type { HabitatCommand, HabitatPartId } from '~/utils/habitat-parts'
 
-const props = defineProps<{ selected: HabitatPartId; roof: boolean; command: HabitatCommand; reducedMotion: boolean }>()
+const props = defineProps<{ selected: HabitatPartId; roof: boolean; command: HabitatCommand; reducedMotion: boolean; touchMode: boolean }>()
 const emit = defineEmits<{ select: [id: HabitatPartId]; ready: []; change: [] }>()
 const model = createHabitatModel()
 const sun = new DirectionalLight('#fff8eb', 3.2)
@@ -90,7 +90,7 @@ onBeforeUnmount(() => { model.dispose(); sun.dispose() })
 
 <template>
   <TresPerspectiveCamera :position="[7.7, 6, 9.4]" :fov="38" :near=".1" :far="100" />
-  <OrbitControls ref="controls" :target="[.45, .85, 0]" :enable-pan="false" :enable-zoom="false"
+  <OrbitControls ref="controls" :target="[.45, .85, 0]" :enable-pan="false" :enable-zoom="touchMode"
     :enable-damping="!reducedMotion" :damping-factor=".1" :rotate-speed=".55"
     :min-polar-angle=".08" :max-polar-angle="1.48" :min-distance="8.5" :max-distance="20"
     @start="startDrag" @end="stopDrag" @change="changed" />

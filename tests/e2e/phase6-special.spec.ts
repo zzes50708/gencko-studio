@@ -26,12 +26,12 @@ test.describe('Phase 6 特殊頁保護', () => {
     await expect(particle).toHaveCSS('animation-name', 'none')
   })
 
-  test('Hero Lab 手機不建立 Canvas 或長距離捲動空間', async ({ page }, testInfo) => {
-    test.skip(testInfo.project.name !== 'chromium-mobile', '僅驗證 mobile fallback')
+  test('Hero Lab 手機保留 3D 與原生捲動旅程', async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name !== 'chromium-mobile', '僅驗證手機動畫')
     await page.goto('/hero-lab')
 
-    await expect(page.locator('.hero-mobile-fallback')).toBeVisible()
-    await expect(page.locator('.hero-canvas-shell')).toHaveCount(0)
-    await expect(page.locator('.hero-lab-scroll-space')).toHaveCSS('height', '0px')
+    await expect(page.locator('.hero-canvas-shell canvas')).toBeVisible({ timeout: 60000 })
+    await expect(page.locator('.hero-mobile-fallback')).toHaveCount(0)
+    await expect.poll(() => page.locator('.hero-lab-scroll-space').evaluate(el => el.getBoundingClientRect().height)).toBeGreaterThan(5000)
   })
 })

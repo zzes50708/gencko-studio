@@ -202,9 +202,9 @@ onBeforeUnmount(() => {
     height: 100dvh;
   }
 
-  /* 手機只顯示靜態 fallback，不保留桌機 3D 的長距離捲動旅程。 */
+  /* 手機保留原生觸控動畫旅程，使用較短的捲動長度。 */
   .hero-lab-scroll-space {
-    height: 0;
+    height: 1100svh;
   }
 
   .hero-lab-home-link {

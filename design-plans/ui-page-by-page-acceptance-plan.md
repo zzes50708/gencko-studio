@@ -191,8 +191,8 @@ Codex 完成修改後，必須先自行驗證再請使用者驗收：
 
 ```yaml
 plan: design-plans/ui-page-by-page-acceptance-plan.md
-current_unit: '/care 環境照片轉互動 3D 模型'
-current_status: 使用者已授權本次部署，執行提交與推送並等待 Vercel 結果；UI 及模型待使用者檢視，純文字暫停
+current_unit: '/ 手機進站動畫恢復及 /care 手機 3D 手勢'
+current_status: 本機修復及觸控驗證完成；使用者已要求兩頁完成後直接部署，純文字及其他收尾暫停
 last_user_accepted_unit: '11 /guide'
 accepted_units:
   - '01 /home'
@@ -318,11 +318,13 @@ uncovered_runtime_states:
 blockers: []
 background_processes: 沿用既有 localhost:3000 開發服務，未停止使用者服務；模型驗證程序已結束。最新證據保留於 output/habitat-20260910，既有 output/ui-continuation-* 未清理。
 next_exact_action: >-
-  使用者於 2026-09-10 明確授權部署；本次允許提交及推送官網變更，確認 Vercel 正式建置與 /care 上線結果並回報待辦。
+  最新優先：部署已恢復的 / 手機核心動畫與 /care 單指旋轉、雙指縮放，並實測正式站。
+  不得再次以手機降級名義移除這兩處核心 3D。其他官網收尾先暫停，/profile 已登入 watcher 初始化問題留待接續。
+  2026-09-10 部署已完成：802a4a3 對應 Production 6372532247 回報成功，正式 /care 桌機與手機重測通過。
   等待使用者檢視 /care 環境章末的互動模型，依其回饋調整模型或操作。
   模型依已提供的 1-Photo-1.jpg 示意圖手工重建，未取得實測尺寸；不自行宣稱使用者已驗收。
   保留桌機按需渲染及手機輕量替代。純文字任務暫停，等使用者下次明確自行開啟；
-  訂製爬櫃仍另案，不部署、commit、push 或還原工作樹。
+  訂製爬櫃仍另案；除本次已完成的授權發布外，不另行部署、commit、push 或還原工作樹。
 ```
 
 ## Evidence chain

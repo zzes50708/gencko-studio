@@ -45,15 +45,37 @@ test('環境模型延後載入、閒置休眠、離屏釋放及重新進入', as
 })
 
 for (const width of [320, 390, 768]) {
-  test(`環境示意 ${width}px 觸控模式不建立 Canvas，七項設備完整可操作`, async ({ browser }) => {
+  test(`環境模型 ${width}px 支援原生觸控旋轉縮放，七項設備完整可操作`, async ({ browser }) => {
+    test.setTimeout(60000)
     const context = await browser.newContext({ viewport: { width, height: 900 }, isMobile: true, hasTouch: true })
     const page = await context.newPage()
     await prepare(page)
     await page.locator('.habitat-explorer').scrollIntoViewIfNeeded()
-    await expect(page.locator('.habitat-stage canvas')).toHaveCount(0)
-    await expect(page.locator('.habitat-toolbar')).toHaveCount(0)
-    await expect(page.locator('.habitat-poster')).toBeVisible()
-    expect(await page.locator('.habitat-poster').evaluate((img: HTMLImageElement) => img.complete && img.naturalWidth > 0)).toBe(true)
+    const canvas = page.locator('.habitat-stage canvas')
+    await expect(canvas).toBeVisible({ timeout: 30000 })
+    await expect(page.locator('.habitat-loading')).toHaveCount(0)
+    await canvas.scrollIntoViewIfNeeded()
+    await expect(page.locator('.habitat-toolbar')).toBeAttached()
+    const bounds = (await canvas.boundingBox())!
+    const x = bounds.x + bounds.width * .5
+    const y = bounds.y + bounds.height * .5
+    const cdp = await context.newCDPSession(page)
+    const before = await canvas.screenshot()
+    const scrollBefore = await page.evaluate(() => scrollY)
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x, y }] })
+    for (let step = 1; step <= 8; step++) {
+      await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: x + step * 8, y }] })
+    }
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] })
+    expect(Buffer.compare(before, await canvas.screenshot())).not.toBe(0)
+    expect(Math.abs(await page.evaluate(() => scrollY) - scrollBefore)).toBeLessThan(3)
+    const beforePinch = await canvas.screenshot()
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ id: 1, x: x - 25, y }, { id: 2, x: x + 25, y }] })
+    for (let step = 1; step <= 8; step++) {
+      await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ id: 1, x: x - 25 - step * 5, y }, { id: 2, x: x + 25 + step * 5, y }] })
+    }
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] })
+    expect(Buffer.compare(beforePinch, await canvas.screenshot())).not.toBe(0)
     const buttons = page.getByRole('group', { name: '選擇設備' }).getByRole('button')
     await expect(buttons).toHaveCount(7)
     for (const button of await buttons.all()) {
@@ -62,9 +84,17 @@ for (const width of [320, 390, 768]) {
       expect((await button.boundingBox())!.height).toBeGreaterThanOrEqual(44)
     }
     await expect(page.locator('.habitat-description h4')).toHaveText('溫度計')
-    await expect(page.locator('.habitat-selected-point')).toHaveText('07')
     await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 2)).toBe(true)
-    await page.locator('.habitat-explorer').screenshot({ path: `output/habitat-20260910/mobile-${width}.png` })
+    await page.locator('.habitat-explorer').screenshot({ path: `output/hero-mobile-restored/care-${width}.png` })
+    await page.locator('.habitat-stage').scrollIntoViewIfNeeded()
+    await expect.poll(() => page.evaluate(() => document.documentElement.scrollHeight - innerHeight - scrollY)).toBeGreaterThan(500)
+    const outsideScroll = await page.evaluate(() => scrollY)
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: 5, y: 700 }] })
+    for (let y = 660; y >= 260; y -= 40) {
+      await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: 5, y }] })
+    }
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] })
+    await expect.poll(() => page.evaluate(() => scrollY)).toBeGreaterThan(outsideScroll + 30)
     await context.close()
   })
 }

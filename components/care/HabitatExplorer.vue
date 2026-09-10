@@ -6,7 +6,7 @@ import type { HabitatCommand, HabitatPartId, HabitatView } from '~/utils/habitat
 
 const HabitatViewport = defineAsyncComponent({ loader: () => import('./HabitatViewport.client.vue'), suspensible: false })
 const host = ref<HTMLElement | null>(null)
-const canUse3d = useMediaQuery('(min-width: 768px) and (hover: hover) and (pointer: fine)')
+const touchMode = useMediaQuery('(max-width: 767px), (pointer: coarse), (hover: none)')
 const reducedMotion = useMediaQuery('(prefers-reduced-motion: reduce)')
 const documentVisibility = useDocumentVisibility()
 const inView = ref(false)
@@ -18,8 +18,8 @@ const selected = ref<HabitatPartId>('water')
 const view = ref<HabitatView>('perspective')
 const command = ref<HabitatCommand>({ serial: 0, type: 'view', value: 'perspective' })
 const current = computed(() => HABITAT_PARTS.find(part => part.id === selected.value)!)
-const render3d = computed(() => mounted.value && canUse3d.value && !failed.value && inView.value && documentVisibility.value === 'visible')
-const desktopMode = computed(() => mounted.value && canUse3d.value && !failed.value)
+const render3d = computed(() => mounted.value && !failed.value && inView.value && documentVisibility.value === 'visible')
+const interactiveMode = computed(() => mounted.value && !failed.value)
 watch(render3d, value => { if (!value) ready.value = false })
 useIntersectionObserver(host, ([entry]) => { inView.value = Boolean(entry?.isIntersecting) }, { rootMargin: '120px' })
 onMounted(() => { mounted.value = true })
@@ -33,7 +33,7 @@ const changeView = (value: HabitatView) => { view.value = value; runCommand('vie
 const onReady = () => { ready.value = true; if (view.value !== 'perspective') runCommand('view', view.value) }
 const reset = () => { roof.value = false; changeView('perspective') }
 const keyboard = (event: KeyboardEvent) => {
-  if (!desktopMode.value || event.target !== event.currentTarget) return
+  if (!interactiveMode.value || event.target !== event.currentTarget) return
   if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
     event.preventDefault(); runCommand('rotate', event.key === 'ArrowLeft' ? -.25 : .25)
   } else if (event.key === '+' || event.key === '=') { event.preventDefault(); runCommand('zoom', .86) }
@@ -46,11 +46,11 @@ const keyboard = (event: KeyboardEvent) => {
   <section ref="host" class="habitat-explorer" aria-labelledby="habitat-title">
     <header class="habitat-heading">
       <div><span class="habitat-eyebrow">ENVIRONMENT / EXPLORE</span><h3 id="habitat-title">看懂每一個配置的位置</h3></div>
-      <p>{{ desktopMode ? '拖曳旋轉 · 點選設備' : '點選下方設備，查看配置位置與說明' }}</p>
+      <p>{{ interactiveMode ? (touchMode ? '模型內單指旋轉 · 雙指縮放 · 區塊外滑動頁面' : '拖曳旋轉 · 點選設備') : '點選下方設備，查看配置位置與說明' }}</p>
     </header>
     <div class="habitat-layout">
       <div class="habitat-main">
-        <div v-if="desktopMode" class="habitat-toolbar" role="group" aria-label="模型視角與顯示">
+        <div v-if="interactiveMode" class="habitat-toolbar" role="group" aria-label="模型視角與顯示">
           <div class="habitat-view-buttons">
             <button :aria-pressed="view === 'perspective'" @click="changeView('perspective')">立體</button>
             <button :aria-pressed="view === 'front'" @click="changeView('front')">正面</button>
@@ -59,23 +59,23 @@ const keyboard = (event: KeyboardEvent) => {
           <label class="habitat-roof"><input v-model="roof" type="checkbox" />顯示頂蓋</label>
           <button @click="reset">重設視角</button>
         </div>
-        <div class="habitat-stage" :class="{ 'habitat-stage--interactive': desktopMode }"
-          :tabindex="desktopMode ? 0 : undefined" :aria-label="desktopMode ? '3D 飼養環境：拖曳旋轉，左右方向鍵轉向，加減鍵縮放，Home 重設' : undefined"
+        <div class="habitat-stage" :class="{ 'habitat-stage--interactive': interactiveMode }"
+          :tabindex="interactiveMode ? 0 : undefined" :aria-label="interactiveMode ? '3D 飼養環境：單指旋轉、雙指縮放；鍵盤左右鍵轉向，加減鍵縮放，Home 重設' : undefined"
           @keydown="keyboard">
           <img class="habitat-poster" :src="'/images/care/habitat-overview.webp'" alt="飼養箱配置：左前水盆、左後食盆、右側躲避屋、箱外底部加熱墊及溫度計"
             width="1200" height="800" loading="lazy" :class="{ 'habitat-poster--covered': render3d && ready }" />
           <div v-if="render3d" class="habitat-canvas-layer">
-            <HabitatViewport :selected="selected" :roof="roof" :command="command" :reduced-motion="reducedMotion"
+            <HabitatViewport :selected="selected" :roof="roof" :command="command" :reduced-motion="reducedMotion" :touch-mode="touchMode"
               @ready="onReady" @error="failed = true" @select="select" />
           </div>
-          <div v-if="!desktopMode" class="habitat-points" aria-hidden="true">
+          <div v-if="!interactiveMode" class="habitat-points" aria-hidden="true">
             <span class="habitat-selected-point" :style="{ left: `${current.point[0]}%`, top: `${current.point[1]}%` }">{{ current.number }}</span>
           </div>
-          <div v-if="desktopMode" class="habitat-zoom" role="group" aria-label="模型縮放">
+          <div v-if="interactiveMode" class="habitat-zoom" role="group" aria-label="模型縮放">
             <button aria-label="放大模型" @click="runCommand('zoom', .86)">＋</button>
             <button aria-label="縮小模型" @click="runCommand('zoom', 1.16)">−</button>
           </div>
-          <span v-if="desktopMode && !ready && render3d" class="habitat-loading" role="status">正在準備互動模型</span>
+          <span v-if="interactiveMode && !ready && render3d" class="habitat-loading" role="status">正在準備互動模型</span>
         </div>
         <p class="habitat-caption">依提供的環境示意圖重建，呈現設備位置與相對關係，非實測尺寸。預設開蓋檢視。</p>
       </div>
@@ -110,7 +110,7 @@ const keyboard = (event: KeyboardEvent) => {
 .habitat-roof { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 6px; color: var(--txt); font: 500 .78rem/1.4 var(--font-body-zh); white-space: nowrap; cursor: pointer; }
 .habitat-roof input { accent-color: var(--pri); width: 16px; height: 16px; }
 .habitat-stage { position: relative; height: clamp(360px, 38vw, 540px); overflow: hidden; background: #f8f7f3; isolation: isolate; }
-.habitat-stage--interactive { cursor: grab; }
+.habitat-stage--interactive { cursor: grab; touch-action: none; }
 .habitat-stage--interactive:active { cursor: grabbing; }
 .habitat-stage :deep(canvas) { position: absolute !important; inset: 0; }
 .habitat-canvas-layer { position: absolute; inset: 0; }
@@ -136,7 +136,7 @@ const keyboard = (event: KeyboardEvent) => {
   .habitat-heading { display: block; }
   .habitat-heading p { margin-top: 6px; }
   .habitat-layout { grid-template-columns: 1fr; gap: 12px; }
-  .habitat-stage { height: auto; aspect-ratio: 3 / 2; overflow: visible; }
+  .habitat-stage { height: auto; aspect-ratio: 3 / 2; overflow: hidden; }
   .habitat-parts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 14px; }
   .habitat-parts button { font-size: .75rem; gap: 8px; }
   .habitat-description { padding-top: 16px; }

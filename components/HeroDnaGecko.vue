@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
 import { onBeforeRouteLeave } from 'vue-router'
-import { useMediaQuery } from '@vueuse/core'
 import DnaGeckoParticles from '@/components/DnaGeckoParticles.vue'
 import GalleryGlitchScreen from '@/components/GalleryGlitchScreen.vue'
 import HeroScrollProgress from '@/components/HeroScrollProgress.vue'
@@ -19,7 +18,8 @@ interface HeroGalleryCard {
 }
 
 const bottomRenderMode = ref<'always' | 'manual'>('always')
-const hero3dEnabled = useMediaQuery('(min-width: 768px) and (hover: hover) and (pointer: fine)')
+// 進站動畫是使用者指定保留的手機核心體驗；使用下方 compactViewport 效能設定，不能以裝置類型整段停用。
+const hero3dEnabled = ref(true)
 const compactViewport = ref(false)
 const canvasDpr = computed<[number, number]>(() => (compactViewport.value ? [1, 1] : [1, 1.5]))
 const ambientLightIntensity = computed(() => (compactViewport.value ? 0.68 : 0.5))

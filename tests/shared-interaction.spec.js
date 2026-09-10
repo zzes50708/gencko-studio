@@ -900,10 +900,8 @@ describe('Phase 1 共用互動元件 contract', () => {
     expect(heroLabPage).toContain('.hero-lab-home-link:focus-visible')
   })
 
-  it('Hero Lab 在 mobile/coarse pointer 不 mount Canvas，desktop 保留完整 3D', () => {
-    expect(heroDnaGecko).toMatch(
-      /useMediaQuery\(\s*'\(min-width: 768px\) and \(hover: hover\) and \(pointer: fine\)'\s*\)/
-    )
+  it('Hero Lab 保留手機核心 3D 旅程，使用手機效能設定', () => {
+    expect(heroDnaGecko).toContain('const hero3dEnabled = ref(true)')
     expect(heroDnaGecko).toMatch(
       /<div\s+v-if="hero3dEnabled"\s+class="hero-canvas-shell"[\s\S]*?<TresCanvas[\s\S]*?<\/TresCanvas>/
     )
@@ -918,7 +916,7 @@ describe('Phase 1 共用互動元件 contract', () => {
     expect(heroLabPage).not.toContain('const hero3dEnabled = useMediaQuery')
     expect(heroLabPage).toMatch(/\.hero-lab-scroll-space\s*\{[\s\S]*?height:\s*1500dvh[\s\S]*?\}/)
     expect(heroLabPage).toMatch(
-      /@media\s*\(max-width:\s*767px\),\s*\(hover:\s*none\),\s*\(pointer:\s*coarse\)[\s\S]*?\.hero-lab-scroll-space\s*\{[\s\S]*?height:\s*0/
+      /@media\s*\(max-width:\s*767px\),\s*\(hover:\s*none\),\s*\(pointer:\s*coarse\)[\s\S]*?\.hero-lab-scroll-space\s*\{[\s\S]*?height:\s*1100svh/
     )
   })
 
