@@ -191,8 +191,8 @@ Codex 完成修改後，必須先自行驗證再請使用者驗收：
 
 ```yaml
 plan: design-plans/ui-page-by-page-acceptance-plan.md
-current_unit: '/ 手機進站動畫恢復及 /care 手機 3D 手勢'
-current_status: 本機修復及觸控驗證完成；使用者已要求兩頁完成後直接部署，純文字及其他收尾暫停
+current_unit: '/ 骨幹卡片新版清晰影片與手機照片'
+current_status: 新版八頁素材已重製，桌機高清影片與手機照片驗證通過，待發布；純文字與其他收尾暫停
 last_user_accepted_unit: '11 /guide'
 accepted_units:
   - '01 /home'
@@ -318,7 +318,9 @@ uncovered_runtime_states:
 blockers: []
 background_processes: 沿用既有 localhost:3000 開發服務，未停止使用者服務；模型驗證程序已結束。最新證據保留於 output/habitat-20260910，既有 output/ui-continuation-* 未清理。
 next_exact_action: >-
-  最新優先：部署已恢復的 / 手機核心動畫與 /care 單指旋轉、雙指縮放，並實測正式站。
+  最新優先：發布根網址骨幹卡片 20260911 版素材，確認桌機高清影片與手機照片；手機不得因自動播放失敗而顯示空白。
+  最新修復已完成：6fba18e 正式部署成功，/ 手機動畫與 /care 單指旋轉、雙指縮放實測通過。
+  等待使用者檢視手機動畫修復；未獲恢復指示前，其他官網收尾保持暫停。
   不得再次以手機降級名義移除這兩處核心 3D。其他官網收尾先暫停，/profile 已登入 watcher 初始化問題留待接續。
   2026-09-10 部署已完成：802a4a3 對應 Production 6372532247 回報成功，正式 /care 桌機與手機重測通過。
   等待使用者檢視 /care 環境章末的互動模型，依其回饋調整模型或操作。

@@ -2,6 +2,7 @@
 import { nextTick, shallowRef, onMounted, onUnmounted } from 'vue'
 import { useLoop, useTresContext } from '@tresjs/core'
 import * as THREE from 'three'
+import { HERO_PREVIEW_VIDEO_ATLAS, HERO_PREVIEW_POSTER_ATLAS, getHeroPreview } from '~/utils/hero-previews'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import { ConvexGeometry } from 'three/examples/jsm/geometries/ConvexGeometry.js'
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js'
@@ -3254,6 +3255,7 @@ interface HeroCard {
   color: string
   accent: string
   video: string
+  poster: string
   atlasIndex: number
   to: string
   year: string
@@ -3269,12 +3271,8 @@ interface HeroCardHitbox {
   height: number
 }
 
-const HERO_CARD_SAMPLE_VIDEO_URL = '/previews/hero-card-sample.mp4'
-const HERO_CARD_ATLAS_VIDEO_URL = '/previews/hero-card-atlas.mp4'
-const HERO_CARD_ATLAS_MOBILE_VIDEO_URL = '/previews/hero-card-atlas-mobile.mp4'
 const HERO_CARD_ATLAS_COLUMNS = 4
 const HERO_CARD_ATLAS_ROWS = 2
-const HERO_CARD_ATLAS_ENABLED = import.meta.env.VITE_HERO_CARD_ATLAS === 'true'
 
 const HERO_CARDS: HeroCard[] = [
   {
@@ -3358,7 +3356,7 @@ const HERO_CARDS: HeroCard[] = [
     kind: 'VET / SUPPORT MAP',
     description: '整理可看診特寵的醫院資訊，讓飼主在需要時能更快找到合適的醫療支援。'
   }
-].map((card) => ({ ...card, video: HERO_CARD_SAMPLE_VIDEO_URL }))
+].map((card) => ({ ...card, ...getHeroPreview(card.to) }))
 const CARD_W = 2.6
 const CARD_H = 1.7
 const CARD_THICKNESS = 0.06
@@ -3373,25 +3371,34 @@ const cardRingY = 0.08 // 第一張正面時基準高度
 const cardVerticalSlope = 0.48 // 相位每推進 1 rad 時沿 Y 軸抬升距離
 const heroCardsGroup = new THREE.Group()
 const cardPreviewVideo = typeof document !== 'undefined' ? document.createElement('video') : null
-let cardPreviewUsesAtlas = false
+let cardPreviewUsesAtlas = true
+let cardPreviewStatic = true
 let cardPreviewAtlasSource = ''
 const cardPreviewTexture = cardPreviewVideo
   ? new THREE.VideoTexture(cardPreviewVideo)
   : new THREE.Texture()
 
 if (cardPreviewVideo) {
-  cardPreviewVideo.src = HERO_CARD_SAMPLE_VIDEO_URL
   cardPreviewVideo.muted = true
   cardPreviewVideo.loop = true
   cardPreviewVideo.playsInline = true
-  cardPreviewVideo.preload = 'auto'
+  cardPreviewVideo.preload = 'none'
   cardPreviewVideo.setAttribute('playsinline', '')
   cardPreviewVideo.addEventListener('error', onCardPreviewVideoError)
+  cardPreviewVideo.addEventListener('loadeddata', onCardPreviewVideoReady)
   cardPreviewTexture.colorSpace = THREE.SRGBColorSpace
   cardPreviewTexture.minFilter = THREE.LinearFilter
   cardPreviewTexture.magFilter = THREE.LinearFilter
 }
 disposables.push(cardPreviewTexture)
+const cardPreviewPosterTexture = typeof document !== 'undefined'
+  ? new THREE.TextureLoader().load(HERO_PREVIEW_POSTER_ATLAS)
+  : new THREE.Texture()
+cardPreviewPosterTexture.colorSpace = THREE.SRGBColorSpace
+cardPreviewPosterTexture.minFilter = THREE.LinearFilter
+cardPreviewPosterTexture.magFilter = THREE.LinearFilter
+cardPreviewPosterTexture.generateMipmaps = false
+disposables.push(cardPreviewPosterTexture)
 
 interface HeroCardItem {
   index: number
@@ -3446,30 +3453,41 @@ function syncCardVideoAtlasUniforms() {
 }
 
 function onCardPreviewVideoError() {
-  if (!cardPreviewVideo || !cardPreviewUsesAtlas) return
-  cardPreviewUsesAtlas = false
-  cardPreviewAtlasSource = ''
-  cardPreviewVideo.src = HERO_CARD_SAMPLE_VIDEO_URL
-  cardPreviewVideo.load()
-  syncCardVideoAtlasUniforms()
-  cardPreviewVideo.play().catch(() => {
-    // 瀏覽器未允許自動播放時，保留既有的使用者互動播放行為。
-  })
+  applyCardPreviewTexture(cardPreviewPosterTexture)
+}
+
+function applyCardPreviewTexture(texture: THREE.Texture) {
+  cardPreviewStatic = texture === cardPreviewPosterTexture
+  for (const item of heroCardItems) item.coreMat.uniforms.uVideo.value = texture
+}
+
+function onCardPreviewVideoReady() {
+  if (window.innerWidth < 768 || cachedTouchViewport) return
+  applyCardPreviewTexture(cardPreviewTexture)
 }
 
 function loadCardPreviewAtlas() {
-  if (!cardPreviewVideo || !HERO_CARD_ATLAS_ENABLED) return
+  if (!cardPreviewVideo) return
   cardPreviewUsesAtlas = true
   const compact = window.innerWidth < 768 || cachedTouchViewport
-  const source = compact ? HERO_CARD_ATLAS_MOBILE_VIDEO_URL : HERO_CARD_ATLAS_VIDEO_URL
+  if (compact) {
+    cardPreviewVideo.pause()
+    if (cardPreviewVideo.getAttribute('src')) {
+      cardPreviewVideo.removeAttribute('src')
+      cardPreviewVideo.load()
+    }
+    cardPreviewAtlasSource = ''
+    applyCardPreviewTexture(cardPreviewPosterTexture)
+    syncCardVideoAtlasUniforms()
+    return
+  }
+  const source = HERO_PREVIEW_VIDEO_ATLAS
   if (cardPreviewAtlasSource === source) return
   cardPreviewAtlasSource = source
   cardPreviewVideo.src = source
   cardPreviewVideo.load()
   syncCardVideoAtlasUniforms()
-  cardPreviewVideo.play().catch(() => {
-    // 瀏覽器未允許自動播放時，保留既有的使用者互動播放行為。
-  })
+  cardPreviewVideo.play().catch(onCardPreviewVideoError)
 }
 
 function syncActiveHeroCard(card: HeroCard | null) {
@@ -3883,7 +3901,7 @@ function makeProjectionCardVideoMaterial(color: string, accent: string, atlasInd
       uSeamB: uniforms.uSeamB,
       uEggReveal: uniforms.uEggReveal,
       uEggRes: uniforms.uEggRes,
-      uVideo: { value: cardPreviewTexture },
+      uVideo: { value: cardPreviewPosterTexture },
       uVideoOffset: { value: new THREE.Vector2(atlas.offsetX, atlas.offsetY) },
       uVideoScale: { value: new THREE.Vector2(atlas.scaleX, atlas.scaleY) },
       uColor: { value: new THREE.Color(color) },
@@ -3941,31 +3959,20 @@ function makeProjectionCardVideoMaterial(color: string, accent: string, atlasInd
         float reveal = smoothstep(uSeamB + 0.035, uSeamB - 0.01, cardScreenD);
         if (reveal <= 0.001) discard;
 
-        vec2 videoUv = vUv * uVideoScale + uVideoOffset;
-        vec2 px = uVideoScale * vec2(1.0 / 960.0, 1.0 / 540.0) * 8.0;
-        vec3 frame = texture2D(uVideo, videoUv).rgb * 0.18;
-        frame += texture2D(uVideo, videoUv + vec2(px.x, 0.0)).rgb * 0.13;
-        frame += texture2D(uVideo, videoUv - vec2(px.x, 0.0)).rgb * 0.13;
-        frame += texture2D(uVideo, videoUv + vec2(0.0, px.y)).rgb * 0.13;
-        frame += texture2D(uVideo, videoUv - vec2(0.0, px.y)).rgb * 0.13;
-        frame += texture2D(uVideo, videoUv + px).rgb * 0.075;
-        frame += texture2D(uVideo, videoUv - px).rgb * 0.075;
-        frame += texture2D(uVideo, videoUv + vec2(px.x, -px.y)).rgb * 0.075;
-        frame += texture2D(uVideo, videoUv + vec2(-px.x, px.y)).rgb * 0.075;
-
-        float luma = dot(frame, vec3(0.299, 0.587, 0.114));
-        vec3 tint = mix(uColor, uAccent, smoothstep(0.16, 0.88, vUv.y));
-        frame = mix(frame, vec3(luma), 0.34);
-        frame = mix(frame, tint, 0.55);
-        float scan = 0.82 + 0.18 * sin(vUv.y * 320.0 + uTime * 2.4);
+        // 直接取樣新版畫面，避免模糊核與鄰格滲色破壞中文及照片細節。
+        vec2 insetUv = clamp(vUv, vec2(0.5 / 960.0, 0.5 / 540.0), vec2(1.0 - 0.5 / 960.0, 1.0 - 0.5 / 540.0));
+        vec2 videoUv = insetUv * uVideoScale + uVideoOffset;
+        vec3 frame = texture2D(uVideo, videoUv).rgb;
         float vignette = smoothstep(1.1, 0.24, length(vUv - 0.5));
         float facing = abs(dot(normalize(vNormal), normalize(vViewDir)));
         float edgeGlow = pow(1.0 - facing, 3.0);
         // 影片直接覆蓋整個有厚度的卡片；邊與側面以入射角染光，保留立體層次。
-        frame *= scan * (0.42 + vignette * 0.58) * (0.52 + facing * 0.48);
-        frame += mix(uColor, uAccent, 0.5) * edgeGlow * 0.46;
-        frame *= uBrightness;
+        frame *= (0.94 + vignette * 0.06) * (0.9 + facing * 0.1);
+        frame += mix(uColor, uAccent, 0.5) * edgeGlow * 0.08;
+        // 白底頁面維持在 Bloom 門檻以下，避免原本為深色示範影片設定的補亮把內容沖白。
+        frame *= min(uBrightness, 1.0) * 0.65;
         gl_FragColor = vec4(frame, uOpacity);
+        #include <colorspace_fragment>
       }
     `
   })
@@ -7735,11 +7742,6 @@ onMounted(async () => {
   installHeroPerf()
   bindInputCapabilityMedia()
   void loadCardPreviewAtlas()
-  if (cardPreviewVideo) {
-    cardPreviewVideo.play().catch(() => {
-      // 瀏覽器未允許自動播放時，仍可在下一次使用者互動後開始更新預覽。
-    })
-  }
   emit('journey-segments', journeySegments)
   emit('next-scene-progress', 0)
   syncParallaxPointerBinding()
@@ -7892,7 +7894,9 @@ onMounted(async () => {
         heroCardHitMeshes: heroCardHitMeshes.length,
         cardInteractionReady,
         cardOrbitUnlockedNow,
-        cardVideoMode: cardPreviewUsesAtlas ? 'atlas' : 'sample',
+        cardVideoMode: cardPreviewStatic ? 'poster' : 'atlas',
+        cardPreviewReady: cardPreviewStatic ? Boolean((cardPreviewPosterTexture.image as HTMLImageElement | undefined)?.width) : (cardPreviewVideo?.readyState ?? 0) >= 2,
+        cardPreviewSize: cardPreviewStatic ? [(cardPreviewPosterTexture.image as HTMLImageElement | undefined)?.width, (cardPreviewPosterTexture.image as HTMLImageElement | undefined)?.height] : [cardPreviewVideo?.videoWidth, cardPreviewVideo?.videoHeight],
         responsiveHoverEffects,
         dnaTilesVisible: dnaTiles.visible,
         boneTilesVisible: boneTiles.visible,
@@ -7970,6 +7974,7 @@ onUnmounted(() => {
   cardHoverEventsBound = false
   if (cardPreviewVideo) {
     cardPreviewVideo.removeEventListener('error', onCardPreviewVideoError)
+    cardPreviewVideo.removeEventListener('loadeddata', onCardPreviewVideoReady)
     cardPreviewVideo.pause()
     cardPreviewVideo.removeAttribute('src')
     cardPreviewVideo.load()

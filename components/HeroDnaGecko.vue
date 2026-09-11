@@ -10,6 +10,7 @@ interface HeroGalleryCard {
   color: string
   accent: string
   video: string
+  poster: string
   atlasIndex: number
   to: string
   year: string
@@ -54,9 +55,6 @@ const bloomThreshold = computed(
 ) // 手機只保留高亮邊緣，桌面維持原本閾值。
 const journeySegments = ref<{ key: string; end: number }[]>([])
 const selectedCard = ref<HeroGalleryCard | null>(null)
-const galleryVideoUsesAtlas = import.meta.env.VITE_HERO_CARD_ATLAS === 'true'
-const HERO_CARD_ATLAS_VIDEO_URL = '/previews/hero-card-atlas.mp4'
-const HERO_CARD_ATLAS_MOBILE_VIDEO_URL = '/previews/hero-card-atlas-mobile.mp4'
 const isGalleryExiting = ref(false)
 const galleryTransitionKey = ref(0)
 const galleryDialogRef = ref<HTMLElement | null>(null)
@@ -76,22 +74,7 @@ let galleryReturnFocus: HTMLElement | null = null
 const galleryVideoSource = computed(() => {
   const card = selectedCard.value
   if (!card) return ''
-  if (!galleryVideoUsesAtlas) return card.video
-  return compactViewport.value ? HERO_CARD_ATLAS_MOBILE_VIDEO_URL : HERO_CARD_ATLAS_VIDEO_URL
-})
-
-const galleryVideoStyle = computed(() => {
-  const card = selectedCard.value
-  if (!card || !galleryVideoUsesAtlas) return undefined
-  const column = card.atlasIndex % 4
-  const row = card.atlasIndex < 4 ? 0 : 1
-  return {
-    width: '400%',
-    height: '200%',
-    maxWidth: 'none',
-    objectFit: 'fill' as const,
-    transform: `translate(${-column * 25}%, ${-row * 50}%)`
-  }
+  return card.video
 })
 
 const heroAccessibleDestinations = [
@@ -487,13 +470,14 @@ onBeforeUnmount(() => {
       >
         <div class="gallery-noise" aria-hidden="true" />
         <GalleryGlitchScreen
+          v-if="!compactViewport"
           :key="`${selectedCard.title}-${galleryTransitionKey}`"
           class="gallery-transition-canvas"
           :card="selectedCard"
           :mode="isGalleryExiting ? 'exit' : 'enter'"
           :video-src="galleryVideoSource"
           :atlas-index="selectedCard.atlasIndex"
-          :use-atlas="galleryVideoUsesAtlas"
+          :use-atlas="false"
         />
         <aside class="gallery-copy">
           <p class="gallery-kicker">GENCKO EXHIBIT</p>
@@ -519,17 +503,19 @@ onBeforeUnmount(() => {
           <div class="gallery-screen">
             <div class="gallery-screen__image">
               <video
+                v-if="!compactViewport"
                 :key="`${selectedCard.title}-${galleryTransitionKey}-${compactViewport ? 'mobile' : 'desktop'}`"
                 class="gallery-screen__video"
                 :src="galleryVideoSource"
-                :style="galleryVideoStyle"
+                :poster="selectedCard.poster"
                 autoplay
                 muted
                 loop
                 playsinline
                 controls
               />
-              <span class="gallery-screen__live">VIDEO FEED / LIVE</span>
+              <img v-else class="gallery-screen__video" :src="selectedCard.poster" :alt="`${selectedCard.title} 新版頁面預覽`" />
+              <span class="gallery-screen__live">{{ compactViewport ? 'PAGE PREVIEW' : 'VIDEO PREVIEW' }}</span>
               <span class="gallery-screen__label">{{ selectedCard.title }}</span>
               <span class="gallery-screen__code">{{ selectedCard.kind }}</span>
             </div>
