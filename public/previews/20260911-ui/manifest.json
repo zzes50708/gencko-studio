@@ -1,0 +1,78 @@
+{
+  "generated": "2026-09-11T06:13:24.703Z",
+  "baseURL": "http://localhost:3000",
+  "cards": [
+    {
+      "index": 0,
+      "route": "/care",
+      "width": 1280,
+      "height": 720,
+      "video": "care.mp4",
+      "poster": "care.webp",
+      "errors": []
+    },
+    {
+      "index": 1,
+      "route": "/articles",
+      "width": 1280,
+      "height": 720,
+      "video": "articles.mp4",
+      "poster": "articles.webp",
+      "errors": []
+    },
+    {
+      "index": 2,
+      "route": "/why-gencko",
+      "width": 1280,
+      "height": 720,
+      "video": "why-gencko.mp4",
+      "poster": "why-gencko.webp",
+      "errors": []
+    },
+    {
+      "index": 3,
+      "route": "/breeders",
+      "width": 1280,
+      "height": 720,
+      "video": "breeders.mp4",
+      "poster": "breeders.webp",
+      "errors": []
+    },
+    {
+      "index": 4,
+      "route": "/shop",
+      "width": 1280,
+      "height": 720,
+      "video": "shop.mp4",
+      "poster": "shop.webp",
+      "errors": []
+    },
+    {
+      "index": 5,
+      "route": "/genes",
+      "width": 1280,
+      "height": 720,
+      "video": "genes.mp4",
+      "poster": "genes.webp",
+      "errors": []
+    },
+    {
+      "index": 6,
+      "route": "/calculator",
+      "width": 1280,
+      "height": 720,
+      "video": "calculator.mp4",
+      "poster": "calculator.webp",
+      "errors": []
+    },
+    {
+      "index": 7,
+      "route": "/hospital",
+      "width": 1280,
+      "height": 720,
+      "video": "hospital.mp4",
+      "poster": "hospital.webp",
+      "errors": []
+    }
+  ]
+}

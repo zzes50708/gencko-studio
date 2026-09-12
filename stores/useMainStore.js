@@ -19,6 +19,9 @@ export const useMainStore = defineStore('main', () => {
   const inv = ref([])
   const merchList = ref([])
   const articlesList = ref([])
+  const articlesLoaded = ref(false)
+  const articlesLoading = ref(false)
+  const articlesError = ref(null)
   const genePages = ref([])
   const marqueeList = ref([])
   const hotList = ref([])
@@ -146,11 +149,51 @@ export const useMainStore = defineStore('main', () => {
     }
   }
 
+  let articlesLoadPromise = null
+  function loadArticles() {
+    if (articlesLoadPromise) return articlesLoadPromise
+    if (articlesLoaded.value && !articlesError.value) return Promise.resolve()
+    articlesLoading.value = true
+    articlesError.value = null
+    articlesLoadPromise = (async () => {
+      try {
+        const { data, error } = await withRetry(
+          () =>
+            supabase
+              .from('articles')
+              .select('id,title,summary,category,image_url,publish_date,author,keywords,status')
+              .ilike('status', 'published'),
+          { label: 'articles' }
+        )
+        if (error) throw error
+        articlesList.value = (data || [])
+          .map((a) => ({
+            ID: a.id,
+            Title: a.title,
+            Category: a.category,
+            Summary: a.summary,
+            ImageURL: a.image_url,
+            Author: a.author || 'Gencko Studio',
+            PublishDate: a.publish_date || '',
+            Keywords: a.keywords || ''
+          }))
+          .reverse()
+        articlesLoaded.value = true
+      } catch (error) {
+        articlesError.value = '文章暫時無法載入，請稍後重試。'
+      } finally {
+        articlesLoading.value = false
+        articlesLoadPromise = null
+      }
+    })()
+    return articlesLoadPromise
+  }
+
   async function loadSecondaryData() {
     // 2. 次要資料表：平行獨立載入，互不影響
-    const [merchResult, artResult, geneResult, configResult] = await Promise.allSettled([
+    const [merchResult, , geneResult, configResult] = await Promise.allSettled([
       withRetry(() => supabase.from('merchandise').select('*'), { label: 'merchandise' }),
-      withRetry(() => supabase.from('articles').select('*'), { label: 'articles' }),
+      loadArticles(),
       withRetry(() => supabase.from('genetic_pages').select('*'), { label: 'genetic_pages' }),
       withRetry(() => supabase.from('config').select('*'), { label: 'config' })
       // 註：site_settings（展場模式）改於 app.vue 以 SSR useAsyncData 先載入，避免價格閃爍
@@ -169,26 +212,6 @@ export const useMainStore = defineStore('main', () => {
       }))
     } else if (merchResult.status === 'rejected' || merchResult.value?.error) {
       console.error('讀取周邊商品失敗:', merchResult.reason || merchResult.value?.error)
-    }
-
-    if (artResult.status === 'fulfilled' && !artResult.value.error && artResult.value.data) {
-      articlesList.value = artResult.value.data
-        .filter((a) => (a.status || '').toLowerCase() === 'published')
-        .map((a) => ({
-          ID: a.id,
-          Title: a.title,
-          Category: a.category,
-          Summary: a.summary,
-          Content: a.content,
-          ImageURL: a.image_url,
-          Author: a.author || 'Gencko Studio',
-          // publish_date 是後台填入的發布日（CLAUDE.md 確認），created_at 為建立時間備用
-          PublishDate: a.publish_date || a.created_at,
-          Keywords: a.keywords || ''
-        }))
-        .reverse()
-    } else if (artResult.status === 'rejected' || artResult.value?.error) {
-      console.error('讀取文章失敗:', artResult.reason || artResult.value?.error)
     }
 
     if (geneResult.status === 'fulfilled' && !geneResult.value.error && geneResult.value.data) {
@@ -597,6 +620,10 @@ export const useMainStore = defineStore('main', () => {
     inv,
     merchList,
     articlesList,
+    articlesLoaded,
+    articlesLoading,
+    articlesError,
+    loadArticles,
     genePages,
     marqueeList,
     hotList,

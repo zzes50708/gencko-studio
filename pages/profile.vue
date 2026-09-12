@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
 import { useHead, useSupabaseClient } from '#imports'
 import { useMainStore } from '~/stores/useMainStore'
@@ -29,25 +29,31 @@ useHead({
 const activeTab = ref('wishlist')
 const myBids = ref([])
 const isLoadingBids = ref(false)
+let bidRequestId = 0
 
 // 監聽 Store 中的 currentUser 變化，以載入或清除競標紀錄
 watch(
   () => store.currentUser,
   (user) => {
+    const requestId = ++bidRequestId
+    myBids.value = []
+    isLoadingBids.value = false
     if (user?.type === 'google') {
-      fetchMyBids()
-    } else {
-      myBids.value = []
+      void fetchMyBids(requestId)
     }
   },
   { immediate: true }
 )
+onBeforeUnmount(() => {
+  bidRequestId++
+})
 
 // 由伺服器端身份取得自己的競標紀錄，不讓瀏覽器以 phone/email 查詢。
-const fetchMyBids = async () => {
+async function fetchMyBids(requestId) {
   isLoadingBids.value = true
   try {
     const { data: bidsData, error: bidsError } = await supabase.rpc('get_my_auction_bids')
+    if (requestId !== bidRequestId) return
 
     if (bidsError) throw bidsError
     if (!bidsData || bidsData.length === 0) {
@@ -57,10 +63,12 @@ const fetchMyBids = async () => {
 
     // Step 2：取出不重複的 auction_id，一次查詢對應拍賣資料
     const auctionIds = [...new Set(bidsData.map((b) => b.auction_id))]
-    const { data: auctionsData } = await supabase
+    const { data: auctionsData, error: auctionsError } = await supabase
       .from('auctions')
       .select('id, morph, end_time, status, images')
       .in('id', auctionIds)
+    if (requestId !== bidRequestId) return
+    if (auctionsError) throw auctionsError
 
     const auctionsMap = {}
     ;(auctionsData || []).forEach((a) => {
@@ -89,9 +97,10 @@ const fetchMyBids = async () => {
     })
     myBids.value = Object.values(grouped)
   } catch (e) {
+    if (requestId !== bidRequestId) return
     console.error('讀取競標紀錄失敗:', e)
   } finally {
-    isLoadingBids.value = false
+    if (requestId === bidRequestId) isLoadingBids.value = false
   }
 }
 
@@ -1432,5 +1441,8 @@ const getMapLink = (h) => {
 :deep(.app-back-btn) {
   border: 1px solid var(--txt);
 }
-.empty-state { border: 0; border-bottom: 1px solid var(--bd); }
+.empty-state {
+  border: 0;
+  border-bottom: 1px solid var(--bd);
+}
 </style>

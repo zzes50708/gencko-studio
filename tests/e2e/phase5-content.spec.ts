@@ -27,7 +27,7 @@ test.describe('Phase 5 內容與購買信任路徑', () => {
 
   test('文章內頁提供清楚閱讀層級、作者與延伸路徑', async ({ page }) => {
     await page.goto('/articles')
-    await page.locator('.article-card').first().click()
+    await page.locator('.article-entry').first().click()
 
     const reader = page.getByTestId('article-reader-shell')
     await expect(reader).toBeVisible()

@@ -45,6 +45,9 @@ const handleLenisScroll = ({ scroll }) => {
     store.readingProgress = Math.min(100, Math.max(0, (st / (docH - winH)) * 100))
   }
 }
+const handleNativeScroll = () => {
+  if (!globalLenis && !isCustomScrollPage.value) handleLenisScroll({ scroll: window.scrollY })
+}
 
 const destroyGlobalLenis = () => {
   if (globalLenisTicker) {
@@ -65,6 +68,9 @@ const destroyGlobalLenis = () => {
 const initGlobalLenis = async () => {
   if (!import.meta.client || isCustomScrollPage.value) return
   destroyGlobalLenis()
+  // 觸控裝置使用原生捲動，省下平滑捲動載入與常駐 ticker；自訂動畫頁不受影響。
+  if (!window.matchMedia('(min-width: 768px) and (hover: hover) and (pointer: fine)').matches)
+    return
   // 動態載入，避免 ~528KB 進入初始關鍵路徑（#U6）
   const [{ default: Lenis }, gsapMod] = await Promise.all([import('lenis'), import('gsap')])
   gsapLib = gsapMod.gsap
@@ -159,6 +165,7 @@ const scrollToTop = () => {
 }
 
 onMounted(() => {
+  window.addEventListener('scroll', handleNativeScroll, { passive: true })
   store.initTheme()
   store.loadDataFromAPI()
   store.loadAuctions()
@@ -217,6 +224,7 @@ onMounted(() => {
 })
 
 onBeforeUnmount(() => {
+  window.removeEventListener('scroll', handleNativeScroll)
   destroyGlobalLenis()
 })
 </script>
@@ -253,8 +261,19 @@ onBeforeUnmount(() => {
           pointer-events: auto;
         "
       >
-        <div role="alert" style="display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap">
-          <strong style="font-size: 0.95rem">{{ isDevelopment ? '執行階段錯誤，請檢查下方資訊' : '頁面發生錯誤' }}</strong>
+        <div
+          role="alert"
+          style="
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            flex-wrap: wrap;
+          "
+        >
+          <strong style="font-size: 0.95rem">
+            {{ isDevelopment ? '執行階段錯誤，請檢查下方資訊' : '頁面發生錯誤' }}
+          </strong>
           <div style="display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end">
             <button
               class="btn-app btn-app--ghost"
@@ -368,7 +387,11 @@ onBeforeUnmount(() => {
               >{{ error?.message || String(error) }}</pre
             >
             <div style="display: flex; gap: 10px; justify-content: flex-start; flex-wrap: wrap">
-              <button class="btn-app btn-app--primary" style="min-width: 140px" @click="clearAndGoHome(clearError)">
+              <button
+                class="btn-app btn-app--primary"
+                style="min-width: 140px"
+                @click="clearAndGoHome(clearError)"
+              >
                 回到首頁
               </button>
               <button
@@ -397,7 +420,9 @@ onBeforeUnmount(() => {
       "
       target="_blank"
       class="btn-app btn-app--primary btn-app--md btn-app--pill floating-inquire-btn"
-      :class="{ 'floating-inquire-btn--with-compare': route.path === '/shop' && store.compareList.length > 0 }"
+      :class="{
+        'floating-inquire-btn--with-compare': route.path === '/shop' && store.compareList.length > 0
+      }"
     >
       <span>已選 {{ store.wishlist.length }} 隻｜一次詢問</span>
     </a>

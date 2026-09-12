@@ -318,8 +318,6 @@ const holoCardStyle = (card) => {
   // 手機版：保留 left/top 分布，縮小卡片並以 scale 跳出（無 3D 旋轉）
   if (!isDesktop.value) {
     return {
-      left: card.left,
-      top: card.top,
       '--delay': card.delay,
       transitionDelay: cardShowing.value ? card.delay : '0s',
       transform: cardShowing.value ? 'scale(1)' : 'scale(0.04)',
@@ -371,7 +369,11 @@ const geneTokens = computed(() => {
 </script>
 
 <template>
-  <div ref="stageEl" class="stage" :class="{ 'stage--day': isDayMode }">
+  <div
+    ref="stageEl"
+    class="stage"
+    :class="{ 'stage--day': isDayMode, 'stage--touch': !isDesktop, 'stage--cards': cardShowing }"
+  >
     <!-- ?? z-index 2: WebGL 3D canvas嚗?璈?+ ?????剁??? -->
     <div class="bg-layer" aria-hidden="true">
       <ClientOnly>
@@ -450,13 +452,18 @@ const geneTokens = computed(() => {
     -->
     <div class="carousel-camera" :style="{ opacity: carouselAlpha }">
       <!-- 頧嚗???CSS transition嚗?亥???lerpedProgress 蝣箔???畾萄??典雿?-->
-      <div class="carousel-reel" :style="{ transform: `rotateY(${carouselDeg}deg)` }">
+      <div
+        class="carousel-reel"
+        :style="{ transform: isDesktop ? `rotateY(${carouselDeg}deg)` : 'none' }"
+      >
         <div
           v-for="(scene, idx) in carouselScenes"
           :key="idx"
           class="carousel-item"
           :style="{
-            transform: `rotateY(${idx * CAROUSEL_STEP}deg) translateZ(${carouselRadius}px)`,
+            transform: isDesktop
+              ? `rotateY(${idx * CAROUSEL_STEP}deg) translateZ(${carouselRadius}px)`
+              : 'none',
             opacity: carouselItemOpacity(idx),
             visibility: carouselItemOpacity(idx) > 0.02 ? 'visible' : 'hidden'
           }"
@@ -1562,6 +1569,87 @@ const geneTokens = computed(() => {
 }
 .scene-desc {
   opacity: 0.9;
+}
+/* 觸控版尺寸置於基礎卡片規則之後，避免被桌機寬度覆蓋而裁掉右側資訊。 */
+.stage--touch .holo-layer {
+  top: auto;
+  bottom: calc(76px + env(safe-area-inset-bottom, 0px));
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 12px;
+}
+.stage--touch .holo-card {
+  position: relative;
+  width: calc((100% - 16px) / 3);
+  max-width: 120px;
+  padding: 8px;
+}
+.stage--touch .holo-card__header {
+  gap: 3px;
+}
+.stage--touch .holo-card__label {
+  font-size: 0.5rem;
+  letter-spacing: 0;
+}
+.stage--touch .holo-card__pct {
+  font-size: 1.5rem;
+}
+.stage--touch .holo-card__gene {
+  font-size: 0.6rem;
+  letter-spacing: 0;
+  overflow-wrap: anywhere;
+}
+.stage--touch .holo-card__status {
+  font-size: 0.5rem;
+  letter-spacing: 0;
+}
+.stage--touch .holo-card__connector {
+  display: none;
+}
+.stage--touch .carousel-camera {
+  perspective: none;
+}
+.stage--touch .carousel-reel {
+  left: 50%;
+}
+.stage--touch.stage--cards .carousel-reel {
+  top: 38%;
+}
+.stage--touch.stage--cards .scroll-hint {
+  visibility: hidden;
+}
+.stage--touch .carousel-item__content {
+  width: calc(100vw - 40px);
+  max-width: 420px;
+  padding: 0;
+  align-items: center;
+  text-align: center;
+  gap: 16px;
+}
+.stage--touch .carousel-item .scene-title {
+  font-size: clamp(1.7rem, 6.5vw, 2.2rem);
+  line-height: 1.3;
+  text-align: center;
+}
+.stage--touch .carousel-item .scene-desc {
+  font-size: 0.9rem;
+  text-align: center;
+}
+.stage--touch .carousel-item .scene-cta {
+  justify-content: center;
+}
+@media (prefers-reduced-motion: reduce) {
+  .holo-card {
+    transition: none !important;
+    animation: none;
+  }
+  .holo-card__scanline,
+  .holo-card__dot,
+  .holo-card__connector-dot {
+    animation: none;
+  }
 }
 @media (max-width: 767px) {
   .scene-end-nav {

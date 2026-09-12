@@ -1,6 +1,14 @@
 # Gencko 官網逐頁完整盤點、修改與驗收計畫
 
-## 最新授權：剩餘頁面批次 UI 完成（2026-09-09）
+## 最新授權：全部建議優化並直接部署（2026-09-12）
+
+使用者要求完成資料載入、共用樣式與手機效能建議後直接部署，包含上一輪 UI 工作樹。允許必要 commit／push／部署；不得還原、清理工作樹或提交本機附件與輸出。純文字及訂製爬櫃另案。實體手機尚未連接，瀏覽器觸控／CPU 降速驗證不得表述為真機驗收。
+
+## 最新授權：全站桌機與手機跑版排查（2026-09-11）
+
+使用者要求「全部 UI 修改好、文章列表跑版修正、全部電腦版手機版排查並修正」。現有所有頁面均在本次 UI 範圍，無須逐頁等待修改指示。純文字仍暫停，訂製爬櫃另案；保留 working tree 及已核准的手機根網址動畫、care 互動模型。最新結果以 docs/ui-redesign-progress.md 頂部為準。
+
+## 歷史授權：剩餘頁面批次 UI 完成（2026-09-09）
 
 - 使用者明確指示「剩餘頁面的 UI 可以參考前面已完成的部分，先把剩餘的做完」。此授權取代下方歷史流程中逐頁等待指示、驗收才繼續的限制。
 - 本批範圍為 12 /care 收尾及 13–29 所有剩餘頁面。可依已確認風格直接實作與驗證；完成後統一等待使用者檢視，不自行標記已驗收。
@@ -60,24 +68,24 @@ Written against: `ea5e0d3`（以目前含未提交變更的 working tree 為實�
 | 09  | `/merch/:id`       | `pages/merch/[id].vue`                             | 商品圖片、資訊、價格、保證／條款、購買／外連、分享、載入與不存在狀態                                                                                                                                 | 已驗收       |
 | 10  | `/start-here`      | `pages/start-here.vue`                             | 新手課程抬頭、知識地圖、準備清單、三條路徑與頁內導覽                                                                                                                                                 | 已驗收       |
 | 11  | `/guide`           | `pages/guide.vue`                                  | 守宮介紹、比較與選擇資訊、五段內容、新手步驟、FAQ 與所有延伸連結                                                                                                                                     | 已驗收       |
-| 12  | `/care`            | `pages/care.vue`                                   | 閱讀進度、決策入口、目錄、環境／溫度／濕度／餵食／繁殖／風險／物種／FAQ／知識庫章節、展開表格與手機 anchor                                                                                           | 等待驗收 |
-| 13  | `/health`          | `pages/health.vue`                                 | 分流模式、題目、進度、健康判讀、警示、結果、疾病／報告資訊與醫院導流                                                                                                                                 | 等待驗收 |
-| 14  | `/qs`              | `pages/qs.vue`                                     | 18 題與 6 維度、題目輪播、選項、進度、計分、雷達／分級、建議、警示、修改答案與重測                                                                                                                   | 等待驗收 |
-| 15  | `/faq`             | `pages/faq.vue`                                    | 分類切換、每一題與答案、Accordion 行為、頁內／跨頁延伸入口                                                                                                                                           | 等待驗收 |
-| 16  | `/articles`        | `pages/articles/index.vue`                         | 期刊抬頭、搜尋、分類／標籤、文章卡、作者／日期／摘要、載入、空狀態與詳情入口                                                                                                                         | 等待驗收 |
-| 17  | `/articles/:id`    | `pages/articles/[id].vue`                          | 返回與上下文導覽、標題、摘要、作者／日期、主圖、全文、相關內容、載入與不存在狀態                                                                                                                     | 等待驗收 |
-| 18  | `/genes`           | `pages/genes/index.vue`                            | 工具入口、物種切換、搜尋、數量、分類、詞條目錄與詳情入口                                                                                                                                             | 等待驗收 |
-| 19  | `/genes/:id`       | `pages/genes/[id].vue`                             | 詞條標題、遺傳模式／年份／來源、說明、警示、原始圖片、資料列、圖鑑／計算機導流、載入與不存在狀態                                                                                                     | 等待驗收 |
-| 20  | `/calculator`      | `pages/calculator.vue`                             | 物種群與物種、雙親／子代角色、基因選擇、Het／Super、反向配對、計算結果、警示與說明 Modal                                                                                                             | 等待驗收 |
-| 21  | `/hospital`        | `pages/hospital.vue`                               | 搜尋、縣市／行政區篩選、醫院名錄、展開明細、收藏、電話、地圖、驗證日期、空結果                                                                                                                       | 等待驗收 |
-| 22  | `/why-gencko`      | `pages/why-gencko.vue`                             | 品牌理由、信任資訊、購買路徑、工具預覽、圖片、所有 CTA 與延伸入口                                                                                                                                    | 等待驗收 |
-| 23  | `/buying-guide`    | `pages/buying-guide.vue`                           | 選購導引、決策入口、五步 Timeline、檢查點、風險提示與 CTA                                                                                                                                            | 等待驗收 |
-| 24  | `/stories`         | `pages/stories.vue`                                | 現有預備頁文案、未來內容區、目前可操作連結與所有狀態                                                                                                                                                 | 等待驗收 |
-| 25  | `/profile`         | `pages/profile.vue`                                | 訪客／登入／已登入狀態、LINE／Google、登出、Avatar、收藏／歷史／醫院／競標 tabs、空狀態與外部操作                                                                                                    | 等待驗收 |
-| 26  | `/identity/:id`    | `pages/identity/[id].vue`                          | 證書導覽、證書內容、身份欄位、圖片 fallback、提示、列印、分享、載入與錯誤狀態                                                                                                                        | 等待驗收 |
-| 27  | `/about`           | `pages/about.vue`                                  | 品牌故事、服務內容、圖片／粒子／滾動場景、聯絡與導流；桌機與手機特效分支                                                                                                                             | 等待驗收 |
-| 28  | `/`                | `pages/index.vue`、`components/HeroLabPage.vue`    | 根路由 Hero Lab 全部場景、文案、動畫、滾動／觸控控制、CTA、降級與錯誤狀態                                                                                                                            | 等待驗收 |
-| 29  | `/hero-lab`        | `pages/hero-lab.vue`、`components/HeroLabPage.vue` | Hero Lab 替代入口、與根路由的差異、SEO／noindex、所有場景與互動                                                                                                                                      | 等待驗收 |
+| 12  | `/care`            | `pages/care.vue`                                   | 閱讀進度、決策入口、目錄、環境／溫度／濕度／餵食／繁殖／風險／物種／FAQ／知識庫章節、展開表格與手機 anchor                                                                                           | 等待驗收     |
+| 13  | `/health`          | `pages/health.vue`                                 | 分流模式、題目、進度、健康判讀、警示、結果、疾病／報告資訊與醫院導流                                                                                                                                 | 等待驗收     |
+| 14  | `/qs`              | `pages/qs.vue`                                     | 18 題與 6 維度、題目輪播、選項、進度、計分、雷達／分級、建議、警示、修改答案與重測                                                                                                                   | 等待驗收     |
+| 15  | `/faq`             | `pages/faq.vue`                                    | 分類切換、每一題與答案、Accordion 行為、頁內／跨頁延伸入口                                                                                                                                           | 等待驗收     |
+| 16  | `/articles`        | `pages/articles/index.vue`                         | 期刊抬頭、搜尋、分類／標籤、文章卡、作者／日期／摘要、載入、空狀態與詳情入口                                                                                                                         | 等待驗收     |
+| 17  | `/articles/:id`    | `pages/articles/[id].vue`                          | 返回與上下文導覽、標題、摘要、作者／日期、主圖、全文、相關內容、載入與不存在狀態                                                                                                                     | 等待驗收     |
+| 18  | `/genes`           | `pages/genes/index.vue`                            | 工具入口、物種切換、搜尋、數量、分類、詞條目錄與詳情入口                                                                                                                                             | 等待驗收     |
+| 19  | `/genes/:id`       | `pages/genes/[id].vue`                             | 詞條標題、遺傳模式／年份／來源、說明、警示、原始圖片、資料列、圖鑑／計算機導流、載入與不存在狀態                                                                                                     | 等待驗收     |
+| 20  | `/calculator`      | `pages/calculator.vue`                             | 物種群與物種、雙親／子代角色、基因選擇、Het／Super、反向配對、計算結果、警示與說明 Modal                                                                                                             | 等待驗收     |
+| 21  | `/hospital`        | `pages/hospital.vue`                               | 搜尋、縣市／行政區篩選、醫院名錄、展開明細、收藏、電話、地圖、驗證日期、空結果                                                                                                                       | 等待驗收     |
+| 22  | `/why-gencko`      | `pages/why-gencko.vue`                             | 品牌理由、信任資訊、購買路徑、工具預覽、圖片、所有 CTA 與延伸入口                                                                                                                                    | 等待驗收     |
+| 23  | `/buying-guide`    | `pages/buying-guide.vue`                           | 選購導引、決策入口、五步 Timeline、檢查點、風險提示與 CTA                                                                                                                                            | 等待驗收     |
+| 24  | `/stories`         | `pages/stories.vue`                                | 現有預備頁文案、未來內容區、目前可操作連結與所有狀態                                                                                                                                                 | 等待驗收     |
+| 25  | `/profile`         | `pages/profile.vue`                                | 訪客／登入／已登入狀態、LINE／Google、登出、Avatar、收藏／歷史／醫院／競標 tabs、空狀態與外部操作                                                                                                    | 等待驗收     |
+| 26  | `/identity/:id`    | `pages/identity/[id].vue`                          | 證書導覽、證書內容、身份欄位、圖片 fallback、提示、列印、分享、載入與錯誤狀態                                                                                                                        | 等待驗收     |
+| 27  | `/about`           | `pages/about.vue`                                  | 品牌故事、服務內容、圖片／粒子／滾動場景、聯絡與導流；桌機與手機特效分支                                                                                                                             | 等待驗收     |
+| 28  | `/`                | `pages/index.vue`、`components/HeroLabPage.vue`    | 根路由 Hero Lab 全部場景、文案、動畫、滾動／觸控控制、CTA、降級與錯誤狀態                                                                                                                            | 等待驗收     |
+| 29  | `/hero-lab`        | `pages/hero-lab.vue`、`components/HeroLabPage.vue` | Hero Lab 替代入口、與根路由的差異、SEO／noindex、所有場景與互動                                                                                                                                      | 等待驗收     |
 
 `pages/repomix-output.xml` 是資料檔，不是 Nuxt 頁面，不列入頁面驗收；若其內容實際被某頁載入，必須在該頁的資料來源中揭露。
 
@@ -191,8 +199,8 @@ Codex 完成修改後，必須先自行驗證再請使用者驗收：
 
 ```yaml
 plan: design-plans/ui-page-by-page-acceptance-plan.md
-current_unit: '/ 骨幹卡片新版清晰影片與手機照片'
-current_status: 新版八頁素材已重製，桌機高清影片與手機照片驗證通過，待發布；純文字與其他收尾暫停
+current_unit: '全站優化與正式部署'
+current_status: 優化實作、Typecheck、99 單元測試及 24 E2E 通過；124 組版面掃描通過，接續正式部署
 last_user_accepted_unit: '11 /guide'
 accepted_units:
   - '01 /home'
@@ -318,7 +326,7 @@ uncovered_runtime_states:
 blockers: []
 background_processes: 沿用既有 localhost:3000 開發服務，未停止使用者服務；模型驗證程序已結束。最新證據保留於 output/habitat-20260910，既有 output/ui-continuation-* 未清理。
 next_exact_action: >-
-  最新優先：發布根網址骨幹卡片 20260911 版素材，確認桌機高清影片與手機照片；手機不得因自動播放失敗而顯示空白。
+  最新工作已完成：277313d 正式部署，新版影片與手機照片載入通過。等待使用者檢視根網址骨幹卡片，不自行續作純文字或暫停中的會員收尾。
   最新修復已完成：6fba18e 正式部署成功，/ 手機動畫與 /care 單指旋轉、雙指縮放實測通過。
   等待使用者檢視手機動畫修復；未獲恢復指示前，其他官網收尾保持暫停。
   不得再次以手機降級名義移除這兩處核心 3D。其他官網收尾先暫停，/profile 已登入 watcher 初始化問題留待接續。
@@ -361,7 +369,7 @@ next_exact_action: >-
 
 ## 下一個精確動作
 
-`01 /home`、`02 /shop`、`03 /product/:id`、`04 /compare`、`05 /auction`、`06 /auction/:id`、`07 /breeders`、`08 /merch`、`09 /merch/:id`、`10 /start-here` 已驗收。當前單位是 `11 /guide`，已完成無卡片 UI、內容重整、三張指定實拍照、響應式比較與結構化資料同步，等待使用者檢視並明確驗收；驗收前不得提前盤點或修改 `12 /care`。
+完成本輪 124 組版面掃描，提交並部署目前官網 UI 與優化，等 Vercel 成功後驗證正式文章、根網址手機動畫及 care 模型。純文字與訂製爬櫃維持另案；不要重開逐頁盤點。
 
 ### 11 `/guide` 盤點索引與續作證據（2026-09-09）
 

@@ -9,7 +9,7 @@ const run = promisify(execFile)
 const baseURL = process.env.HERO_CAPTURE_BASE_URL || 'http://localhost:3000'
 const ffmpeg = process.env.HERO_CAPTURE_FFMPEG
 if (!ffmpeg) throw new Error('請設定 HERO_CAPTURE_FFMPEG 編碼器路徑')
-const output = 'public/previews/20260911'
+const output = 'public/previews/20260911-ui'
 const work = `.tmp/hero-previews-${Date.now()}`
 const routes = ['care', 'articles', 'why-gencko', 'breeders', 'shop', 'genes', 'calculator', 'hospital']
 await mkdir(output, { recursive: true })

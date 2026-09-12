@@ -2,7 +2,11 @@
 import { nextTick, shallowRef, onMounted, onUnmounted } from 'vue'
 import { useLoop, useTresContext } from '@tresjs/core'
 import * as THREE from 'three'
-import { HERO_PREVIEW_VIDEO_ATLAS, HERO_PREVIEW_POSTER_ATLAS, getHeroPreview } from '~/utils/hero-previews'
+import {
+  HERO_PREVIEW_VIDEO_ATLAS,
+  HERO_PREVIEW_POSTER_ATLAS,
+  getHeroPreview
+} from '~/utils/hero-previews'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import { ConvexGeometry } from 'three/examples/jsm/geometries/ConvexGeometry.js'
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js'
@@ -2543,6 +2547,7 @@ function wakeBottomRender() {
 // 與實際 canvas 因分頁切換、視窗失焦、bfcache 還原等時機不同步，導致 onBeforeRender 未恢復、
 // 捲動看起來卡住不動。同時清掉可能殘留的觸控狀態。
 function forceWakeRender() {
+  syncCardPreviewPlayback()
   lastBottomRenderMode = 'manual'
   setBottomRenderMode('always')
   lastTouchY = 0
@@ -2553,6 +2558,7 @@ function onVisibilityChange() {
   if (document.visibilityState === 'visible') {
     forceWakeRender()
   } else {
+    cardPreviewVideo?.pause()
     setBottomRenderMode('manual')
   }
 }
@@ -3391,9 +3397,10 @@ if (cardPreviewVideo) {
   cardPreviewTexture.magFilter = THREE.LinearFilter
 }
 disposables.push(cardPreviewTexture)
-const cardPreviewPosterTexture = typeof document !== 'undefined'
-  ? new THREE.TextureLoader().load(HERO_PREVIEW_POSTER_ATLAS)
-  : new THREE.Texture()
+const cardPreviewPosterTexture =
+  typeof document !== 'undefined'
+    ? new THREE.TextureLoader().load(HERO_PREVIEW_POSTER_ATLAS)
+    : new THREE.Texture()
 cardPreviewPosterTexture.colorSpace = THREE.SRGBColorSpace
 cardPreviewPosterTexture.minFilter = THREE.LinearFilter
 cardPreviewPosterTexture.magFilter = THREE.LinearFilter
@@ -3487,7 +3494,20 @@ function loadCardPreviewAtlas() {
   cardPreviewVideo.src = source
   cardPreviewVideo.load()
   syncCardVideoAtlasUniforms()
-  cardPreviewVideo.play().catch(onCardPreviewVideoError)
+  syncCardPreviewPlayback()
+}
+
+// 背景分頁與離屏場景停止解碼影片；恢復時沿用原播放進度。
+function syncCardPreviewPlayback() {
+  if (!cardPreviewVideo || !cardPreviewVideo.getAttribute('src')) return
+  if (document.hidden || !heroViewportVisible || window.innerWidth < 768 || cachedTouchViewport) {
+    cardPreviewVideo.pause()
+  } else {
+    cardPreviewVideo.play().catch((error: DOMException) => {
+      if (error?.name === 'AbortError') return
+      if (!document.hidden && heroViewportVisible) onCardPreviewVideoError()
+    })
+  }
 }
 
 function syncActiveHeroCard(card: HeroCard | null) {
@@ -6329,6 +6349,7 @@ function bindResponsiveCanvasObserver() {
         const visible = entry?.isIntersecting ?? true
         if (heroViewportVisible === visible) return
         heroViewportVisible = visible
+        syncCardPreviewPlayback()
         if (visible) forceWakeRender()
         else setBottomRenderMode('manual')
       },
@@ -7895,8 +7916,16 @@ onMounted(async () => {
         cardInteractionReady,
         cardOrbitUnlockedNow,
         cardVideoMode: cardPreviewStatic ? 'poster' : 'atlas',
-        cardPreviewReady: cardPreviewStatic ? Boolean((cardPreviewPosterTexture.image as HTMLImageElement | undefined)?.width) : (cardPreviewVideo?.readyState ?? 0) >= 2,
-        cardPreviewSize: cardPreviewStatic ? [(cardPreviewPosterTexture.image as HTMLImageElement | undefined)?.width, (cardPreviewPosterTexture.image as HTMLImageElement | undefined)?.height] : [cardPreviewVideo?.videoWidth, cardPreviewVideo?.videoHeight],
+        cardVideoPaused: cardPreviewVideo?.paused ?? true,
+        cardPreviewReady: cardPreviewStatic
+          ? Boolean((cardPreviewPosterTexture.image as HTMLImageElement | undefined)?.width)
+          : (cardPreviewVideo?.readyState ?? 0) >= 2,
+        cardPreviewSize: cardPreviewStatic
+          ? [
+              (cardPreviewPosterTexture.image as HTMLImageElement | undefined)?.width,
+              (cardPreviewPosterTexture.image as HTMLImageElement | undefined)?.height
+            ]
+          : [cardPreviewVideo?.videoWidth, cardPreviewVideo?.videoHeight],
         responsiveHoverEffects,
         dnaTilesVisible: dnaTiles.visible,
         boneTilesVisible: boneTiles.visible,

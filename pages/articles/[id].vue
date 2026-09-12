@@ -28,7 +28,7 @@ const { data: readingArticle, pending } = await useAsyncData(`article-${articleI
   // 若 Store 已經有了，可以直接用 (CSR 場景)
   if (store.articlesList && store.articlesList.length > 0) {
     const found = store.articlesList.find((a) => a.ID === articleId)
-    if (found) return found
+    if (found?.Content) return found
   }
 
   // 若 Store 沒有 (SSR 場景或直接進入內頁)，則直接去資料庫撈

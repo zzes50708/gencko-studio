@@ -131,6 +131,7 @@ const siteData = computed(() => {
 })
 
 useHead({
+  bodyAttrs: { class: 'identity-print-page' },
   title: computed(() => siteData.value.title),
   meta: [
     { name: 'description', content: computed(() => siteData.value.desc) },
@@ -836,6 +837,7 @@ const triggerPrint = () => {
 }
 
 @media print {
+  .common-document-meta,
   .identity-navigation,
   .identity-heading,
   .identity-note,
@@ -898,5 +900,24 @@ const triggerPrint = () => {
 }
 :deep(.app-back-btn) {
   border: 1px solid var(--txt);
+}
+</style>
+
+<style>
+/* 證書列印僅保留文件，不包含全站導覽與浮動操作。 */
+@media print {
+  body.identity-print-page .cont > :not(main),
+  body.identity-print-page .skip-to-content,
+  body.identity-print-page #nuxt-devtools-container {
+    display: none !important;
+  }
+  body.identity-print-page,
+  body.identity-print-page .cont,
+  body.identity-print-page #main-content {
+    margin: 0;
+    padding: 0;
+    background: #fff;
+    color: #111;
+  }
 }
 </style>
