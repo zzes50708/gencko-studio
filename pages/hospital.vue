@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, nextTick } from 'vue'
 import { useHead, useAsyncData, useSupabaseClient } from '#imports'
 import { useMainStore } from '~/stores/useMainStore'
 // HOSPITAL_REGIONS 仍從 js 讀（縣市區域分組是固定常數）；HOSPITAL_DATA 已搬到 Supabase
@@ -14,7 +14,7 @@ const { data: hospitalsData } = await useAsyncData('hospitals-v1', async () => {
     const { data, error } = await supabase
       .from('hospitals')
       .select(
-        'id, name, address, city, district, phone, map_url, region, hours, has_emergency, accept_species, verified_at'
+        'id, name, address, city, district, phone, map_url, region, hours, has_emergency, accept_species, verified_at, latitude, longitude, geocode_source, geocode_source_id'
       )
       .eq('status', 'active')
       .order('id', { ascending: true })
@@ -23,7 +23,9 @@ const { data: hospitalsData } = await useAsyncData('hospitals-v1', async () => {
       id: String(h.id),
       name: h.name,
       address: h.address,
-      city: h.city,
+      city: String(h.city || '')
+        .replaceAll('臺', '台')
+        .trim(),
       district: h.district,
       phone: h.phone,
       mapUrl: h.map_url || null,
@@ -31,7 +33,11 @@ const { data: hospitalsData } = await useAsyncData('hospitals-v1', async () => {
       hours: h.hours,
       hasEmergency: h.has_emergency,
       acceptSpecies: h.accept_species || [],
-      verifiedAt: h.verified_at
+      verifiedAt: h.verified_at,
+      latitude: h.latitude == null ? null : Number(h.latitude),
+      longitude: h.longitude == null ? null : Number(h.longitude),
+      geocodeSource: h.geocode_source || null,
+      geocodeSourceId: h.geocode_source_id || null
     }))
   } catch (e) {
     console.error('[hospitals SSR] fetch failed:', e?.message)
@@ -100,6 +106,18 @@ const hospWishlist = computed(() => store.hospWishlist)
 const changeCity = (val) => {
   hospCity.value = val
   hospDistrict.value = 'all'
+}
+
+const focusHospital = async (hospital) => {
+  changeCity(hospital.city)
+  hospDistrict.value = hospital.district || 'all'
+  hospQuery.value = ''
+  hospExpanded.value = new Set([hospital.id])
+  await nextTick()
+  document.getElementById(`hospital-${hospital.id}`)?.scrollIntoView({
+    behavior: 'smooth',
+    block: 'center'
+  })
 }
 
 const toggleHospWishlist = (id) => {
@@ -361,17 +379,17 @@ useHead({
 
 <template>
   <div class="hosp-page-wrapper">
-    <header class="hosp-hero">
-      <div class="hosp-document-meta" aria-label="醫院名錄說明">
-        <span>GENCKO CARE DIRECTORY</span>
-        <span>SEARCH / SAVE / CONTACT</span>
-      </div>
-      <span>EXOTIC CARE DIRECTORY / 全台資源</span>
-      <h1>特寵醫院查詢</h1>
-      <p>以縣市、行政區或關鍵字縮小既有名單；展開後可直接撥號或前往真實 Google Maps 連結。</p>
-    </header>
+    <div class="hosp-intro">
+      <header class="hosp-hero">
+        <div class="hosp-document-meta" aria-label="醫院名錄說明">
+          <span>GENCKO CARE DIRECTORY</span>
+          <span>SEARCH / SAVE / CONTACT</span>
+        </div>
+        <span>EXOTIC CARE DIRECTORY / 全台資源</span>
+        <h1>特寵醫院查詢</h1>
+        <p>以縣市、行政區或關鍵字縮小既有名單；展開後可直接撥號或前往真實 Google Maps 連結。</p>
+      </header>
 
-    <div class="hosp-workspace">
       <aside class="hosp-filter-panel" aria-label="醫院篩選條件">
         <div class="hosp-alert-box">
           <span class="icon">i</span>
@@ -403,6 +421,15 @@ useHead({
               aria-label="區域與縣市"
             >
               <option value="all">所有縣市</option>
+              <option
+                v-if="
+                  hospCity !== 'all' &&
+                  !Object.values(HOSPITAL_REGIONS).some((cities) => cities.includes(hospCity))
+                "
+                :value="hospCity"
+              >
+                {{ hospCity }}
+              </option>
               <optgroup v-for="(cities, region) in HOSPITAL_REGIONS" :key="region" :label="region">
                 <option
                   v-for="city in cities"
@@ -438,7 +465,17 @@ useHead({
           </span>
         </div>
       </aside>
+    </div>
 
+    <LazyHospitalMap
+      :hospitals="HOSPITAL_DATA"
+      :wishlist="hospWishlist"
+      :selected="hospCity"
+      @select="changeCity"
+      @select-hospital="focusHospital"
+    />
+
+    <div class="hosp-workspace">
       <section class="hosp-list-panel" aria-label="特寵醫院清單">
         <div class="hosp-list-heading">
           <span>DIRECTORY</span>
@@ -454,6 +491,7 @@ useHead({
           <article
             v-for="h in hospFiltered"
             :key="h.id"
+            :id="`hospital-${h.id}`"
             class="hosp-card"
             :class="{ expanded: isHospExpanded(h.id) }"
           >
@@ -1223,11 +1261,11 @@ useHead({
 }
 /* 醫療名錄保留篩選、展開與電話的清楚操作層級。 */
 .hosp-page-wrapper {
-  padding: 8px 18px 28px;
+  padding: 0 18px 18px;
 }
 .hosp-hero {
-  padding-block: 22px;
-  margin-bottom: 20px;
+  padding-block: 12px 14px;
+  margin-bottom: 12px;
 }
 .hosp-hero h1 {
   font-family: var(--font-heading-zh);
@@ -1235,16 +1273,33 @@ useHead({
   line-height: 1.3;
 }
 .hosp-workspace {
-  gap: 24px;
+  gap: 18px;
 }
 .hosp-alert-box {
-  padding: 14px 0;
+  padding: 10px 0;
+  margin-bottom: 12px;
   border: 0;
   border-bottom: 1px solid var(--bd);
 }
 .hosp-filter-panel {
+  padding-block: 12px;
   border-radius: 0;
   box-shadow: none;
+}
+.hosp-document-meta {
+  margin-bottom: 10px;
+  padding-bottom: 10px;
+}
+.hosp-search-group,
+.hosp-filter-row {
+  margin-bottom: 10px;
+}
+.hosp-count-row {
+  padding-top: 9px;
+}
+.hosp-list-heading {
+  margin-bottom: 8px;
+  padding-bottom: 8px;
 }
 .hosp-search,
 .hosp-select {
@@ -1253,7 +1308,7 @@ useHead({
   min-height: 44px;
 }
 .hosp-header {
-  padding-block: 14px;
+  padding-block: 10px;
 }
 .hosp-header-toggle,
 .hosp-fav-btn {
@@ -1261,6 +1316,19 @@ useHead({
 }
 .hosp-fav-btn {
   min-width: 44px;
+  border: 1px solid transparent;
+  color: var(--txt);
+  transition:
+    color 0.16s ease-out,
+    background-color 0.16s ease-out,
+    border-color 0.16s ease-out,
+    transform 0.16s ease-out;
+}
+.hosp-fav-btn.active {
+  border-color: #e91e63;
+  background: rgba(233, 30, 99, 0.08);
+  color: #e91e63;
+  box-shadow: none;
 }
 .hosp-name {
   font-family: var(--font-heading-zh);
@@ -1286,5 +1354,90 @@ useHead({
 }
 :deep(.app-back-btn) {
   border: 1px solid var(--txt);
+}
+
+@media (max-width: 768px) {
+  .hosp-page-wrapper {
+    padding: 0 14px 12px;
+  }
+
+  .hosp-document-meta {
+    margin-bottom: 8px;
+    padding-bottom: 8px;
+  }
+
+  .hosp-hero,
+  .hosp-filter-panel {
+    padding-block: 10px;
+  }
+
+  .hosp-hero {
+    margin-bottom: 8px;
+  }
+
+  .hosp-workspace {
+    gap: 12px;
+  }
+
+  .hosp-alert-box {
+    padding-block: 8px;
+    margin-bottom: 8px;
+  }
+
+  .hosp-search-group,
+  .hosp-filter-row {
+    margin-bottom: 8px;
+  }
+
+  .hosp-filter-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .hosp-count-row {
+    padding-top: 8px;
+  }
+
+  .hosp-list-heading {
+    margin-bottom: 4px;
+    padding-bottom: 7px;
+  }
+
+  .hosp-header {
+    padding-block: 8px;
+  }
+
+  .hosp-details {
+    padding-top: 8px;
+    padding-bottom: 10px;
+  }
+}
+/* 標題與篩選並列；地圖及院所名單各自保留完整內容寬度。 */
+.hosp-intro {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 0.9fr);
+  gap: 32px;
+  align-items: center;
+  margin-bottom: 14px;
+}
+.hosp-intro .hosp-hero {
+  margin: 0;
+}
+.hosp-intro .hosp-filter-panel {
+  position: static;
+  min-width: 0;
+}
+.hosp-workspace {
+  display: block;
+}
+.hosp-list-panel {
+  min-width: 0;
+}
+@media (max-width: 767px) {
+  .hosp-intro {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 6px;
+    margin-bottom: 8px;
+  }
 }
 </style>
