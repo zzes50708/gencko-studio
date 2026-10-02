@@ -181,4 +181,13 @@ import { SOCIAL_LINKS } from '~/utils/site-constants'
     gap: 26px 12px;
   }
 }
+@media (max-width: 768px) {
+  .footer-navigation,
+  .footer-bottom {
+    display: none;
+  }
+  .footer-inner {
+    gap: 0;
+  }
+}
 </style>

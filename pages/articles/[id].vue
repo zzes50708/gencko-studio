@@ -327,7 +327,7 @@ const relatedArticles = computed(() => {
 </script>
 
 <template>
-  <div>
+  <div class="site-document-page">
     <div v-if="isHydrated && pending" style="text-align: center; padding: 100px 0; color: #888">
       <div class="loader" style="margin: 0 auto 20px auto"></div>
       <p>文章載入中...</p>
@@ -355,7 +355,7 @@ const relatedArticles = computed(() => {
         <span aria-hidden="true">/</span>
         <NuxtLink no-prefetch to="/care">飼養指南</NuxtLink>
         <span aria-hidden="true">/</span>
-        <NuxtLink no-prefetch to="/genes">基因資料庫</NuxtLink>
+        <NuxtLink no-prefetch to="/genes">基因圖鑑</NuxtLink>
         <span aria-hidden="true">/</span>
         <NuxtLink no-prefetch to="/hospital">特寵醫院</NuxtLink>
       </nav>
@@ -524,8 +524,9 @@ const relatedArticles = computed(() => {
 
 .article-hero-image {
   position: relative;
-  min-height: 260px;
-  max-height: 520px;
+  width: 100%;
+  min-height: 0;
+  max-height: none;
   overflow: hidden;
   border-bottom: 1px solid var(--bd);
 }
@@ -541,9 +542,10 @@ const relatedArticles = computed(() => {
 
 .article-hero-image img {
   display: block;
-  width: 100%;
-  height: clamp(260px, 46vw, 520px);
-  object-fit: cover;
+  width: 100% !important;
+  max-width: none;
+  height: auto !important;
+  object-fit: contain;
 }
 
 .reader-header {
@@ -630,10 +632,21 @@ const relatedArticles = computed(() => {
 
 .reader-content :deep(img) {
   display: block;
-  max-width: 100%;
-  height: auto;
+  width: 100% !important;
+  max-width: 100% !important;
+  height: auto !important;
   margin: 28px auto;
   border-radius: var(--radius-lg);
+}
+
+.reader-content :deep(figure) {
+  width: 100% !important;
+  max-width: 100% !important;
+  margin: 28px 0;
+}
+
+.reader-content :deep(figure img) {
+  margin: 0;
 }
 
 /* ── 自動內部連結（基因名 → /genes/<name>）── */
@@ -719,8 +732,8 @@ const relatedArticles = computed(() => {
 
   .article-hero-image,
   .article-hero-image img {
-    min-height: 210px;
-    height: 210px;
+    min-height: 0;
+    height: auto !important;
   }
 
   .reader-header {
@@ -882,11 +895,11 @@ const relatedArticles = computed(() => {
 }
 
 .article-hero-image {
-  aspect-ratio: 1;
+  aspect-ratio: auto;
 }
 
 .article-hero-image img {
-  object-fit: cover;
+  object-fit: contain;
 }
 
 /* 閱讀頁移除裝飾膠囊與浮卡，讓標題、內文、作者資訊連成單一篇章。 */
@@ -989,8 +1002,9 @@ const relatedArticles = computed(() => {
   text-underline-offset: 4px;
 }
 .reader-content :deep(img) {
+  width: 100% !important;
   max-width: 100%;
-  height: auto;
+  height: auto !important;
   border-radius: 0;
 }
 .author-card {

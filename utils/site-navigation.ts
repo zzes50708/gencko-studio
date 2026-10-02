@@ -26,7 +26,7 @@ const exploreLinks: NavigationLink[] = [
   { label: '選購守宮', to: '/shop' },
   { label: '線上競標', to: '/auction' },
   { label: '種群展示', to: '/breeders' },
-  { label: '周邊商品', to: '/merch' }
+  { label: '客製設備', to: '/merch' }
 ]
 
 const learnLinks: NavigationLink[] = [
@@ -62,7 +62,7 @@ export const MOBILE_NAV_ITEMS = [
   { key: 'home', label: '首頁', to: '/home', sections: [] },
   {
     key: 'explore',
-    label: '探索',
+    label: '選購',
     to: '/shop',
     sections: [
       { label: '選購', links: exploreLinks },
@@ -77,7 +77,7 @@ export const MOBILE_NAV_ITEMS = [
   },
   {
     key: 'learn',
-    label: '新手',
+    label: '知識',
     to: '/start-here',
     sections: [{ label: '新手與知識', links: learnLinks }]
   },
@@ -86,6 +86,22 @@ export const MOBILE_NAV_ITEMS = [
     label: '工具',
     to: '/genes',
     sections: [{ label: '基因與工具', links: toolLinks }]
+  },
+  {
+    key: 'more',
+    label: '更多',
+    to: '/profile',
+    sections: [
+      { label: '會員', links: [{ label: '會員專區', to: '/profile' }] },
+      {
+        label: 'GENCKO',
+        links: [
+          ...brandLinks,
+          { label: '品牌故事', to: '/stories' },
+          { label: '品牌展示', to: '/' }
+        ]
+      }
+    ] satisfies NavigationSection[]
   }
 ] as const
 

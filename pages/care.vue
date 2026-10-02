@@ -1,74 +1,22 @@
 <script setup>
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
-import { useHead, useAsyncData, useSupabaseClient } from '#imports'
+import { useHead } from '#imports'
 import { useMainStore } from '~/stores/useMainStore'
 import {
-  PERSONAS,
   ANCHORS,
   ENV_ITEMS,
   TEMP_GRADIENT,
-  HUMIDITY_CONFIG,
-  HUMIDITY_SEASONAL,
-  HUMIDITY_RELATED,
   FEED_FREQ,
   FEEDERS,
-  FEEDER_RELATED,
   SUPPLEMENTS,
   SUPPLEMENT_WARN,
-  SUPPLEMENT_RELATED,
   BREEDING_NOTES,
   BREEDING_RELATED,
-  DANGERS,
-  FAQ
+  DANGERS
 } from '~/utils/care'
 
 const store = useMainStore()
 const router = useRouter()
-const supabase = useSupabaseClient()
-
-// SSR：抓取 FAQ 對應文章的 summary，用於 FAQPage JSON-LD 答案
-const faqArticleIds = FAQ.map((f) => f.article).filter(Boolean)
-const { data: faqArticles } = await useAsyncData('care-faq-articles', async () => {
-  if (!faqArticleIds.length) return {}
-  try {
-    const { data, error } = await supabase
-      .from('articles')
-      .select('id, summary, title')
-      .in('id', faqArticleIds)
-      .ilike('status', 'published')
-    if (error || !data) return {}
-    return Object.fromEntries(
-      data.map((a) => [a.id, { summary: a.summary || '', title: a.title || '' }])
-    )
-  } catch (e) {
-    console.warn('[care] FAQ 文章 summary 抓取失敗:', e?.message)
-    return {}
-  }
-})
-
-// JSON-LD：FAQPage（11 題，answer = 文章 summary，找不到時跳過）
-const faqPageLd = computed(() => {
-  const mainEntity = FAQ.map((item) => {
-    const art = faqArticles.value?.[item.article]
-    const answer = art?.summary?.trim()
-    if (!answer) return null
-    return {
-      '@type': 'Question',
-      name: item.q,
-      acceptedAnswer: {
-        '@type': 'Answer',
-        text: answer + ` 完整內容請見《${art.title || ''}》（/articles/${item.article}）`
-      }
-    }
-  }).filter(Boolean)
-  if (!mainEntity.length) return null
-  return {
-    '@context': 'https://schema.org',
-    '@type': 'FAQPage',
-    '@id': 'https://www.genckobreeding.com/care#faq',
-    mainEntity: mainEntity
-  }
-})
 
 // JSON-LD：HowTo①「如何設置守宮飼養環境」（步驟取自 ENV_ITEMS）
 const howToEnvLd = {
@@ -162,19 +110,17 @@ const breadcrumbLd = {
 
 // JSON-LD：Article（整頁視為長文教學，給 LLM 吃 articleBody）
 const articleBodyText = [
-  `守宮飼養指南完整收錄環境配置、溫度梯度、濕度配置、餵食與營養、補充品劑量、繁殖預備、照護警示與新手常見問題。`,
+  `守宮飼養指南完整收錄環境配置、溫度梯度、餵食與營養、補充品劑量、繁殖預備與照護警示。`,
   `環境配置：${ENV_ITEMS.map((e) => `${e.title}（${e.spec}）`).join('；')}。`,
   `溫度梯度：冷區 ${TEMP_GRADIENT.cold.range}、過渡區 ${TEMP_GRADIENT.middle.range}、熱區 ${TEMP_GRADIENT.hot.range}；${TEMP_GRADIENT.nightMin}；${TEMP_GRADIENT.danger}。`,
-  `濕度配置：${HUMIDITY_CONFIG.map((h) => `${h.zone} ${h.range}（${h.desc}）`).join('；')}。`,
   `餵食頻率：${FEED_FREQ.map((f) => `${f.age} - ${f.freq}，${f.qty}，主食 ${f.menu}`).join('；')}。`,
   `補充品：${SUPPLEMENTS.map((s) => `${s.name}（鈣粉 ${s.juvenile}／綜合維 ${s.adult}）`).join('；')}。${SUPPLEMENT_WARN}`,
   `致命地雷：${DANGERS.map((d) => `${d.title}（${d.consequence}）`).join('；')}。`
 ].join(' ')
 
-// JSON-LD：WebPage 包覆（Article 為 mainEntity，FAQPage / HowTo 為 hasPart）
+// JSON-LD：WebPage 包覆（Article 為 mainEntity，HowTo 為 hasPart）
 const webPageLd = computed(() => {
   const hasPart = [howToEnvLd, howToFeedLd, howToAppetiteLd]
-  if (faqPageLd.value) hasPart.push(faqPageLd.value)
   return {
     '@context': 'https://schema.org',
     '@type': 'WebPage',
@@ -185,13 +131,7 @@ const webPageLd = computed(() => {
     isPartOf: { '@type': 'WebSite', '@id': 'https://www.genckobreeding.com/#website' },
     speakable: {
       '@type': 'SpeakableSpecification',
-      cssSelector: [
-        '.care-hero-title',
-        '.care-env-card',
-        '.care-temp-bar',
-        '.care-humidity-card',
-        '.care-faq-q-text'
-      ]
+      cssSelector: ['.care-hero-title', '.care-env-card', '.care-temp-bar', '.care-howto-title']
     },
     primaryImageOfPage: {
       '@type': 'ImageObject',
@@ -315,44 +255,14 @@ const relatedByCategory = computed(() => {
   return groups
 })
 
-const recommendedArticles = computed(() => {
-  const list = [...(store.articlesList || [])]
-  const seed = new Date().toISOString().slice(0, 10)
-  return list
-    .sort((a, b) => `${a.ID}-${seed}`.localeCompare(`${b.ID}-${seed}`))
-    .sort((a, b) => {
-      const ah = `${a.ID}-${seed}`.split('').reduce((sum, ch) => sum + ch.charCodeAt(0), 0)
-      const bh = `${b.ID}-${seed}`.split('').reduce((sum, ch) => sum + ch.charCodeAt(0), 0)
-      return ah - bh
-    })
-    .slice(0, 5)
-})
-
 const sidebarAnchors = computed(() => {
-  const order = ['env', 'temp', 'humidity', 'food', 'breeding', 'faq']
+  const order = ['env', 'food', 'breeding', 'faq']
   return [...ANCHORS].sort((a, b) => order.indexOf(a.id) - order.indexOf(b.id))
 })
 
 const environmentWarnings = DANGERS.filter((item) => item.id === 'cohab')
 const temperatureWarnings = DANGERS.filter((item) => item.id === 'noTherm')
 const feedingWarnings = DANGERS.filter((item) => item.id === 'monoDiet')
-const environmentArticleIds = computed(() =>
-  [
-    ...ENV_ITEMS.flatMap((item) => item.related || []),
-    ...TEMP_GRADIENT.related,
-    ...HUMIDITY_RELATED,
-    ...environmentWarnings.flatMap((item) => item.related || []),
-    ...temperatureWarnings.flatMap((item) => item.related || [])
-  ].filter((id, index, list) => list.indexOf(id) === index)
-)
-const feedingArticleIds = computed(() =>
-  [
-    ...FEEDER_RELATED,
-    ...SUPPLEMENT_RELATED,
-    ...feedingWarnings.flatMap((item) => item.related || [])
-  ].filter((id, index, list) => list.indexOf(id) === index)
-)
-
 const scrollProgress = ref(0)
 
 const handleScroll = () => {
@@ -385,17 +295,12 @@ const handlePersona = (p) => {
     router.push(p.href)
     return
   }
-  scrollTo(p.target)
-}
-
-const openFaq = ref(null)
-const toggleFaq = (i) => {
-  openFaq.value = openFaq.value === i ? null : i
+  scrollTo(p.target || p.id)
 }
 </script>
 
 <template>
-  <div class="care-page">
+  <div class="site-document-page care-page">
     <div class="care-progress-bar">
       <div class="care-progress-fill" :style="{ width: `${scrollProgress}%` }"></div>
     </div>
@@ -408,18 +313,15 @@ const toggleFaq = (i) => {
       <div class="care-hero-copy">
         <div class="care-hero-kicker">CARE MANUAL · 日常照護手冊</div>
         <h1 class="care-hero-title">守宮飼養指南</h1>
-        <p class="care-hero-lead">
-          先把環境與日常照護做對；遇到異常時，再依狀況前往健康評估或特寵醫院。
-        </p>
+        <p class="care-hero-lead">守宮怎麼養，先把環境與餵食做對</p>
       </div>
     </section>
 
     <nav class="care-decision-map" data-testid="care-decision-map" aria-label="照護決策入口">
-      <div class="care-map-label">依目前狀況前往</div>
-      <NuxtLink no-prefetch to="/start-here">第一次飼養</NuxtLink>
-      <NuxtLink no-prefetch to="/health">健康異常評估</NuxtLink>
-      <NuxtLink no-prefetch to="/hospital">尋找特寵醫院</NuxtLink>
-      <NuxtLink no-prefetch to="/articles">深入知識文章</NuxtLink>
+      <NuxtLink no-prefetch to="/start-here">新手入門</NuxtLink>
+      <NuxtLink no-prefetch to="/health">健康評估</NuxtLink>
+      <NuxtLink no-prefetch to="/hospital">特寵醫院</NuxtLink>
+      <NuxtLink no-prefetch to="/articles">知識文章</NuxtLink>
     </nav>
 
     <div class="care-body">
@@ -427,10 +329,10 @@ const toggleFaq = (i) => {
         <section class="care-reading-index" aria-labelledby="care-reading-index-title">
           <div>
             <span>READING INDEX</span>
-            <h2 id="care-reading-index-title">從環境開始，依序建立每日照護</h2>
+            <h2 id="care-reading-index-title">從環境開始，讓守宮每天都開心</h2>
           </div>
           <div class="care-reading-index-links">
-            <button v-for="a in sidebarAnchors" :key="a.id" type="button" @click="scrollTo(a.id)">
+            <button v-for="a in sidebarAnchors" :key="a.id" type="button" @click="handlePersona(a)">
               <span>{{ a.icon }}</span>
               {{ a.label }}
             </button>
@@ -451,7 +353,6 @@ const toggleFaq = (i) => {
               <div v-if="e.comingArticle" class="care-coming">📝 完整對照文章敬請期待</div>
             </div>
           </div>
-          <div class="care-subh">環境警示</div>
           <div class="care-danger-grid">
             <div v-for="d in environmentWarnings" :key="d.id" class="care-danger-card">
               <div class="care-danger-head">
@@ -485,7 +386,6 @@ const toggleFaq = (i) => {
               <div class="care-temp-warn">{{ TEMP_GRADIENT.danger }}</div>
             </div>
 
-            <div class="care-subh">加溫安全</div>
             <div class="care-danger-grid">
               <div v-for="d in temperatureWarnings" :key="d.id" class="care-danger-card">
                 <div class="care-danger-head">
@@ -497,41 +397,11 @@ const toggleFaq = (i) => {
             </div>
           </div>
 
-          <div id="humidity" class="care-subsection">
-            <h3 class="care-subh">濕度配置</h3>
-            <div class="care-humidity-grid">
-              <div
-                v-for="h in HUMIDITY_CONFIG"
-                :key="h.zone"
-                class="care-humidity-card"
-                :style="{ '--accent': h.color }"
-              >
-                <div class="care-humidity-zone">{{ h.zone }}</div>
-                <div class="care-humidity-range">{{ h.range }}</div>
-                <div class="care-humidity-desc">{{ h.desc }}</div>
-              </div>
-            </div>
-          </div>
-
           <CareHabitatExplorer />
-
-          <div class="care-subh">環境延伸閱讀</div>
-          <div class="care-inline-chips">
-            <button
-              v-for="aid in environmentArticleIds"
-              :key="aid"
-              type="button"
-              class="care-chip"
-              @click="goArticle(aid)"
-            >
-              → {{ articleById(aid)?.Title || '相關閱讀' }}
-            </button>
-          </div>
         </section>
 
         <section id="food" class="care-section">
-          <h2 class="care-h">餵食與營養</h2>
-          <div class="care-subh">依年齡的餵食頻率</div>
+          <h2 class="care-h">餵食頻率與營養</h2>
           <div class="care-table care-table--feed">
             <div class="care-tr care-tr-head">
               <div>年齡</div>
@@ -574,7 +444,6 @@ const toggleFaq = (i) => {
             </div>
           </div>
 
-          <div class="care-subh">餵食警示</div>
           <div class="care-danger-grid">
             <div v-for="d in feedingWarnings" :key="d.id" class="care-danger-card">
               <div class="care-danger-head">
@@ -585,12 +454,11 @@ const toggleFaq = (i) => {
             </div>
           </div>
 
-          <div class="care-subh">補充品劑量</div>
           <div class="care-table care-table--supp">
             <div class="care-tr care-tr-head">
-              <div>守宮年齡階段</div>
+              <div>年齡</div>
               <div>鈣粉（含 D3）</div>
-              <div>綜合維生素粉</div>
+              <div>綜合維生素</div>
             </div>
             <div v-for="s in SUPPLEMENTS" :key="s.name" class="care-tr care-tr-3">
               <div>{{ s.name }}</div>
@@ -601,21 +469,20 @@ const toggleFaq = (i) => {
 
           <div class="care-supp-warn">{{ SUPPLEMENT_WARN }}</div>
 
-          <div class="care-subh">拒食時先觀察還是就醫？</div>
           <section class="care-howto-card" aria-labelledby="care-appetite-title">
             <h3 id="care-appetite-title" class="care-howto-title">守宮拒食判讀四步驟</h3>
             <div class="care-howto-steps">
               <div class="care-howto-step">
                 <div class="care-howto-no">01</div>
                 <div>
-                  <strong>先排查環境與近期變化</strong>
-                  <p>先看溫度、濕躲、補鈣與最近是否有換環境、脫皮、搬動或突然換餌。</p>
+                  <strong>排查環境與近期變化</strong>
+                  <p>先看溫度、濕度與最近是否有換環境、脫皮、搬動或突然換餌。</p>
                 </div>
               </div>
               <div class="care-howto-step">
                 <div class="care-howto-no">02</div>
                 <div>
-                  <strong>再看體態有沒有掉</strong>
+                  <strong>體態有沒有掉</strong>
                   <p>
                     尾巴厚度、精神、站姿都還穩，通常可短期觀察；如果正在變瘦，就不要只當成挑食。
                   </p>
@@ -624,8 +491,8 @@ const toggleFaq = (i) => {
               <div class="care-howto-step">
                 <div class="care-howto-no">03</div>
                 <div>
-                  <strong>把排泄與外觀一起看</strong>
-                  <p>確認有沒有正常排便、腹脹、流口水、眼鼻分泌物，避免漏看消化道或感染問題。</p>
+                  <strong>排泄與外觀一起看</strong>
+                  <p>確認有沒有正常排便、腹脹、眼鼻分泌物，避免漏看消化道或感染問題。</p>
                 </div>
               </div>
               <div class="care-howto-step">
@@ -639,19 +506,6 @@ const toggleFaq = (i) => {
               </div>
             </div>
           </section>
-
-          <div class="care-subh">餵食延伸閱讀</div>
-          <div class="care-inline-chips">
-            <button
-              v-for="aid in feedingArticleIds"
-              :key="aid"
-              type="button"
-              class="care-chip"
-              @click="goArticle(aid)"
-            >
-              → {{ articleById(aid)?.Title || '相關閱讀' }}
-            </button>
-          </div>
         </section>
 
         <section id="breeding" class="care-section">
@@ -670,37 +524,6 @@ const toggleFaq = (i) => {
             >
               → {{ articleById(aid)?.Title || '相關閱讀' }}
             </button>
-          </div>
-        </section>
-
-        <section id="faq" class="care-section">
-          <h2 class="care-h">常見問題</h2>
-          <div class="care-faq-list">
-            <div
-              v-for="(item, i) in FAQ"
-              :key="i"
-              class="care-faq-item"
-              :class="{ 'is-open': openFaq === i }"
-            >
-              <button
-                type="button"
-                class="care-faq-q"
-                :aria-expanded="openFaq === i"
-                :aria-controls="`care-faq-answer-${i}`"
-                @click="toggleFaq(i)"
-              >
-                <span class="care-faq-q-text">{{ item.q }}</span>
-                <span class="care-faq-q-icon">{{ openFaq === i ? '−' : '+' }}</span>
-              </button>
-              <div v-if="openFaq === i" :id="`care-faq-answer-${i}`" class="care-faq-a">
-                <div class="care-faq-summary">
-                  {{ articleById(item.article)?.Summary || '完整內容請參考下方文章' }}
-                </div>
-                <button type="button" class="care-chip" @click="goArticle(item.article)">
-                  → 閱讀完整文章
-                </button>
-              </div>
-            </div>
           </div>
         </section>
 
@@ -729,7 +552,7 @@ const toggleFaq = (i) => {
         </section>
 
         <div class="care-quote">
-          我們將守宮視為需被妥善照護的生命，而非一般商品。本指南旨在協助飼主以正確、全面的知識理解守宮的行為與需求，並依其生理特性提供安全、穩定且適宜的環境。每個個體性格、反應與適應能力皆有差異，照護方式並無絕對標準，請依個體狀況彈性調整。
+          我們將守宮視為需被妥善照護的生命，而非一般商品。本頁旨在協助飼主以正確、全面的知識理解守宮的行為與需求，並依其生理特性提供安全、穩定且適宜的環境。每個個體的性格、反應與適應能力皆有差異，照護方式並無絕對標準，請依個體狀況彈性調整。
         </div>
       </main>
     </div>
@@ -1184,8 +1007,9 @@ const toggleFaq = (i) => {
 
 .care-env-spec {
   color: var(--pri);
-  font-family: 'Black Ops One', monospace, sans-serif;
+  font-family: var(--font-body-zh);
   font-size: 0.85rem;
+  font-variant-numeric: tabular-nums;
   font-weight: 700;
   margin-bottom: 6px;
 }
@@ -3267,8 +3091,7 @@ const toggleFaq = (i) => {
 .care-chip:focus-visible,
 .care-decision-map a:focus-visible,
 .care-reading-index-links button:focus-visible,
-.care-related-card:focus-visible,
-.care-faq-q:focus-visible {
+.care-related-card:focus-visible {
   outline: 2px solid var(--pri);
   outline-offset: 3px;
 }
@@ -3307,12 +3130,67 @@ const toggleFaq = (i) => {
 
   .care-decision-map {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 0 14px;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0 6px;
   }
 
-  .care-map-label {
-    grid-column: 1 / -1;
+  .care-decision-map a,
+  .care-reading-index-links button {
+    justify-content: center;
+    min-width: 0;
+    padding-inline: 0;
+    text-align: center;
+  }
+
+  .care-decision-map a {
+    font-size: clamp(0.64rem, 2.8vw, 0.76rem);
+  }
+
+  .care-reading-index-links {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0 6px;
+  }
+
+  .care-reading-index-links button {
+    font-size: clamp(0.68rem, 2.9vw, 0.78rem);
+  }
+
+  .care-decision-map a::after,
+  .care-reading-index-links button::after {
+    display: none;
+  }
+
+  .care-table--feed,
+  .care-table--supp {
+    width: 100%;
+    overflow: visible;
+  }
+
+  .care-table--feed .care-tr {
+    grid-template-columns: minmax(0, 0.62fr) minmax(0, 0.72fr) minmax(0, 0.58fr) minmax(0, 1fr);
+    gap: 4px;
+    min-width: 0;
+    padding: 9px 0;
+    white-space: normal;
+  }
+
+  .care-table--supp .care-tr {
+    grid-template-columns: minmax(0, 0.62fr) minmax(0, 0.86fr) minmax(0, 1fr);
+    gap: 5px;
+    min-width: 0;
+    padding: 9px 0;
+    white-space: normal;
+  }
+
+  .care-table--feed .care-tr,
+  .care-table--supp .care-tr {
+    font-size: clamp(0.62rem, 2.7vw, 0.74rem);
+  }
+
+  .care-table--feed .care-tr > div,
+  .care-table--supp .care-tr > div {
+    min-width: 0;
+    overflow-wrap: anywhere;
   }
 
   .care-inline-chips {

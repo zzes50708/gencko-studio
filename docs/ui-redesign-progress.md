@@ -1,5 +1,103 @@
 # UI Redesign Progress
 
+## 最新進度：`/calculator` 緊湊控制與基因結果修訂完成，等待驗收（2026-09-15）
+
+- 「基因觀念」與「多遺傳說明」在桌機、手機均改為同列；計算機內所有原生按鈕統一為 36px 高，基因選項縮減留白。
+- Het／超級控制固定於基因名稱右側，選取後不再增加基因列高度；390px 實測選取列與未選取列同為 36px。
+- 結果機率使用單行排版，手機 `100%` 不再拆行；手機與桌機皆無整頁水平溢位。
+- 白黃在選擇區仍顯示原名稱，計算結果統一顯示 `WY`；選到慾望黑眼時新增「部分雌性可能不孕、眼睛結構可能異常」警告。
+- 驗證：Typecheck、focused Vitest 83/83 通過；390px 與 1280px 本機瀏覽器實測按鈕高度、同行 Het、機率單行、WY 結果及慾望黑眼警告正常。
+- 下一個精確動作：等待使用者驗收 `/calculator`；未通過前不進入 `/hospital`。`/qs` 純文字仍為已跳過的未完成項目。本次未部署、commit、push、reset、restore 或清理 working tree。
+
+## 最新進度：`/genes/:id` 指定修訂完成並通過，進入 `/calculator` 文案盤點（2026-09-15）
+
+- `/genes/:id` 工具導覽已刪除「查完詞條，接著模擬配對」，保留 `GENE WORKFLOW` 與前往基因計算機入口；詞條標題、警告與內容之間的垂直留白已縮減。
+- 警告框改為可收縮文字欄，長警語會在內容寬度內自然換行，不再超出面板。390px 實測頁面無水平溢位，警告框與內容欄左右邊界一致。
+- 使用者指示修改後直接通過並提供下一頁，19 `/genes/:id` 已標記為已驗收。
+- 驗證：Prettier 檢查、Typecheck、focused Vitest 60/60 通過；Playwright CLI 因受限環境無法啟動 Chromium（spawn EPERM），已改用現有本機瀏覽器完成 390px 實測。
+- 20 `/calculator` 已依目前 working tree 盤點文件識別、流程、物種、雙親／子代設定、基因與品系、反向配對、結果、警示、說明視窗及 SEO／JSON-LD 文案。
+- 下一個精確動作：等待使用者依 `/calculator` 的 C 完整文案清單指定修改；未驗收前不進入 `/hospital`。`/qs` 純文字仍為已跳過的未完成項目。本次未部署、commit、push、reset、restore 或清理 working tree。
+
+## 最新進度：`/genes` 指定修訂完成並通過，進入 `/genes/:id` 文案盤點（2026-09-15）
+
+- `/genes` Hero 說明已改為使用者指定文字；刪除指向同頁詞條區的重複入口，剩餘入口改名為「基因計算機」與「找特寵醫院」。桌機與手機皆使用兩欄，手機 390px 實測並排。
+- 使用者指示修改後直接通過並提供下一頁，18 `/genes` 已標記為已驗收。
+- 驗證：Typecheck、focused Vitest 60/60、Genes Chromium E2E 1/1 通過；兩個入口目的地、手機欄數、詞條搜尋與詳情導覽正常。
+- 19 `/genes/:id` 已依目前 working tree 盤點文件識別、載入／不存在狀態、返回、計算機導流、標題與資料欄位、警語、圖片、簡介／詳細敘述、來源及 SEO／DefinedTerm／Article／WebPage／BreadcrumbList 文案。
+- 下一個精確動作：等待使用者依 `/genes/:id` 的 C 完整文案清單指定修改；未驗收前不進入 `/calculator`。`/qs` 純文字仍為已跳過的未完成項目。本次未部署、commit、push、reset、restore 或清理 working tree。
+
+## 最新進度：`/articles/:id` 驗收通過，進入 `/genes` 文案盤點（2026-09-15）
+
+- `/articles/:id` 的文章延伸路徑已將「基因資料庫」改為「基因圖鑑」，目的地維持 `/genes`。使用者指示改完直接下一頁，17 `/articles/:id` 已標記為已驗收。
+- 驗證：Typecheck 通過；文章內頁 Chromium E2E 1/1 通過，導覽名稱、目的地與前一輪圖片響應式修正皆正常。
+- 18 `/genes` 已依目前 working tree 盤點文件識別、Hero、三個工具入口、物種／搜尋控制、32 個本機基因詞條、空狀態及 SEO／DefinedTermSet／ItemList／CollectionPage／BreadcrumbList 文案。
+- 下一個精確動作：等待使用者依 `/genes` 的 C 完整文案清單指定修改；未驗收前不進入 `/genes/:id`。`/qs` 純文字仍為已跳過的未完成項目。本次未部署、commit、push、reset、restore 或清理 working tree。
+
+## 最新進度：`/articles` 驗收通過，`/articles/:id` 圖片修正並進入文案確認（2026-09-14）
+
+- 使用者明確回覆「通過」，16 `/articles` 已標記為已驗收。
+- 17 `/articles/:id` 的主圖、正文圖片與 figure 改為強制貼合閱讀欄寬並保留原始比例；移除固定 210px 手機高度及 1:1 裁切，避免後台 HTML 的固定尺寸造成圖片縮在左側或溢位。
+- 驗證：Typecheck 通過；focused Vitest 60/60；ART-003 文章內頁 Chromium E2E 1/1 通過，確認桌機圖片未超出父容器且 390px 沒有水平溢位。
+- 下一個精確動作：等待使用者依 `/articles/:id` 的 C 完整文案清單指定修改；修改與驗證後須取得明確驗收，才可進入下一個單位。`/qs` 純文字仍為已跳過的未完成項目。本次未部署、commit、push、reset、restore 或清理 working tree。
+
+## 最新進度：`/articles` 文案、動態分類與手機雙欄完成，等待驗收（2026-09-14）
+
+- 16 `/articles` 已套用指定 S01–S11 文案；Hero eyebrow 改為 `GENCKO FIELD NOTES · 守宮知識`，說明改為「對於守宮知識進行更詳細的說明。」，首個閱讀入口改為「新手入門頁面」。
+- 分類列改由目前 Supabase 文章的 `Category` 動態建立，不再遺漏「繁殖相關」；保留「全部文章」，資料含新手相關文章時另顯示「新手必看」快速篩選。
+- 文章列表在 539px 以下改為兩欄，並同步縮整分類標籤、日期、標題、摘要及欄距，保留完整文章連結與無障礙名稱。
+- 驗證：Typecheck 通過；focused Vitest 60/60；文章索引 Chromium E2E 1/1 通過，確認 390px 兩欄、無水平溢位、「繁殖相關」分類可見及新手篩選可操作。
+- 下一個精確動作：等待使用者驗收 `/articles`；明確通過後才進入 `/articles/:id`。`/qs` 純文字仍為已跳過的未完成項目。本次未部署、commit、push、reset、restore 或清理 working tree。
+
+## 最新進度：`/faq` 驗收通過，進入 `/articles` 文案盤點（2026-09-14）
+
+- 使用者回覆「繼續」，依既定逐頁流程視為 15 `/faq` 驗收通過。
+- 16 `/articles` 已完成固定介面文案、搜尋／分類／熱門主題模板、loading／error／empty 狀態、12 筆目前 Supabase 文章卡及 SEO／Blog／ItemList／CollectionPage／BreadcrumbList 文案盤點。
+- 下一個精確動作：等待使用者依 `/articles` 的 C 完整文案清單指定修改；修改及驗證後須取得明確驗收，才可進入 `/articles/:id`。`/qs` 純文字仍為已跳過的未完成項目。
+- 本階段未修改 `/articles` 程式碼，亦未部署、commit、push、reset、restore 或清理 working tree。
+
+## 最新進度：`/faq` 文案、互動與 `/shop` 補充修訂完成，等待驗收（2026-09-14）
+
+- 使用者指示 `/qs` 純文字先跳過並進入下一頁；`/qs` UI 保留已完成狀態，但文案不標記為驗收完成。
+- 15 `/faq` 已依完整文字表更新 31 題、Hero 與政策內容；移除 Hero eyebrow 和手機返回鍵。分類顯示順序改為購買與售後／官網使用說明／守宮知識，預設仍開啟守宮知識；手機四個延伸入口保持單列。
+- FAQ 分類補齊鍵盤方向鍵、Home／End、id、aria-controls 與 roving tabindex；答案補上 region／aria-labelledby，加入 160ms 簡潔展開動畫及 reduced-motion 降級。全部 31 題都存在頁面 DOM，與 FAQPage JSON-LD 對應；speakable selector 與答案 inline style 已修正。
+- 會員功能依目前程式如實說明：LINE 與 Google 登入入口均存在；收藏及瀏覽紀錄只存本機，競標紀錄目前只由 Google Supabase 身分查詢。比較入口改為 `/shop`。
+- `/shop` 補充修正：孵化溫度個體依既有溫度區間顯示 90% 公、75% 公、公母均等、75% 母或 90% 母，並保留不保證性別；320px 手機收藏／加入比較按鈕縮至 26px 高，減少圖片遮擋。
+- 驗證：Typecheck 通過；focused Vitest 65/65、FAQ Chromium E2E、320px Shop 操作 E2E 通過。沒有使用真實會員帳號操作 OAuth 或競標紀錄。
+- 下一個精確動作：等待使用者驗收 `/faq`；明確通過後才進入 `/articles`。`/qs` 純文字仍為跳過的未完成項目。本次未部署、commit、push、reset、restore 或清理 working tree。
+
+## 最新進度：`/health` 置頂貼齊與 `/qs` UI 修訂（2026-09-14）
+
+- `/health` 問卷工具列由舊 90px 定位改為目前全站導覽實際 64px 高度，導覽顯示時兩者緊接、收合時同步上移，不再留下截圖中的空隙。使用者已授權改完直接進入下一頁，13 `/health` 標記為已驗收。
+- `/qs` 依 `/health` 的表單邏輯重整：移除模糊側卡與橫向輪播呈現，每次只顯示一題；進度、返回與頁名合併為貼齊導覽的固定工具列。選項改為清楚的編號列，結果改為無大卡片、緊湊的報告區。
+- 保留 18 題、六維度、選項隨機排序、自動前進、返回修改、加權計分、風險提示、雷達圖、推薦路線及 7 天 localStorage 恢復。新增 progressbar、選項群組與結果 aria-live 語意。
+- 驗證：`npm.cmd run typecheck` 通過；Vitest 7 files / 102 tests 通過；Phase 4 Chromium E2E 11/11 通過，包含 `/health` 與 `/qs` 的 390px 工具列貼齊、作答進度、單題呈現與無水平溢位。
+- 下一個精確動作：等待使用者依 `/qs` 的 A-G 完整清單指定純文字修改；未驗收前不進入 `/faq`。本次未部署、commit、push、reset、restore 或清理 working tree。
+
+## 最新進度：`/health` 純文字與置頂進度列修訂（2026-09-14）
+
+- 已依使用者提供的完整文字表更新 `/health` 的 Hero 摘要、健康工具導覽、四步判讀、三種評估入口，以及快篩、完整檢查與購入評估的指定題目、補充說明與嚴重度。疾病資料、結果、獸醫報告及 SEO 保留使用者列出的既有內容。
+- 健康工具導覽刪除 `CARE PATH / 使用順序`，手機兩個入口維持同一列；醫療聲明緊接導覽。三個評估入口刪除重複的題數摘要首行，放大模式名稱並縮減留白。
+- 問卷頁首把返回、模式名稱、百分比與進度條整合為單一置頂工具列，移除雙層陰影與模糊背景。修正進入題組及逐題自動捲動時被工具列遮住的問題；手機 390px 無整頁水平溢位。
+- 選項補上 `aria-pressed`，進度補上 `progressbar` 與數值語意，結果補上 `aria-live`。Typecheck、健康資料單元測試 3/3、共用互動測試 60/60、Health 相關 E2E 3/3 通過。
+- 下一個精確動作：等待使用者驗收 `/health`；未明確通過前不進入 `/qs`。本次未部署、commit、push、reset、restore 或清理 working tree。
+
+## 最新進度：`/care` 驗收通過，進入 `/health`（2026-09-14）
+
+- 使用者明確回覆「通過 下一頁」，12 `/care` 已標記為已驗收。
+- 13 `/health` 已完成來源碼、42 題與全部選項、52 項疾病資料、結果分支、sessionStorage、桌機／手機排版及 SEO／JSON-LD 的唯讀盤點。
+- 下一個精確動作：等待使用者指定 `/health` 要修改的 S 區塊、文案、排版或 F 功能；修改與驗證後須由使用者明確驗收，才可進入 `/qs`。
+- 本階段未修改 `/health` 程式碼，亦未部署、commit、push、reset、restore 或清理 working tree。
+
+## 最新進度：`/care` 純文字與區塊修訂（2026-09-14）
+
+- 已依使用者提供的 S01–S10 清單更新 `/care` 的文件識別、Hero、狀況導覽、閱讀索引、環境、互動模型、餵食、繁殖、知識庫與品牌聲明文案。
+- 刪除完整濕度配置、環境延伸閱讀、餵食延伸閱讀及頁內 FAQ；同步移除 FAQ 查詢與 FAQPage JSON-LD，避免不可見內容仍被宣告。閱讀索引的 FAQ 保留為第四個入口並改連獨立 `/faq`。
+- 模型七項設備移除位置副標，更新操作提示、示意說明與設備內容。桌機 3D、視角、頂蓋、縮放、鍵盤及設備選取功能均保留；手機仍支援單指旋轉、雙指縮放與區塊外頁面滑動。
+- 手機 320px 的四個狀況入口及四個閱讀索引均保持單列；餵食頻率與補充品表格改為容器內自適應，元件與整頁皆無水平溢位。飼養箱及躲避處規格數字改用正文黑體與等寬數字設定。
+- S11 SEO 與分享文案依使用者提供值原樣保留，所以仍提及已刪除的「濕度／FAQ」內容；待使用者決定是否另行同步改寫。
+- 驗證：Typecheck 通過；共用互動單元測試 60/60、Phase 5 E2E 7/7、環境模型 E2E 5/5 通過。瀏覽器測試涵蓋 320／390／768px 觸控與 WebGL 失敗替代；未宣稱實體手機驗收。
+- 本次未部署、commit、push、reset、restore 或清理 working tree。下一個精確動作：等待使用者驗收 `/care`；通過後才開始 `/health` 的 A–G 純文字盤點。
+
 ## 最新任務：資料、樣式與手機效能優化後直接部署（2026-09-12）
 
 - 使用者已授權全部建議優化，完成後直接部署；本次發布包含上一輪尚未提交的 UI 修正及 `20260911-ui` 卡片素材。只提交官網程式、必要資產、測試與紀錄，不提交原始附件或本機驗證輸出；不還原或清理 working tree。
@@ -7,8 +105,9 @@
 - Footer 三層舊樣式整併為單一來源；320、390、640、768、960、1024、1440、1920px 的各元素 display、欄位、間距、字型、顏色及邊界與原基準相同，視覺不變。
 - 觸控內容頁不建立全域 Lenis／GSAP ticker，使用原生被動 scroll listener，保留 Shop 分段載入、導覽捲動與文章閱讀進度。根網址與 about 的獨立動畫不受此規則影響。卡片影片在背景／離屏停止解碼，恢復時續播；處理暫停造成的 AbortError，不誤判影片壞掉。
 - Typecheck、99 項單元測試通過；19 項既有流程與 5 項新優化 E2E 通過。新測試包含 SSR 不重抓、摘要／正文切換、錯誤重試與並行去重、手機原生續載及閱讀進度、影片可見性暫停恢復、CPU 4 倍降速下手機旋轉／觸控及不下載 MP4。這些是瀏覽器模擬；未連接實體 iPhone／Android，不能宣稱真機效能已驗收。
-- 證據位於 `output/optimization-20260912/`。全站 124 組版面掃描通過，無整頁水平溢位或 pageerror。準備提交並推送 main，等待 Vercel 建置及正式站驗證。
-- 下一個精確動作：完成掃描後部署，確認正式站文章、手機根網址及 care；純文字與訂製爬櫃維持另案。既有 localhost:3000 保留，不與本機 build 同跑。
+- 證據位於 `output/optimization-20260912/`。全站 124 組版面掃描通過，無整頁水平溢位或 pageerror。已正常通過 Git hooks，提交並推送 `9d8da120666b260045fd882c03ab139a0e1215d3`；Vercel `8EXvnP9nxJy5AxFRUUDrfPgyJ7y2` 建置與部署成功。
+- 正式站 `/articles`、`/care`、`/` 的桌機與手機共 6 組檢查通過：HTTP 200、無整頁水平溢位與 pageerror；文章 SSR／正文載入正常，手機根網址原生觸控捲動及模型手勢正常，手機無卡片 MP4 請求。首次模型檢查早於初始化而超時，補上 hydration 等待後通過；證據在 `output/optimization-20260912/production/`。此為瀏覽器模擬，並非實體手機驗收。
+- 下一個精確動作：本輪優化與部署完成，等待使用者檢視正式站；純文字由使用者另開，訂製爬櫃維持另案。驗證程序均已結束，既有 localhost:3000 保留。部署結果 checkpoint 留在本機，不為紀錄再次發布。
 
 ## 最新任務：全站桌機／手機 UI 跑版收尾（2026-09-11）
 
@@ -952,3 +1051,18 @@
 - 使用者在 `/guide` 驗收期間插入 `/home` 小修正。首頁 Hero 使用的 `assets/NDBE.jpg` 原圖為 1024×1024；桌機、手機與窄手機的 Hero 圖片容器皆改為 `1:1`，不再由 4:5 或 5:4 造成左右高低差。
 - 驗證：`npm.cmd run typecheck`、`npm.cmd run test -- --run tests/shared-interaction.spec.js`（60/60）通過；Chrome 1379×754 hydration 後實測圖片容器為 507×507、ratio 1、`object-fit: cover`、頁面水平溢位 0。
 - 下一個精確動作：等待使用者驗收 `/home` Hero 1:1 修正；通過後回到 `/guide` 完成目前頁面驗收，未經 `/guide` 明確通過不得進入 `/care`。
+
+## 最新進度：`/calculator` 驗收通過，進入 `/hospital` 文案盤點（2026-09-15）
+
+- 使用者回覆「下一步」，依逐頁流程將 20 `/calculator` 標記為已驗收。
+- 21 `/hospital` 已完成固定介面文案、搜尋／縣市／行政區篩選、收藏／展開／撥號／地圖操作、Supabase 動態欄位、空資料與讀取失敗行為，以及動態 SEO、9 題 FAQPage、VeterinaryCare ItemList、WebPage 與 BreadcrumbList 文案盤點。
+- 本機 hydration 實際載入 78 間有效醫院，最新資料更新日為 2026-06-17；醫院名稱、地址、電話、縣市與行政區屬 Supabase 營運資料，不視為固定頁面文案。
+- 下一個精確動作：等待使用者依 `/hospital` 的 C 完整文案清單指定修改；完成與驗收後才進入 `/why-gencko`。`/qs` 純文字仍為已跳過的未完成項目。本次未部署、commit、push、reset、restore 或清理 working tree。
+
+## 最新進度：`/hospital` 留白與收藏狀態修訂（2026-09-15）
+
+- Hero、文件識別、篩選提示、搜尋／下拉、結果摘要、醫院清單列、展開內容及頁尾前間距已縮減；手機縣市與行政區改為同列，保留 44px 主要觸控範圍。
+- 修正本頁 `.hosp-fav-btn` 覆蓋全域啟用色的問題。收藏後愛心現在使用明確粉色、淡粉背景與粉色邊框，aria-label 同步改為「取消收藏」，不再維持黑色。
+- 目前 78 筆醫院來自一次性 seed migration，沒有定期同步；該 migration 使用 `ON CONFLICT DO NOTHING`，不能更新既有紀錄。全台合法獸醫診療機構可由各縣市公開名冊建立基礎資料，但「是否收治守宮／爬蟲」通常仍需院方資料或人工電話確認。
+- 驗證：Prettier、Typecheck、focused Vitest 60/60 通過；本機 hydrated 頁面收藏 computed style 與 78 筆資料載入正常。Playwright CLI 受限於 Chromium `spawn EPERM`，桌機改由既有瀏覽器實測；手機視覺仍待使用者驗收。
+- 下一個精確動作：等待使用者驗收 `/hospital`，並決定是否另案建立醫院資料 staging、來源識別、人工審核、定期 upsert 與稽核紀錄；通過後才進入 `/why-gencko`。本次未部署、commit、push、reset、restore 或清理 working tree。

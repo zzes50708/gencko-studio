@@ -44,7 +44,7 @@ useHead({
 </script>
 
 <template>
-  <div class="stories-page" data-testid="stories-holding-page">
+  <div class="site-document-page stories-page" data-testid="stories-holding-page">
     <div class="stories-document-meta" aria-label="故事頁面說明">
       <span>GENCKO STORY ARCHIVE</span>
       <span>REAL RECORDS IN PREPARATION</span>

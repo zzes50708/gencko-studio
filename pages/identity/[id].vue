@@ -154,7 +154,7 @@ const triggerPrint = () => {
 </script>
 
 <template>
-  <div class="id-page-container">
+  <div class="site-document-page id-page-container">
     <div class="common-document-meta identity-document-meta" aria-label="身份文件說明">
       <span>GENCKO IDENTITY RECORD</span>
       <span>VERIFY / REVIEW / KEEP</span>

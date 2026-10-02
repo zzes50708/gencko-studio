@@ -53,6 +53,10 @@ inspector_port = 8083
 [functions.end-auction]
 verify_jwt = false
 
+# 農業部合法獸醫診療機構母表；函式內另以 HOSPITAL_SYNC_SECRET 驗證。
+[functions.sync-veterinary-registry]
+verify_jwt = false
+
 [experimental]
 orioledb_version = ""
 s3_host = "env(SUPABASE_S3_HOST)"

@@ -20,13 +20,18 @@ describe('B2 全站資訊架構', () => {
     ])
   })
 
-  it('手機底部導覽為首頁、探索、新手、工具四項', () => {
+  it('手機底部導覽整合五個入口與會員品牌頁', () => {
     expect(MOBILE_NAV_ITEMS.map(({ key, label, to }) => ({ key, label, to }))).toEqual([
       { key: 'home', label: '首頁', to: '/home' },
-      { key: 'explore', label: '探索', to: '/shop' },
-      { key: 'learn', label: '新手', to: '/start-here' },
-      { key: 'tools', label: '工具', to: '/genes' }
+      { key: 'explore', label: '選購', to: '/shop' },
+      { key: 'learn', label: '知識', to: '/start-here' },
+      { key: 'tools', label: '工具', to: '/genes' },
+      { key: 'more', label: '更多', to: '/profile' }
     ])
+    const mobilePaths = MOBILE_NAV_ITEMS.flatMap((item) =>
+      item.sections.flatMap((section) => section.links.map((link) => link.to))
+    )
+    expect(mobilePaths).toEqual(expect.arrayContaining(['/profile', '/about', '/stories', '/']))
   })
 
   it('依核准語意判定目前群組，並保留 Hero Lab 與商業首頁的分工', () => {

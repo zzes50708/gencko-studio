@@ -240,7 +240,7 @@ const removeItem = (id) => {
 </script>
 
 <template>
-  <main class="compare-page" data-phase3-surface="compare">
+  <main class="site-document-page compare-page" data-phase3-surface="compare">
     <div class="common-document-meta" aria-label="比較工作台說明">
       <span>GENCKO COMPARISON DESK</span>
       <span>SELECT / REVIEW / DECIDE</span>

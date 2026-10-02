@@ -28,12 +28,20 @@ const readinessColumns = [
   {
     eyebrow: 'WHY IT WORKS',
     title: '適合作為入門寵物的原因',
-    items: ['生活空間相對集中，不需要外出散步', '日常照護流程明確，容易建立固定習慣', '豹紋與肥尾守宮都有多種外觀可供認識與選擇']
+    items: [
+      '生活空間相對集中，不需要外出散步',
+      '日常照護流程明確，容易建立固定習慣',
+      '豹紋與肥尾守宮都有多種外觀可供認識與選擇'
+    ]
   },
   {
     eyebrow: 'BEFORE YOU START',
     title: '帶回家前需要確認',
-    items: ['能否準備合適的環境與日常用品', '能否穩定取得活餌並接受餵食昆蟲', '能否負擔長期照護與必要時的特殊寵物醫療']
+    items: [
+      '能否準備合適的環境與日常用品',
+      '能否穩定取得活餌並接受餵食昆蟲',
+      '能否負擔長期照護與必要時的特殊寵物醫療'
+    ]
   }
 ]
 
@@ -118,7 +126,7 @@ useHead({
 </script>
 
 <template>
-  <div class="guide-page">
+  <div class="site-document-page guide-page">
     <div class="guide-document-meta" aria-label="頁面摘要">
       <span>GENCKO FIELD NOTES</span>
       <span>01 / GECKOS</span>
@@ -248,9 +256,7 @@ useHead({
         <span>START HERE</span>
         <strong>第一次飼養，先了解守宮</strong>
       </div>
-      <NuxtLink no-prefetch to="/start-here" class="guide-inline-link">
-        查看新手入門 →
-      </NuxtLink>
+      <NuxtLink no-prefetch to="/start-here" class="guide-inline-link">查看新手入門 →</NuxtLink>
     </div>
 
     <section id="guide-faq" class="guide-sec">

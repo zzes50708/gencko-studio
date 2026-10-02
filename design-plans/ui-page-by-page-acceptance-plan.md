@@ -68,14 +68,14 @@ Written against: `ea5e0d3`（以目前含未提交變更的 working tree 為實�
 | 09  | `/merch/:id`       | `pages/merch/[id].vue`                             | 商品圖片、資訊、價格、保證／條款、購買／外連、分享、載入與不存在狀態                                                                                                                                 | 已驗收       |
 | 10  | `/start-here`      | `pages/start-here.vue`                             | 新手課程抬頭、知識地圖、準備清單、三條路徑與頁內導覽                                                                                                                                                 | 已驗收       |
 | 11  | `/guide`           | `pages/guide.vue`                                  | 守宮介紹、比較與選擇資訊、五段內容、新手步驟、FAQ 與所有延伸連結                                                                                                                                     | 已驗收       |
-| 12  | `/care`            | `pages/care.vue`                                   | 閱讀進度、決策入口、目錄、環境／溫度／濕度／餵食／繁殖／風險／物種／FAQ／知識庫章節、展開表格與手機 anchor                                                                                           | 等待驗收     |
-| 13  | `/health`          | `pages/health.vue`                                 | 分流模式、題目、進度、健康判讀、警示、結果、疾病／報告資訊與醫院導流                                                                                                                                 | 等待驗收     |
-| 14  | `/qs`              | `pages/qs.vue`                                     | 18 題與 6 維度、題目輪播、選項、進度、計分、雷達／分級、建議、警示、修改答案與重測                                                                                                                   | 等待驗收     |
-| 15  | `/faq`             | `pages/faq.vue`                                    | 分類切換、每一題與答案、Accordion 行為、頁內／跨頁延伸入口                                                                                                                                           | 等待驗收     |
-| 16  | `/articles`        | `pages/articles/index.vue`                         | 期刊抬頭、搜尋、分類／標籤、文章卡、作者／日期／摘要、載入、空狀態與詳情入口                                                                                                                         | 等待驗收     |
-| 17  | `/articles/:id`    | `pages/articles/[id].vue`                          | 返回與上下文導覽、標題、摘要、作者／日期、主圖、全文、相關內容、載入與不存在狀態                                                                                                                     | 等待驗收     |
-| 18  | `/genes`           | `pages/genes/index.vue`                            | 工具入口、物種切換、搜尋、數量、分類、詞條目錄與詳情入口                                                                                                                                             | 等待驗收     |
-| 19  | `/genes/:id`       | `pages/genes/[id].vue`                             | 詞條標題、遺傳模式／年份／來源、說明、警示、原始圖片、資料列、圖鑑／計算機導流、載入與不存在狀態                                                                                                     | 等待驗收     |
+| 12  | `/care`            | `pages/care.vue`                                   | 閱讀進度、決策入口、目錄、環境／溫度／餵食／繁殖／風險／知識庫、互動環境模型與手機導覽                                                                                                               | 已驗收       |
+| 13  | `/health`          | `pages/health.vue`                                 | 分流模式、題目、進度、健康判讀、警示、結果、疾病／報告資訊與醫院導流                                                                                                                                 | 已驗收       |
+| 14  | `/qs`              | `pages/qs.vue`                                     | 18 題與 6 維度、單題表單、選項、進度、計分、雷達／分級、建議、警示、修改答案與重測                                                                                                                   | 暫時跳過文案 |
+| 15  | `/faq`             | `pages/faq.vue`                                    | 分類切換、每一題與答案、Accordion 行為、頁內／跨頁延伸入口                                                                                                                                           | 已驗收       |
+| 16  | `/articles`        | `pages/articles/index.vue`                         | 期刊抬頭、搜尋、分類／標籤、文章卡、作者／日期／摘要、載入、空狀態與詳情入口                                                                                                                         | 已驗收       |
+| 17  | `/articles/:id`    | `pages/articles/[id].vue`                          | 返回與上下文導覽、標題、摘要、作者／日期、主圖、全文、相關內容、載入與不存在狀態                                                                                                                     | 已驗收       |
+| 18  | `/genes`           | `pages/genes/index.vue`                            | 工具入口、物種切換、搜尋、數量、分類、詞條目錄與詳情入口                                                                                                                                             | 已驗收       |
+| 19  | `/genes/:id`       | `pages/genes/[id].vue`                             | 詞條標題、遺傳模式／年份／來源、說明、警示、原始圖片、資料列、圖鑑／計算機導流、載入與不存在狀態                                                                                                     | 已驗收       |
 | 20  | `/calculator`      | `pages/calculator.vue`                             | 物種群與物種、雙親／子代角色、基因選擇、Het／Super、反向配對、計算結果、警示與說明 Modal                                                                                                             | 等待驗收     |
 | 21  | `/hospital`        | `pages/hospital.vue`                               | 搜尋、縣市／行政區篩選、醫院名錄、展開明細、收藏、電話、地圖、驗證日期、空結果                                                                                                                       | 等待驗收     |
 | 22  | `/why-gencko`      | `pages/why-gencko.vue`                             | 品牌理由、信任資訊、購買路徑、工具預覽、圖片、所有 CTA 與延伸入口                                                                                                                                    | 等待驗收     |
@@ -199,9 +199,9 @@ Codex 完成修改後，必須先自行驗證再請使用者驗收：
 
 ```yaml
 plan: design-plans/ui-page-by-page-acceptance-plan.md
-current_unit: '全站優化與正式部署'
-current_status: 優化實作、Typecheck、99 單元測試及 24 E2E 通過；124 組版面掃描通過，接續正式部署
-last_user_accepted_unit: '11 /guide'
+current_unit: '21 /hospital'
+current_status: 已完成留白與收藏啟用色修訂；等待使用者驗收及決定醫院資料同步方案
+last_user_accepted_unit: '20 /calculator'
 accepted_units:
   - '01 /home'
   - '02 /shop'
@@ -214,16 +214,32 @@ accepted_units:
   - '09 /merch/:id'
   - '10 /start-here'
   - '11 /guide'
+  - '12 /care'
+  - '13 /health'
+  - '15 /faq'
+  - '16 /articles'
+  - '17 /articles/:id'
+  - '18 /genes'
+  - '19 /genes/:id'
+  - '20 /calculator'
 pending_user_decisions:
-  - /care 已移除桌機固定側欄與平板／手機固定章節列，正文恢復單欄全寬，只保留一套頁內閱讀索引。
-  - /care 已刪除豹紋 vs 肥尾區塊；環境、溫度、濕度合併為單一環境章，致命地雷分流至環境、溫度與餵食內容，重複相關文章入口已合併去重。
-  - 依使用者截圖回饋，已移除 Hero 空白圖片佔位、環境大色塊示意、章節 Emoji 與彩色溫度卡；內容改為無底色資料列並進一步縮短上下留白。
-  - 依第二次截圖回饋，已移除所有主要章節外層容器的白底、左右邊界、陰影與濾鏡；閱讀索引、決策入口、FAQ 與完整知識庫亦統一為透明背景及細分隔線，不再形成整張大卡片。
-  - 環境章末已依使用者提供的 1-Photo-1.jpg 重建互動模型，含桌機旋轉、縮放、頂蓋與設備選取，以及手機輕量示意。單張示意圖僅提供相對配置，不代表實測尺寸。
-  - 2026-09-09 最新授權允許直接完成剩餘 UI，本批完成後等待使用者統一檢視。
+  - 14 /qs 的 UI 已完成，但使用者指示純文字先跳過；不將尚未修改的文案視為已驗收，後續需另行返回。
+  - 21 /hospital 已完成完整盤點、留白與收藏啟用色修訂；等待使用者驗收及決定是否另建全台醫院同步流程。
 deferred_future_work:
   - 訂製爬櫃不屬於 Supabase 商品；待全站 UI 驗收全部結束後，於下一次獨立任務與廠商定案後製作獨立頁面。目前不建立入口、暫定文案、圖片或 LINE 導流。
 changed_files_this_unit:
+  - pages/hospital.vue（縮減 Hero、篩選、清單與頁尾前留白；收藏啟用時改為明確粉色文字、淡粉底與粉色邊框）
+  - tests/shared-interaction.spec.js（新增醫院收藏啟用色回歸）
+  - pages/calculator.vue（說明按鈕並排、全頁按鈕統一 36px、基因列與 Het／超級同行、手機機率不換行）
+  - utils/genetics/leopardgecko.config.ts、utils/calcUtils.ts（白黃結果名稱改為 WY，新增慾望黑眼繁殖與眼睛結構警告）
+  - tests/calc-utils.spec.js、tests/shared-interaction.spec.js（結果名稱、警告與緊湊控制回歸）
+  - pages/health.vue（問卷工具列改依目前 64px 全站導覽高度貼齊）
+  - pages/qs.vue（單題表單、固定進度工具列、結果報告與響應式 UI）
+  - tests/e2e/phase4-tools.spec.ts（/health 與 /qs 導覽貼齊、進度互動及手機無溢位驗證）
+  - design-plans/ui-page-by-page-acceptance-plan.md、docs/ui-redesign-progress.md（本次 checkpoint）
+  - pages/care.vue、utils/care.ts（本次 /care 純文字、區塊刪除、schema 同步與手機排版）
+  - components/care/HabitatExplorer.vue、utils/habitat-parts.ts（模型操作提示、說明與七項設備文案）
+  - tests/e2e/phase5-content.spec.ts、tests/shared-interaction.spec.js（手機單列／防溢位及移除 FAQ 後的回歸）
   - components/care/HabitatExplorer.vue、HabitatViewport.client.vue、HabitatScene.vue（互動模型及裝置降級）
   - utils/habitat-model.ts、utils/habitat-parts.ts、public/images/care/habitat-overview.webp（模型、設備資料及輕量示意）
   - tests/e2e/habitat.spec.ts、scripts/verify-habitat.mjs（3D 互動、卸載、降級及畫面驗證）
@@ -234,6 +250,8 @@ changed_files_this_unit:
   - scripts/verify-shared-ui-20260910.mjs（共用狀態本機檢查）
   - pages/health.vue、pages/qs.vue、pages/faq.vue（健康／飼養前問卷、結果與 FAQ 視覺統整）
   - pages/articles/index.vue、pages/articles/[id].vue、pages/genes/index.vue、pages/genes/[id].vue（列表與閱讀介面）
+  - pages/articles/index.vue（本次 Hero 文案、Supabase 動態分類與手機雙欄文章列表）
+  - pages/articles/[id].vue（本次主圖、正文圖片與 figure 響應式尺寸修正）
   - pages/calculator.vue、pages/hospital.vue（工具表單、搜尋及操作層級）
   - pages/why-gencko.vue、pages/buying-guide.vue、pages/stories.vue（品牌與流程排版、重複 CTA 移除）
   - pages/profile.vue、pages/identity/[id].vue（會員與螢幕證書介面）
@@ -252,6 +270,11 @@ changed_files_this_unit:
   - public/images/guide/fat-tailed-gecko.webp（使用者指定肥尾守宮實拍照的網站用版本）
   - design-plans/ui-page-by-page-acceptance-plan.md（記錄 /start-here 通過及 /guide UI／文案盤點 checkpoint）
 validation_completed:
+  - /hospital 本次修改：Prettier 通過、Typecheck 通過、focused Vitest 60/60 通過；本機 hydrated 頁面載入 78 間醫院，點擊收藏後 aria-label 切為取消收藏，computed color 為 rgb(233, 30, 99)、淡粉背景及粉色邊框，無陰影。
+  - /hospital 桌機本機瀏覽器畫面與無水平溢位檢查通過。Playwright CLI 因受限環境啟動 Chromium 時 spawn EPERM，未將該次執行列為通過；手機規則以既有 390px 測試基線及本次靜態檢查覆蓋，仍待使用者視覺驗收。
+  - /health 與 /qs 本次修改：`npm.cmd run typecheck` 通過；Vitest 7 files / 102 tests 通過；`tests/e2e/phase4-tools.spec.ts` 11/11 通過；`git diff --check` 無 whitespace error，只有既有 LF → CRLF 提示。
+  - /care 本次修改：`npm.cmd run typecheck` 通過；`tests/shared-interaction.spec.js` 60/60 通過；`tests/e2e/phase5-content.spec.ts` 7/7 通過；`tests/e2e/habitat.spec.ts` 5/5 通過。
+  - /care 320px 實測四個狀況入口與四個閱讀索引各自同列，餵食／補充品表格及整頁均無水平溢位；3D 模型在 320／390／768px 的旋轉、縮放、設備選取與區塊外頁面滑動通過。
   - 互動環境模型：Typecheck、99/99 單元測試及 5 項專用 E2E 通過。涵蓋拖曳、閒置停止渲染、離屏卸載重入、320／390／768px 觸控降級與 WebGL 失敗；直接設備點選、視角、頂蓋、鍵盤另外實測通過，無 pageerror。證據於 output/habitat-20260910。
   - 最新 UI 收尾：99/99 單元測試、Typecheck 通過；104 組路由／寬度檢查中 103 組直接通過，1 組 768px /merch 導頁中斷後個別重測通過，無排版溢位或 pageerror。
   - iOS／Lightbox 原生彈窗焦點與背景捲動、Navbar／Bottom Sheet、手機詢問鈕與比較列、About／Hero Lab 動畫降級補驗通過。證據見 output/ui-final-20260910-* 與進度文件最新章節。
@@ -317,24 +340,29 @@ validation_completed:
   - /guide 修改後 `npm.cmd run test -- --run tests/shared-interaction.spec.js` 60/60 通過，`npm.cmd run typecheck` 通過，`git diff --check` 通過。
   - /guide 已套用使用者提供的 S01–S08 文案；FAQPage 因共用 `faqs` 資料同步更新。1280×720、390×844、320×700 實測均無水平溢位，長版眼睛特徵在桌機表格與手機分組中完整呈現，無 page error。
   - 使用者確認 S02 說明開頭的「到」為誤植，已依指示刪除；目前文字為「兩種常見寵物守宮的差異，先正確認識，再決定是否適合開始飼養。」
+  - /faq 已套用使用者提供的 S01–S05 文案與政策修訂；移除 Hero eyebrow 及手機返回鍵，手機四個延伸入口維持單列，分類視覺順序為購買與售後／官網使用說明／守宮知識，預設仍開啟守宮知識。
+  - /faq 的 31 題全部保留於頁面 DOM，分類 Tab 補上 id、aria-controls、roving tabindex 與方向鍵／Home／End 操作；答案補上 region／aria-labelledby，並以 160ms 位移淡入動畫展開，reduced-motion 下停用動畫。speakable 改為實際 `.faq-a`，答案 inline style 全數移除。
+  - /faq 會員文案依目前程式確認：LINE 與 Google 均可登入；收藏及瀏覽紀錄只存本機，競標紀錄目前只由 Google Supabase 身分查詢。/shop 同步加入孵化溫度對應性別機率，手機收藏／加入比較按鈕縮至 26px 高，降低圖片遮擋。
+  - /faq 修改後 `npm.cmd run typecheck`、65 項 focused Vitest、FAQ Chromium E2E 及 320px Shop 操作 E2E 通過；正式會員 OAuth 分支未以真實帳號操作。
+  - /articles 本次修改：`npm.cmd run typecheck` 通過；`tests/shared-interaction.spec.js` 60/60 通過；文章索引 Chromium E2E 1/1 通過，確認 390px 兩欄、無水平溢位及 Supabase 的「繁殖相關」分類可見。
+  - /articles/:id 圖片修正：`npm.cmd run typecheck` 通過；`tests/shared-interaction.spec.js` 60/60 通過；文章內頁 Chromium E2E 1/1 通過，確認 ART-003 主圖／正文圖片不超出父容器且 390px 無水平溢位。
+  - /articles/:id 導覽文字改為「基因圖鑑」後，`npm.cmd run typecheck` 與文章內頁 Chromium E2E 1/1 通過，連結仍正確指向 `/genes`。
+  - /genes 指定修訂：Typecheck、focused Vitest 60/60、Genes Chromium E2E 1/1 通過；確認只保留基因計算機與特寵醫院兩個入口，390px 兩欄並排，搜尋及詳情導覽正常。
+  - /genes/:id 指定修訂：Prettier 檢查、`npm.cmd run typecheck`、focused Vitest 60/60 通過；本機瀏覽器 390px 實測頁面無水平溢位，警告框與內容欄左右邊界一致。Playwright CLI 因受限環境無法啟動 Chromium（spawn EPERM），已以現有本機瀏覽器完成同項檢查。
+  - /calculator 指定修訂：`npm.cmd run typecheck` 通過；focused Vitest 83/83 通過；390px 與 1280px 本機瀏覽器實測所有計算機按鈕均為 36px、說明按鈕並排、Het 與基因名稱同行、機率保持單行且頁面無水平溢位。實際配對確認結果顯示 WY 而非白黃，並會顯示慾望黑眼的雌性不孕與眼睛結構警告。
 validation_pending:
-  - 使用者整體視覺驗收與後續文案修改；/care 完整環境配置圖片。
+  - 等待使用者驗收 /hospital 的留白與收藏啟用色；未通過前不進入 /why-gencko。
+  - 全台特寵醫院沒有單一且含收治物種的官方資料源；若要自動同步，需先決定來源、人工審核責任與更新頻率，再另建 staging／upsert／audit 流程。
+  - /qs UI 已完成但純文字依使用者指示暫時跳過，仍未驗收。
   - 未登入真實會員帳號，會員資料與競標紀錄的已登入分支尚未以真實帳號驗收。
   - 手機已做觸控模擬與動畫降級驗證，未使用實體手機驗收動畫手感。
 uncovered_runtime_states:
   - 會員已登入資料分支；外部登入、電話撥號與系統列印面板未執行。
 blockers: []
-background_processes: 沿用既有 localhost:3000 開發服務，未停止使用者服務；模型驗證程序已結束。最新證據保留於 output/habitat-20260910，既有 output/ui-continuation-* 未清理。
+background_processes: localhost:3100 開發服務可用；本次 Playwright 驗證程序已結束，未清理任何既有輸出或工作樹檔案。
 next_exact_action: >-
-  最新工作已完成：277313d 正式部署，新版影片與手機照片載入通過。等待使用者檢視根網址骨幹卡片，不自行續作純文字或暫停中的會員收尾。
-  最新修復已完成：6fba18e 正式部署成功，/ 手機動畫與 /care 單指旋轉、雙指縮放實測通過。
-  等待使用者檢視手機動畫修復；未獲恢復指示前，其他官網收尾保持暫停。
-  不得再次以手機降級名義移除這兩處核心 3D。其他官網收尾先暫停，/profile 已登入 watcher 初始化問題留待接續。
-  2026-09-10 部署已完成：802a4a3 對應 Production 6372532247 回報成功，正式 /care 桌機與手機重測通過。
-  等待使用者檢視 /care 環境章末的互動模型，依其回饋調整模型或操作。
-  模型依已提供的 1-Photo-1.jpg 示意圖手工重建，未取得實測尺寸；不自行宣稱使用者已驗收。
-  保留桌機按需渲染及手機輕量替代。純文字任務暫停，等使用者下次明確自行開啟；
-  訂製爬櫃仍另案；除本次已完成的授權發布外，不另行部署、commit、push 或還原工作樹。
+  等待使用者驗收 21 /hospital 的留白與收藏啟用色，並決定是否另建全台醫院同步流程；驗收通過後才可進入 22 /why-gencko。
+  /qs 純文字依使用者指示暫時跳過，保留為未完成項目。不部署、commit、push、reset、restore 或清理 working tree；訂製爬櫃維持另案。
 ```
 
 ## Evidence chain
@@ -369,7 +397,7 @@ next_exact_action: >-
 
 ## 下一個精確動作
 
-完成本輪 124 組版面掃描，提交並部署目前官網 UI 與優化，等 Vercel 成功後驗證正式文章、根網址手機動畫及 care 模型。純文字與訂製爬櫃維持另案；不要重開逐頁盤點。
+等待使用者依完整清單指定 21 `/hospital` 的純文字或功能修訂；修改與驗證後須取得明確驗收，才可進入 22 `/why-gencko`。`/qs` 純文字仍為已跳過的未完成項目；訂製爬櫃維持另案。不得部署、commit、push、reset、restore 或清理 working tree。
 
 ### 11 `/guide` 盤點索引與續作證據（2026-09-09）
 

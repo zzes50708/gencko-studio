@@ -102,7 +102,9 @@ describe('Phase 1 共用互動元件 contract', () => {
     expect(navbar).toContain('@click="dismissMenu"')
     expect(navbar).toContain('watch(() => route.path, closeMenuForNavigation)')
     expect(navbar).toContain('v-on="canHover ? {')
-    expect(navbar).toContain("useMediaQuery('(min-width: 768px) and (hover: hover) and (pointer: fine)')")
+    expect(navbar).toContain(
+      "useMediaQuery('(min-width: 768px) and (hover: hover) and (pointer: fine)')"
+    )
     expect(bottomNav).toContain('@click="closeSheet({ restoreFocus: false })"')
   })
 
@@ -131,7 +133,12 @@ describe('Phase 1 共用互動元件 contract', () => {
     expect(shopFlipCard).toContain('<div class="flip-face flip-back" aria-hidden="true">')
     expect(shopFlipCard).toContain('v-if="showInteractiveGrid"')
     expect(shopFlipCard).not.toContain('findSimilar')
-    expect(shopFlipCard).toContain('孵化溫度:${v}度（不保證性別）')
+    expect(shopFlipCard).toContain("if (temperature >= 31) return '90%公'")
+    expect(shopFlipCard).toContain("if (temperature >= 30) return '75%公'")
+    expect(shopFlipCard).toContain("if (temperature >= 28) return '公母均等'")
+    expect(shopFlipCard).toContain("if (temperature >= 27) return '75%母'")
+    expect(shopFlipCard).toContain("return '90%母'")
+    expect(shopFlipCard).toContain('不保證性別')
     expect(shopFlipCard).toContain(
       '@media (min-width: 769px) and (hover: hover) and (pointer: fine)'
     )
@@ -293,13 +300,18 @@ describe('Phase 1 共用互動元件 contract', () => {
 
   it('FAQ 分類與問題控制具備觸控高度、語意與 reduced-motion 降級', () => {
     expect(faq).toMatch(
-      /<button\s+v-for="cat in FAQ_CATEGORIES"[\s\S]*?type="button"[\s\S]*?class="cat-tab"/
+      /<button\s+v-for="\(cat, catIndex\) in orderedCategories"[\s\S]*?type="button"[\s\S]*?class="cat-tab"/
     )
     expect(faq).toMatch(/\.cat-tab\s*\{[\s\S]*?min-height:\s*var\(--control-min-height\)/)
     expect(faq).toMatch(/\.faq-q\s*\{[\s\S]*?min-height:\s*var\(--control-min-height\)/)
-    expect(faq).toContain(':aria-controls="`faq-answer-${activeCategory}-${idx}`"')
+    expect(faq).toContain(':aria-controls="`faq-panel-${cat.id}`"')
+    expect(faq).toContain('@keydown="onCategoryKeydown($event, catIndex)"')
+    expect(faq).toContain('role="tabpanel"')
+    expect(faq).toContain('role="region"')
+    expect(faq).toContain(':aria-controls="`faq-answer-${category.id}-${idx}`"')
+    expect(faq).toContain('<Transition name="faq-reveal">')
     expect(faq).toMatch(
-      /@media\s*\(prefers-reduced-motion:\s*reduce\)\s*\{[\s\S]*?\.faq-body-wrapper\s*\{[\s\S]*?transition:\s*none/
+      /@media\s*\(prefers-reduced-motion:\s*reduce\)\s*\{[\s\S]*?\.faq-reveal-enter-active,[\s\S]*?transition:\s*none/
     )
   })
 
@@ -309,6 +321,10 @@ describe('Phase 1 共用互動元件 contract', () => {
     expect(health).toContain('<button type="button" class="h-reset-btn"')
     expect(health).toMatch(/<button[\s\S]*?type="button"[\s\S]*?class="h-submit-btn"/)
     expect(health).toContain('<button type="button" class="h-copy-btn"')
+    expect(health).toContain('role="progressbar"')
+    expect(health).toContain(':aria-valuenow="Math.round(progress)"')
+    expect(health).toContain(':aria-pressed="isSelected(q.id, opt.id)"')
+    expect(health).toContain('class="h-result" aria-live="polite"')
     expect(health).toMatch(
       /@media\s*\(hover:\s*none\),\s*\(pointer:\s*coarse\),\s*\(max-width:\s*768px\)\s*\{[\s\S]*?\.h-entry-card:hover[\s\S]*?transform:\s*none[\s\S]*?\.h-q-opt:hover[\s\S]*?transform:\s*none/
     )
@@ -328,6 +344,9 @@ describe('Phase 1 共用互動元件 contract', () => {
       /\.hosp-header-toggle\s*\{[\s\S]*?min-height:\s*var\(--control-min-height\)/
     )
     expect(hospital).toMatch(/\.hosp-fav-btn\s*\{[\s\S]*?min-height:\s*var\(--control-min-height\)/)
+    expect(hospital).toMatch(
+      /\.hosp-fav-btn\.active\s*\{[\s\S]*?background:\s*rgba\(233, 30, 99, 0\.08\)[\s\S]*?color:\s*#e91e63/
+    )
     expect(hospital).toMatch(/\.hosp-link\s*\{[\s\S]*?min-height:\s*var\(--control-min-height\)/)
     expect(hospital).toMatch(
       /@media\s*\(prefers-reduced-motion:\s*reduce\)\s*\{[\s\S]*?\.hosp-details\s*\{[\s\S]*?animation:\s*none/
@@ -657,7 +676,13 @@ describe('Phase 1 共用互動元件 contract', () => {
   it('Articles 列表篩選使用原生 button、狀態屬性與共用觸控尺寸', () => {
     expect(articlesIndex).not.toContain('role="button"')
     expect(articlesIndex).toMatch(
-      /<button\s+v-for="cat in fixedCats"[\s\S]*?type="button"[\s\S]*?class="nav-chip"[\s\S]*?:aria-pressed=/
+      /<button\s+v-for="cat in categoryOptions"[\s\S]*?type="button"[\s\S]*?class="nav-chip"[\s\S]*?:aria-pressed=/
+    )
+    expect(articlesIndex).toMatch(
+      /const categoryOptions = computed\([\s\S]*?new Set\([\s\S]*?article\.Category[\s\S]*?options\.push/
+    )
+    expect(articlesIndex).toMatch(
+      /@media\s*\(max-width:\s*539px\)\s*\{[\s\S]*?\.article-group-grid\s*\{[\s\S]*?grid-template-columns:\s*repeat\(2,\s*minmax\(0,\s*1fr\)\)/
     )
     expect(articlesIndex).toMatch(
       /<button\s+v-for="t in popularTags"[\s\S]*?type="button"[\s\S]*?class="q-tag"[\s\S]*?:aria-pressed=/
@@ -682,6 +707,12 @@ describe('Phase 1 共用互動元件 contract', () => {
     expect(articlesDetail).toContain('v-if="isHydrated && pending"')
     expect(articlesDetail).toMatch(
       /<button[\s\S]*?type="button"[\s\S]*?class="btn-app btn-app--ghost btn-app--md btn-app--pill"/
+    )
+    expect(articlesDetail).toMatch(
+      /\.reader-content\s+:deep\(img\)\s*\{[\s\S]*?width:\s*100%\s*!important[\s\S]*?height:\s*auto\s*!important/
+    )
+    expect(articlesDetail).toMatch(
+      /\.article-hero-image img\s*\{[\s\S]*?width:\s*100%\s*!important[\s\S]*?height:\s*auto\s*!important/
     )
     expect(articlesDetail).toMatch(
       /@media\s*\(min-width:\s*768px\)\s*and\s*\(hover:\s*hover\)\s*and\s*\(pointer:\s*fine\)\s*\{[\s\S]*?\.related-art-card:hover/
@@ -713,6 +744,14 @@ describe('Phase 1 共用互動元件 contract', () => {
     expect(genesDetail).toContain('v-if="isHydrated && pending"')
     expect(genesDetail).toMatch(
       /@media\s*\(prefers-reduced-motion:\s*reduce\)\s*\{[\s\S]*?\.loader[\s\S]*?animation:\s*none/
+    )
+    expect(genesDetail).not.toContain('查完詞條，接著模擬配對')
+    expect(genesDetail).toContain('<span class="warn-text">{{ geneWarningText }}</span>')
+    expect(genesDetail).toMatch(
+      /\.warn-box\s*\{[\s\S]*?max-width:\s*100%[\s\S]*?grid-template-columns:\s*auto minmax\(0,\s*1fr\)[\s\S]*?overflow:\s*hidden/
+    )
+    expect(genesDetail).toMatch(
+      /\.warn-text\s*\{[\s\S]*?white-space:\s*pre-line[\s\S]*?overflow-wrap:\s*anywhere/
     )
   })
 
@@ -783,22 +822,15 @@ describe('Phase 1 共用互動元件 contract', () => {
     const buttons = [...care.matchAll(/<button\b[\s\S]*?>/g)].map((match) => match[0])
     expect(buttons.length).toBeGreaterThan(0)
     for (const button of buttons) expect(button).toContain('type="button"')
-    for (const className of [
-      'care-stat-card',
-      'care-anchor-btn',
-      'care-chip',
-      'care-toggle-btn',
-      'care-faq-q'
-    ]) {
+    for (const className of ['care-stat-card', 'care-anchor-btn', 'care-chip', 'care-toggle-btn']) {
       expect(care).toMatch(
         new RegExp(`\\.${className}\\s*\\{[\\s\\S]*?min-height:\\s*var\\(--control-min-height\\)`)
       )
     }
     expect(care).toContain('.care-stat-card:focus-visible')
-    expect(care).toContain('.care-faq-q:focus-visible')
     expect(care).toContain('outline: 3px solid var(--pri)')
     expect(care).not.toContain('showSpeciesCompare')
-    expect(care).toContain(':aria-controls="`care-faq-answer-${i}`"')
+    expect(care).not.toContain('class="care-faq-list"')
     expect(care).toMatch(
       /@media\s*\(min-width:\s*768px\)\s*and\s*\(hover:\s*hover\)\s*and\s*\(pointer:\s*fine\)\s*\{[\s\S]*?\.care-stat-card:hover/
     )
@@ -884,6 +916,18 @@ describe('Phase 1 共用互動元件 contract', () => {
     )
     expect(calculator).toContain("event.key === 'Escape'")
     expect(calculator).toContain('calcModalTrigger?.focus()')
+    expect(calculator).toMatch(
+      /\.calc-container button\s*\{[\s\S]*?min-height:\s*36px !important[\s\S]*?height:\s*36px/
+    )
+    expect(calculator).toMatch(
+      /\.calc-help-btn-wrapper\s*\{[\s\S]*?grid-template-columns:\s*repeat\(2,\s*minmax\(0,\s*1fr\)\)/
+    )
+    expect(calculator).toMatch(
+      /\.calc-dd-item\s*\{[\s\S]*?grid-template-columns:\s*minmax\(0,\s*1fr\) auto[\s\S]*?height:\s*36px/
+    )
+    expect(calculator).toMatch(
+      /\.calc-prob-val\s*\{[\s\S]*?display:\s*inline-flex[\s\S]*?white-space:\s*nowrap/
+    )
   })
 
   it('購買流程與 Hero Lab 入口具備鍵盤 focus、觸控尺寸與動效降級', () => {

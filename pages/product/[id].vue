@@ -586,7 +586,7 @@ const handlePromoKeydown = (event) => {
 </script>
 
 <template>
-  <div class="product-root-container">
+  <div class="site-document-page product-root-container">
     <div class="product-page-wrapper">
       <div class="common-document-meta" aria-label="個體詳情說明">
         <span>GENCKO ANIMAL RECORD</span>

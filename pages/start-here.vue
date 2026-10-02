@@ -95,7 +95,7 @@ useHead({
 </script>
 
 <template>
-  <div class="starter-page">
+  <div class="site-document-page starter-page">
     <div class="starter-document-meta">
       <span>GENCKO STARTER COURSE</span>
       <span>01 / FOUNDATION</span>
@@ -213,7 +213,6 @@ useHead({
         </div>
       </article>
     </section>
-
   </div>
 </template>
 

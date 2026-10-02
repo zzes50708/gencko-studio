@@ -119,7 +119,7 @@ export const ROUTE_LABELS: Record<string, string> = {
   '/qs': '飼養前評估',
   '/hospital': '特寵醫院查詢',
   '/auction': '守宮競標',
-  '/merch': '周邊商品',
+  '/merch': '客製化爬蟲設備',
   '/breeders': '種群展示',
   '/compare': '個體比較',
   '/faq': '常見問題 FAQ',

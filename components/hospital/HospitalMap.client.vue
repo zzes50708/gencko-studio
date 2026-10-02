@@ -1,5 +1,14 @@
 <script setup lang="ts">
-import { computed, onErrorCaptured, onMounted, onUnmounted, ref, shallowRef, triggerRef } from 'vue'
+import {
+  computed,
+  onErrorCaptured,
+  onMounted,
+  onUnmounted,
+  ref,
+  shallowRef,
+  triggerRef,
+  watch
+} from 'vue'
 import { TresCanvas } from '@tresjs/core'
 import HospitalMapScene from './HospitalMapScene.vue'
 import {
@@ -14,24 +23,35 @@ const props = defineProps<{
   hospitals: MapHospital[]
   wishlist: (string | number)[]
   selected: string
+  focusedHospital?: MapHospital | null
+  focusSequence?: number
+  visibleHospitals?: MapHospital[]
 }>()
 const emit = defineEmits<{
   select: [city: string]
   selectHospital: [hospital: MapHospital]
+  showDetails: [hospital: MapHospital]
 }>()
 const mountedOnce = ref(true)
 const visible = ref(true)
+const stage = ref<HTMLElement | null>(null)
+let visibilityObserver: IntersectionObserver | undefined
 const documentVisible = ref(true)
 const compact = ref(false)
 const reducedMotion = ref(false)
 const ready = ref(false)
 const failed = ref(false)
 const generation = ref(0)
-const command = ref({ action: '', sequence: 0 })
+const command = ref<{ action: string; sequence: number; delta?: number }>({
+  action: '',
+  sequence: 0
+})
+const mapMode = ref<'3d' | 'google'>('3d')
 const metrics = ref({ frames: 0, calls: 0, triangles: 0, idle: true, buildings: 0 })
 const labels = shallowRef<{ name: string; x: number; y: number; visible: boolean }[]>([])
 const summaries = computed(() => summarizeMapHospitals(props.hospitals, props.wishlist))
-const preciseHospitals = computed(() => preciseMapHospitals(props.hospitals))
+const displayedHospitals = computed(() => props.visibleHospitals || props.hospitals)
+const preciseHospitals = computed(() => preciseMapHospitals(displayedHospitals.value))
 const selectedHospital = ref<MapHospital | null>(null)
 const selectedCity = computed(() => normalizeMapCity(props.selected))
 const selectedSummary = computed(() =>
@@ -42,7 +62,38 @@ const selectedSummary = computed(() =>
       }
     : summaries.value.get(selectedCity.value) || { count: 0, saved: 0 }
 )
-const active = computed(() => visible.value && documentVisible.value && !failed.value)
+const active = computed(
+  () => visible.value && documentVisible.value && !failed.value && mapMode.value === '3d'
+)
+const googleQuery = computed(() =>
+  selectedHospital.value
+    ? `${selectedHospital.value.name} ${selectedHospital.value.address}`
+    : `${selectedCity.value === 'all' ? '台灣' : selectedCity.value} 特寵醫院`
+)
+const googleEmbedUrl = computed(
+  () =>
+    `https://maps.google.com/maps?q=${encodeURIComponent(googleQuery.value)}&z=16&output=embed&hl=zh-TW`
+)
+const googleNavigationUrl = computed(
+  () =>
+    `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(googleQuery.value)}`
+)
+watch(
+  () => [props.focusedHospital, props.focusSequence],
+  () => {
+    selectedHospital.value = props.focusedHospital || null
+    if (selectedHospital.value && !preciseMapHospitals([selectedHospital.value]).length)
+      mapMode.value = 'google'
+  },
+  { immediate: true }
+)
+watch(displayedHospitals, (hospitals) => {
+  if (
+    selectedHospital.value &&
+    !hospitals.some((h) => String(h.id) === String(selectedHospital.value?.id))
+  )
+    selectedHospital.value = null
+})
 const canvasDpr = computed(() => (compact.value ? 1.25 : 1.5))
 let deviceQuery: MediaQueryList | undefined
 let motionQuery: MediaQueryList | undefined
@@ -59,6 +110,17 @@ function selectHospital(id: string | number) {
 }
 function control(action: string) {
   command.value = { action, sequence: command.value.sequence + 1 }
+}
+function wheelControl(event: WheelEvent) {
+  if (mapMode.value !== '3d' || failed.value) return
+  event.preventDefault()
+  event.stopPropagation()
+  const delta = event.deltaY * (event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? 400 : 1)
+  command.value = {
+    action: 'wheel',
+    sequence: command.value.sequence + 1,
+    delta: Math.max(-400, Math.min(400, delta))
+  }
 }
 function updateLabels(value: typeof labels.value) {
   labels.value = value
@@ -88,6 +150,13 @@ onErrorCaptured(() => {
   return false
 })
 onMounted(() => {
+  visibilityObserver = new IntersectionObserver(
+    ([entry]) => {
+      visible.value = !!entry?.isIntersecting
+    },
+    { rootMargin: '100px' }
+  )
+  if (stage.value) visibilityObserver.observe(stage.value)
   deviceQuery = window.matchMedia('(max-width: 767px), (pointer: coarse)')
   motionQuery = window.matchMedia('(prefers-reduced-motion: reduce)')
   deviceChanged()
@@ -98,6 +167,7 @@ onMounted(() => {
   document.addEventListener('visibilitychange', visibilityChanged)
 })
 onUnmounted(() => {
+  visibilityObserver?.disconnect()
   deviceQuery?.removeEventListener('change', deviceChanged)
   motionQuery?.removeEventListener('change', motionChanged)
   document.removeEventListener('visibilitychange', visibilityChanged)
@@ -105,19 +175,26 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <section class="hospital-map" aria-label="立體縣市醫院概覽">
+  <section class="hospital-map" aria-label="全台特寵醫院分布概覽">
     <div class="map-heading">
       <div>
         <span class="map-eyebrow">EXPLORE TAIWAN</span>
-        <h2>從所在縣市，找到照護</h2>
+        <h2>先比較各地資源，再進入院所</h2>
       </div>
-      <span class="map-mode">
-        <i />
-        3D 縣市概覽
-      </span>
+      <div class="map-view-switch" aria-label="地圖底圖">
+        <button type="button" :aria-pressed="mapMode === '3d'" @click="mapMode = '3d'">
+          3D 地圖
+        </button>
+        <button type="button" :aria-pressed="mapMode === 'google'" @click="mapMode = 'google'">
+          Google 地圖
+        </button>
+      </div>
     </div>
     <div
+      ref="stage"
       class="map-stage"
+      data-lenis-prevent-wheel
+      @wheel="wheelControl"
       :data-map-ready="ready"
       :data-map-idle="metrics.idle"
       :data-map-frames="metrics.frames"
@@ -127,6 +204,7 @@ onUnmounted(() => {
     >
       <TresCanvas
         v-if="mountedOnce && !failed"
+        v-show="mapMode === '3d'"
         :key="generation"
         clear-color="#080f1b"
         :alpha="false"
@@ -146,6 +224,8 @@ onUnmounted(() => {
           :compact="compact"
           :reduced-motion="reducedMotion"
           :command="command"
+          :focused-hospital="selectedHospital"
+          :focus-sequence="focusSequence"
           @select="select"
           @select-hospital="selectHospital"
           @labels="updateLabels"
@@ -154,7 +234,16 @@ onUnmounted(() => {
           @metrics="metrics = $event"
         />
       </TresCanvas>
-      <div class="map-summary" aria-live="polite" aria-atomic="true">
+      <iframe
+        v-if="mapMode === 'google'"
+        class="map-google"
+        :src="googleEmbedUrl"
+        :title="`${googleQuery} Google 地圖`"
+        loading="lazy"
+        referrerpolicy="no-referrer-when-downgrade"
+        allowfullscreen
+      />
+      <div v-if="mapMode === '3d'" class="map-summary" aria-live="polite" aria-atomic="true">
         <span>{{ selectedCity === 'all' ? '全台資源' : selectedCity }}</span>
         <strong>
           {{ selectedSummary.count }}
@@ -164,21 +253,24 @@ onUnmounted(() => {
           ● 已收藏 {{ selectedSummary.saved }} 間
         </span>
         <span class="map-precise">
-          精確點位 {{ preciseHospitals.length }} / {{ hospitals.length }}
+          定位點位 {{ preciseHospitals.length }} / {{ displayedHospitals.length }}
         </span>
       </div>
-      <button
-        v-if="selectedHospital"
-        type="button"
+      <div
+        v-if="selectedHospital && mapMode === '3d'"
         class="map-hospital-detail"
-        @click="emit('selectHospital', selectedHospital)"
+        aria-live="polite"
       >
         <span>SELECTED LOCATION</span>
         <strong>{{ selectedHospital.name }}</strong>
         <small>{{ selectedHospital.address }}</small>
-        <b>查看院所資料 →</b>
-      </button>
-      <div v-if="ready && !failed" class="map-labels">
+        <div class="map-detail-actions">
+          <button type="button" @click="emit('showDetails', selectedHospital)">院所資料</button>
+          <button type="button" @click="mapMode = 'google'">Google 地圖</button>
+          <a :href="googleNavigationUrl" target="_blank" rel="noopener noreferrer">導航 ↗</a>
+        </div>
+      </div>
+      <div v-if="ready && !failed && mapMode === '3d'" class="map-labels">
         <template v-for="label in labels" :key="label.name">
           <button
             v-if="label.visible"
@@ -198,7 +290,7 @@ onUnmounted(() => {
           </button>
         </template>
       </div>
-      <div class="map-tools" aria-label="地圖視角控制">
+      <div v-if="mapMode === '3d'" class="map-tools" aria-label="地圖視角控制">
         <span class="map-north" aria-hidden="true">
           N
           <span>↑</span>
@@ -229,17 +321,25 @@ onUnmounted(() => {
           ↺
         </button>
       </div>
-      <div v-if="!ready && !failed" class="map-loading" role="status">正在展開立體地圖…</div>
-      <div v-if="failed" class="map-fallback" role="status">
+      <div v-if="!ready && !failed && mapMode === '3d'" class="map-loading" role="status">
+        正在展開立體地圖…
+      </div>
+      <div v-if="failed && mapMode === '3d'" class="map-fallback" role="status">
         <strong>暫時無法顯示立體地圖</strong>
         <p>仍可使用下方縣市按鈕查找醫院。</p>
         <button type="button" @click="retry">重新載入地圖</button>
       </div>
-      <div class="map-instructions">
-        <span>拖曳旋轉 · 雙指縮放</span>
+      <div v-if="mapMode === '3d'" class="map-instructions">
+        <span>
+          {{
+            compact
+              ? '點選縣市聚焦 · 單指平移 · 雙指縮放'
+              : '點選縣市聚焦 · 拖曳平移 · 滾輪縮放 · 右鍵旋轉'
+          }}
+        </span>
         <span class="map-legend">
           <i />
-          已核對院所
+          院所定位
           <i class="saved" />
           有收藏
         </span>
@@ -264,7 +364,9 @@ onUnmounted(() => {
     </div>
     <div class="map-caption">
       <p>
-        地圖只顯示已核對的院所經緯度；沒有可靠座標的資料保留在下方清單，不以縣市中心代替。點選光點可查看院所。
+        3D
+        地圖用於快速比較各縣市的收錄量、收藏與醫療資源分布；選定縣市後會自動聚焦，再點選定位點查看院所。需要地址、路線與周邊資訊時，切換
+        Google 地圖。部分院所可能搬遷，就診前請先致電確認地址。
       </p>
       <span class="map-sources">
         <a
@@ -283,6 +385,42 @@ onUnmounted(() => {
 </template>
 
 <style scoped>
+.map-view-switch,
+.map-detail-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.map-view-switch button {
+  min-height: 36px;
+  padding: 6px 10px;
+  border: 1px solid var(--bd);
+  background: var(--bg);
+  color: var(--txt);
+  cursor: pointer;
+  font: 600 0.75rem/1.4 var(--font-body-zh);
+}
+.map-view-switch button[aria-pressed='true'] {
+  border-color: var(--pri);
+  color: var(--pri);
+}
+.map-google {
+  display: block;
+  border: 0;
+  width: 100%;
+  height: 100%;
+}
+.map-detail-actions button,
+.map-detail-actions a {
+  padding: 7px;
+  min-height: 36px;
+  border: 1px solid #537ca3;
+  color: #fff;
+  background: #122236;
+  font: 600 0.7rem/1.4 var(--font-body-zh);
+  cursor: pointer;
+  text-decoration: none;
+}
 .hospital-map {
   min-width: 0;
   margin: 14px 0 20px;
@@ -368,7 +506,7 @@ onUnmounted(() => {
 .map-hospital-detail {
   position: absolute;
   top: 78px;
-  right: 16px;
+  right: 76px;
   display: grid;
   width: min(280px, calc(100% - 32px));
   gap: 5px;
@@ -378,7 +516,6 @@ onUnmounted(() => {
   background: #0a1624e8;
   color: #e8f2f8;
   text-align: left;
-  cursor: pointer;
 }
 .map-hospital-detail > span {
   color: #78cfff;
@@ -610,7 +747,12 @@ a:focus-visible,
     height: 390px;
   }
   .map-heading {
-    align-items: center;
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .map-view-switch {
+    flex-wrap: nowrap;
   }
   .map-mode {
     font-size: 0.58rem;

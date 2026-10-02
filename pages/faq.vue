@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { computed, nextTick, ref } from 'vue'
 import { useHead } from '#imports'
 import { FAQ_CATEGORIES, FAQ_DATA } from '~/utils/faq'
 import { absUrl, DEFAULT_OG_IMAGE } from '~/utils/site-constants'
@@ -42,7 +42,7 @@ const faqWebPageLd = getWebPage({
   url: faqUrl,
   name: faqTitle,
   image: DEFAULT_OG_IMAGE,
-  speakable: ['.faq-q', '.faq-answer', '.q-text'],
+  speakable: ['.faq-q', '.faq-a', '.q-text'],
   about: GECKO_TAXONS,
   mainEntity: faqPageLd
 })
@@ -72,8 +72,14 @@ useHead({
 
 const activeCategory = ref('gecko')
 const activeIndex = ref<string | null>(null) // 格式：'catId-qIdx'
+const categoryTabs = ref<HTMLButtonElement[]>([])
+const categoryOrder = ['purchase', 'website', 'gecko']
 
-const currentCategory = computed(() => FAQ_CATEGORIES.find((c) => c.id === activeCategory.value))
+const orderedCategories = computed(() =>
+  categoryOrder
+    .map((id) => FAQ_CATEGORIES.find((category) => category.id === id))
+    .filter((category): category is (typeof FAQ_CATEGORIES)[number] => Boolean(category))
+)
 
 const switchCategory = (id: string) => {
   activeCategory.value = id
@@ -83,12 +89,30 @@ const switchCategory = (id: string) => {
 const toggleQ = (key: string) => {
   activeIndex.value = activeIndex.value === key ? null : key
 }
+
+const onCategoryKeydown = async (event: KeyboardEvent, index: number) => {
+  let nextIndex = index
+  if (event.key === 'ArrowRight' || event.key === 'ArrowDown') {
+    nextIndex = (index + 1) % orderedCategories.value.length
+  } else if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') {
+    nextIndex = (index - 1 + orderedCategories.value.length) % orderedCategories.value.length
+  } else if (event.key === 'Home') {
+    nextIndex = 0
+  } else if (event.key === 'End') {
+    nextIndex = orderedCategories.value.length - 1
+  } else {
+    return
+  }
+
+  event.preventDefault()
+  switchCategory(orderedCategories.value[nextIndex].id)
+  await nextTick()
+  categoryTabs.value[nextIndex]?.focus()
+}
 </script>
 
 <template>
-  <div class="faq-page-wrapper">
-    <TheBackButton wrapper-class="m-only" fallback="/" />
-
+  <div class="site-document-page faq-page-wrapper">
     <div class="content-card">
       <div class="faq-document-meta" aria-label="FAQ 閱讀說明">
         <span>GENCKO ANSWER DESK</span>
@@ -96,9 +120,9 @@ const toggleQ = (key: string) => {
       </div>
       <header class="faq-intro" data-testid="faq-route-map">
         <div class="faq-intro-copy">
-          <div class="faq-kicker">QUICK ANSWERS · 先找問題，再決定下一步</div>
-          <h1>常見問題 FAQ</h1>
-          <p>依主題切換，展開後直接閱讀完整答案；需要更深入時，可接著前往對應的指南與工具。</p>
+          <p class="site-page-kicker">QUESTIONS / ANSWERS</p>
+          <h1>常見問題</h1>
+          <p>展開後直接閱讀完整答案；需要更深入時，可前往對應的頁面。</p>
         </div>
         <nav class="faq-route-map" aria-label="FAQ 延伸入口">
           <NuxtLink no-prefetch to="/start-here">新手入門</NuxtLink>
@@ -111,14 +135,19 @@ const toggleQ = (key: string) => {
       <!-- 分類 Tab -->
       <div class="cat-tabs" role="tablist" aria-label="常見問題分類">
         <button
-          v-for="cat in FAQ_CATEGORIES"
+          v-for="(cat, catIndex) in orderedCategories"
           :key="cat.id"
+          ref="categoryTabs"
           type="button"
           class="cat-tab"
           :class="{ active: activeCategory === cat.id }"
           role="tab"
+          :id="`faq-tab-${cat.id}`"
           :aria-selected="activeCategory === cat.id"
+          :aria-controls="`faq-panel-${cat.id}`"
+          :tabindex="activeCategory === cat.id ? 0 : -1"
           @click="switchCategory(cat.id)"
+          @keydown="onCategoryKeydown($event, catIndex)"
         >
           <span class="cat-tab-title">{{ cat.title }}</span>
           <span class="cat-tab-sub dt-only">{{ cat.subtitle }}</span>
@@ -126,34 +155,47 @@ const toggleQ = (key: string) => {
       </div>
 
       <!-- 問題列表 -->
-      <div class="faq-list">
-        <div
-          v-for="(q, idx) in currentCategory?.questions"
-          :key="idx"
-          class="faq-item"
-          :class="{ active: activeIndex === `${activeCategory}-${idx}` }"
-        >
-          <button
-            type="button"
-            class="faq-q"
-            :aria-expanded="activeIndex === `${activeCategory}-${idx}`"
-            :aria-controls="`faq-answer-${activeCategory}-${idx}`"
-            @click="toggleQ(`${activeCategory}-${idx}`)"
-          >
-            <span class="q-text">{{ q.title }}</span>
-            <span class="q-icon">{{ activeIndex === `${activeCategory}-${idx}` ? '▲' : '▼' }}</span>
-          </button>
-          <div
-            v-show="activeIndex === `${activeCategory}-${idx}`"
-            :id="`faq-answer-${activeCategory}-${idx}`"
-            class="faq-body-wrapper"
-          >
-            <div class="faq-body-inner">
-              <div class="faq-a" v-html="q.ans ? q.ans.replace(/\n/g, '<br>') : ''"></div>
-            </div>
+      <section
+        v-for="category in orderedCategories"
+        v-show="activeCategory === category.id"
+        :id="`faq-panel-${category.id}`"
+        :key="category.id"
+        class="faq-list"
+        role="tabpanel"
+        :aria-labelledby="`faq-tab-${category.id}`"
+        :tabindex="0"
+      >
+        <div v-for="(q, idx) in category.questions" :key="idx">
+          <div class="faq-item" :class="{ active: activeIndex === `${category.id}-${idx}` }">
+            <button
+              :id="`faq-question-${category.id}-${idx}`"
+              type="button"
+              class="faq-q"
+              :aria-expanded="activeIndex === `${category.id}-${idx}`"
+              :aria-controls="`faq-answer-${category.id}-${idx}`"
+              @click="toggleQ(`${category.id}-${idx}`)"
+            >
+              <span class="q-text">{{ q.title }}</span>
+              <span class="q-icon" aria-hidden="true">
+                {{ activeIndex === `${category.id}-${idx}` ? '−' : '+' }}
+              </span>
+            </button>
+            <Transition name="faq-reveal">
+              <div
+                v-if="activeIndex === `${category.id}-${idx}`"
+                :id="`faq-answer-${category.id}-${idx}`"
+                class="faq-body-wrapper"
+                role="region"
+                :aria-labelledby="`faq-question-${category.id}-${idx}`"
+              >
+                <div class="faq-body-inner">
+                  <div class="faq-a" v-html="q.ans ? q.ans.replace(/\n/g, '<br>') : ''"></div>
+                </div>
+              </div>
+            </Transition>
           </div>
         </div>
-      </div>
+      </section>
     </div>
   </div>
 </template>
@@ -183,10 +225,6 @@ const toggleQ = (key: string) => {
 .dt-only {
   display: block;
 }
-.m-only {
-  display: none !important;
-}
-
 .content-card {
   background: transparent;
   border: 1px solid var(--bd);
@@ -206,14 +244,6 @@ const toggleQ = (key: string) => {
   margin-bottom: 28px;
   padding-bottom: 28px;
   border-bottom: 1px solid var(--bd);
-}
-
-.faq-kicker {
-  margin-bottom: 10px;
-  color: var(--pri);
-  font-size: 0.74rem;
-  font-weight: 900;
-  letter-spacing: 0.15em;
 }
 
 .faq-intro h1 {
@@ -352,6 +382,20 @@ const toggleQ = (key: string) => {
 .faq-body-wrapper {
   display: block;
 }
+
+.faq-reveal-enter-active,
+.faq-reveal-leave-active {
+  transition:
+    opacity 160ms ease,
+    transform 160ms ease;
+  transform-origin: top;
+}
+
+.faq-reveal-enter-from,
+.faq-reveal-leave-to {
+  opacity: 0;
+  transform: translateY(-5px);
+}
 .faq-body-inner {
   overflow: hidden;
 }
@@ -368,9 +412,6 @@ const toggleQ = (key: string) => {
 @media (max-width: 768px) {
   .dt-only {
     display: none !important;
-  }
-  .m-only {
-    display: flex !important;
   }
   .faq-page-wrapper {
     padding: 0 10px 32px;
@@ -389,7 +430,15 @@ const toggleQ = (key: string) => {
     padding-bottom: 20px;
   }
   .faq-route-map {
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 4px;
+  }
+  .faq-route-map a {
+    justify-content: center;
+    min-height: 40px;
+    padding: 7px 3px;
+    font-size: clamp(0.63rem, 2.8vw, 0.74rem);
+    white-space: nowrap;
   }
   .cat-tab {
     padding: 8px 6px;
@@ -429,6 +478,11 @@ const toggleQ = (key: string) => {
   .faq-q,
   .q-icon,
   .faq-body-wrapper {
+    transition: none;
+  }
+
+  .faq-reveal-enter-active,
+  .faq-reveal-leave-active {
     transition: none;
   }
 }

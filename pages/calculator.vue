@@ -825,7 +825,7 @@ const formatWarningText = (text) => {
 </script>
 
 <template>
-  <div class="calc-container">
+  <div class="site-document-page calc-container">
     <div class="calc-header">
       <div class="calc-document-meta" aria-label="基因計算流程說明">
         <span>GENCKO BREEDING DESK</span>
@@ -1062,8 +1062,7 @@ const formatWarningText = (text) => {
                       <div
                         v-if="
                           calcIsGeneSelected(gene.id, parent.key) &&
-                          (gene.type === CALC_TYPES.REC || gene.type === CALC_TYPES.CODOM) &&
-                          calcIsGeneExpanded(gene.id)
+                          (gene.type === CALC_TYPES.REC || gene.type === CALC_TYPES.CODOM)
                         "
                         class="calc-dd-flags"
                         @click.stop
@@ -3204,6 +3203,76 @@ const formatWarningText = (text) => {
   border-style: solid;
   color: var(--txt);
   border-color: var(--txt);
+}
+
+/* 計算工具的控制統一為緊湊高度，避免窄欄按鈕堆疊出大面積留白。 */
+.calc-container button {
+  box-sizing: border-box;
+  min-height: 36px !important;
+  height: 36px;
+  padding-block: 0 !important;
+  line-height: 1.2;
+}
+.calc-help-btn-wrapper {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  width: min(100%, 280px);
+  gap: 8px;
+}
+.calc-help-btn {
+  justify-content: center;
+  width: 100%;
+  padding-inline: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.calc-dd-grid {
+  gap: 5px;
+}
+.calc-dd-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  min-height: 36px !important;
+  height: 36px;
+  padding: 0 7px;
+  overflow: hidden;
+}
+.calc-dd-item-row {
+  width: auto;
+  min-width: 0;
+}
+.calc-dd-item-row--trigger {
+  height: 34px;
+  border-radius: 0;
+}
+.calc-dd-flags {
+  display: flex !important;
+  width: auto;
+  min-width: 0;
+  margin: 0 0 0 5px;
+  align-items: center;
+  align-self: center;
+}
+.calc-dd-badge {
+  min-width: 42px;
+  padding-inline: 7px;
+  white-space: nowrap;
+}
+.calc-prob-val {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 2px;
+  white-space: nowrap;
+}
+@media (max-width: 767px) {
+  .calc-help-btn-wrapper {
+    flex-direction: row;
+  }
+  .calc-prob-box {
+    width: 68px;
+    padding-inline: 5px;
+  }
 }
 /* 本頁返回與次要操作使用同一按鈕形式。 */
 :deep(.app-back-btn),

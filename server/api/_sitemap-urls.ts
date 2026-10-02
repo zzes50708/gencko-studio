@@ -86,26 +86,7 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  // 4. 抓取周邊商品 (Merch)
-  // 嚴格還原舊版寫法：只抓 item_id
-  const { data: merch, error: err4 } = await supabase
-    .from('merchandise')
-    .select('item_id, image_url')
-
-  if (err4) console.error('Sitemap 抓取 merchandise 失敗:', err4)
-  if (merch) {
-    merch.forEach((m) => {
-      const images = toImages(m.image_url)
-      urls.push({
-        loc: `/merch/${m.item_id}`,
-        changefreq: 'weekly',
-        priority: 0.7,
-        ...(images ? { images } : {})
-      })
-    })
-  }
-
-  // 5. 抓取進行中的競標 (Auctions)
+  // 4. 抓取進行中的競標 (Auctions)
   const { data: auctions, error: err5 } = await supabase
     .from('auctions')
     .select('id, end_time, images')

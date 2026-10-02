@@ -46,9 +46,8 @@ const genesImg =
   'https://wsrv.nl/?url=raw.githubusercontent.com%2Fzzes50708%2Fgencko-assets%2Fmain%2Fimg%2F11.png&w=1200&h=630&fit=contain&bg=e6e3e3&output=webp&q=85'
 
 const toolHubLinks = [
-  { label: '查基因詞條', body: '依物種與遺傳模式瀏覽下方完整圖鑑。', to: '#gene-library' },
-  { label: '使用基因計算機', body: '選擇親代基因，查看可能的繁殖結果。', to: '/calculator' },
-  { label: '查找特寵醫院', body: '依地區搜尋並收藏可先聯絡確認的醫院。', to: '/hospital' }
+  { label: '基因計算機', body: '選擇親代基因，查看可能的繁殖結果。', to: '/calculator' },
+  { label: '找特寵醫院', body: '依地區搜尋並收藏可先聯絡確認的醫院。', to: '/hospital' }
 ]
 const genesPublisher = {
   '@type': 'Organization',
@@ -196,7 +195,7 @@ useHead({
 </script>
 
 <template>
-  <div class="genes-page-wrapper">
+  <div class="site-document-page genes-page-wrapper">
     <div class="genes-document-meta" aria-label="基因圖鑑說明">
       <span>GENCKO REFERENCE LIBRARY</span>
       <span>SPECIES / INHERITANCE / NOTES</span>
@@ -204,7 +203,7 @@ useHead({
     <header class="genes-hero">
       <span class="genes-kicker">GENETICS INDEX / 遺傳資料庫</span>
       <h1>守宮基因圖鑑</h1>
-      <p>先選物種，再依遺傳模式縮小範圍；每一詞條保留來源、警語與計算工具入口。</p>
+      <p>根據物種，提供相對應的基因資料，內容均為網路整理，若有錯誤請多包涵。</p>
     </header>
 
     <nav class="tool-hub" aria-label="基因與工具快速入口">
@@ -339,7 +338,7 @@ useHead({
 
 .tool-hub {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
   margin-bottom: 18px;
 }
@@ -613,7 +612,7 @@ useHead({
   }
 
   .tool-hub {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     margin-bottom: 12px;
   }
 
@@ -836,7 +835,7 @@ useHead({
 
 @media (max-width: 768px) {
   .tool-hub {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .tool-hub-card {

@@ -2,6 +2,9 @@
 import { ref, computed, onMounted, onBeforeUnmount, nextTick, watch } from 'vue'
 import { useHead } from '#imports'
 import { QUIZ_DATA, QUIZ_DIMENSIONS, QUIZ_TRACKS } from '~/utils/quiz'
+import { useMainStore } from '~/stores/useMainStore'
+
+const store = useMainStore()
 
 const qsUrl = 'https://www.genckobreeding.com/qs'
 const qsImg =
@@ -206,19 +209,6 @@ const sliding = ref(false)
 const selectedOptionId = ref(null)
 const hydrated = ref(false)
 
-// ============ 容器寬度（用於 px 計算位移） ============
-const carouselWidth = ref(0)
-const measureCarousel = () => {
-  const el = document.querySelector('.qs-carousel')
-  if (el) carouselWidth.value = el.getBoundingClientRect().width
-}
-const cardWidth = computed(() => carouselWidth.value * 0.8)
-const trackOffset = computed(() => {
-  const peek = carouselWidth.value * 0.1
-  const gap = 16
-  return peek - step.value * (cardWidth.value + gap)
-})
-
 // 隨機選項順序：對每題 shuffle 一次後固定（不會每次 re-render 重洗）
 const shuffleArr = (arr) => {
   const a = arr.slice()
@@ -242,8 +232,6 @@ const progress = computed(() => (Object.keys(answers.value).length / totalQs) * 
 const findQuestionIdx = (qId) => questions.findIndex((q) => q.id === qId)
 
 const currentQ = computed(() => questions[step.value])
-const prevQ = computed(() => (step.value > 0 ? questions[step.value - 1] : null))
-const nextQ = computed(() => (step.value < totalQs - 1 ? questions[step.value + 1] : null))
 const currentOptions = computed(
   () => shuffledOptions.value[currentQ.value?.id] || currentQ.value?.options || []
 )
@@ -516,10 +504,6 @@ let lastDayMode = null
 onMounted(() => {
   hydrated.value = true
   loadProgress()
-  nextTick(() => {
-    measureCarousel()
-    window.addEventListener('resize', measureCarousel)
-  })
   if (typeof MutationObserver !== 'undefined') {
     lastDayMode = document.documentElement.classList.contains('day-mode')
     themeObserver = new MutationObserver(() => {
@@ -539,18 +523,50 @@ onMounted(() => {
 onBeforeUnmount(() => {
   if (chartInstance) chartInstance.destroy()
   if (themeObserver) themeObserver.disconnect()
-  if (typeof window !== 'undefined') window.removeEventListener('resize', measureCarousel)
 })
 </script>
 
 <template>
-  <div class="qs-container">
+  <div
+    :class="[
+      'qs-container',
+      {
+        'qs-container--quiz': !finished,
+        'qs-container--nav-hidden': store.navHidden && !finished
+      }
+    ]"
+    class="site-document-page"
+  >
     <!-- ============ 問卷階段 ============ -->
-    <div v-if="!finished">
+    <div v-if="!finished" class="qs-questionnaire">
+      <div class="qs-quiz-toolbar">
+        <div class="qs-quiz-head">
+          <NuxtLink no-prefetch to="/start-here" class="qs-toolbar-back">← 返回</NuxtLink>
+          <strong>飼養前自我評估</strong>
+        </div>
+        <div class="qs-progress-area">
+          <div class="qs-progress-labels">
+            <span>進度</span>
+            <span>{{ Math.round(progress) }}%</span>
+          </div>
+          <div
+            class="qs-progress-track"
+            role="progressbar"
+            aria-label="評估作答進度"
+            aria-valuemin="0"
+            aria-valuemax="100"
+            :aria-valuenow="Math.round(progress)"
+          >
+            <div class="qs-progress-fill" :style="{ width: progress + '%' }"></div>
+          </div>
+        </div>
+      </div>
+
       <div class="qs-document-meta" aria-label="評估流程說明">
         <span>GENCKO READINESS DESK</span>
         <span>18 QUESTIONS / ONE CLEAR NEXT STEP</span>
       </div>
+      <p class="site-page-kicker">READINESS ASSESSMENT CONSOLE</p>
       <h1 class="page-title">飼養前自我評估</h1>
 
       <nav class="qs-tool-nav" aria-label="評估後續工具">
@@ -564,58 +580,39 @@ onBeforeUnmount(() => {
         </div>
       </nav>
 
-      <div class="qs-progress-area">
-        <div class="qs-progress-labels">
-          <span>Step {{ step + 1 }} of {{ totalQs }}</span>
-          <span>{{ Math.round(progress) }}%</span>
-        </div>
-        <div class="qs-progress-track">
-          <div class="qs-progress-fill" :style="{ width: progress + '%' }"></div>
-        </div>
-      </div>
-
-      <!-- 卡片輪播：上一題在左淡出、當前題置中、下一題在右淡出 -->
+      <!-- 單題表單：每次只呈現目前題目，避免側卡與水平位移干擾閱讀。 -->
       <ClientOnly>
-        <div class="qs-carousel">
-          <div class="qs-carousel-track" :style="{ transform: `translateX(${trackOffset}px)` }">
-            <div
-              v-for="(q, idx) in questions"
-              :key="q.id"
-              class="qs-card"
-              :style="{ flex: `0 0 ${cardWidth}px` }"
-              :class="{
-                'is-current': idx === step,
-                'is-prev': idx === step - 1,
-                'is-next': idx === step + 1,
-                'is-far': Math.abs(idx - step) > 1
-              }"
-            >
-              <div class="qs-dim-tag">
-                {{ QUIZ_DIMENSIONS[q.dim].icon }} {{ QUIZ_DIMENSIONS[q.dim].label }}
-              </div>
-              <h2 v-if="idx === step" class="qs-question-text" aria-live="polite">
-                {{ q.text }}
-              </h2>
-              <div v-if="idx === step" class="qs-options-grid">
-                <button
-                  type="button"
-                  v-for="opt in currentOptions"
-                  :key="opt.id"
-                  class="qs-option-btn"
-                  :class="{ 'is-selected': selectedOptionId === opt.id }"
-                  :aria-label="`${q.text}：${opt.label}`"
-                  :aria-pressed="selectedOptionId === opt.id"
-                  @click="selectOption(q.id, opt)"
-                >
-                  <span class="qs-option-label">{{ opt.label }}</span>
-                  <div class="qs-check-circle">
-                    <span v-if="selectedOptionId === opt.id" class="qs-check-mark">✓</span>
-                  </div>
-                </button>
-              </div>
-            </div>
+        <section class="qs-card" :aria-labelledby="`qs-question-${currentQ.id}`">
+          <div class="qs-question-meta">
+            <span class="qs-step-count">
+              {{ String(step + 1).padStart(2, '0') }} / {{ totalQs }}
+            </span>
+            <span class="qs-dim-tag">
+              {{ QUIZ_DIMENSIONS[currentQ.dim].icon }} {{ QUIZ_DIMENSIONS[currentQ.dim].label }}
+            </span>
           </div>
-        </div>
+          <h2 :id="`qs-question-${currentQ.id}`" class="qs-question-text" aria-live="polite">
+            {{ currentQ.text }}
+          </h2>
+          <div class="qs-options-grid" role="group" :aria-label="currentQ.text">
+            <button
+              v-for="(opt, optionIndex) in currentOptions"
+              :key="opt.id"
+              type="button"
+              class="qs-option-btn"
+              :class="{ 'is-selected': selectedOptionId === opt.id }"
+              :aria-label="`${currentQ.text}：${opt.label}`"
+              :aria-pressed="selectedOptionId === opt.id"
+              @click="selectOption(currentQ.id, opt)"
+            >
+              <span class="qs-option-index">{{ String(optionIndex + 1).padStart(2, '0') }}</span>
+              <span class="qs-option-label">{{ opt.label }}</span>
+              <span class="qs-check-circle" aria-hidden="true">
+                <span v-if="selectedOptionId === opt.id" class="qs-check-mark">✓</span>
+              </span>
+            </button>
+          </div>
+        </section>
         <template #fallback>
           <div class="qs-carousel-fallback">載入中…</div>
         </template>
@@ -627,12 +624,14 @@ onBeforeUnmount(() => {
     </div>
 
     <!-- ============ 結果階段 ============ -->
-    <div v-else class="qs-result-wrap">
+    <div v-else class="qs-result-wrap" aria-live="polite">
       <div class="qs-document-meta" aria-label="評估結果說明">
         <span>GENCKO READINESS DESK</span>
         <span>YOUR PERSONAL REVIEW</span>
       </div>
-      <!-- 總分卡 -->
+      <p class="site-page-kicker">READINESS ASSESSMENT REVIEW</p>
+      <h1 class="page-title">飼養前自我評估結果</h1>
+      <!-- 總分摘要 -->
       <div class="qs-result-box">
         <span class="qs-badge">Evaluation Complete</span>
         <div class="qs-grade-row">
@@ -1663,8 +1662,532 @@ onBeforeUnmount(() => {
 :deep(.app-back-btn) {
   border: 1px solid var(--txt);
 }
-.qs-grade-letter, .qs-score-display, .qs-dim-score { font-family: var(--font-body-zh); font-variant-numeric: tabular-nums; }
-.qs-result-box { text-align: left; }
-.qs-grade-row { justify-content: flex-start; }
-.qs-section-title { text-align: left; }
+.qs-grade-letter,
+.qs-score-display,
+.qs-dim-score {
+  font-family: var(--font-body-zh);
+  font-variant-numeric: tabular-nums;
+}
+.qs-result-box {
+  text-align: left;
+}
+.qs-grade-row {
+  justify-content: flex-start;
+}
+.qs-section-title {
+  text-align: left;
+}
+
+/* 逐頁驗收：與健康評估一致的緊湊表單與報告介面。 */
+.qs-container {
+  --qs-sticky-top: calc(64px + env(safe-area-inset-top, 0px));
+  --qs-toolbar-shift: 0px;
+  --qs-toolbar-height: 92px;
+  width: min(100%, 1000px);
+  max-width: 1000px;
+  margin-inline: auto;
+  padding: 10px 20px 32px;
+  overflow: visible;
+}
+
+.qs-container--nav-hidden {
+  --qs-toolbar-shift: -64px;
+}
+
+.qs-container--quiz {
+  padding-top: calc(var(--qs-toolbar-height) + 18px);
+}
+
+.qs-quiz-toolbar {
+  position: fixed;
+  top: var(--qs-sticky-top);
+  left: 0;
+  z-index: 900;
+  width: 100%;
+  min-height: var(--qs-toolbar-height);
+  padding: 7px 20px 9px;
+  padding-inline: 0 !important;
+  border-bottom: 1px solid var(--bd-solid);
+  background: var(--card-bg-solid);
+  transform: translateY(var(--qs-toolbar-shift));
+  transition: transform 0.2s ease-out;
+}
+
+.qs-questionnaire {
+  /* 固定進度列預留實際高度，避免共用標題留白覆寫後內容被壓住。 */
+  padding-top: var(--qs-toolbar-height);
+}
+
+.qs-quiz-head {
+  margin-inline: var(--site-content-gutter, 16px);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: 43px;
+}
+
+.qs-quiz-head strong {
+  color: var(--txt);
+  font-family: var(--font-heading-zh);
+  font-size: 1rem;
+  line-height: 1.25;
+  white-space: nowrap;
+}
+
+.qs-toolbar-back {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 38px;
+  padding: 0 13px;
+  border: 1px solid var(--txt);
+  color: var(--txt);
+  font-size: 0.84rem;
+  font-weight: 850;
+  line-height: 1;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.qs-toolbar-back:focus-visible,
+.qs-tool-links a:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: var(--focus-offset);
+}
+
+.qs-quiz-toolbar .qs-progress-area {
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.qs-quiz-toolbar .qs-progress-labels {
+  margin-inline: var(--site-content-gutter, 16px);
+}
+
+.qs-progress-labels {
+  margin-bottom: 5px;
+  color: var(--txt-muted);
+  font-size: 0.7rem;
+  letter-spacing: 0.04em;
+  text-transform: none;
+}
+
+.qs-progress-track {
+  height: 5px;
+  background: color-mix(in srgb, var(--txt) 12%, transparent);
+}
+
+.qs-progress-fill {
+  background: var(--pri);
+  box-shadow: none;
+  transition: width 0.25s ease;
+}
+
+.qs-document-meta {
+  padding-bottom: 10px;
+}
+
+.qs-container .page-title {
+  margin: 14px 0 8px;
+  font-size: clamp(2.15rem, 5vw, 4.25rem);
+}
+
+.qs-tool-nav {
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 18px;
+  margin: 8px 0 14px;
+  padding: 11px 0;
+  border-color: var(--bd);
+}
+
+.qs-tool-nav > div:first-child {
+  gap: 2px;
+}
+
+.qs-tool-nav > div:first-child strong {
+  font-size: 0.92rem;
+  line-height: 1.55;
+}
+
+.qs-tool-links {
+  display: grid;
+  grid-template-columns: repeat(2, max-content);
+  gap: 0;
+}
+
+.qs-tool-links a {
+  min-height: 42px;
+  padding-inline: 14px;
+  border-color: var(--txt);
+  border-radius: 0;
+  background: transparent;
+  white-space: nowrap;
+}
+
+.qs-tool-links a + a {
+  border-left: 0;
+}
+
+.qs-card {
+  width: 100%;
+  min-height: 0;
+  margin: 0;
+  padding: 18px 0 0;
+  border: 0;
+  border-top: 1px solid var(--bd-solid);
+  background: transparent;
+  opacity: 1;
+  filter: none;
+  transform: none;
+  pointer-events: auto;
+}
+
+.qs-card::before {
+  display: none;
+}
+
+.qs-question-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.qs-step-count,
+.qs-dim-tag {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--pri);
+  font-family: var(--font-body-zh);
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  line-height: 1.4;
+}
+
+.qs-dim-tag {
+  color: var(--txt-muted);
+  letter-spacing: 0.04em;
+}
+
+.qs-question-text {
+  max-width: 820px;
+  margin: 0 0 17px;
+  font-size: clamp(1.4rem, 3vw, 2.15rem);
+  line-height: 1.45;
+}
+
+.qs-options-grid {
+  gap: 0;
+  border-top: 1px solid var(--bd);
+}
+
+.qs-option-btn {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr) 24px;
+  gap: 12px;
+  min-height: 58px;
+  padding: 11px 4px;
+  border: 0;
+  border-bottom: 1px solid var(--bd);
+  background: transparent;
+}
+
+.qs-option-btn.is-selected {
+  border-color: var(--pri);
+  background: color-mix(in srgb, var(--pri) 7%, transparent);
+}
+
+.qs-option-index {
+  color: var(--txt-muted);
+  font-size: 0.72rem;
+  font-weight: 850;
+  letter-spacing: 0.08em;
+}
+
+.qs-option-label {
+  padding: 0;
+  color: var(--txt);
+  font-size: 0.96rem;
+  font-weight: 600;
+  line-height: 1.55;
+}
+
+.qs-check-circle {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+}
+
+.qs-nav-btn {
+  width: auto;
+  margin-top: 14px;
+  padding: 0 15px;
+  border: 1px solid var(--txt);
+  background: transparent;
+  color: var(--txt);
+  opacity: 1;
+}
+
+.qs-result-wrap {
+  animation: none;
+}
+
+.qs-result-box,
+.qs-section {
+  margin: 0;
+  padding: 18px 0;
+  border: 0;
+  border-top: 1px solid var(--bd-solid);
+  background: transparent;
+}
+
+.qs-result-box {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(260px, 0.72fr);
+  gap: 26px;
+  align-items: end;
+}
+
+.qs-badge {
+  grid-column: 1 / -1;
+  margin: 0;
+  padding: 0;
+  background: transparent;
+  letter-spacing: 0.1em;
+}
+
+.qs-grade-row {
+  gap: 16px;
+  margin: 0;
+}
+
+.qs-grade-letter {
+  min-width: 78px;
+  padding: 8px 15px;
+  font-size: 3.25rem;
+}
+
+.qs-res-title {
+  font-size: clamp(1.4rem, 3vw, 2rem);
+}
+
+.qs-res-desc {
+  margin: 0;
+}
+
+.qs-section-title {
+  margin-bottom: 12px;
+  padding-bottom: 10px;
+}
+
+.qs-radar-wrap {
+  height: 300px;
+  margin-bottom: 10px;
+}
+
+.qs-dim-grid {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0;
+  border-top: 1px solid var(--bd);
+}
+
+.qs-dim-item {
+  padding: 12px 10px;
+  border-right: 1px solid var(--bd);
+  border-bottom: 1px solid var(--bd);
+}
+
+.qs-dim-item:first-child {
+  border-left: 1px solid var(--bd);
+}
+
+.qs-track-links {
+  gap: 8px;
+}
+
+.qs-track-link,
+.qs-reset-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: auto;
+  min-height: 44px;
+  padding: 0 16px;
+}
+
+.qs-risk-group {
+  margin-bottom: 14px;
+}
+
+.qs-risk-header {
+  margin: 0;
+  padding: 8px 0;
+  border-bottom: 2px solid currentColor;
+  background: transparent;
+}
+
+.qs-risk-card,
+.qs-hint-box {
+  margin: 0;
+  padding: 13px 0;
+  border-left: 0;
+  border-bottom: 1px solid var(--bd);
+}
+
+.qs-modify-btn {
+  min-height: 40px;
+  padding: 0 13px;
+  border-color: var(--txt);
+  color: var(--txt);
+}
+
+.qs-reset-btn {
+  margin-top: 14px;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .qs-toolbar-back:hover,
+  .qs-tool-links a:hover,
+  .qs-nav-btn:hover,
+  .qs-modify-btn:hover {
+    border-color: var(--pri);
+    background: var(--pri);
+    color: #fff;
+  }
+
+  .qs-option-btn:hover {
+    border-color: var(--pri);
+    background: color-mix(in srgb, var(--pri) 5%, transparent);
+  }
+}
+
+@media (max-width: 767px) {
+  .qs-container {
+    --qs-toolbar-height: 88px;
+    width: 100%;
+    padding: 8px 16px 24px;
+  }
+
+  .qs-container--quiz {
+    padding-top: calc(var(--qs-toolbar-height) + 12px);
+  }
+
+  .qs-quiz-toolbar {
+    width: 100%;
+    padding: 5px 16px 8px;
+  }
+
+  .qs-quiz-head {
+    min-height: 42px;
+  }
+
+  .qs-document-meta {
+    gap: 8px;
+    font-size: 0.59rem;
+    letter-spacing: 0.06em;
+  }
+
+  .qs-document-meta span:last-child {
+    text-align: right;
+  }
+
+  .qs-container .page-title {
+    margin-top: 11px;
+    font-size: clamp(2rem, 11vw, 3rem);
+  }
+
+  .qs-tool-nav {
+    grid-template-columns: 1fr;
+    gap: 9px;
+    padding: 10px 0;
+  }
+
+  .qs-tool-links {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    width: 100%;
+  }
+
+  .qs-tool-links a {
+    padding-inline: 6px;
+    font-size: 0.76rem;
+  }
+
+  .qs-question-text {
+    font-size: clamp(1.25rem, 6.4vw, 1.65rem);
+  }
+
+  .qs-option-btn {
+    grid-template-columns: 30px minmax(0, 1fr) 22px;
+    gap: 8px;
+    min-height: 56px;
+  }
+
+  .qs-option-label {
+    font-size: 0.9rem;
+  }
+
+  .qs-result-box {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+
+  .qs-badge {
+    grid-column: auto;
+  }
+
+  .qs-grade-letter {
+    min-width: 66px;
+    font-size: 2.75rem;
+  }
+
+  .qs-radar-wrap {
+    height: 255px;
+    margin-inline: -8px;
+  }
+
+  .qs-dim-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .qs-dim-item:nth-child(odd) {
+    border-left: 1px solid var(--bd);
+  }
+
+  .qs-track-links {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .qs-track-link {
+    width: 100%;
+    padding-inline: 8px;
+    text-align: center;
+  }
+
+  .qs-reset-btn {
+    width: 100%;
+  }
+}
+
+@media (max-width: 360px) {
+  .qs-quiz-head strong {
+    font-size: 0.9rem;
+  }
+
+  .qs-toolbar-back {
+    padding-inline: 10px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .qs-quiz-toolbar,
+  .qs-progress-fill {
+    transition: none;
+  }
+}
 </style>

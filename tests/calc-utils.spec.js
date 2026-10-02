@@ -118,6 +118,25 @@ describe('calculateGenetics — dominant (謎 enigman)', () => {
   })
 })
 
+describe('calculateGenetics — 結果名稱與品系警告', () => {
+  it('白黃在結果中顯示為 WY，但選項名稱維持白黃', () => {
+    const r = calculateGenetics(cfg, [{ geneId: 'whiteandyellow', zygosity: ZYG.VIS }], [])
+    const wy = findByDesc(r.outcomes, 'WY')
+
+    expect(cfg.genes.find((gene) => gene.id === 'whiteandyellow')?.name).toBe('白黃')
+    expect(wy).toBeDefined()
+    expect(wy.fullLabel).not.toContain('白黃')
+  })
+
+  it('選擇慾望黑眼時顯示繁殖與眼睛結構警告', () => {
+    const r = calculateGenetics(cfg, [{ geneId: 'ndbe', zygosity: ZYG.VIS }], [])
+
+    expect(r.warning).toMatch(/慾望黑眼/)
+    expect(r.warning).toMatch(/不孕/)
+    expect(r.warning).toMatch(/眼睛結構/)
+  })
+})
+
 describe('calculateGenetics — warnings', () => {
   it('mixing albinos (tremper × bell) triggers warning', () => {
     const r = calculateGenetics(

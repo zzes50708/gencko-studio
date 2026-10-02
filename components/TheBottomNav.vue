@@ -2,8 +2,13 @@
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { MOBILE_NAV_ITEMS, getNavigationGroup } from '~/utils/site-navigation'
+import { useMainStore } from '~/stores/useMainStore'
+import { useMediaQuery } from '@vueuse/core'
 
 const route = useRoute()
+const store = useMainStore()
+const mobile = useMediaQuery('(max-width: 767px)')
+const navItems = MOBILE_NAV_ITEMS
 const sheetOpen = ref(false)
 const activeSheet = ref(null)
 const closeButton = ref(null)
@@ -11,10 +16,11 @@ const sheet = ref(null)
 const triggerRefs = new Map()
 let previousBodyOverflow = ''
 const activeGroup = computed(() => getNavigationGroup(route.path))
-const currentItem = computed(() => MOBILE_NAV_ITEMS.find((item) => item.key === activeSheet.value))
+const currentItem = computed(() => navItems.find((item) => item.key === activeSheet.value))
 
 const isActive = (key) =>
-  activeGroup.value === key || (key === 'explore' && activeGroup.value === 'brand')
+  activeGroup.value === key ||
+  (key === 'more' && ['brand', 'profile', 'hero'].includes(activeGroup.value))
 
 const setTriggerRef = (key, el) => {
   if (el) triggerRefs.set(key, el)
@@ -71,17 +77,21 @@ watch(sheetOpen, (open) => {
   }
 })
 
+watch(mobile, (enabled) => {
+  if (!enabled && sheetOpen.value) closeSheet({ restoreFocus: false })
+})
+
 onMounted(() => window.addEventListener('keydown', handleKeydown))
 onUnmounted(() => {
   window.removeEventListener('keydown', handleKeydown)
-  if (import.meta.client) document.body.style.overflow = previousBodyOverflow
+  if (import.meta.client && sheetOpen.value) document.body.style.overflow = previousBodyOverflow
 })
 </script>
 
 <template>
   <div>
     <nav class="bottom-nav" aria-label="手機底部導覽">
-      <template v-for="item in MOBILE_NAV_ITEMS" :key="item.key">
+      <template v-for="item in navItems" :key="item.key">
         <NuxtLink
           no-prefetch
           v-if="item.key === 'home'"
@@ -139,6 +149,19 @@ onUnmounted(() => {
         </div>
 
         <div class="sheet-body">
+          <div v-if="activeSheet === 'more'" class="mobile-settings">
+            <button type="button" class="sheet-item" @click="store.toggleTheme">
+              {{ store.isDayMode ? '切換深色' : '切換亮色' }}
+            </button>
+            <button
+              v-if="store.canInstall"
+              type="button"
+              class="sheet-item"
+              @click="store.installApp"
+            >
+              安裝 App
+            </button>
+          </div>
           <section
             v-for="section in currentItem.sections"
             :key="section.label"
@@ -151,6 +174,7 @@ onUnmounted(() => {
                 v-for="link in section.links"
                 :key="link.to"
                 :to="link.to"
+                :aria-current="route.path === link.to ? 'page' : undefined"
                 class="sheet-item"
                 @click="closeSheet({ restoreFocus: false })"
               >
@@ -420,6 +444,34 @@ onUnmounted(() => {
     background: transparent;
     font-size: 0.82rem;
     font-weight: 600;
+  }
+}
+@media (max-width: 767px) {
+  .nav-item {
+    position: relative;
+  }
+  .label {
+    font-size: 0.75rem;
+  }
+  .sheet {
+    max-height: calc(100dvh - env(safe-area-inset-top, 0px) - 16px);
+    overscroll-behavior: contain;
+  }
+  .sheet-header {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    background: var(--card-bg-solid);
+  }
+  .mobile-settings {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+  .sheet-item[aria-current='page'] {
+    color: var(--pri);
+    border-color: var(--pri);
+    background: color-mix(in srgb, var(--pri) 8%, transparent);
   }
 }
 </style>

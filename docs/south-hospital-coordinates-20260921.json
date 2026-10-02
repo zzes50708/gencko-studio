@@ -1,0 +1,272 @@
+[
+  {
+    "id": "50",
+    "name": "嘉樂動物醫院",
+    "address": "嘉義市東區民族路67號",
+    "latitude": null,
+    "longitude": null,
+    "sourceUrl": null,
+    "status": "unresolved",
+    "evidence": "尚未取得院方公開精確座標；不以街區中心代替。"
+  },
+  {
+    "id": "52",
+    "name": "立安動物醫院",
+    "address": "台南市中西區永華路一段186號",
+    "latitude": null,
+    "longitude": null,
+    "sourceUrl": null,
+    "status": "unresolved",
+    "evidence": "尚未取得院方公開精確座標；不以街區中心代替。"
+  },
+  {
+    "id": "53",
+    "name": "酷比動物醫院",
+    "address": "台南市南區夏林路210號",
+    "latitude": null,
+    "longitude": null,
+    "sourceUrl": "https://www.coobihospital.com/",
+    "status": "address_conflict",
+    "evidence": "官網舊頁列夏林路210號，官方連結 https://maps.app.goo.gl/DvoFJxVZWQSx1Hnj8 的302給舊址pin22.9797896,120.1949081；搜尋發現2026/7/3搬往東區崇德路124號資訊，尚未取得可讀官方搬遷公告，故不採舊址。"
+  },
+  {
+    "id": "54",
+    "name": "啄木鳥動物醫院",
+    "address": "台南市北區臨安路二段243號",
+    "latitude": null,
+    "longitude": null,
+    "sourceUrl": null,
+    "status": "unresolved",
+    "evidence": "尚未取得院方公開精確座標；不以街區中心代替。"
+  },
+  {
+    "id": "55",
+    "name": "小鯢特殊寵物專科醫院",
+    "address": "台南市永康區永明街59號",
+    "latitude": null,
+    "longitude": null,
+    "sourceUrl": null,
+    "status": "unresolved",
+    "evidence": "尚未取得院方公開精確座標；不以街區中心代替。"
+  },
+  {
+    "id": "56",
+    "name": "毛毛動物醫院－歸仁分院",
+    "address": "台南市歸仁區民權三街32號",
+    "latitude": null,
+    "longitude": null,
+    "sourceUrl": "https://www.maomaovet.com.tw/contactn.html",
+    "status": "unresolved",
+    "evidence": "院方聯絡頁列歸仁民權三街32號；地圖pb含 !2d120.2887827!3d22.9695019，但為鏡頭中心而未明示place pin，故不採作精確座標。"
+  },
+  {
+    "id": "57",
+    "name": "峽灣動物醫院",
+    "address": "台南市北區西門路四段442號",
+    "latitude": 23.01577,
+    "longitude": 120.210549,
+    "sourceUrl": "https://www.fiordah.com/聯絡資訊",
+    "status": "official_map_coordinate",
+    "evidence": "院方聯絡資訊列西門路四段440、442號；同頁Google Sites地圖iframe明示 ll=23.01577,120.210549，q及aria-label均為西門路四段442號。"
+  },
+  {
+    "id": "58",
+    "name": "窩窩兔動物醫院",
+    "address": "高雄市苓雅區建民路67號",
+    "latitude": null,
+    "longitude": null,
+    "sourceUrl": null,
+    "status": "unresolved",
+    "evidence": "尚未取得院方公開精確座標；不以街區中心代替。"
+  },
+  {
+    "id": "59",
+    "name": "中興梅西動物醫療中心（特別寵物科）",
+    "address": "高雄市左營區文府路498號5樓",
+    "latitude": null,
+    "longitude": null,
+    "sourceUrl": "https://www.jsah.com.tw/",
+    "status": "unresolved",
+    "evidence": "院方確認對應地址，但公開Google Maps連結僅地址查詢，沒有精確座標參數。"
+  },
+  {
+    "id": "60",
+    "name": "中興農十六特別寵物科",
+    "address": "高雄市鼓山區大順一路935號2樓",
+    "latitude": null,
+    "longitude": null,
+    "sourceUrl": "https://www.jsah.com.tw/",
+    "status": "unresolved",
+    "evidence": "院方確認對應地址，但公開Google Maps連結僅地址查詢，沒有精確座標參數。"
+  },
+  {
+    "id": "61",
+    "name": "亞幸動物醫院",
+    "address": "高雄市苓雅區光華一路12-1號",
+    "latitude": 22.618895,
+    "longitude": 120.3177324,
+    "sourceUrl": "https://actionah2020.com/contact-us/",
+    "status": "verified_place_pin",
+    "evidence": "院方列光華一路12-1號且提供 https://goo.gl/maps/AfkqPr8JEg1sXJHSA；僅讀取該短連結HTTP302 Location，店家座標段為 !8m2!3d22.618895!4d120.3177324，非@鏡頭中心。"
+  },
+  {
+    "id": "62",
+    "name": "大毛小毛動物醫院",
+    "address": "高雄市三民區文濱路62號",
+    "latitude": null,
+    "longitude": null,
+    "sourceUrl": null,
+    "status": "unresolved",
+    "evidence": "尚未取得院方公開精確座標；不以街區中心代替。"
+  },
+  {
+    "id": "63",
+    "name": "本丸特殊寵物與貓專科醫院",
+    "address": "高雄市前鎮區永豐路105號1樓",
+    "latitude": null,
+    "longitude": null,
+    "sourceUrl": "https://honmaruvet.wordpress.com/",
+    "status": "unresolved",
+    "evidence": "院方部落格可讀，未發現地圖經緯度。"
+  },
+  {
+    "id": "64",
+    "name": "蓋亞野生動物專科醫院",
+    "address": "高雄市三民區建工路611號",
+    "latitude": null,
+    "longitude": null,
+    "sourceUrl": null,
+    "status": "unresolved",
+    "evidence": "尚未取得院方公開精確座標；不以街區中心代替。"
+  },
+  {
+    "id": "65",
+    "name": "全家福動物醫院",
+    "address": "高雄市三民區義華路51號",
+    "latitude": null,
+    "longitude": null,
+    "sourceUrl": null,
+    "status": "unresolved",
+    "evidence": "尚未取得院方公開精確座標；不以街區中心代替。"
+  },
+  {
+    "id": "66",
+    "name": "韓特動物醫院",
+    "address": "高雄市前金區自強三路211號",
+    "latitude": null,
+    "longitude": null,
+    "sourceUrl": null,
+    "status": "unresolved",
+    "evidence": "尚未取得院方公開精確座標；不以街區中心代替。"
+  },
+  {
+    "id": "67",
+    "name": "毛毛動物醫院（大社分院）",
+    "address": "高雄市大社區三民路270號",
+    "latitude": null,
+    "longitude": null,
+    "sourceUrl": "https://www.maomaovet.com.tw/products-3.html",
+    "status": "address_conflict",
+    "evidence": "院方網站頁尾大社分院為中山路114號，contactn.html仍列三民路270號；後者iframe鏡頭22.731948,120.3464925未確認pin。須先核對搬遷，不補舊址。"
+  },
+  {
+    "id": "68",
+    "name": "星羽動物醫院（三民院）",
+    "address": "高雄市三民區信國路20號",
+    "latitude": null,
+    "longitude": null,
+    "sourceUrl": "https://starfeather.com.tw/",
+    "status": "unresolved",
+    "evidence": "院方地圖iframe只有地址q查詢，沒有經緯度；地址與清單一致。"
+  },
+  {
+    "id": "69",
+    "name": "星羽動物醫院（大寮院）",
+    "address": "高雄市大寮區鳳林路四段790號之1",
+    "latitude": null,
+    "longitude": null,
+    "sourceUrl": "https://starfeather.com.tw/",
+    "status": "unresolved",
+    "evidence": "院方地圖iframe只有地址q查詢，沒有經緯度；地址與清單一致。"
+  },
+  {
+    "id": "70",
+    "name": "培昱動物醫院",
+    "address": "高雄市鳳山區保泰路6號",
+    "latitude": null,
+    "longitude": null,
+    "sourceUrl": null,
+    "status": "unresolved",
+    "evidence": "尚未取得院方公開精確座標；不以街區中心代替。"
+  },
+  {
+    "id": "71",
+    "name": "小鳴動物醫院",
+    "address": "高雄市前鎮區廣西路288號",
+    "latitude": 22.61523,
+    "longitude": 120.314051,
+    "sourceUrl": "https://www.tomeetyouah.com/來去小鳴",
+    "status": "official_map_coordinate",
+    "evidence": "院方交通頁Google Sites地圖iframe明示 ll=22.61523,120.314051，q及aria-label均為高雄前鎮廣西路288號。"
+  },
+  {
+    "id": "72",
+    "name": "祈癒動物醫院",
+    "address": "高雄市仁武區京吉六路90號",
+    "latitude": null,
+    "longitude": null,
+    "sourceUrl": "https://4c70b895cbb8.godaddysites.com/",
+    "status": "unresolved",
+    "evidence": "官方Linktree連結至本網址，但直接回應未取得座標。"
+  },
+  {
+    "id": "73",
+    "name": "肯亞動物專業醫院－屏東院",
+    "address": "屏東市崇朝一路192號",
+    "latitude": null,
+    "longitude": null,
+    "sourceUrl": null,
+    "status": "unresolved",
+    "evidence": "尚未取得院方公開精確座標；不以街區中心代替。"
+  },
+  {
+    "id": "74",
+    "name": "肯亞野動倉庫動物醫院",
+    "address": "屏東縣萬丹鄉丹榮路975號",
+    "latitude": null,
+    "longitude": null,
+    "sourceUrl": null,
+    "status": "unresolved",
+    "evidence": "尚未取得院方公開精確座標；不以街區中心代替。"
+  },
+  {
+    "id": "75",
+    "name": "大同動物醫院",
+    "address": "屏東縣屏東市民族路486號",
+    "latitude": null,
+    "longitude": null,
+    "sourceUrl": null,
+    "status": "unresolved",
+    "evidence": "尚未取得院方公開精確座標；不以街區中心代替。"
+  },
+  {
+    "id": "76",
+    "name": "福爾摩莎動物醫院",
+    "address": "屏東縣內埔鄉光明路525-1號",
+    "latitude": null,
+    "longitude": null,
+    "sourceUrl": null,
+    "status": "unresolved",
+    "evidence": "尚未取得院方公開精確座標；不以街區中心代替。"
+  },
+  {
+    "id": "78",
+    "name": "谷米動物醫院",
+    "address": "台東縣關山鎮和平路128號",
+    "latitude": null,
+    "longitude": null,
+    "sourceUrl": "https://www.taitungcity.gov.tw/archive/news/2024010911270301.pdf",
+    "status": "unresolved",
+    "evidence": "市公所公開登記機構名冊確認關山和平路128號，資料沒有座標。"
+  }
+]

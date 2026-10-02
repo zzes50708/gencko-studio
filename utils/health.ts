@@ -342,8 +342,7 @@ export const getSeasonContext = (date = new Date()) => {
 export const TRIAGE_QUESTIONS = [
   {
     id: 'lifeSign',
-    title: 'Q1. 致命警訊檢查',
-    subtitle: '以下症狀看似不明顯，其實都是嚴重警訊。請選擇最符合目前狀況的一項。',
+    title: 'Q1. 嚴重警訊檢查',
     type: 'single',
     options: [
       {
@@ -387,7 +386,7 @@ export const TRIAGE_QUESTIONS = [
   },
   {
     id: 'stool',
-    title: 'Q2. 糞便狀態（最近 3–5 天）',
+    title: 'Q2. 糞便狀態（最近一週內）',
     type: 'single',
     options: [
       { id: 'normal', label: '成型、白色尿酸、無強烈異味', severity: 'normal' },
@@ -395,7 +394,7 @@ export const TRIAGE_QUESTIONS = [
         id: 'noStool',
         label: '5–7 天內沒排便但腹部正常、活動進食正常',
         severity: 'normal',
-        normalReason: '脫皮前、低溫期、剛吃飽都可能 5–7 天無便，屬正常變異。'
+        normalReason: '脫皮前、低溫期、剛吃飽都可能 5–7 天無便，屬正常範圍。'
       },
       { id: 'softOdorless', label: '偶爾偏軟、無異味', severity: 'watch' },
       {
@@ -409,7 +408,7 @@ export const TRIAGE_QUESTIONS = [
         label: '腹部明顯脹大 / 超過 7 天無便 / 無精神',
         severity: 'critical',
         diseases: ['impaction', 'eggBinding'],
-        normalReason: '母成體必須懷疑卡蛋 / 卵泡留滯。'
+        normalReason: '熱區未達標、母成體恐卵泡留滯。'
       },
       {
         id: 'blood',
@@ -419,9 +418,10 @@ export const TRIAGE_QUESTIONS = [
       },
       {
         id: 'wateryVomit',
-        label: '水樣便 + 腥臭 + 反覆吐食',
+        label: '水便+腥臭+反覆吐食',
         severity: 'critical',
-        diseases: ['crypto']
+        diseases: ['crypto'],
+        normalReason: '可能有寄生蟲爆發的問題。'
       },
       {
         id: 'yellowUrate',
@@ -435,36 +435,39 @@ export const TRIAGE_QUESTIONS = [
   {
     id: 'gender',
     title: 'Q3-1. 性別與年齡',
-    subtitle:
-      '影響拒食判讀。幼亞成體拒食 1–2 週以上極度危險；成年母體春季拒食大多是發情排卵（即使未交配也可能空包蛋）；成年公體繁殖期躁動拒食屬正常。',
     type: 'single',
     options: [
       {
         id: 'maleAdult',
-        label: '公成體（1 歲以上）',
+        label: '公成體（1歲以上）',
         severity: 'normal',
-        normalReason: '繁殖期（1–4 月）躁動拒食屬正常現象。'
+        normalReason: '繁殖期躁動拒食屬正常現象。'
       },
       {
         id: 'femaleAdult',
-        label: '母成體（1 歲以上）',
+        label: '母成體（1歲以上）',
         severity: 'normal',
         normalReason:
           '春天拒食大多為發情排卵，即使未交配也可能空包蛋，未處理會導致卵泡留滯（卡蛋）。'
       },
       {
         id: 'subadult',
-        label: '亞成體（6–12 個月）',
-        severity: 'normal',
-        normalReason: '亞成體代謝快，拒食超過 1–2 週極度危險。'
+        label: '亞成體（6~12個月）',
+        severity: 'warn',
+        normalReason: '亞成體代謝快，拒食超過1~2週極度危險。'
       },
       {
         id: 'juvenile',
-        label: '幼體（< 6 個月）',
-        severity: 'normal',
-        normalReason: '幼體代謝快，拒食超過 1–2 週容易餓死或因寄生蟲崩潰。'
+        label: '幼體（<6個月）',
+        severity: 'critical',
+        normalReason: '幼體代謝快，拒食超過1~2週容易餓死或因寄生蟲崩潰。'
       },
-      { id: 'unknown', label: '不清楚', severity: 'normal' }
+      {
+        id: 'unknown',
+        label: '不清楚',
+        severity: 'critical',
+        normalReason: '若購買到不確定年齡的守宮，極影響狀況判斷。'
+      }
     ]
   },
   {
@@ -473,23 +476,23 @@ export const TRIAGE_QUESTIONS = [
     type: 'single',
     options: [
       { id: 'd0', label: '正常進食中（沒有拒食）', severity: 'normal' },
-      { id: 'd3', label: '1–3 天', severity: 'normal' },
-      { id: 'd7', label: '4–7 天', severity: 'watch' },
+      { id: 'd3', label: '1~3天', severity: 'normal' },
+      { id: 'd7', label: '4~7天', severity: 'watch' },
       {
         id: 'd14',
-        label: '1–2 週',
+        label: '1~2週',
         severity: 'warn',
         diseases: ['parasites', 'organFailure', 'eggBinding']
       },
       {
         id: 'd30',
-        label: '2 週至 1 個月',
-        severity: 'warn',
+        label: '2週至1個月',
+        severity: 'critical',
         diseases: ['parasites', 'organFailure', 'eggBinding']
       },
       {
         id: 'd60',
-        label: '超過 1 個月',
+        label: '超過1個月',
         severity: 'critical',
         diseases: ['parasites', 'organFailure', 'eggBinding']
       }
@@ -506,7 +509,7 @@ export const TRIAGE_QUESTIONS = [
         label: '體重明顯下降（拿起來變輕）',
         severity: 'warn',
         diseases: ['crypto'],
-        normalReason: '建議從現在開始每週量一次體重，若 1 個月內掉 10% 以上請就醫。'
+        normalReason: '建議從現在開始每天量一次體重，若體重逐步下降請即時就醫。'
       },
       { id: 'vomiting', label: '嘔吐或反芻', severity: 'critical', diseases: ['crypto'] },
       {
@@ -534,11 +537,11 @@ export const TRIAGE_QUESTIONS = [
         id: 'thinOk',
         label: '略偏瘦但活動進食正常',
         severity: 'watch',
-        normalReason: '剛產卵母守宮、剛斷尾再生中、發情公守宮短期可能略瘦。'
+        normalReason: '剛產卵母守宮、剛斷尾再生中、發情期公守宮短期可能略瘦。'
       },
       {
         id: 'thinFast',
-        label: '1 個月內明顯瘦了一圈',
+        label: '1個月內明顯瘦了一圈',
         severity: 'warn',
         diseases: ['parasites', 'anorexia', 'malnutrition']
       },
@@ -558,14 +561,14 @@ export const TRIAGE_QUESTIONS = [
       { id: 'normal', label: '跟平常差不多（夜間活躍、白天躲洞）', severity: 'normal' },
       {
         id: 'preShed',
-        label: '比平常安靜 + 體色變暗',
+        label: '比平常安靜+體色變暗',
         severity: 'normal',
         normalReason: '脫皮前 1–3 天典型徵兆。'
       },
       { id: 'slow', label: '比平常慢但仍會出來進食', severity: 'watch' },
       {
         id: 'hiding',
-        label: '整天躲洞 + 拒食 + 拿出來也不太掙扎',
+        label: '整天躲洞+拒食+拿出來也不太掙扎',
         severity: 'warn',
         diseases: ['parasites', 'anorexia', 'malnutrition']
       },
@@ -585,26 +588,27 @@ export const TRIAGE_QUESTIONS = [
     options: [
       {
         id: 'newEnv',
-        label: '24 小時內換新環境 / 搬家 / 剛買回家',
+        label: '24小時內換新環境/搬家/剛買回家',
         severity: 'normal',
-        normalReason: '壓力期，輕微異常先觀察 1–2 週。'
+        normalReason: '壓力期，輕微異常先觀察1~2週。'
       },
       {
         id: 'tempBad',
-        label: '最近 3 天溫度低於 22°C 或高於 35°C',
+        label: '最近3天溫度低於22°C或高於35°C',
         severity: 'warn',
         diseases: ['tempAbnormal', 'giStasis', 'heatExhaust'],
-        normalReason: '高危險：低溫導致腸胃停滯，高溫導致熱衰竭。'
+        normalReason: '低溫導致腸胃停滯，高溫導致熱衰竭。'
       },
       {
         id: 'contagion',
-        label: '最近接觸 / 同缸其他守宮（傳染風險）',
+        label: '最近接觸/同缸其他守宮（傳染風險）',
         severity: 'watch',
-        diseases: ['contagionRisk']
+        diseases: ['contagionRisk'],
+        normalReason: '部分寄生蟲具高傳染性，迎接新守宮時請確實做好隔離觀察。'
       },
       {
         id: 'substrate',
-        label: '飼主換過底材（疑似底材誤食 / 中毒）',
+        label: '飼主換過不適合的底材（疑似底材誤食/中毒）',
         severity: 'watch',
         diseases: ['impaction']
       },
@@ -641,7 +645,7 @@ export const CHECKUP_QUESTIONS = [
       },
       {
         id: 'shutLong',
-        label: '完全閉眼超過 24 小時（非脫皮）',
+        label: '完全閉眼超過24小時（非脫皮）',
         severity: 'critical',
         diseases: ['eyeIssue']
       }
@@ -654,9 +658,8 @@ export const CHECKUP_QUESTIONS = [
     type: 'single',
     options: [
       { id: 'clean', label: '乾淨、無分泌物', severity: 'normal' },
-      { id: 'driedBit', label: '少量乾結（剛醒可能）', severity: 'watch' },
-      { id: 'mucus', label: '透明黏液持續、輕度結痂', severity: 'warn', diseases: ['ri'] },
-      { id: 'badRI', label: '持續黏液 + 結痂 + 聽到呼吸聲', severity: 'critical', diseases: ['ri'] }
+      { id: 'driedBit', label: '少量分泌物', severity: 'warn', diseases: ['ri'] },
+      { id: 'mucus', label: '透明黏液持續', severity: 'critical', diseases: ['ri'] }
     ]
   },
   {
@@ -667,14 +670,14 @@ export const CHECKUP_QUESTIONS = [
     options: [
       { id: 'closed', label: '緊閉、抓拿時不抗拒張嘴', severity: 'normal' },
       { id: 'lickLip', label: '偶爾舔嘴角（剛喝水可能）', severity: 'normal' },
-      { id: 'whiteSpot', label: '嘴角白點 / 微腫', severity: 'warn', diseases: ['stomatitis'] },
+      { id: 'whiteSpot', label: '嘴角白點/微腫', severity: 'warn', diseases: ['stomatitis'] },
       {
         id: 'foamSwell',
-        label: '口腔邊緣膿塊 / 嚴重腫脹 / 嘴歪斜',
+        label: '口腔邊緣膿塊/嚴重腫脹/嘴歪斜',
         severity: 'critical',
         diseases: ['stomatitis']
       },
-      { id: 'openMouth', label: '長時間張口呼吸', severity: 'critical', diseases: ['ri'] }
+      { id: 'openMouth', label: '長時間張口', severity: 'critical', diseases: ['ri'] }
     ]
   },
   {
@@ -688,7 +691,7 @@ export const CHECKUP_QUESTIONS = [
       { id: 'fast', label: '靜止時呼吸偏快、喉部起伏明顯', severity: 'warn', diseases: ['ri'] },
       {
         id: 'bubble',
-        label: '張口呼吸 / 啵啵聲 / 嘴角牽絲黏液',
+        label: '張口呼吸/啵啵聲/嘴角牽絲黏液',
         severity: 'critical',
         diseases: ['ri']
       }
@@ -710,7 +713,7 @@ export const CHECKUP_QUESTIONS = [
       },
       {
         id: 'softJaw',
-        label: '下顎軟塌 / 歪斜 / 無法正常閉嘴',
+        label: '下顎軟塌/歪斜/無法正常閉嘴',
         severity: 'critical',
         diseases: ['mbd', 'stomatitis']
       }
@@ -745,12 +748,12 @@ export const CHECKUP_QUESTIONS = [
       { id: 'oldScar', label: '有舊傷疤（已癒合）', severity: 'normal' },
       {
         id: 'scratch',
-        label: '抓痕 / 咬傷 / 殘皮卡 > 1 週',
+        label: '抓痕/咬傷 /殘皮卡>1週',
         severity: 'warn',
         diseases: ['dysecdysis']
       },
       { id: 'burn', label: '燒燙傷（腹部黑斑）', severity: 'critical', diseases: ['burn'] },
-      { id: 'wound', label: '開放傷口 / 潰瘍 / 組織壞死', severity: 'critical', diseases: ['burn'] }
+      { id: 'wound', label: '開放傷口/潰瘍/組織壞死', severity: 'critical', diseases: ['burn'] }
     ]
   },
   {
@@ -759,9 +762,9 @@ export const CHECKUP_QUESTIONS = [
     title: 'B2. 脫皮狀態',
     type: 'single',
     options: [
-      { id: 'clean', label: '整片脫淨、3 天內完成', severity: 'normal' },
+      { id: 'clean', label: '整片脫淨、1天內完成', severity: 'normal' },
       { id: 'minor', label: '殘餘碎屑但沒卡關節', severity: 'watch' },
-      { id: 'toe', label: '趾尖殘皮 1 週未脫', severity: 'warn', diseases: ['dysecdysis'] },
+      { id: 'toe', label: '趾尖殘皮1週未脫', severity: 'warn', diseases: ['dysecdysis'] },
       {
         id: 'tailTip',
         label: '尾尖殘皮（壞死斷尾風險）',
@@ -786,7 +789,7 @@ export const CHECKUP_QUESTIONS = [
       { id: 'preShed', label: '整體略暗（脫皮前 1–3 天）', severity: 'normal' },
       {
         id: 'dullLong',
-        label: '持續暗沉 > 1 週、無脫皮跡象',
+        label: '持續暗沉>1週、無脫皮跡象',
         severity: 'watch',
         diseases: ['metabolicStasis', 'envStress']
       },
@@ -805,7 +808,7 @@ export const CHECKUP_QUESTIONS = [
     type: 'single',
     options: [
       { id: 'clean', label: '趾尖、尾尖乾淨無殘皮', severity: 'normal' },
-      { id: 'smallFlake', label: '少量碎皮，2–3 天內可自行脫落', severity: 'watch' },
+      { id: 'smallFlake', label: '少量碎皮，2~3天內可自行脫落', severity: 'watch' },
       {
         id: 'stuck',
         label: '趾尖或尾尖有卡皮、環狀束住',
@@ -814,7 +817,7 @@ export const CHECKUP_QUESTIONS = [
       },
       {
         id: 'necrosis',
-        label: '趾尖發黑 / 尾尖乾縮 / 疑似壞死',
+        label: '趾尖發黑/尾尖乾縮/疑似壞死',
         severity: 'critical',
         diseases: ['dysecdysis']
       }
@@ -836,7 +839,7 @@ export const CHECKUP_QUESTIONS = [
       },
       {
         id: 'prolapse',
-        label: '外翻 / 出血 / 明顯腫塊',
+        label: '外翻/出血/明顯腫塊',
         severity: 'critical',
         diseases: ['prolapse']
       }
@@ -847,9 +850,8 @@ export const CHECKUP_QUESTIONS = [
     category: '體表與脫皮',
     title: 'B6. 四肢、趾數與趾甲',
     type: 'single',
-    subtitle: '前後肢各 5 趾，趾甲應完整且不過長',
     options: [
-      { id: 'complete', label: '四肢健全、20 趾完整、趾甲正常', severity: 'normal' },
+      { id: 'complete', label: '四肢健全、20趾完整、趾甲正常', severity: 'normal' },
       { id: 'missingOld', label: '有舊缺趾或截肢但完全癒合', severity: 'normal' },
       { id: 'overgrown', label: '趾甲過長 / 趾甲斷裂未癒合', severity: 'watch' },
       {
@@ -873,7 +875,7 @@ export const CHECKUP_QUESTIONS = [
     title: 'C1. 尾巴體態',
     type: 'single',
     options: [
-      { id: 'plump', label: '飽滿圓潤（豹紋）/ 葫蘆狀（肥尾）', severity: 'normal' },
+      { id: 'plump', label: '飽滿圓潤', severity: 'normal' },
       { id: 'okThin', label: '比例略瘦但仍有肉', severity: 'watch' },
       { id: 'thin', label: '明顯凹陷、能看出脊椎', severity: 'warn' },
       {
@@ -892,20 +894,20 @@ export const CHECKUP_QUESTIONS = [
     options: [
       { id: 'stable', label: '穩定（± 5%）', severity: 'normal' },
       { id: 'gain', label: '緩步增重（幼亞成體正常）', severity: 'normal' },
-      { id: 'lose10', label: '1 個月內掉 5–10%', severity: 'watch' },
+      { id: 'lose10', label: '1 個月內掉5~10%', severity: 'watch' },
       {
         id: 'lose20',
-        label: '1 個月內掉 10–20%',
+        label: '1 個月內掉10~20%',
         severity: 'warn',
         diseases: ['parasites', 'anorexia']
       },
       {
         id: 'lose30',
-        label: '1 個月內掉 20% 以上 / 任何時段急速消瘦',
+        label: '1 個月內掉20%以上 / 任何時段急速消瘦',
         severity: 'critical',
         diseases: ['crypto']
       },
-      { id: 'noData', label: '沒量過 / 沒紀錄', severity: 'watch' }
+      { id: 'noData', label: '沒量過/沒紀錄', severity: 'watch' }
     ]
   },
   {
@@ -915,28 +917,28 @@ export const CHECKUP_QUESTIONS = [
     type: 'single',
     options: [
       { id: 'normal', label: '正常進食、看到飼料會追', severity: 'normal' },
-      { id: 'reduced', label: '進食量比平常少 1/3，仍會吃', severity: 'watch' },
+      { id: 'reduced', label: '進食量比平常少1/3，仍會吃', severity: 'watch' },
       {
         id: 'spit',
-        label: '反覆甩頭吐食 / 含一下就吐',
+        label: '反覆甩頭吐食/含一下就吐',
         severity: 'critical',
         diseases: ['crypto']
       },
       {
         id: 'refuse',
-        label: '完全拒食 + 體態消瘦',
+        label: '完全拒食+體態消瘦',
         severity: 'critical',
         diseases: ['organFailure', 'severeParasites', 'eggBinding']
       },
       {
         id: 'maleSeason',
-        label: '公成體春季完全拒食 + 其他指標正常',
+        label: '公成體春季完全拒食+其他指標正常',
         severity: 'normal',
-        normalReason: '發情期拒食，多數會在 1–2 個月後恢復。'
+        normalReason: '發情期拒食，多數會在1~2個月後恢復。'
       },
       {
         id: 'newAdjust',
-        label: '新個體入手 2 週內拒食 + 其他指標正常',
+        label: '新個體入手2週內拒食+其他指標正常',
         severity: 'normal',
         normalReason: '環境適應期，建議保持安靜減少干擾。'
       }
@@ -1002,7 +1004,7 @@ export const CHECKUP_QUESTIONS = [
       },
       {
         id: 'mass',
-        label: '明顯腫塊 / 單側鼓起 / 腹部拖地',
+        label: '明顯腫塊/單側鼓起/腹部拖地',
         severity: 'critical',
         diseases: ['eggBinding', 'tumor', 'severeConstipation', 'impaction']
       }
@@ -1015,23 +1017,23 @@ export const CHECKUP_QUESTIONS = [
     type: 'single',
     subtitle: '長期單一飼料容易營養失衡（鈣/磷比、維生素 A）',
     options: [
-      { id: 'mixed', label: '主食 2–3 種以上交替（杜比亞、蟋蟀等）', severity: 'normal' },
-      { id: 'twoTypes', label: '主食固定 1 種、偶爾換點心', severity: 'watch' },
+      { id: 'mixed', label: '主食2~3種以上交替（杜比亞、蟋蟀等）', severity: 'normal' },
+      { id: 'twoTypes', label: '主食固定1種、偶爾換點心', severity: 'watch' },
       {
         id: 'mealwormOnly',
-        label: '只餵麵包蟲 / 大麥蟲長期單一',
+        label: '只餵麵包蟲/大麥蟲長期單一',
         severity: 'warn',
         diseases: ['nutritionalImbalance']
       },
       {
         id: 'sweets',
-        label: '長期以蠟蟲 / 大麥蟲為主食（高脂）',
+        label: '長期以蠟蟲/大麥蟲為主食（高脂）',
         severity: 'warn',
         diseases: ['fattyLiver', 'calciumPhosphorus', 'mbd']
       },
       {
         id: 'unknown',
-        label: '飼料來源不明 / 野外捕捉昆蟲',
+        label: '飼料來源不明/野外捕捉昆蟲',
         severity: 'warn',
         diseases: ['coccidia', 'crypto']
       }
@@ -1048,7 +1050,7 @@ export const CHECKUP_QUESTIONS = [
       { id: 'rare', label: '幾乎沒看過喝水，但尿酸正常', severity: 'watch' },
       {
         id: 'none',
-        label: '長期不喝水 + 尿酸偏黃 / 偏少',
+        label: '長期不喝水+尿酸偏黃/偏少',
         severity: 'warn',
         diseases: ['dehydration']
       }
@@ -1064,10 +1066,10 @@ export const CHECKUP_QUESTIONS = [
       { id: 'regular', label: '規律成型、白色尿酸', severity: 'normal' },
       { id: 'noStool', label: '5–7 天無便但腹部正常', severity: 'normal' },
       { id: 'soft', label: '偏軟、無異味', severity: 'watch' },
-      { id: 'runny', label: '拉稀 + 極臭', severity: 'warn', diseases: ['coccidia'] },
+      { id: 'runny', label: '拉稀+極臭', severity: 'warn', diseases: ['coccidia'] },
       {
         id: 'blood',
-        label: '血便 / 反覆吐食 + 水便',
+        label: '血便/反覆吐食+水便',
         severity: 'critical',
         diseases: ['crypto', 'impaction']
       },
@@ -1082,14 +1084,14 @@ export const CHECKUP_QUESTIONS = [
     options: [
       { id: 'steady', label: '行走穩定、腹部離地', severity: 'normal' },
       { id: 'slip', label: '偶爾打滑、腹部摩擦地面', severity: 'watch' },
-      { id: 'tremor', label: '前肢顫抖 / 後肢拖行', severity: 'warn', diseases: ['mbd'] },
+      { id: 'tremor', label: '前肢顫抖/後肢拖行', severity: 'warn', diseases: ['mbd'] },
       {
         id: 'hop',
         label: '跳走、四肢無力、下顎軟塌、骨頭彎曲',
         severity: 'critical',
         diseases: ['mbd']
       },
-      { id: 'seizure', label: '抽搐 / 痙攣', severity: 'critical', diseases: ['neuroToxic', 'mbd'] }
+      { id: 'seizure', label: '抽搐/痙攣', severity: 'critical', diseases: ['neuroToxic', 'mbd'] }
     ]
   },
   {
@@ -1098,7 +1100,7 @@ export const CHECKUP_QUESTIONS = [
     title: 'D3. 環境溫控與補充',
     type: 'single',
     options: [
-      { id: 'full', label: '完整溫度梯度 + 規律鈣粉每餐', severity: 'normal' },
+      { id: 'full', label: '完整溫度梯度+規律鈣粉每餐', severity: 'normal' },
       {
         id: 'noTherm',
         label: '有加溫但無控溫器（燙傷風險）',
@@ -1107,11 +1109,11 @@ export const CHECKUP_QUESTIONS = [
       },
       {
         id: 'noMeas',
-        label: '沒測量過溫度 / 全缸同溫',
+        label: '沒測量過溫度/全缸同溫',
         severity: 'warn',
         diseases: ['detectionFail']
       },
-      { id: 'none', label: '完全沒溫控 + 沒補鈣粉', severity: 'critical', diseases: ['mbd'] }
+      { id: 'none', label: '完全沒溫控+沒補鈣粉', severity: 'critical', diseases: ['mbd'] }
     ]
   },
   {
@@ -1125,7 +1127,7 @@ export const CHECKUP_QUESTIONS = [
       { id: 'sluggish', label: '整天少動、反應慢、長時間縮著', severity: 'warn' },
       {
         id: 'collapsed',
-        label: '翻正困難 / 幾乎不動 / 無力撐身',
+        label: '翻正困難/幾乎不動/無力撐身',
         severity: 'critical',
         diseases: ['neuroTerminal']
       }
@@ -1140,7 +1142,7 @@ export const CHECKUP_QUESTIONS = [
       { id: 'strong', label: '站姿穩、抓地正常、腹部離地', severity: 'normal' },
       { id: 'slip', label: '偶爾打滑，但能自行恢復', severity: 'watch' },
       { id: 'weak', label: '四肢撐力變差、走路搖晃', severity: 'warn', diseases: ['mbd'] },
-      { id: 'drag', label: '拖行 / 無法抬身 / 明顯跛行', severity: 'critical', diseases: ['mbd'] }
+      { id: 'drag', label: '拖行/無法抬身/明顯跛行', severity: 'critical', diseases: ['mbd'] }
     ]
   },
   {
@@ -1176,7 +1178,7 @@ export const CHECKUP_QUESTIONS = [
       },
       {
         id: 'chronic',
-        label: '長期腹瀉 / 消瘦，且從未檢糞',
+        label: '長期腹瀉/消瘦，且從未檢糞',
         severity: 'critical',
         diseases: ['crypto', 'coccidia']
       }
@@ -1187,23 +1189,23 @@ export const CHECKUP_QUESTIONS = [
     category: '排泄行為環境',
     title: 'D8. 環境濕度',
     type: 'single',
-    subtitle: '豹紋多數時間 30–50%、濕盒內 70–80%',
+    subtitle: '豹紋多數時間30~50%、濕盒內70~80%',
     options: [
-      { id: 'ideal', label: '主環境 30–50%、濕盒 70–80%', severity: 'normal' },
-      { id: 'lowOk', label: '主環境偏乾 (< 30%) 但有濕盒可用', severity: 'watch' },
+      { id: 'ideal', label: '主環境30~50%、濕盒70~80%', severity: 'normal' },
+      { id: 'lowOk', label: '主環境偏乾 (<30%) 但有濕盒可用', severity: 'watch' },
       {
         id: 'tooDry',
-        label: '長期 < 30% 且無濕盒，脫皮反覆失敗',
+        label: '長期<30% 且無濕盒，脫皮反覆失敗',
         severity: 'warn',
         diseases: ['dysecdysis', 'dehydration']
       },
       {
         id: 'tooWet',
-        label: '長期 > 70% 滿缸潮濕、底材長黴',
+        label: '長期>70% 滿缸潮濕、底材長黴',
         severity: 'warn',
         diseases: ['ri', 'bacterialDermatitis']
       },
-      { id: 'noMeasure', label: '從未測過濕度 / 沒有溫濕度計', severity: 'watch' }
+      { id: 'noMeasure', label: '從未測過濕度/沒有溫濕度計', severity: 'watch' }
     ]
   },
   {
@@ -1211,11 +1213,11 @@ export const CHECKUP_QUESTIONS = [
     category: '排泄行為環境',
     title: 'D9. 鈣粉與綜合維生素補充',
     type: 'single',
-    subtitle: '幼體每餐沾鈣粉、成體每週 2–3 次；綜合維生素每週 1 次',
+    subtitle: '幼體每餐沾鈣粉、成體每週2~3次；綜合維生素每週1次',
     options: [
-      { id: 'routine', label: '依年齡規律補鈣 + 每週綜合維生素', severity: 'normal' },
+      { id: 'routine', label: '依年齡規律補鈣+每週綜合維生素', severity: 'normal' },
       { id: 'calOnly', label: '只補鈣粉，沒有綜合維生素', severity: 'watch' },
-      { id: 'irregular', label: '想到才補 / 補充頻率不固定', severity: 'warn', diseases: ['mbd'] },
+      { id: 'irregular', label: '想到才補/補充頻率不固定', severity: 'warn', diseases: ['mbd'] },
       { id: 'never', label: '從未補充鈣粉與維生素', severity: 'critical', diseases: ['mbd'] }
     ]
   },
@@ -1224,12 +1226,11 @@ export const CHECKUP_QUESTIONS = [
     category: '排泄行為環境',
     title: 'D10. 同箱個體狀況',
     type: 'single',
-    subtitle: '⚠️ 守宮禁止任何形式的混養，若有混養情況，請立即停止，堅持一缸一體。',
     options: [
       { id: 'solo', label: '單獨飼養', severity: 'normal' },
       {
         id: 'femalePair',
-        label: '母 + 母混養，無爭執且皆健康',
+        label: '母+母混養，無爭執且皆健康',
         severity: 'critical',
         diseases: ['chronicStress']
       },
@@ -1242,7 +1243,7 @@ export const CHECKUP_QUESTIONS = [
       {
         id: 'sizeGap',
         label: '混養但體型差距大 / 弱勢個體常被搶食',
-        severity: 'warn',
+        severity: 'critical',
         diseases: ['malnutrition', 'limbLossRisk', 'chronicStress']
       }
     ]
@@ -1261,8 +1262,8 @@ export const PURCHASE_QUESTIONS = [
     options: [
       { id: 'clear', label: '雙眼大睜、清澈、無分泌物', severity: 'normal' },
       { id: 'halfShut', label: '一眼半閉、無分泌物', severity: 'watch' },
-      { id: 'sunken', label: '眼睛凹陷 / 皮膚皺褶', severity: 'warn', diseases: ['dehydration'] },
-      { id: 'discharge', label: '有分泌物 / 結痂', severity: 'critical', diseases: ['eyeIssue'] }
+      { id: 'sunken', label: '眼睛凹陷/皮膚皺褶', severity: 'warn', diseases: ['dehydration'] },
+      { id: 'discharge', label: '有分泌物/結痂', severity: 'critical', diseases: ['eyeIssue'] }
     ]
   },
   {
@@ -1290,13 +1291,13 @@ export const PURCHASE_QUESTIONS = [
       { id: 'minor', label: '少量殘皮可協助移除', severity: 'watch' },
       {
         id: 'wound',
-        label: '殘皮卡關節 / 咬痕 / 抓傷',
+        label: '殘皮卡關節/咬痕/抓傷',
         severity: 'warn',
         diseases: ['dysecdysis']
       },
       {
         id: 'burn',
-        label: '燒燙傷痕跡 / 潰瘍 / 組織壞死 / 大面積傷口',
+        label: '燒燙傷痕跡/潰瘍/組織壞死/大面積傷口',
         severity: 'critical',
         diseases: ['burn']
       }
@@ -1314,13 +1315,13 @@ export const PURCHASE_QUESTIONS = [
       },
       {
         id: 'tremor',
-        label: '上手時前肢一直發抖 / 走路腹部拖地',
+        label: '上手時前肢一直發抖/走路腹部拖地',
         severity: 'warn',
         diseases: ['earlyMbd', 'neuroDamage']
       },
       {
         id: 'wobble',
-        label: '仰頭看天（星際觀望）/ 原地轉圈圈 / 瘋狂撲空',
+        label: '仰頭看天（星際觀望）/原地轉圈圈/瘋狂撲空',
         severity: 'critical',
         diseases: ['mystery']
       },

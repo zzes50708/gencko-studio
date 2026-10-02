@@ -14,16 +14,30 @@ const seoArticles = computed(() => store.articlesList)
 const artCat = ref('All')
 const searchQuery = ref('')
 
-const fixedCats = [
-  { label: '全部文章', value: 'All' },
-  { label: '新手必看', value: 'Beginner' },
-  { label: '行為與互動', value: '行為與互動' },
-  { label: '健康照護', value: '健康照護' },
-  { label: '環境佈置', value: '環境佈置' },
-  { label: '餵食與營養', value: '餵食與營養' }
-]
-
 const categoryOrder = ['新手必看', '環境佈置', '健康照護', '行為與互動', '餵食與營養']
+
+const categoryOptions = computed(() => {
+  const articles = store.articlesList || []
+  const categories = [...new Set(articles.map((article) => article.Category).filter(Boolean))]
+  categories.sort((a, b) => {
+    const ai = categoryOrder.indexOf(a)
+    const bi = categoryOrder.indexOf(b)
+    const av = ai === -1 ? Number.MAX_SAFE_INTEGER : ai
+    const bv = bi === -1 ? Number.MAX_SAFE_INTEGER : bi
+    return av - bv || a.localeCompare(b, 'zh-TW')
+  })
+
+  const hasBeginnerArticles = articles.some(
+    (article) =>
+      article.Category === '新手必看' || (article.Keywords || '').toLowerCase().includes('新手')
+  )
+  const options = [{ label: '全部文章', value: 'All' }]
+  if (hasBeginnerArticles && !categories.includes('新手必看')) {
+    options.push({ label: '新手必看', value: 'Beginner' })
+  }
+  options.push(...categories.map((category) => ({ label: category, value: category })))
+  return options
+})
 
 const setCategory = (catValue) => {
   artCat.value = catValue
@@ -268,20 +282,20 @@ const fmtDate = (d) => {
 </script>
 
 <template>
-  <div class="articles-page-wrapper">
+  <div class="site-document-page articles-page-wrapper">
     <div class="articles-document-meta" aria-label="文章資料庫說明">
       <span>GENCKO FIELD JOURNAL</span>
       <span>SEARCH / READ / APPLY</span>
     </div>
     <header class="articles-masthead" data-testid="articles-editorial-stage">
       <div class="masthead-copy">
-        <div class="masthead-kicker">GENCKO FIELD NOTES · 守宮知識誌</div>
+        <div class="masthead-kicker">GENCKO FIELD NOTES · 守宮知識</div>
         <h1>守宮文章知識庫</h1>
-        <p>從飼養情境、健康觀察到行為與營養，用可以立即採取行動的文章整理每一個問題。</p>
+        <p>對於守宮知識進行更詳細的說明。</p>
       </div>
       <nav class="masthead-routes" aria-label="文章閱讀入口">
         <NuxtLink no-prefetch to="/start-here">
-          新手閱讀路徑
+          新手入門頁面
           <span>01</span>
         </NuxtLink>
         <NuxtLink no-prefetch to="/care">
@@ -318,7 +332,7 @@ const fmtDate = (d) => {
 
       <div class="category-nav-row" aria-label="文章分類">
         <button
-          v-for="cat in fixedCats"
+          v-for="cat in categoryOptions"
           :key="cat.value"
           type="button"
           class="nav-chip"
@@ -351,7 +365,9 @@ const fmtDate = (d) => {
     <div v-if="searchQuery || artCat !== 'All'" class="main-list-head">
       <h2 class="list-title">
         {{
-          searchQuery ? `搜尋：${searchQuery}` : fixedCats.find((c) => c.value === artCat)?.label
+          searchQuery
+            ? `搜尋：${searchQuery}`
+            : categoryOptions.find((category) => category.value === artCat)?.label
         }}
       </h2>
     </div>
@@ -775,7 +791,29 @@ a:focus-visible {
 }
 @media (max-width: 539px) {
   .article-group-grid {
-    grid-template-columns: minmax(0, 1fr);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px 10px;
+  }
+  .article-category-badge {
+    left: 6px;
+    bottom: 6px;
+    padding: 3px 5px;
+    font-size: 0.66rem;
+  }
+  .article-body {
+    padding-block: 9px 12px;
+  }
+  .date-text {
+    font-size: 0.68rem;
+  }
+  .article-title {
+    margin-block: 5px;
+    font-size: clamp(0.92rem, 4.4vw, 1.05rem);
+    line-height: 1.45;
+  }
+  .art-summary {
+    font-size: 0.76rem;
+    line-height: 1.6;
   }
 }
 @media (prefers-reduced-motion: reduce) {

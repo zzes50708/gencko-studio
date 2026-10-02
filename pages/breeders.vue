@@ -191,7 +191,7 @@ useHead({
 </script>
 
 <template>
-  <div class="breeders-page-wrapper">
+  <div class="site-document-page breeders-page-wrapper">
     <div class="common-document-meta" aria-label="種群展示說明">
       <span>GENCKO BREEDING ARCHIVE</span>
       <span>LINEAGE / GENETICS / SELECTION</span>

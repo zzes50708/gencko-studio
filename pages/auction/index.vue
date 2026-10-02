@@ -270,12 +270,11 @@ const formatPrice = (value, fallback) => {
 </script>
 
 <template>
-  <div class="auction-page">
+  <div class="site-document-page auction-page">
     <div class="common-document-meta" aria-label="競標目錄說明">
       <span>GENCKO AUCTION DESK</span>
       <span>WATCH / BID / REVIEW</span>
     </div>
-    <TheBackButton wrapper-class="m-only" fallback="/" text="返回" />
 
     <div class="auction-container">
       <header class="auction-intro">
@@ -285,6 +284,7 @@ const formatPrice = (value, fallback) => {
         </div>
         <p class="auction-mobile-desc">限時競標，結標前 3 分鐘出價自動延長。</p>
       </header>
+      <TheBackButton wrapper-class="m-only" fallback="/" text="返回" />
 
       <section class="auction-catalog-stage" aria-labelledby="auction-live-catalog-title">
         <header class="auction-stage-heading">

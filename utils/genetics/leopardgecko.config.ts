@@ -24,7 +24,13 @@ export const LEOPARD_GECKO_GENES = [
   { id: 'lemonfrost', name: '檸檬霜', type: CALC_TYPES.CODOM, category: 'codominant' },
 
   { id: 'enigman', name: '謎', type: CALC_TYPES.DOM, category: 'dominant' },
-  { id: 'whiteandyellow', name: '白黃', type: CALC_TYPES.DOM, category: 'dominant' },
+  {
+    id: 'whiteandyellow',
+    name: '白黃',
+    resultName: 'WY',
+    type: CALC_TYPES.DOM,
+    category: 'dominant'
+  },
   { id: 'tugsnow', name: '奧本雪花', type: CALC_TYPES.DOM, category: 'dominant' },
   { id: 'gemsnow', name: '寶石雪花', type: CALC_TYPES.DOM, category: 'dominant' },
   { id: 'pastel', name: '蠟筆', type: CALC_TYPES.POLY, category: 'polygenic' },
@@ -403,7 +409,11 @@ export const LEOPARD_GECKO_CHECKS = {
 export const LEOPARD_GECKO_WARNINGS = [
   { check: 'lemonfrost', message: '檸檬霜 (Lemon Frost) 可能帶有腫瘤風險。\n' },
   { check: 'enigman', message: '謎 (Enigma) 可能伴隨 Enigma Syndrome。\n' },
-  { check: 'whiteandyellow', message: 'WY 可能伴隨神經症狀，請留意個體差異。\n' }
+  { check: 'whiteandyellow', message: 'WY 可能伴隨神經症狀，請留意個體差異。\n' },
+  {
+    check: 'ndbe',
+    message: '慾望黑眼 (NDBE) 的部分雌性個體可能不孕，眼睛結構也可能異常，繁殖與選育時需注意。\n'
+  }
 ]
 
 export const LeopardGeckoConfig = {

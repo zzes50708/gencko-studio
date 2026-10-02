@@ -26,7 +26,8 @@ export function getProbFraction(prob: number): string {
   return ''
 }
 
-const getGeneBaseName = (geneDef: any): string => (geneDef ? geneDef.name.split(' (')[0] : '')
+const getGeneBaseName = (geneDef: any): string =>
+  geneDef ? (geneDef.resultName || geneDef.name).split(' (')[0] : ''
 const isAftZeroGene = (geneId: string): boolean => geneId === 'aft_zero'
 
 const getGeneDisplayNameByZygosity = (geneDef: any, zygosity: string): string => {

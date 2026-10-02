@@ -124,12 +124,28 @@ const navLogoUrl = computed(() => (store.logoUrl ? getCleanUrl(store.logoUrl, 72
               dismissed: dismissedMenu === group.key
             }"
             @focusout="handleFocusOut"
-            v-on="canHover ? {
-              mouseenter: () => { openMenu = group.key; dismissedMenu = null },
-              mouseleave: () => { closeMenu(); clearDismissedMenu(group.key) }
-            } : {}"
+            v-on="
+              canHover
+                ? {
+                    mouseenter: () => {
+                      openMenu = group.key
+                      dismissedMenu = null
+                    },
+                    mouseleave: () => {
+                      closeMenu()
+                      clearDismissedMenu(group.key)
+                    }
+                  }
+                : {}
+            "
           >
-            <NuxtLink no-prefetch :to="group.to" class="nav-item-dt-link" @focus="openMenu = group.key" @click="dismissMenu">
+            <NuxtLink
+              no-prefetch
+              :to="group.to"
+              class="nav-item-dt-link"
+              @focus="openMenu = group.key"
+              @click="dismissMenu"
+            >
               {{ group.label }}
             </NuxtLink>
             <button
@@ -585,7 +601,7 @@ const navLogoUrl = computed(() => (store.logoUrl ? getCleanUrl(store.logoUrl, 72
 }
 
 .dt-dropdown {
-  top: calc(100% + 17px);
+  top: 100%;
   min-width: 176px;
   padding: 8px;
   background: var(--card-bg-solid);
@@ -662,6 +678,16 @@ const navLogoUrl = computed(() => (store.logoUrl ? getCleanUrl(store.logoUrl, 72
 
   .theme-toggle {
     margin-right: 0;
+  }
+}
+@media (max-width: 767px) {
+  .sticky-nav {
+    display: none;
+  }
+  .reading-progress-bar,
+  .reading-progress-bar--nav-hidden {
+    top: env(safe-area-inset-top, 0px);
+    transform: none;
   }
 }
 </style>

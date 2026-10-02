@@ -1,0 +1,454 @@
+/* 全站標題契約：字級取自爬櫃 3D 區塊，頂部節奏取自基因計算機。 */
+:root {
+  --site-content-gutter: clamp(16px, 4vw, 64px);
+  --site-content-max: 1600px;
+  --site-page-title-size: clamp(1.5rem, 3vw, 2.3rem);
+  --site-page-title-line: 1.12;
+  --site-page-top-space: 26px;
+  --site-page-heading-height: 74px;
+  --site-page-meta-gap: 8px;
+}
+/* 內容頁共用外框，避免各頁與內層容器重複加入左右留白。 */
+.cont:has(#main-content .site-document-page) {
+  width: 100%;
+  max-width: none;
+  padding-inline: 0;
+}
+#main-content:has(.site-document-page) {
+  width: 100% !important;
+  max-width: none !important;
+  padding-inline: 0 !important;
+  margin-inline: 0 !important;
+}
+#main-content .site-document-page {
+  box-sizing: border-box;
+  width: min(var(--site-content-max), calc(100% - 2 * var(--site-content-gutter))) !important;
+  max-width: none !important;
+  min-width: 0;
+  margin-inline: auto !important;
+  padding-inline: 0 !important;
+  padding-bottom: 32px !important;
+}
+#main-content
+  .site-document-page
+  :is(
+    .shop-page-wrapper,
+    .auction-container,
+    .product-page-wrapper,
+    .content-card,
+    .faq-container,
+    .hosp-intro
+  ) {
+  width: 100% !important;
+  max-width: none !important;
+  padding-inline: 0 !important;
+  margin-inline: 0 !important;
+}
+#main-content .site-document-page [class*='document-meta'] {
+  max-width: none !important;
+}
+/* 區塊間距保留閱讀層次，移除過大的展示留白。 */
+#main-content
+  .site-document-page
+  :is(
+    .home-section,
+    .content-section,
+    .section-block,
+    .guide-section,
+    .care-section,
+    .trust-section,
+    .flow-section,
+    .starter-section,
+    .cabinet-section,
+    .shop-catalog-stage,
+    .auction-catalog-stage
+  ) {
+  margin-top: 20px !important;
+  margin-bottom: 20px !important;
+  padding-top: 16px !important;
+  padding-bottom: 16px !important;
+}
+#main-content
+  .site-document-page
+  :is(
+    .shop-intro,
+    .auction-intro,
+    .breeders-intro,
+    .cabinet-hero,
+    .page-hero,
+    .care-hero,
+    .compare-header,
+    .home-hero
+  ) {
+  margin-bottom: 16px !important;
+  padding-bottom: 16px !important;
+}
+#main-content .site-document-page :is(.empty-compare, .shop-empty-state, .auction-empty-state) {
+  padding-block: 32px !important;
+}
+#main-content .site-document-page .shop-photo-notice {
+  margin-block: 8px !important;
+  padding-block: 8px !important;
+}
+#main-content .site-document-page .hero-content-inner {
+  max-width: none !important;
+  padding-inline: 0 !important;
+}
+#main-content
+  .site-document-page
+  :is(
+    .article-page,
+    .reader-container,
+    .reader-header,
+    .gene-container,
+    .prod-container,
+    .id-content-wrap,
+    .identity-certificate
+  ) {
+  width: 100% !important;
+  max-width: none !important;
+  margin-inline: 0 !important;
+}
+#main-content .site-document-page .reader-header {
+  padding: 16px 0 !important;
+}
+#main-content .site-document-page .identity-heading {
+  padding-top: 16px !important;
+  padding-bottom: 16px !important;
+}
+#main-content .site-document-page .reader-content {
+  max-width: 75ch;
+  margin-inline: 0;
+  padding: 16px 0 10px;
+}
+
+#main-content h1:not(.sr-only),
+#main-content h2.page-title,
+#main-content .cabinet-section-head h2 {
+  font-family: var(--font-heading-zh) !important;
+  font-size: var(--site-page-title-size) !important;
+  line-height: var(--site-page-title-line) !important;
+  letter-spacing: normal !important;
+  margin-block: 8px !important;
+  max-width: none !important;
+  text-wrap: balance;
+}
+#main-content h1:not(.sr-only) > span {
+  font-size: inherit !important;
+  line-height: inherit !important;
+}
+
+#main-content .site-document-page:has([class*='document-meta']) {
+  padding-top: var(--site-page-top-space) !important;
+  margin-top: 0 !important;
+}
+#main-content
+  .site-document-page
+  :is(
+    .shop-page-wrapper,
+    .product-page-wrapper,
+    .auction-container,
+    .content-card,
+    .hosp-intro,
+    .h-entry
+  ) {
+  padding-top: 0 !important;
+  margin-top: 0 !important;
+}
+#main-content .site-document-page [class*='document-meta'] {
+  display: flex !important;
+  justify-content: space-between;
+  flex-direction: row;
+  gap: 16px;
+  margin: 0 0 var(--site-page-meta-gap) !important;
+  padding: 0 0 14px !important;
+  border-bottom: 1px solid var(--bd);
+  min-height: 0 !important;
+  height: auto !important;
+  font-size: 0.68rem !important;
+  line-height: 1.5 !important;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+}
+#main-content
+  .site-document-page
+  :is(
+    .calc-header,
+    .shop-intro,
+    .auction-intro,
+    .breeders-intro,
+    .cabinet-hero,
+    .hosp-hero,
+    .faq-intro,
+    .articles-masthead,
+    .genes-hero,
+    .profile-heading,
+    .care-hero,
+    .page-hero,
+    .stories-page > .hero
+  ) {
+  padding-top: 0 !important;
+  padding-bottom: 18px !important;
+  margin-top: 0 !important;
+  min-height: 0 !important;
+  text-align: left;
+}
+#main-content
+  .site-document-page
+  :is(
+    .calc-heading-block,
+    .shop-intro > div:first-child,
+    .auction-intro > div:first-child,
+    .breeders-intro,
+    .cabinet-hero__copy,
+    .hosp-hero,
+    .faq-intro-copy,
+    .masthead-copy,
+    .genes-hero,
+    .profile-heading > div:first-child,
+    .care-hero-copy,
+    .hero-copy
+  ) {
+  min-height: var(--site-page-heading-height) !important;
+}
+#main-content
+  .site-document-page
+  :is(
+    .calc-kicker,
+    .shop-intro__eyebrow,
+    .auction-eyebrow,
+    .breeders-eyebrow,
+    .cabinet-kicker,
+    .hosp-hero > span,
+    .masthead-kicker,
+    .genes-kicker,
+    .profile-kicker,
+    .care-hero-kicker,
+    .hero-kicker,
+    .site-page-kicker,
+    .home-hero__eyebrow
+  ) {
+  display: block;
+  margin: 0 !important;
+  font-size: 0.7rem !important;
+  line-height: 1.4 !important;
+  letter-spacing: 0.16em;
+}
+#main-content
+  .site-document-page
+  :is(
+    .cabinet-hero,
+    .breeders-intro,
+    .hosp-intro,
+    .faq-intro,
+    .page-hero,
+    .home-hero,
+    .hero-content-inner
+  ) {
+  align-items: start !important;
+}
+#main-content .site-document-page .breeders-intro {
+  row-gap: 0 !important;
+}
+#main-content .site-document-page .care-hero-copy {
+  padding-top: 0 !important;
+}
+#main-content .site-document-page :is(.care-hero, .profile-heading) {
+  border-top: 0 !important;
+}
+#main-content .cabinet-section-head {
+  min-height: var(--site-page-heading-height);
+}
+#main-content .site-document-page .home-hero__copy {
+  padding-top: 0 !important;
+}
+#main-content .site-document-page .home-hero {
+  padding-top: 0 !important;
+}
+#main-content .site-document-page .hero-copy {
+  padding-top: 0 !important;
+  row-gap: 0 !important;
+  align-content: start !important;
+}
+#main-content .site-document-page .hero-kicker::before {
+  display: none !important;
+}
+#main-content .site-document-page .page-hero {
+  border-top: 0 !important;
+}
+#main-content .site-document-page .compare-header {
+  padding-top: 0 !important;
+  margin-top: 0 !important;
+  align-items: start !important;
+}
+#main-content .site-document-page :is(.compare-eyebrow, .stories-page .eyebrow) {
+  margin: 0 !important;
+  font-size: 0.7rem !important;
+  line-height: 1.4 !important;
+}
+@media (max-width: 640px) {
+  #main-content .site-document-page [class*='document-meta'] {
+    flex-direction: column;
+    gap: 6px;
+  }
+}
+/* 手機優先縮減資料列、標題與說明的展示留白。 */
+@media (max-width: 767px) {
+  :root {
+    --site-page-top-space: 10px;
+    --site-page-heading-height: 0px;
+    --site-page-meta-gap: 5px;
+  }
+  #main-content .site-document-page [class*='document-meta'] {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 3px 12px;
+    padding-bottom: 6px !important;
+    font-size: 0.6rem !important;
+    line-height: 1.3 !important;
+  }
+  #main-content h1:not(.sr-only),
+  #main-content h2.page-title {
+    margin-block: 4px !important;
+  }
+  #main-content
+    .site-document-page
+    :is(
+      .calc-header,
+      .shop-intro,
+      .auction-intro,
+      .breeders-intro,
+      .cabinet-hero,
+      .hosp-hero,
+      .faq-intro,
+      .articles-masthead,
+      .genes-hero,
+      .profile-heading,
+      .care-hero,
+      .page-hero,
+      .compare-header,
+      .home-hero,
+      .stories-page > .hero
+    ) {
+    gap: 6px !important;
+    align-items: start !important;
+    margin-bottom: 8px !important;
+    padding-bottom: 8px !important;
+  }
+  #main-content
+    .site-document-page
+    :is(
+      .shop-intro__copy,
+      .auction-mobile-desc,
+      .breeders-intro > p,
+      .cabinet-hero__copy > p,
+      .hero-lead,
+      .home-hero__lede,
+      .faq-intro-copy > p:not(.site-page-kicker),
+      .care-hero-copy > p:not(.care-hero-kicker)
+    ) {
+    margin-block: 4px !important;
+    line-height: 1.5 !important;
+  }
+  #main-content .site-document-page .shop-photo-notice {
+    margin-block: 4px !important;
+    padding-block: 6px !important;
+    gap: 8px;
+  }
+  #main-content
+    .site-document-page
+    :is(
+      .content-section,
+      .home-section,
+      .cabinet-section,
+      .shop-catalog-stage,
+      .auction-catalog-stage
+    ) {
+    margin-block: 10px !important;
+    padding-block: 10px !important;
+  }
+  #main-content .site-document-page > section,
+  #main-content
+    .site-document-page
+    :is(.cabinet-3d-slot, .cabinet-systems, .cabinet-cases, .cabinet-process, .cabinet-inquiry) {
+    margin-block: 10px !important;
+    padding-block: 10px !important;
+  }
+  #main-content .cabinet-section-head h2 {
+    margin-block: 4px !important;
+  }
+  #main-content .site-document-page :is(.cabinet-3d-slot__intro, .cabinet-cases__intro) {
+    margin-block: 6px !important;
+    line-height: 1.5 !important;
+  }
+}
+
+/* 手機統一由底部導覽操作，頂部只保留裝置安全區。 */
+@media (max-width: 767px) {
+  :root {
+    --mobile-nav-height: calc(62px + env(safe-area-inset-bottom, 0px));
+  }
+  html {
+    padding-bottom: 0;
+    scroll-padding-top: calc(env(safe-area-inset-top, 0px) + 12px);
+  }
+  body {
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: var(--mobile-nav-height);
+  }
+  #main-content .qs-container {
+    --qs-sticky-top: env(safe-area-inset-top, 0px);
+    --qs-toolbar-shift: 0px;
+  }
+  #main-content .health-container {
+    --health-sticky-top: env(safe-area-inset-top, 0px);
+    --health-nav-shift: 0px;
+  }
+  #main-content .care-anchor-nav {
+    top: env(safe-area-inset-top, 0px);
+    transform: none;
+  }
+  #main-content .care-section {
+    scroll-margin-top: calc(env(safe-area-inset-top, 0px) + 58px);
+  }
+  #main-content :is(.cabinet-section, .hosp-map-section, .start-section) {
+    scroll-margin-top: calc(env(safe-area-inset-top, 0px) + 12px);
+  }
+  #main-content .h-quiz-foot {
+    bottom: var(--mobile-nav-height);
+  }
+  .connection-status {
+    top: calc(env(safe-area-inset-top, 0px) + 8px);
+  }
+  body.hero-lab-active .bottom-nav {
+    display: flex !important;
+  }
+  body.hero-lab-active .hero-lab-home-link {
+    display: none !important;
+  }
+}
+
+@media (max-width: 767px) {
+  #main-content .hosp-filter-panel {
+    top: calc(env(safe-area-inset-top, 0px) + 8px);
+  }
+  #main-content .calc-reverse-parents-panel {
+    z-index: 11000;
+  }
+}
+
+@media (max-width: 767px) {
+  body.hero-lab-active .hero-lab {
+    height: calc(100dvh - var(--mobile-nav-height));
+    bottom: var(--mobile-nav-height);
+  }
+}
+
+@media (max-width: 767px) {
+  .floating-inquire-btn.floating-inquire-btn--with-compare {
+    top: calc(env(safe-area-inset-top, 0px) + 8px);
+  }
+  #main-content .stage--touch {
+    bottom: var(--mobile-nav-height);
+  }
+}

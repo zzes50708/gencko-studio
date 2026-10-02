@@ -229,8 +229,7 @@ onBeforeUnmount(() => {
 :global(body.hero-lab-active footer),
 :global(body.hero-lab-active .marquee-container),
 :global(body.hero-lab-active .sticky-nav),
-:global(body.hero-lab-active .reading-progress-bar),
-:global(body.hero-lab-active .bottom-nav) {
+:global(body.hero-lab-active .reading-progress-bar) {
   display: none !important;
 }
 
@@ -258,5 +257,15 @@ onBeforeUnmount(() => {
 .hero-lab-home-link:hover {
   background: var(--pri);
   color: #fff;
+}
+@media (min-width: 768px) {
+  :global(body.hero-lab-active .bottom-nav) {
+    display: none !important;
+  }
+}
+@media (max-width: 767px) {
+  .hero-lab-home-link {
+    display: none;
+  }
 }
 </style>

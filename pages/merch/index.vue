@@ -1,705 +1,795 @@
-<script setup>
-import { computed } from 'vue'
-import { useHead, useAsyncData, useSupabaseClient } from '#imports'
-import { useMainStore } from '~/stores/useMainStore'
-import { getCleanUrl } from '~/utils/image'
+<script setup lang="ts">
+import { computed, ref, watch } from 'vue'
+import { useHead } from '#imports'
+import { SOCIAL_LINKS } from '~/utils/site-constants'
 
-const store = useMainStore()
-const supabase = useSupabaseClient()
-
-// SSR：抓取所有周邊商品（給 schema 用）
-const { data: ssrMerch } = await useAsyncData('merch-list-seo-v1', async () => {
-  try {
-    const { data, error } = await supabase
-      .from('merchandise')
-      .select('item_id, name, description, price, image_url, category, available')
-    if (error || !data) return []
-    return data.map((m) => ({
-      ItemID: m.item_id,
-      Name: m.name,
-      Description: m.description,
-      Price: m.price,
-      ImageURL: m.image_url,
-      Category: m.category,
-      Available: m.available
-    }))
-  } catch (e) {
-    console.error('[merch-list SSR] fetch failed:', e?.message)
-    return []
-  }
+const selectedTemplateId = ref('a4')
+const equipment = ref<string[]>([])
+type Configuration = {
+  rows: number
+  columns: number
+  finish: string
+  boxLabel?: string
+  boxDimensions?: { length: number; width: number; height: number }
+  boxColor?: string
+  counts?: Record<string, number>
+  ledLayers?: number
+  ledColor?: string
+  lightLevel?: number
+  storageHeight?: number
+  storageStyle?: 'drawer' | 'doors' | 'open'
+  dimensions?: { width: number; height: number; depth: number }
+  clearances?: { horizontal: number; vertical: number; depth: number; controlHeight: number }
+}
+const configuration = ref<Configuration>({ rows: 4, columns: 2, finish: '待選擇' })
+const needs = ref({ species: '', space: '', budget: '', note: '', boxSize: '', finish: '' })
+const copyStatus = ref('')
+const summaryField = ref<HTMLTextAreaElement | null>(null)
+const accessoryPrices = [
+  ['溫度計', '200／個'],
+  ['一般開關', '100／個'],
+  ['金屬發光開關', '250／個'],
+  ['額外內嵌式溫控', '600／個'],
+  ['萬向輪', '100／個'],
+  ['LED 間接照明', '依訂製報價'],
+  ['抽屜與收納櫃', '依訂製報價'],
+  ['三色可調 LED', '依訂製報價']
+]
+const equipmentNames: Record<string, string> = {
+  thermometer: '溫度計',
+  switch: '一般開關',
+  metalSwitch: '金屬發光開關',
+  extraThermostat: '額外內嵌式溫控',
+  led: 'LED 間接照明',
+  storage: '抽屜與收納櫃',
+  rgbLed: '三色可調 LED',
+  wheels: '萬向輪'
+}
+function updateConfiguration(value: Configuration & { capabilities: string[] }) {
+  equipment.value = value.capabilities
+  configuration.value = { ...value }
+}
+const equipmentSummary = computed(() => {
+  const c = configuration.value
+  const items = Object.entries(c.counts || {})
+    .filter(([, count]) => count > 0)
+    .map(([key, count]) => `${equipmentNames[key] || key} × ${count}`)
+  if (c.ledLayers)
+    items.push(
+      `LED ${c.ledLayers} 層／${({ warm: '暖白', neutral: '自然白', cool: '冷白' } as Record<string, string>)[c.ledColor || 'warm']}`
+    )
+  if (c.storageHeight)
+    items.push(
+      `底部收納：${c.storageStyle === 'doors' ? '雙開門' : c.storageStyle === 'open' ? '無門' : '抽屜'}，內高 ${c.storageHeight} cm`
+    )
+  if (equipment.value.includes('wheels')) items.push('萬向輪組')
+  return items.join('、') || '無額外加購'
 })
-
-const merchList = computed(() => {
-  const csr = store.merchList || []
-  return csr.length ? csr : ssrMerch.value || []
-})
-
-const availableCount = computed(
-  () => merchList.value.filter((item) => item.Available !== 'No').length
+const inquiry = computed(() =>
+  [
+    '客製化爬蟲設備需求',
+    `款式：${configuration.value.boxLabel || '待選擇'}木製爬櫃`,
+    `盒款：${configuration.value.boxLabel || '待選擇'}；盒色：${configuration.value.boxColor === 'smoke' ? '霧黑' : '透白'}`,
+    configuration.value.boxDimensions
+      ? `盒體長×寬×高：${configuration.value.boxDimensions.length} × ${configuration.value.boxDimensions.width} × ${configuration.value.boxDimensions.height} cm`
+      : '盒體尺寸：待確認',
+    configuration.value.dimensions
+      ? `櫃體寬×高×深（規劃值）：${configuration.value.dimensions.width} × ${configuration.value.dimensions.height} × ${configuration.value.dimensions.depth} cm`
+      : '櫃體尺寸：待確認',
+    '層板與櫃壁厚度：2 cm',
+    configuration.value.clearances
+      ? `預留間隙（cm）：水平 ${configuration.value.clearances.horizontal}／垂直 ${configuration.value.clearances.vertical}／深度 ${configuration.value.clearances.depth}；控制區高 ${configuration.value.clearances.controlHeight}`
+      : '',
+    `配置：每層 ${configuration.value.columns} 抽 × ${configuration.value.rows} 層，共 ${configuration.value.columns * configuration.value.rows} 抽`,
+    '標配：貼皮木製櫃體、內嵌式溫控、美國加熱墊',
+    `貼皮：${needs.value.finish || configuration.value.finish}（以實際樣本確認）`,
+    `選配：${equipmentSummary.value}`,
+    `物種與數量：${needs.value.species || '待討論'}`,
+    `可用空間（寬×深×高 cm）：${needs.value.space || '待確認'}`,
+    `預算範圍：${needs.value.budget || '待討論'}`,
+    `其他需求：${needs.value.note || '無'}`,
+    '以上為初步需求，請協助確認實際尺寸、設備相容性與報價。'
+  ].join('\n')
 )
-
-// 解析 "299 起" 等字串為純數字
-const parsePrice = (val) => {
-  if (val == null) return null
-  const m = String(val).match(/\d+(\.\d+)?/)
-  return m ? m[0] : null
-}
-
-const formatMerchPrice = (value) => {
-  if (value == null || String(value).trim() === '') return '價格請洽'
-
-  const raw = String(value).trim()
-  const match = raw.match(/\d+(?:\.\d+)?/)
-  if (!match) return `NT$ ${raw}`
-
-  const formatted = Number(match[0]).toLocaleString('zh-TW')
-  return `NT$ ${raw.replace(match[0], formatted)}`
-}
-
-const merchUrl = 'https://www.genckobreeding.com/merch'
-const merchImg =
-  'https://wsrv.nl/?url=raw.githubusercontent.com%2Fzzes50708%2Fgencko-assets%2Fmain%2Fimg%2F11.png&w=1200&h=630&fit=contain&bg=e6e3e3&output=webp&q=85'
-const merchSeller = {
-  '@type': 'Organization',
-  name: 'Gencko Breeding Studio',
-  alternateName: ['Gencko Studio', '捷客工作室'],
-  url: 'https://www.genckobreeding.com',
-  logo: 'https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/11.png',
-  sameAs: [
-    'https://www.instagram.com/gencko_breeding',
-    'https://www.facebook.com/profile.php?id=61579393505049',
-    'https://line.me/R/ti/p/@219abdzn'
-  ]
-}
-
-const merchItemListLd = computed(() => {
-  const list = merchList.value
-  if (!list.length) return null
-  return {
-    '@type': 'ItemList',
-    '@id': `${merchUrl}#list`,
-    name: 'Gencko 守宮 / 爬蟲周邊商品列表',
-    numberOfItems: list.length,
-    itemListElement: list.map((m, idx) => {
-      const itemUrl = `${merchUrl}/${m.ItemID}`
-      const img = m.ImageURL ? getCleanUrl(m.ImageURL) : merchImg
-      const price = parsePrice(m.Price)
-      const isRange = /起|~|-/.test(String(m.Price ?? ''))
-      const cat = m.Category || '周邊商品'
-      const isAvailable = m.Available !== 'No'
-      const offer = {
-        '@type': 'Offer',
-        url: itemUrl,
-        priceCurrency: 'TWD',
-        availability: isAvailable ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock',
-        itemCondition: 'https://schema.org/NewCondition',
-        areaServed: { '@type': 'Country', name: 'Taiwan' },
-        seller: merchSeller
-      }
-      if (price) {
-        offer.price = price
-        if (isRange) {
-          offer.priceSpecification = {
-            '@type': 'PriceSpecification',
-            priceCurrency: 'TWD',
-            minPrice: Number(price)
-          }
-        }
-      }
-      return {
-        '@type': 'ListItem',
-        position: idx + 1,
-        url: itemUrl,
-        item: {
-          '@type': 'Product',
-          '@id': `${itemUrl}#product`,
-          name: m.Name,
-          url: itemUrl,
-          image: img,
-          sku: String(m.ItemID),
-          category: `寵物用品 > ${cat}`,
-          description: m.Description || `Gencko 周邊商品：${m.Name}`,
-          brand: { '@type': 'Brand', name: 'Gencko Breeding Studio' },
-          offers: offer
-        }
-      }
-    })
-  }
+watch(inquiry, () => {
+  copyStatus.value = ''
 })
-
-const merchBreadcrumbLd = {
-  '@context': 'https://schema.org',
-  '@type': 'BreadcrumbList',
-  itemListElement: [
-    { '@type': 'ListItem', position: 1, name: '首頁', item: 'https://www.genckobreeding.com/home' },
-    { '@type': 'ListItem', position: 2, name: '周邊商品', item: merchUrl }
-  ]
+async function copyInquiry() {
+  try {
+    await navigator.clipboard.writeText(inquiry.value)
+    copyStatus.value = '已複製，請開啟 Gencko LINE 並貼上需求。'
+  } catch {
+    summaryField.value?.focus({ preventScroll: true })
+    summaryField.value?.select()
+    try {
+      if (!document.execCommand('copy')) throw new Error('複製失敗')
+      copyStatus.value = '已複製，請開啟 Gencko LINE 並貼上需求。'
+    } catch {
+      copyStatus.value = '無法自動複製，已選取需求摘要，請手動複製。'
+    }
+  }
 }
-
-const merchWebPageLd = computed(() => ({
-  '@context': 'https://schema.org',
-  '@type': 'CollectionPage',
-  '@id': merchUrl,
-  url: merchUrl,
-  name: 'Gencko 守宮周邊商品｜飼養器材、餌料、躲避屋',
-  inLanguage: 'zh-TW',
-  isPartOf: { '@type': 'WebSite', '@id': 'https://www.genckobreeding.com/#website' },
-  primaryImageOfPage: { '@type': 'ImageObject', url: merchImg },
-  speakable: {
-    '@type': 'SpeakableSpecification',
-    cssSelector: ['.page-title', '.morph-title']
-  },
-  publisher: merchSeller,
-  ...(merchItemListLd.value ? { mainEntity: merchItemListLd.value } : {})
-}))
 
 useHead({
-  title: '守宮周邊商品｜飼養器材、餌料、躲避屋、營養品 - Gencko Breeding Studio',
+  title: '客製化爬蟲設備｜Honeycomb 蜂巢工作室協作規劃',
   meta: [
     {
       name: 'description',
       content:
-        'Gencko Breeding Studio 精選守宮與爬蟲飼養周邊商品：飼養箱、加熱墊、躲避屋、餌料（杜比亞、麵包蟲）、鈣粉與綜合維生素，提供最適合豹紋守宮與肥尾守宮的專業器材。'
+        'Gencko 與 Honeycomb 蜂巢工作室協作的客製化爬蟲設備規劃。依塑膠盒或壓克力盒規劃木製爬櫃，選擇抽數、層數、貼皮與加購設備。'
     },
-    {
-      name: 'keywords',
-      content: '守宮周邊, 守宮飼養器材, 杜比亞, 加熱墊, 躲避屋, 鈣粉, 守宮營養品'
-    },
-    // Open Graph
-    {
-      property: 'og:title',
-      content: '守宮周邊商品｜飼養器材、餌料、躲避屋 - Gencko Breeding Studio'
-    },
+    { name: 'keywords', content: '客製化爬蟲設備, 訂製爬櫃, 爬蟲櫃, 爬缸, A4爬櫃, A6爬櫃' },
+    { property: 'og:title', content: '客製化爬蟲設備｜Honeycomb 蜂巢工作室協作規劃' },
     {
       property: 'og:description',
-      content: '精選守宮飼養周邊：飼養箱、加熱墊、躲避屋、餌料、鈣粉與營養品。'
+      content: '依盒款、抽數、層數與櫃體尺寸規劃貼皮木櫃，提供溫控、照明及收納選配。'
     },
-    { property: 'og:image', content: merchImg },
-    { property: 'og:image:alt', content: 'Gencko 守宮周邊商品' },
-    { property: 'og:url', content: merchUrl },
     { property: 'og:type', content: 'website' },
-    // Twitter Card
-    { name: 'twitter:card', content: 'summary_large_image' },
-    { name: 'twitter:title', content: '守宮周邊商品｜飼養器材、餌料、躲避屋' },
-    {
-      name: 'twitter:description',
-      content: '精選守宮飼養周邊：飼養箱、加熱墊、躲避屋、餌料、鈣粉與營養品。'
-    },
-    { name: 'twitter:image', content: merchImg }
+    { property: 'og:url', content: 'https://www.genckobreeding.com/merch' }
   ],
-  link: [{ rel: 'canonical', href: merchUrl }],
-  script: computed(() => [
-    { type: 'application/ld+json', innerHTML: JSON.stringify(merchWebPageLd.value) },
-    { type: 'application/ld+json', innerHTML: JSON.stringify(merchBreadcrumbLd) }
-  ])
+  link: [{ rel: 'canonical', href: 'https://www.genckobreeding.com/merch' }],
+  script: [
+    {
+      type: 'application/ld+json',
+      innerHTML: JSON.stringify({
+        '@context': 'https://schema.org',
+        '@type': 'Service',
+        name: '客製化爬蟲設備規劃服務',
+        url: 'https://www.genckobreeding.com/merch',
+        provider: { '@type': 'Organization', name: 'Gencko Breeding Studio' },
+        areaServed: { '@type': 'Country', name: 'Taiwan' },
+        serviceType: '客製化爬蟲設備規劃'
+      })
+    }
+  ]
 })
 </script>
 
 <template>
-  <main class="merch-page-wrapper" data-phase3-surface="merch-index">
-    <div class="common-document-meta" aria-label="周邊目錄說明">
-      <span>GENCKO GOODS INDEX</span>
-      <span>VIEW / REVIEW / ORDER</span>
+  <div class="site-document-page cabinet-page">
+    <div class="common-document-meta" aria-label="客製化爬蟲設備說明">
+      <span>GENCKO CUSTOM HABITAT</span>
+      <span>PLAN / BUILD / CARE</span>
     </div>
-    <header class="merch-intro">
-      <div>
-        <p class="merch-eyebrow">Gencko supply archive</p>
-        <h1 class="page-title">飼養用品與品牌周邊</h1>
-        <p class="merch-lead">
-          從日常照護到飼養環境，依目前供應狀態挑選適合的用品。商品規格與交付方式以購買前確認為準。
+
+    <section id="cabinet-configurator" class="cabinet-3d-slot" aria-labelledby="cabinet-3d-title">
+      <div class="cabinet-section-head">
+        <span>01 / CONFIGURE IN 3D</span>
+        <h2 id="cabinet-3d-title">3D 客製模擬系統</h2>
+      </div>
+      <ClientOnly>
+        <CabinetConfigurator3D v-model="selectedTemplateId" @change="updateConfiguration" />
+        <template #fallback>
+          <p class="cabinet-note">正在準備配置預覽；也可以直接填寫下方訂製需求。</p>
+        </template>
+      </ClientOnly>
+      <details class="cabinet-price-reference">
+        <summary>加購配件參考</summary>
+        <p>
+          以下金額依合作夥伴提供的訂製說明整理，幣別與現行售價於報價時確認。溫控標配不重複計價，額外數量另議。
         </p>
-      </div>
-      <dl class="merch-summary" aria-label="商品供應摘要">
-        <div>
-          <dt>館藏</dt>
-          <dd>目前共 {{ merchList.length }} 項</dd>
-        </div>
-        <div>
-          <dt>供應中</dt>
-          <dd>{{ availableCount }} 項</dd>
-        </div>
-      </dl>
-    </header>
+        <dl>
+          <div v-for="item in accessoryPrices" :key="item[0]">
+            <dt>{{ item[0] }}</dt>
+            <dd>{{ item[1] }}</dd>
+          </div>
+        </dl>
+      </details>
+    </section>
 
-    <section class="merch-collection" role="region" aria-label="周邊商品清單">
-      <div v-if="store.loading && merchList.length === 0" class="merch-grid" aria-busy="true">
-        <span class="sr-only" role="status">正在載入周邊商品</span>
-        <SkeletonCard v-for="n in 8" :key="n" square />
+    <section id="cabinet-systems" class="cabinet-systems" aria-labelledby="cabinet-systems-title">
+      <div class="cabinet-section-head">
+        <span>02 / DEFINE THE SYSTEM</span>
+        <h2 id="cabinet-systems-title">木製爬櫃標準配置</h2>
       </div>
-
-      <div v-else-if="merchList.length === 0" class="merch-empty">
-        <p class="merch-empty__index" aria-hidden="true">00</p>
-        <h2>目前沒有可瀏覽的周邊商品</h2>
-        <p>你仍可先查看在售個體，或稍後回來確認最新用品。</p>
-        <NuxtLink no-prefetch to="/shop" class="btn-app btn-app--primary btn-app--md">
-          前往選購守宮
-        </NuxtLink>
-      </div>
-
-      <div v-else class="merch-grid">
-        <article v-for="(m, index) in merchList" :key="m.ItemID" class="merch-card">
-          <NuxtLink
-            no-prefetch
-            :to="`/merch/${m.ItemID}`"
-            class="merch-card__link"
-            :aria-label="`查看 ${m.Name} 商品詳情`"
-          >
-            <div class="merch-card__media">
-              <img
-                v-if="m.ImageURL"
-                :src="getCleanUrl(m.ImageURL)"
-                :alt="m.Name"
-                class="card-img"
-                loading="lazy"
-                decoding="async"
-              />
-              <div v-else class="card-img merch-card__placeholder" aria-hidden="true">用品</div>
-              <span class="merch-card__number" aria-hidden="true">
-                {{ String(index + 1).padStart(2, '0') }}
-              </span>
-            </div>
-            <div class="card-body merch-card__body">
-              <div class="merch-card__meta">
-                <span>{{ m.Category || '周邊商品' }}</span>
-                <span
-                  class="availability-badge"
-                  :class="{ 'is-unavailable': m.Available === 'No' }"
-                >
-                  {{ m.Available === 'No' ? '暫停供應' : '供應中' }}
-                </span>
-              </div>
-              <h2 class="morph-title">{{ m.Name }}</h2>
-              <p v-if="m.Description" class="merch-card__description">{{ m.Description }}</p>
-              <div class="merch-card__footer">
-                <span class="price">{{ formatMerchPrice(m.Price) }}</span>
-                <span class="merch-card__cta" aria-hidden="true">查看詳情 →</span>
-              </div>
-            </div>
-          </NuxtLink>
+      <div class="cabinet-system-grid">
+        <article>
+          <span>01</span>
+          <h3>貼皮木製櫃體</h3>
+          <p>爬櫃統一採木製貼皮櫃體，層板與櫃壁厚 2 公分，依盒體安排抽數與整體尺寸。</p>
+        </article>
+        <article>
+          <span>02</span>
+          <h3>內嵌式溫控</h3>
+          <p>標準配置包含內嵌式溫控；需增加控制分區時，再確認額外溫控數量。</p>
+        </article>
+        <article>
+          <span>03</span>
+          <h3>美國加熱墊</h3>
+          <p>標準配置包含美國加熱墊；配置位置與溫控方式依實際製作規格確認。</p>
+        </article>
+        <article>
+          <span>04</span>
+          <h3>貼皮樣本確認</h3>
+          <p>可先選擇外觀方向，正式花色、材質與色號需依實際樣本確認。</p>
         </article>
       </div>
     </section>
-  </main>
+
+    <section class="cabinet-cases" aria-labelledby="cabinet-cases-title">
+      <div class="cabinet-section-head">
+        <span>03 / BUILT EXAMPLES</span>
+        <h2 id="cabinet-cases-title">實際案例</h2>
+      </div>
+      <p class="cabinet-cases__intro">成品照片、尺寸與設備清單將在取得授權後陸續更新。</p>
+      <div class="cabinet-case-grid" aria-label="客製化設備案例佔位區">
+        <article v-for="item in ['A4 多層飼養系統', '壓克力抽盒木櫃', '盒體管理系統']" :key="item">
+          <div class="cabinet-case-placeholder" role="img" :aria-label="`${item}案例影像待置換`">
+            <span>CASE IMAGE</span>
+          </div>
+          <h3>{{ item }}</h3>
+          <p>案例規格、設備配置與成品影像待補。</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="cabinet-process" aria-labelledby="cabinet-process-title">
+      <div class="cabinet-section-head">
+        <span>04 / HOW WE PLAN</span>
+        <h2 id="cabinet-process-title">先規劃，再進入製作</h2>
+      </div>
+      <ol>
+        <li>
+          <b>01 選盒款</b>
+          <span>選擇塑膠盒或壓克力盒，確認型號與盒體外尺寸。</span>
+        </li>
+        <li>
+          <b>02 安排櫃體</b>
+          <span>確認每層抽數、層數及櫃體寬、深、高，保留抽取與搬運空間。</span>
+        </li>
+        <li>
+          <b>03 確認標配與貼皮</b>
+          <span>確認貼皮木櫃、內嵌式溫控、美國加熱墊及貼皮樣本。</span>
+        </li>
+        <li>
+          <b>04 選配與報價</b>
+          <span>確認加購設備、數量、製作圖與報價，再安排製作及交付。</span>
+        </li>
+      </ol>
+      <p class="cabinet-note">
+        3D
+        模擬系統與案例內容將以正式標準尺寸、模組與設備規格為資料依據；示意畫面不取代正式製作圖與報價。
+      </p>
+    </section>
+    <section id="cabinet-inquiry" class="cabinet-inquiry" aria-labelledby="cabinet-inquiry-title">
+      <div class="cabinet-section-head">
+        <span>05 / YOUR PROJECT</span>
+        <h2 id="cabinet-inquiry-title">把想法交給我們</h2>
+      </div>
+      <p>填寫你已經確定的需求，複製摘要後透過 Gencko LINE 討論；不確定的項目可以留白。</p>
+      <div class="cabinet-inquiry-grid">
+        <div class="cabinet-fields">
+          <label>
+            物種與數量
+            <input v-model="needs.species" maxlength="120" placeholder="例如：豹紋守宮，共 12 隻" />
+          </label>
+          <label>
+            可用空間（cm）
+            <input
+              v-model="needs.space"
+              maxlength="120"
+              placeholder="寬 × 深 × 高；尚未丈量可留白"
+            />
+          </label>
+          <label>
+            預算範圍
+            <input
+              v-model="needs.budget"
+              maxlength="80"
+              placeholder="例如：希望先了解不同配置的報價"
+            />
+          </label>
+          <label>
+            貼皮偏好
+            <input
+              v-model="needs.finish"
+              maxlength="120"
+              placeholder="花色方向或已確認的樣本色號"
+            />
+          </label>
+          <label>
+            其他需求
+            <textarea
+              v-model="needs.note"
+              maxlength="1000"
+              rows="3"
+              placeholder="盒款、層數、材質偏好、交付地區或維護需求"
+            />
+          </label>
+        </div>
+        <div class="cabinet-inquiry-summary">
+          <label for="cabinet-summary">需求摘要</label>
+          <textarea
+            id="cabinet-summary"
+            ref="summaryField"
+            :value="inquiry"
+            readonly
+            rows="11"
+            aria-describedby="cabinet-inquiry-status"
+          />
+          <div class="cabinet-hero__actions">
+            <button
+              type="button"
+              class="cabinet-button cabinet-button--primary"
+              @click="copyInquiry"
+            >
+              複製需求摘要
+            </button>
+            <a
+              :href="SOCIAL_LINKS.line"
+              class="cabinet-button"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              開啟 Gencko LINE ↗
+            </a>
+          </div>
+          <p id="cabinet-inquiry-status" role="status">
+            {{ copyStatus || '填寫內容不會自動送出；由你貼上需求後開始討論。' }}
+          </p>
+        </div>
+      </div>
+    </section>
+    <aside class="cabinet-note">
+      <strong>爬缸規劃｜後續開放</strong>
+      <br />
+      爬缸的材質、通風與灑水規格另行整理，目前模擬器與標配僅適用於木製爬櫃。
+    </aside>
+  </div>
 </template>
 
 <style scoped>
-.merch-page-wrapper {
-  width: min(100%, 1240px);
-  margin: 0 auto;
-  padding: 1rem 1.25rem 5rem;
+.cabinet-price-reference {
+  margin-top: 1rem;
+  border-block: 1px solid var(--bd);
+  padding: 0.9rem 0;
 }
-
-.merch-intro {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 3rem;
-  align-items: end;
-  padding: clamp(1.5rem, 4vw, 4rem) 0 clamp(2rem, 4vw, 3.5rem);
-  border-bottom: 1px solid var(--bd);
-}
-
-.merch-eyebrow {
-  margin: 0 0 0.75rem;
-  color: var(--pri);
-  font-size: 0.75rem;
-  font-weight: 800;
-  text-transform: uppercase;
-}
-
-.page-title {
-  max-width: 14ch;
-  margin: 0;
-  font-size: clamp(2.35rem, 6vw, 5.5rem);
-  line-height: 0.98;
-  text-wrap: balance;
-}
-
-.merch-lead {
-  max-width: 60ch;
-  margin: 1.25rem 0 0;
+.cabinet-price-reference summary {
+  cursor: pointer;
+  font-weight: 700;
   color: var(--txt);
-  font-size: clamp(0.95rem, 1.5vw, 1.1rem);
-  line-height: 1.75;
-  opacity: 0.72;
-  text-wrap: pretty;
 }
-
-.merch-summary {
+.cabinet-price-reference p {
+  color: var(--txt-muted);
+  line-height: 1.7;
+}
+.cabinet-price-reference dl {
   display: grid;
-  grid-template-columns: repeat(2, minmax(7rem, 1fr));
-  margin: 0;
-  border: 1px solid var(--bd);
-  border-radius: 1rem;
-  background: var(--card-bg);
-  overflow: hidden;
+  grid-template-columns: 1fr 1fr;
+  gap: 0 1.5rem;
 }
-
-.merch-summary > div {
-  padding: 1rem 1.25rem;
-}
-
-.merch-summary > div + div {
-  border-left: 1px solid var(--bd);
-}
-
-.merch-summary dt {
-  margin-bottom: 0.3rem;
-  color: var(--txt);
-  font-size: 0.72rem;
-  opacity: 0.55;
-}
-
-.merch-summary dd {
-  margin: 0;
-  color: var(--txt);
-  font-weight: 800;
-  font-variant-numeric: tabular-nums;
-}
-
-.merch-collection {
-  padding-top: 2rem;
-}
-
-.merch-grid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: clamp(1rem, 2vw, 1.75rem);
-}
-
-.merch-card {
-  min-width: 0;
-}
-
-.merch-card__link {
+.cabinet-price-reference dl > div {
   display: flex;
-  min-height: 100%;
-  flex-direction: column;
-  overflow: hidden;
-  color: inherit;
-  text-decoration: none;
-  border: 1px solid var(--bd);
-  border-radius: 1.25rem;
-  background: var(--card-bg);
-  transition:
-    transform 180ms ease-out,
-    border-color 180ms ease-out,
-    box-shadow 180ms ease-out;
-}
-
-.merch-card__link:focus-visible {
-  outline: 3px solid var(--pri);
-  outline-offset: 3px;
-}
-
-.merch-card__media {
-  position: relative;
-  overflow: hidden;
-  aspect-ratio: 1 / 1;
-  background: var(--bd);
-}
-
-.card-img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.merch-card__placeholder {
-  display: grid;
-  place-items: center;
-  color: var(--txt);
-  font-size: 1rem;
-  font-weight: 800;
-  opacity: 0.45;
-}
-
-.merch-card__number {
-  position: absolute;
-  right: 0.75rem;
-  bottom: 0.65rem;
-  color: #fff;
-  font-size: 0.75rem;
-  font-weight: 800;
-  font-variant-numeric: tabular-nums;
-  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.55);
-}
-
-.merch-card__body {
-  display: flex;
-  flex: 1;
-  flex-direction: column;
-  padding: 1.15rem;
-}
-
-.merch-card__meta {
-  display: flex;
-  align-items: center;
   justify-content: space-between;
   gap: 0.75rem;
-  margin-bottom: 0.8rem;
-  color: var(--txt);
-  font-size: 0.72rem;
-  opacity: 0.72;
+  border-top: 1px solid var(--bd);
+  padding: 0.6rem 0;
 }
-
-.availability-badge {
-  padding: 0.25rem 0.5rem;
-  border-radius: 0.45rem;
-  background: color-mix(in srgb, var(--pri) 12%, transparent);
-  color: var(--pri);
-  font-weight: 800;
-  opacity: 1;
-}
-
-.availability-badge.is-unavailable {
-  background: var(--bd);
-  color: var(--txt);
-  opacity: 0.62;
-}
-
-.morph-title {
+.cabinet-price-reference dd {
   margin: 0;
+  flex-shrink: 0;
+}
+@media (max-width: 600px) {
+  .cabinet-price-reference dl {
+    grid-template-columns: 1fr;
+  }
+}
+.cabinet-box-fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr 2fr;
+  gap: 1rem;
+  padding-top: 1rem;
+}
+.cabinet-box-fields label {
+  display: grid;
+  gap: 0.4rem;
   color: var(--txt);
-  font-size: clamp(1.05rem, 2vw, 1.25rem);
-  font-weight: 850;
-  line-height: 1.25;
+}
+.cabinet-box-fields input,
+.cabinet-box-fields select {
+  width: 100%;
+  min-width: 0;
+  padding: 0.65rem;
+  color: var(--txt);
+  background: var(--bg-dark);
+  border: 1px solid var(--bd);
+  font: inherit;
+  font-size: 16px;
+}
+@media (max-width: 760px) {
+  .cabinet-box-fields {
+    grid-template-columns: 1fr 1fr;
+  }
+  .cabinet-box-fields label:last-child {
+    grid-column: 1 / -1;
+  }
+}
+.cabinet-page section {
+  scroll-margin-top: 100px;
+}
+.cabinet-inquiry {
+  padding-top: 2rem;
+}
+.cabinet-inquiry > p,
+.cabinet-inquiry-summary p {
+  color: var(--txt-muted);
+  line-height: 1.7;
+}
+.cabinet-inquiry-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+  border-top: 1px solid var(--bd);
+  padding-top: 1rem;
+}
+.cabinet-fields {
+  display: grid;
+  gap: 1rem;
+}
+.cabinet-inquiry label {
+  display: grid;
+  gap: 0.4rem;
+  color: var(--txt);
+  font-weight: 700;
+}
+.cabinet-inquiry input,
+.cabinet-inquiry textarea {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  border: 1px solid var(--bd);
+  border-radius: 0;
+  background: var(--bg-dark);
+  color: var(--txt);
+  padding: 0.7rem;
+  font: 400 16px/1.65 var(--font-body-zh);
+}
+.cabinet-inquiry textarea {
+  resize: vertical;
+}
+.cabinet-inquiry input:focus-visible,
+.cabinet-inquiry textarea:focus-visible {
+  outline: 2px solid var(--pri);
+  outline-offset: 2px;
+}
+.cabinet-inquiry-summary > textarea {
+  margin-top: 0.4rem;
+}
+.cabinet-inquiry-summary p {
+  font-size: 0.875rem;
+}
+.cabinet-button {
+  cursor: pointer;
+}
+@media (max-width: 760px) {
+  .cabinet-inquiry-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+.cabinet-page {
+  width: min(100%, 1160px);
+  margin: 0 auto;
+  padding: 0.65rem 1.25rem 4rem;
+}
+.cabinet-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(260px, 0.38fr);
+  gap: clamp(1.5rem, 4vw, 3.5rem);
+  align-items: end;
+  padding: 1.5rem 0 1.75rem;
+  border-bottom: 1px solid var(--bd);
+}
+.cabinet-kicker,
+.cabinet-section-head > span,
+.cabinet-preview > div > span,
+.cabinet-partner > span {
+  color: var(--pri);
+  font: 800 0.68rem/1.4 var(--font-body-zh);
+  letter-spacing: 0.12em;
+}
+.cabinet-hero h1,
+.cabinet-section-head h2 {
+  margin: 0.55rem 0 0;
+  color: var(--txt);
+  font-family: var(--font-heading-zh);
   text-wrap: balance;
 }
-
-.merch-card__description {
-  display: -webkit-box;
-  margin: 0.7rem 0 1.25rem;
-  overflow: hidden;
+.cabinet-hero h1 {
+  max-width: 12ch;
+  font-size: clamp(2rem, 5vw, 4.2rem);
+  line-height: 1.04;
+}
+.cabinet-hero p {
+  max-width: 39rem;
+  margin: 0.85rem 0 0;
+  color: var(--txt-muted);
+  font-size: clamp(1rem, 1.35vw, 1.12rem);
+  line-height: 1.75;
+  text-wrap: pretty;
+}
+.cabinet-hero__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+  margin-top: 1.25rem;
+}
+.cabinet-button {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  padding: 0.65rem 1rem;
+  border: 1px solid var(--bd);
+  color: var(--txt);
+  font: 700 0.82rem/1.4 var(--font-body-zh);
+  text-decoration: none;
+}
+.cabinet-button--primary {
+  border-color: var(--pri);
+  background: var(--pri);
+  color: #fff;
+}
+.cabinet-partner {
+  display: grid;
+  gap: 0.6rem;
+  padding: 1.2rem;
+  border: 1px solid var(--bd);
+  border-top: 2px solid var(--pri);
+}
+.cabinet-partner strong {
+  color: var(--txt);
+  font: 700 clamp(1.35rem, 2.5vw, 2rem)/1.15 var(--font-heading-zh);
+}
+.cabinet-partner p {
+  margin: 0;
+  font-size: 0.95rem;
+  line-height: 1.7;
+}
+.cabinet-planning,
+.cabinet-systems,
+.cabinet-3d-slot,
+.cabinet-cases,
+.cabinet-process {
+  padding-top: 2rem;
+}
+.cabinet-section-head h2 {
+  font-size: clamp(1.5rem, 3vw, 2.3rem);
+  line-height: 1.12;
+}
+.cabinet-template-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1px;
+  margin-top: 1.6rem;
+  border: 1px solid var(--bd);
+  background: var(--bd);
+}
+.cabinet-template {
+  display: grid;
+  width: 100%;
+  min-height: 172px;
+  align-content: start;
+  gap: 0.7rem;
+  padding: 1.15rem;
+  border: 0;
+  background: var(--bg-dark);
+  color: var(--txt);
+  text-align: left;
+  cursor: pointer;
+}
+.cabinet-template.is-selected {
+  background: color-mix(in srgb, var(--pri) 8%, var(--bg-dark));
+  box-shadow: inset 0 3px var(--pri);
+}
+.cabinet-template > span,
+.cabinet-system-grid article > span {
+  color: var(--pri);
+  font:
+    800 0.7rem/1 ui-monospace,
+    monospace;
+}
+.cabinet-template strong {
+  font: 700 1.05rem/1.35 var(--font-heading-zh);
+}
+.cabinet-template small {
+  color: var(--txt-muted);
+  font: 400 0.88rem/1.65 var(--font-body-zh);
+}
+.cabinet-preview {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: clamp(1.25rem, 4vw, 3rem);
+  align-items: center;
+  padding: clamp(1.3rem, 4vw, 2.2rem);
+  border: 1px solid var(--bd);
+  border-top: 0;
+}
+.cabinet-preview__drawing {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 7px;
+  aspect-ratio: 1/1;
+  padding: 10px;
+  border: 1px solid var(--txt);
+  background: color-mix(in srgb, var(--txt) 3%, transparent);
+}
+.cabinet-preview__drawing i {
+  display: block;
+  border: 1px solid var(--pri);
+}
+.cabinet-preview h3 {
+  margin: 0.45rem 0 0;
+  color: var(--txt);
+  font: 700 clamp(1.45rem, 3vw, 2.2rem)/1.2 var(--font-heading-zh);
+}
+.cabinet-preview p {
+  margin: 0.7rem 0;
+  color: var(--txt-muted);
+  line-height: 1.7;
+}
+.cabinet-preview ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+  padding: 0;
+  margin: 0;
+  list-style: none;
   color: var(--txt);
   font-size: 0.88rem;
-  line-height: 1.6;
-  opacity: 0.66;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
 }
-
-.merch-card__footer {
-  display: flex;
-  align-items: end;
-  justify-content: space-between;
-  gap: 1rem;
-  margin-top: auto;
-  padding-top: 1rem;
-  border-top: 1px solid var(--bd);
-}
-
-.price {
+.cabinet-preview li::before {
+  content: '— ';
   color: var(--pri);
-  font-size: 1.2rem;
-  font-weight: 900;
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
 }
-
-.merch-card__cta {
-  color: var(--txt);
-  font-size: 0.78rem;
-  font-weight: 700;
-  opacity: 0.58;
-}
-
-.merch-empty {
+.cabinet-system-grid {
   display: grid;
-  justify-items: start;
-  max-width: 38rem;
-  padding: clamp(2rem, 8vw, 5rem) 0;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1px;
+  margin-top: 1.6rem;
+  border: 1px solid var(--bd);
+  background: var(--bd);
 }
-
-.merch-empty__index {
-  margin: 0 0 1rem;
-  color: var(--pri);
-  font-size: 3rem;
-  font-weight: 900;
-  font-variant-numeric: tabular-nums;
+.cabinet-system-grid article {
+  min-height: 165px;
+  padding: 1.15rem;
+  background: var(--bg-dark);
 }
-
-.merch-empty h2 {
+.cabinet-system-grid h3 {
+  margin: 1.8rem 0 0.65rem;
+  color: var(--txt);
+  font: 700 1.05rem/1.35 var(--font-heading-zh);
+}
+.cabinet-system-grid p {
   margin: 0;
-  color: var(--txt);
-  font-size: clamp(1.6rem, 4vw, 2.4rem);
-  text-wrap: balance;
-}
-
-.merch-empty p:not(.merch-empty__index) {
-  margin: 0.8rem 0 1.5rem;
-  color: var(--txt);
+  color: var(--txt-muted);
+  font-size: 0.92rem;
   line-height: 1.7;
-  opacity: 0.68;
 }
-
-@media (hover: hover) and (pointer: fine) {
-  .merch-card__link:hover {
-    transform: translateY(-3px);
-    border-color: var(--bd-hover);
-    box-shadow: 0 16px 32px rgba(30, 24, 20, 0.1);
-  }
+.cabinet-process {
+  padding-bottom: 1rem;
 }
-
-@media (max-width: 900px) {
-  .merch-page-wrapper {
+.cabinet-process ol {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1px;
+  padding: 0;
+  margin: 1.6rem 0 0;
+  list-style: none;
+  border: 1px solid var(--bd);
+  background: var(--bd);
+}
+.cabinet-process li {
+  display: grid;
+  gap: 0.65rem;
+  min-height: 125px;
+  padding: 1.15rem;
+  background: var(--bg-dark);
+}
+.cabinet-process b {
+  color: var(--pri);
+  font: 700 1rem/1.35 var(--font-heading-zh);
+}
+.cabinet-process span,
+.cabinet-note {
+  color: var(--txt-muted);
+  font-size: 0.95rem;
+  line-height: 1.75;
+}
+.cabinet-note {
+  margin: 1rem 0 0;
+  padding-left: 1rem;
+  border-left: 2px solid var(--pri);
+}
+.cabinet-case-grid h3 {
+  margin: 0.5rem 0 0;
+  color: var(--txt);
+  font: 700 clamp(1.35rem, 2.6vw, 2rem)/1.25 var(--font-heading-zh);
+}
+.cabinet-3d-slot__intro,
+.cabinet-cases__intro,
+.cabinet-case-grid p {
+  color: var(--txt-muted);
+  font-size: 0.95rem;
+  line-height: 1.75;
+}
+.cabinet-3d-slot__intro {
+  max-width: 42rem;
+  margin: 0.75rem 0 1.25rem;
+}
+.cabinet-cases__intro {
+  margin: 0.75rem 0 0;
+}
+.cabinet-case-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1px;
+  margin-top: 1.35rem;
+  border: 1px solid var(--bd);
+  background: var(--bd);
+}
+.cabinet-case-grid article {
+  padding: 0.85rem;
+  background: var(--bg-dark);
+}
+.cabinet-case-placeholder {
+  display: grid;
+  min-height: 190px;
+  place-items: center;
+  border: 1px solid color-mix(in srgb, var(--txt) 28%, var(--bd));
+  background: color-mix(in srgb, var(--txt) 3%, transparent);
+  color: var(--pri);
+  font: 800 0.68rem/1 var(--font-body-zh);
+  letter-spacing: 0.1em;
+}
+.cabinet-case-grid h3 {
+  font-size: 1.1rem;
+}
+.cabinet-case-grid p {
+  margin: 0.45rem 0 0;
+}
+button:focus-visible,
+a:focus-visible {
+  outline: 2px solid var(--pri);
+  outline-offset: 3px;
+}
+@media (max-width: 760px) {
+  .cabinet-page {
     padding-inline: 1rem;
   }
-
-  .merch-intro {
+  .cabinet-hero {
     grid-template-columns: 1fr;
-    gap: 1.5rem;
+    gap: 1.4rem;
+    padding-top: 1.75rem;
   }
-
-  .merch-summary {
-    width: 100%;
-  }
-
-  .merch-grid {
+  .cabinet-template-grid,
+  .cabinet-system-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
-}
-
-@media (max-width: 540px) {
-  .merch-page-wrapper {
-    padding-inline: 0.75rem;
+  .cabinet-template {
+    min-height: 150px;
   }
-
-  .merch-intro {
-    padding-top: 0.75rem;
-  }
-
-  .page-title {
-    font-size: clamp(2.25rem, 12vw, 3.4rem);
-  }
-
-  .merch-summary > div {
-    padding: 0.85rem;
-  }
-
-  .merch-grid {
+  .cabinet-preview,
+  .cabinet-process ol {
     grid-template-columns: 1fr;
   }
-
-  .merch-card__media {
-    aspect-ratio: 1 / 1;
+  .cabinet-preview__drawing {
+    width: min(230px, 100%);
   }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .merch-card__link {
-    transition: none !important;
+  .cabinet-system-grid article {
+    min-height: 150px;
   }
-
-  .merch-card__link:hover {
-    transform: none;
+  .cabinet-case-grid {
+    grid-template-columns: 1fr;
   }
-}
-
-/* Boutique catalog alignment */
-.merch-page-wrapper {
-  width: min(100%, 1440px);
-  padding: clamp(22px, 3vw, 44px) clamp(20px, 5vw, 76px) clamp(44px, 6vw, 72px);
-}
-
-.merch-intro {
-  gap: clamp(24px, 4vw, 48px);
-  padding: 0 0 clamp(28px, 4vw, 48px);
-}
-
-.merch-eyebrow {
-  letter-spacing: 0.18em;
-}
-
-.page-title {
-  font-family: 'Noto Serif TC', serif;
-  font-size: clamp(2.6rem, 5vw, 4.75rem);
-  font-weight: 700;
-  letter-spacing: -0.06em;
-}
-
-.merch-summary {
-  border: 0;
-  border-bottom: 1px solid var(--bd);
-  border-radius: 0;
-  background: transparent;
-}
-
-.merch-card__link {
-  border: 0;
-  border-radius: 0;
-  background: transparent;
-  box-shadow: none;
-}
-
-.merch-card__media {
-  border-radius: 0;
-}
-
-.merch-card__body {
-  min-height: 190px;
-  padding: 14px 0 0;
-}
-
-.availability-badge {
-  border: 1px solid color-mix(in srgb, var(--pri) 32%, transparent);
-  border-radius: 2px;
-  white-space: nowrap;
-}
-
-@media (hover: hover) and (pointer: fine) {
-  .merch-card__link:hover {
-    transform: none;
-    border-color: transparent;
-    box-shadow: none;
+  .cabinet-case-grid article {
+    display: grid;
+    grid-template-columns: 112px minmax(0, 1fr);
+    column-gap: 0.85rem;
+    align-items: center;
   }
-
-  .merch-card__link:hover .card-img {
-    opacity: 0.92;
-  }
-}
-
-@media (max-width: 540px) {
-  .merch-page-wrapper {
-    padding: 20px 16px 52px;
-  }
-
-  .merch-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 28px 10px;
-  }
-
-  .merch-card__description {
-    display: none;
-  }
-
-  .merch-card__body {
-    min-height: 116px;
-    padding-top: 10px;
-  }
-
-  .merch-card__meta {
-    gap: 0.4rem;
-    margin-bottom: 0.55rem;
-    font-size: 0.66rem;
-  }
-
-  .morph-title {
-    font-size: 0.9rem;
-  }
-
-  .merch-card__footer {
-    gap: 0.35rem;
-    padding-top: 0.7rem;
-  }
-
-  .price {
-    font-size: 0.82rem;
-  }
-
-  .merch-card__cta {
-    display: inline;
-    font-size: 0.68rem;
-    white-space: nowrap;
+  .cabinet-case-placeholder {
+    grid-row: span 2;
+    min-height: 96px;
   }
 }
 </style>

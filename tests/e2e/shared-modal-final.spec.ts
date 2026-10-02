@@ -5,17 +5,32 @@ test('768px 周邊列表導頁補驗', async ({ page }) => {
   const response = await page.goto('/merch')
   expect(response?.status()).toBe(200)
   await expect(page.locator('h1')).toContainText('飼養用品')
-  await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 2)).toBe(true)
+  await expect
+    .poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 2))
+    .toBe(true)
 })
 
 test('手機收藏詢問與比較列同時出現時不遮擋', async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 720 })
-  await page.addInitScript(() => localStorage.setItem('gencko_wishlist', JSON.stringify(['S-53518'])))
+  await page.addInitScript(() =>
+    localStorage.setItem('gencko_wishlist', JSON.stringify(['S-53518']))
+  )
   await page.goto('/shop')
   await page.addStyleTag({ content: '#nuxt-devtools-container { display:none !important }' })
   const card = page.locator('.flip-card').first()
   const compareButton = card.locator('.card-action-btn').filter({ hasText: '加入比較' })
   await expect(compareButton).toBeVisible({ timeout: 30000 })
+  const actionButtons = card.locator('.flip-front-actions .card-action-btn')
+  const actionBoxes = await actionButtons.evaluateAll((buttons) =>
+    buttons.map((button) => {
+      const box = button.getBoundingClientRect()
+      return { width: box.width, height: box.height }
+    })
+  )
+  expect(actionBoxes.every(({ height }) => height <= 28)).toBe(true)
+  const actionRow = await card.locator('.flip-front-actions').boundingBox()
+  const cardBox = await card.boundingBox()
+  expect(actionRow!.width).toBeLessThan(cardBox!.width - 8)
   await compareButton.click()
   const compare = page.locator('.compare-bar')
   const inquire = page.locator('.floating-inquire-btn')
@@ -30,7 +45,8 @@ test('手機收藏詢問與比較列同時出現時不遮擋', async ({ page }) 
 test('iOS 安裝說明在窄螢幕可閱讀、限制焦點並返回觸發鍵', async ({ browser }) => {
   const context = await browser.newContext({
     viewport: { width: 320, height: 720 },
-    userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 Version/17.0 Mobile/15E148 Safari/604.1',
+    userAgent:
+      'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 Version/17.0 Mobile/15E148 Safari/604.1',
     isMobile: true,
     hasTouch: true
   })
@@ -50,7 +66,9 @@ test('iOS 安裝說明在窄螢幕可閱讀、限制焦點並返回觸發鍵', a
   await page.keyboard.press('Tab')
   await expect(close).toBeFocused()
   await expect.poll(() => page.evaluate(() => document.body.style.overflow)).toBe('hidden')
-  await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 2)).toBe(true)
+  await expect
+    .poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 2))
+    .toBe(true)
   await page.screenshot({ path: 'output/ui-final-20260910/ios-install-320.png' })
   await page.keyboard.press('Escape')
   await expect(dialog).toHaveCount(0)

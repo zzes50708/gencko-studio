@@ -77,7 +77,7 @@ useHead({
 </script>
 
 <template>
-  <div class="trust-page" data-testid="trust-evidence-map">
+  <div class="site-document-page trust-page" data-testid="trust-evidence-map">
     <div class="trust-document-meta" aria-label="品牌資料說明">
       <span>GENCKO BRAND FILE</span>
       <span>DATA / CARE / CONTINUITY</span>

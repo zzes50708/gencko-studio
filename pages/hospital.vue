@@ -63,12 +63,17 @@ const hospCity = ref('all')
 const hospDistrict = ref('all')
 const hospQuery = ref('')
 const hospExpanded = ref(new Set())
+const focusedHospital = ref(null)
+const mapFocusSequence = ref(0)
+const mapSection = ref(null)
 
 const toggleHospExpand = (id) => {
   if (hospExpanded.value.has(id)) {
     hospExpanded.value.delete(id)
   } else {
     hospExpanded.value.add(id)
+    focusedHospital.value = HOSPITAL_DATA.value.find((h) => h.id === id) || null
+    mapFocusSequence.value++
   }
   hospExpanded.value = new Set(hospExpanded.value)
 }
@@ -106,17 +111,28 @@ const hospWishlist = computed(() => store.hospWishlist)
 const changeCity = (val) => {
   hospCity.value = val
   hospDistrict.value = 'all'
+  focusedHospital.value = null
 }
 
-const focusHospital = async (hospital) => {
-  changeCity(hospital.city)
-  hospDistrict.value = hospital.district || 'all'
-  hospQuery.value = ''
+const focusHospital = (hospital) => {
+  focusedHospital.value = hospital
+  mapFocusSequence.value++
   hospExpanded.value = new Set([hospital.id])
+}
+const showHospitalDetails = async (hospital) => {
+  focusHospital(hospital)
   await nextTick()
   document.getElementById(`hospital-${hospital.id}`)?.scrollIntoView({
     behavior: 'smooth',
     block: 'center'
+  })
+}
+const showHospitalOnMap = async (hospital) => {
+  focusHospital(hospital)
+  await nextTick()
+  mapSection.value?.scrollIntoView({
+    behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth',
+    block: 'start'
   })
 }
 
@@ -378,7 +394,7 @@ useHead({
 </script>
 
 <template>
-  <div class="hosp-page-wrapper">
+  <div class="site-document-page hosp-page-wrapper">
     <div class="hosp-intro">
       <header class="hosp-hero">
         <div class="hosp-document-meta" aria-label="醫院名錄說明">
@@ -467,13 +483,19 @@ useHead({
       </aside>
     </div>
 
-    <LazyHospitalMap
-      :hospitals="HOSPITAL_DATA"
-      :wishlist="hospWishlist"
-      :selected="hospCity"
-      @select="changeCity"
-      @select-hospital="focusHospital"
-    />
+    <div ref="mapSection" class="hosp-map-section">
+      <LazyHospitalMap
+        :hospitals="HOSPITAL_DATA"
+        :wishlist="hospWishlist"
+        :selected="hospCity"
+        :visible-hospitals="hospFiltered"
+        :focused-hospital="focusedHospital"
+        :focus-sequence="mapFocusSequence"
+        @select="changeCity"
+        @select-hospital="focusHospital"
+        @show-details="showHospitalDetails"
+      />
+    </div>
 
     <div class="hosp-workspace">
       <section class="hosp-list-panel" aria-label="特寵醫院清單">
@@ -527,6 +549,12 @@ useHead({
             </div>
 
             <div :id="`hosp-details-${h.id}`" v-show="isHospExpanded(h.id)" class="hosp-details">
+              <button type="button" class="hosp-map-focus" @click="showHospitalOnMap(h)">
+                在地圖上定位 ↗
+              </button>
+              <p v-if="h.latitude == null || h.longitude == null" class="hosp-location-note">
+                此院所目前未顯示地圖定位點，請先致電確認地址與看診安排。
+              </p>
               <a
                 :href="getMapLink(h)"
                 target="_blank"
@@ -565,6 +593,19 @@ useHead({
 </template>
 
 <style scoped>
+.hosp-map-section {
+  scroll-margin-top: 110px;
+}
+.hosp-map-focus {
+  padding: 8px 12px;
+  margin-bottom: 10px;
+  min-height: 40px;
+  border: 1px solid var(--pri);
+  color: var(--pri);
+  background: transparent;
+  cursor: pointer;
+  font: inherit;
+}
 /*
   [局部樣式修復] 
   已清除所有寫死深淺色的背景與文字色碼。
@@ -932,6 +973,14 @@ useHead({
   opacity: 0.7;
   line-height: 1.4;
   margin: 0;
+}
+.hosp-location-note {
+  margin: 0 0 10px;
+  padding-left: 10px;
+  border-left: 2px solid var(--pri);
+  color: var(--txt-muted);
+  font-size: 0.82rem;
+  line-height: 1.65;
 }
 .hosp-icon {
   width: 14px;

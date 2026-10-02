@@ -259,7 +259,7 @@ useHead({
 </script>
 
 <template>
-  <div class="gene-detail-wrapper">
+  <div class="site-document-page gene-detail-wrapper">
     <div class="common-document-meta gene-document-meta" aria-label="基因詞條說明">
       <span>GENCKO GENE RECORD</span>
       <span>TRAIT / INHERITANCE / NOTES</span>
@@ -291,7 +291,6 @@ useHead({
       <nav class="gene-tool-nav" aria-label="基因詞條工具">
         <div>
           <span>GENE WORKFLOW</span>
-          <strong>查完詞條，接著模擬配對</strong>
         </div>
         <NuxtLink no-prefetch to="/calculator" class="gene-tool-link">前往基因計算機</NuxtLink>
       </nav>
@@ -315,8 +314,8 @@ useHead({
         </header>
 
         <div v-if="geneWarningText" class="warn-box">
-          <span style="font-size: 1.2rem; margin-right: 5px">⚠️</span>
-          {{ geneWarningText }}
+          <span class="warn-icon" aria-hidden="true">⚠️</span>
+          <span class="warn-text">{{ geneWarningText }}</span>
         </div>
 
         <div class="gene-layout">
@@ -443,6 +442,9 @@ useHead({
 }
 
 .warn-box {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
   background: rgba(244, 67, 54, 0.1);
   border: 1px solid #f44336;
   color: var(--txt);
@@ -451,9 +453,24 @@ useHead({
   margin-bottom: 25px;
   font-weight: bold;
   font-size: 0.95rem;
-  display: flex;
-  align-items: center;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: start;
+  gap: 10px;
   line-height: 1.5;
+  overflow: hidden;
+}
+
+.warn-icon {
+  font-size: 1.2rem;
+  line-height: 1.5;
+}
+
+.warn-text {
+  min-width: 0;
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+  word-break: normal;
 }
 
 .gene-layout {
@@ -640,7 +657,7 @@ p {
 .content-card {
   border: 0;
   border-radius: 0;
-  padding: 18px 0;
+  padding: 0;
   background: transparent;
   box-shadow: none;
 }
@@ -650,7 +667,8 @@ p {
   line-height: 1.3;
 }
 .gene-title-row {
-  margin-bottom: 18px;
+  margin-bottom: 12px;
+  padding: 0;
   gap: 20px;
 }
 .gene-tool-nav {
@@ -675,6 +693,8 @@ p {
 .warn-box {
   border-radius: 0;
   box-shadow: none;
+  margin-bottom: 0;
+  padding: 12px 0 12px 12px;
 }
 .detail-section {
   margin-top: 20px;
@@ -684,6 +704,9 @@ p {
 .detail-txt {
   font-family: var(--font-body-zh);
   line-height: 1.85;
+}
+.gene-layout {
+  padding: 16px 0 0;
 }
 /* 本頁返回與次要操作使用同一按鈕形式。 */
 :deep(.app-back-btn),

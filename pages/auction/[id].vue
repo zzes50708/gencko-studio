@@ -588,7 +588,7 @@ const handlePromoKeydown = (event) => {
 </script>
 
 <template>
-  <div class="auction-page-wrapper">
+  <div class="site-document-page auction-page-wrapper">
     <div class="common-document-meta" aria-label="競標詳情說明">
       <span>GENCKO AUCTION RECORD</span>
       <span>DETAIL / STATUS / ACTION</span>
@@ -698,7 +698,7 @@ const handlePromoKeydown = (event) => {
               <div class="status-badge badge-active">計算中</div>
             </template>
           </ClientOnly>
-          <h2>
+          <h2 class="page-title">
             {{ currentAuction.morph }}
             <span class="m-gender" v-if="currentAuction.gender && currentAuction.gender !== '未定'">
               ({{ currentAuction.gender }})

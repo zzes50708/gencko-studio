@@ -2,7 +2,6 @@
 import { markRaw, onMounted, onUnmounted, shallowRef, watch } from 'vue'
 import { useLoop, useTres } from '@tresjs/core'
 import {
-  BoxGeometry,
   BufferAttribute,
   BufferGeometry,
   Color,
@@ -16,6 +15,7 @@ import {
   Mesh,
   MeshBasicMaterial,
   Path,
+  Plane,
   PerspectiveCamera,
   Raycaster,
   Shape,
@@ -26,12 +26,15 @@ import {
 } from 'three'
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js'
 import {
+  ensureHospitalMarkerCapacity,
+  refreshHospitalMarkerBounds
+} from '~/utils/hospitalMapMarkers'
+import {
   MAP_COUNTIES,
   countyAnchor,
   isInsideCounty,
   projectTaiwanCoordinate,
-  type MapHospital,
-  type MapPoint
+  type MapHospital
 } from '~/utils/hospitalMap'
 
 const props = defineProps<{
@@ -42,7 +45,9 @@ const props = defineProps<{
   active: boolean
   reducedMotion: boolean
   compact: boolean
-  command: { action: string; sequence: number }
+  command: { action: string; sequence: number; delta?: number }
+  focusedHospital?: MapHospital | null
+  focusSequence?: number
 }>()
 const emit = defineEmits(['select', 'select-hospital', 'labels', 'ready', 'lost', 'metrics'])
 const { renderer, sizes, invalidate } = useTres()
@@ -106,53 +111,15 @@ selection.visible = false
 selection.position.y = 0.004
 root.add(selection)
 
-// 共用方塊 Instancing + 合併線段：不為每個示意街廓建立獨立 draw call。
-const blocks: { x: number; z: number; h: number; w: number }[] = []
-for (let z = -5; z < 5.4; z += 0.23)
-  for (let x = -5; x < 5.4; x += 0.23) {
-    const point: MapPoint = [x, z]
-    if (MAP_COUNTIES.some((county) => isInsideCounty(point, county.polygons))) {
-      const seed = Math.abs(Math.sin(x * 19.71 + z * 37.29))
-      if (seed > 0.25) blocks.push({ x, z, h: 0.06 + seed * 0.22, w: 0.07 + seed * 0.055 })
-    }
-  }
-const blockGeometry = new BoxGeometry(1, 1, 1)
-const buildings = new InstancedMesh(
-  blockGeometry,
-  new MeshBasicMaterial({ color: '#172b43' }),
-  blocks.length
-)
 const matrix = new Matrix4()
-const blockEdges = new EdgesGeometry(blockGeometry)
-const linePoints: number[] = []
-const edgeVertex = new Vector3()
-blocks.forEach((block, i) => {
-  matrix.makeScale(block.w, block.h, block.w)
-  matrix.setPosition(block.x, 0.095 + block.h / 2, block.z)
-  buildings.setMatrixAt(i, matrix)
-  for (let j = 0; j < blockEdges.attributes.position!.count; j++) {
-    edgeVertex.fromBufferAttribute(blockEdges.attributes.position!, j).applyMatrix4(matrix)
-    linePoints.push(edgeVertex.x, edgeVertex.y, edgeVertex.z)
-  }
-})
-buildings.instanceMatrix.needsUpdate = true
-root.add(buildings)
-const buildingLines = new BufferGeometry()
-buildingLines.setAttribute('position', new BufferAttribute(new Float32Array(linePoints), 3))
-root.add(
-  new LineSegments(
-    buildingLines,
-    new LineBasicMaterial({ color: '#537ca3', transparent: true, opacity: 0.42 })
-  )
-)
-blockEdges.dispose()
 
-const markers = new InstancedMesh(
+let markers = new InstancedMesh(
   new SphereGeometry(0.085, 12, 8),
-  new MeshBasicMaterial({ vertexColors: true }),
+  new MeshBasicMaterial({ depthTest: false, depthWrite: false }),
   Math.max(1, props.hospitals.length)
 )
 markers.count = props.hospitals.length
+markers.renderOrder = 10
 root.add(markers)
 const gridPoints: number[] = []
 for (let i = -9; i <= 9; i += 0.5)
@@ -171,7 +138,7 @@ const majorNames = new Set(['台北市', '台中市', '高雄市', '花蓮縣', 
 const projected = new Vector3()
 const pointer = new Vector2()
 const raycaster = new Raycaster()
-const viewTarget = { azimuth: 0.27, polar: 0.73, zoom: 1 }
+const viewTarget = { azimuth: 0.27, polar: 0.73, zoom: 1, x: 0, z: 0 }
 const viewCurrent = { ...viewTarget }
 let settled = false
 let mounted = false
@@ -181,8 +148,43 @@ let canvas: HTMLCanvasElement | undefined
 let touchedMultiple = false
 const pointers = new Map<
   number,
-  { x: number; y: number; startX: number; startY: number; moved: boolean }
+  { x: number; y: number; startX: number; startY: number; moved: boolean; rotate: boolean }
 >()
+const ground = new Plane(new Vector3(0, 1, 0), -0.095)
+const panStart = new Vector3()
+const panEnd = new Vector3()
+
+function pan(fromX: number, fromY: number, toX: number, toY: number) {
+  if (!canvas || !camera.value) return
+  const rect = canvas.getBoundingClientRect()
+  const intersect = (x: number, y: number, target: Vector3) => {
+    pointer.set(((x - rect.left) / rect.width) * 2 - 1, 1 - ((y - rect.top) / rect.height) * 2)
+    raycaster.setFromCamera(pointer, camera.value!)
+    return raycaster.ray.intersectPlane(ground, target)
+  }
+  if (intersect(fromX, fromY, panStart) && intersect(toX, toY, panEnd)) {
+    viewTarget.x = Math.max(-10, Math.min(10, viewTarget.x + panStart.x - panEnd.x))
+    viewTarget.z = Math.max(-10, Math.min(10, viewTarget.z + panStart.z - panEnd.z))
+    wake()
+  }
+}
+
+function focusHospital() {
+  const hospital = props.focusedHospital
+  if (!hospital || !Number.isFinite(hospital.latitude) || !Number.isFinite(hospital.longitude))
+    return
+  const [x, z] = projectTaiwanCoordinate(hospital.longitude!, hospital.latitude!)
+  Object.assign(viewTarget, { x, z, zoom: 25 })
+  wake()
+}
+
+function focusCity() {
+  if (props.selected === 'all') return
+  const county = countyMeshes.find((item) => item.name === props.selected)
+  if (!county) return
+  Object.assign(viewTarget, { x: county.anchor.x, z: county.anchor.z, zoom: 3.1 })
+  wake()
+}
 
 function wake() {
   if (!mounted || !props.active) return
@@ -195,6 +197,7 @@ function updateData() {
   selection.visible = !!selected
   if (selected) selection.geometry = selected.geometry
   const favorites = new Set(props.wishlist.map(String))
+  markers = ensureHospitalMarkerCapacity(markers, props.hospitals.length)
   markers.count = props.hospitals.length
   props.hospitals.forEach((hospital, i) => {
     const point = projectTaiwanCoordinate(hospital.longitude!, hospital.latitude!)
@@ -207,35 +210,38 @@ function updateData() {
       tint.set(favorites.has(String(hospital.id)) ? colors.saved : colors.marker)
     )
   })
-  markers.instanceMatrix.needsUpdate = true
-  if (markers.instanceColor) markers.instanceColor.needsUpdate = true
+  refreshHospitalMarkerBounds(markers)
   wake()
 }
 
 function setZoom(value: number) {
-  viewTarget.zoom = Math.min(2.5, Math.max(0.7, value))
+  viewTarget.zoom = Math.min(80, Math.max(0.7, value))
   wake()
 }
 function runCommand(action: string) {
   if (action === 'in') setZoom(viewTarget.zoom * 1.22)
   else if (action === 'out') setZoom(viewTarget.zoom / 1.22)
+  else if (action === 'wheel')
+    setZoom(viewTarget.zoom * Math.exp(-(props.command.delta || 0) * 0.002))
   else if (action === 'reset') {
-    Object.assign(viewTarget, { azimuth: 0.27, polar: 0.73, zoom: 1 })
+    Object.assign(viewTarget, { azimuth: 0.27, polar: 0.73, zoom: 1, x: 0, z: 0 })
     wake()
   }
 }
 function onPointerDown(event: PointerEvent) {
-  if (event.button !== 0) return
+  if (event.button !== 0 && event.button !== 2) return
   canvas?.focus({ preventScroll: true })
   pointers.set(event.pointerId, {
     x: event.clientX,
     y: event.clientY,
     startX: event.clientX,
     startY: event.clientY,
-    moved: false
+    moved: false,
+    rotate: event.button === 2 || event.shiftKey
   })
   if (pointers.size > 1) touchedMultiple = true
   canvas?.setPointerCapture(event.pointerId)
+  if (canvas) canvas.style.cursor = 'grabbing'
 }
 function onPointerMove(event: PointerEvent) {
   const old = pointers.get(event.pointerId)
@@ -248,19 +254,33 @@ function onPointerMove(event: PointerEvent) {
     const before = Math.hypot(old.x - other.x, old.y - other.y)
     const after = Math.hypot(event.clientX - other.x, event.clientY - other.y)
     if (before > 5) setZoom((viewTarget.zoom * after) / before)
-  } else {
+    pan(
+      (old.x + other.x) / 2,
+      (old.y + other.y) / 2,
+      (event.clientX + other.x) / 2,
+      (event.clientY + other.y) / 2
+    )
+  } else if (old.rotate) {
     viewTarget.azimuth = Math.max(-0.85, Math.min(0.85, viewTarget.azimuth - dx * 0.004))
     viewTarget.polar = Math.max(0.28, Math.min(1.12, viewTarget.polar - dy * 0.003))
     wake()
-  }
+  } else pan(old.x, old.y, event.clientX, event.clientY)
   old.x = event.clientX
   old.y = event.clientY
 }
 function onPointerUp(event: PointerEvent) {
   const previous = pointers.get(event.pointerId)
   pointers.delete(event.pointerId)
+  if (canvas && !pointers.size) canvas.style.cursor = 'grab'
   if (canvas?.hasPointerCapture(event.pointerId)) canvas.releasePointerCapture(event.pointerId)
-  if (previous && !previous.moved && !touchedMultiple && camera.value && canvas) {
+  if (
+    previous &&
+    !previous.rotate &&
+    !previous.moved &&
+    !touchedMultiple &&
+    camera.value &&
+    canvas
+  ) {
     const rect = canvas.getBoundingClientRect()
     pointer.set(
       ((event.clientX - rect.left) / rect.width) * 2 - 1,
@@ -284,11 +304,8 @@ function onPointerCancel(event: PointerEvent) {
   pointers.delete(event.pointerId)
   if (!pointers.size) touchedMultiple = false
 }
-function onWheel(event: WheelEvent) {
-  // 一般滾輪保留頁面捲動；Ctrl/⌘ + 滾輪才操作地圖。
-  if (!event.ctrlKey && !event.metaKey) return
+function onContextMenu(event: Event) {
   event.preventDefault()
-  setZoom(viewTarget.zoom * Math.exp(-event.deltaY * 0.002))
 }
 function onKey(event: KeyboardEvent) {
   if (!['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', '+', '=', '-', '0'].includes(event.key))
@@ -332,21 +349,41 @@ const beforeHook = onBeforeRender(({ delta }) => {
   viewCurrent.azimuth += (viewTarget.azimuth - viewCurrent.azimuth) * alpha
   viewCurrent.polar += (viewTarget.polar - viewCurrent.polar) * alpha
   viewCurrent.zoom += (viewTarget.zoom - viewCurrent.zoom) * alpha
+  viewCurrent.x += (viewTarget.x - viewCurrent.x) * alpha
+  viewCurrent.z += (viewTarget.z - viewCurrent.z) * alpha
   const aspect = sizes.width.value / Math.max(1, sizes.height.value)
   const distance = Math.max(13.3, 10.3 / Math.max(0.6, aspect)) / viewCurrent.zoom
   camera.value.position.set(
-    distance * Math.sin(viewCurrent.polar) * Math.sin(viewCurrent.azimuth),
-    distance * Math.cos(viewCurrent.polar),
-    distance * Math.sin(viewCurrent.polar) * Math.cos(viewCurrent.azimuth)
+    viewCurrent.x + distance * Math.sin(viewCurrent.polar) * Math.sin(viewCurrent.azimuth),
+    0.1 + distance * Math.cos(viewCurrent.polar),
+    viewCurrent.z + distance * Math.sin(viewCurrent.polar) * Math.cos(viewCurrent.azimuth)
   )
-  camera.value.lookAt(0, 0, 0)
+  camera.value.lookAt(viewCurrent.x, 0.1, viewCurrent.z)
   camera.value.updateMatrixWorld()
+  // 隨縮放保持定位點可辨識，避免近距離時球體遮住整張圖。
+  const favorites = new Set(props.wishlist.map(String))
+  props.hospitals.forEach((hospital, i) => {
+    const [x, z] = projectTaiwanCoordinate(hospital.longitude!, hospital.latitude!)
+    const focused = String(hospital.id) === String(props.focusedHospital?.id)
+    const scale = (focused ? 1.45 : 1) / viewCurrent.zoom
+    matrix.makeScale(scale, scale, scale)
+    matrix.setPosition(x, 0.1 + 0.04 / viewCurrent.zoom, z)
+    markers.setMatrixAt(i, matrix)
+    markers.setColorAt(
+      i,
+      tint.set(
+        focused ? '#ffb06e' : favorites.has(String(hospital.id)) ? colors.saved : colors.marker
+      )
+    )
+  })
+  refreshHospitalMarkerBounds(markers)
   for (let i = 0; i < labels.length; i++) {
     const label = labels[i]!
     projected.copy(countyMeshes[i]!.anchor).project(camera.value)
     label.x = ((projected.x + 1) / 2) * sizes.width.value
     label.y = ((-projected.y + 1) / 2) * sizes.height.value
     label.visible =
+      viewCurrent.zoom < 5 &&
       (majorNames.has(label.name) || label.name === props.selected) &&
       projected.z < 1 &&
       label.x > 35 &&
@@ -369,7 +406,8 @@ const beforeHook = onBeforeRender(({ delta }) => {
     Math.abs(viewTarget.azimuth - viewCurrent.azimuth) +
       Math.abs(viewTarget.polar - viewCurrent.polar) +
       Math.abs(viewTarget.zoom - viewCurrent.zoom) <
-    0.0003
+      0.0003 &&
+    Math.abs(viewTarget.x - viewCurrent.x) + Math.abs(viewTarget.z - viewCurrent.z) < 0.0003
   invalidate()
 })
 const afterHook = onRender(() => {
@@ -383,7 +421,7 @@ const afterHook = onRender(() => {
     geometries: info.memory.geometries,
     idle: settled,
     frameMs: lastTimestamp ? Math.round(now - lastTimestamp) : 0,
-    buildings: blocks.length
+    buildings: 0
   })
   lastTimestamp = now
   if (settled) stop()
@@ -393,6 +431,8 @@ watch(() => [props.selected, props.summaries, props.hospitals, props.wishlist], 
   immediate: true,
   deep: true
 })
+watch(() => props.selected, focusCity)
+watch(() => [props.focusedHospital?.id, props.focusSequence], focusHospital, { immediate: true })
 watch(
   () => props.command.sequence,
   () => runCommand(props.command.action)
@@ -415,14 +455,15 @@ onMounted(() => {
   canvas.tabIndex = 0
   canvas.setAttribute(
     'aria-label',
-    '立體特寵醫院地圖：點選光點查看院所；拖曳旋轉、雙指縮放；鍵盤方向鍵旋轉，加減鍵縮放，0 重設'
+    '立體特寵醫院地圖：拖曳平移、滾輪縮放、右鍵拖曳旋轉；手機單指平移、雙指縮放；鍵盤方向鍵旋轉，加減鍵縮放，0 重設'
   )
   canvas.style.touchAction = 'none'
+  canvas.style.cursor = 'grab'
   canvas.addEventListener('pointerdown', onPointerDown)
   canvas.addEventListener('pointermove', onPointerMove)
   canvas.addEventListener('pointerup', onPointerUp)
   canvas.addEventListener('pointercancel', onPointerCancel)
-  canvas.addEventListener('wheel', onWheel, { passive: false })
+  canvas.addEventListener('contextmenu', onContextMenu)
   canvas.addEventListener('keydown', onKey)
   canvas.addEventListener('webglcontextlost', onContextLost)
   emit('ready')
@@ -437,7 +478,7 @@ onUnmounted(() => {
   canvas?.removeEventListener('pointermove', onPointerMove)
   canvas?.removeEventListener('pointerup', onPointerUp)
   canvas?.removeEventListener('pointercancel', onPointerCancel)
-  canvas?.removeEventListener('wheel', onWheel)
+  canvas?.removeEventListener('contextmenu', onContextMenu)
   canvas?.removeEventListener('keydown', onKey)
   canvas?.removeEventListener('webglcontextlost', onContextLost)
   pointers.clear()
@@ -452,12 +493,11 @@ onUnmounted(() => {
   geometries.forEach((geometry) => geometry.dispose())
   materials.forEach((material) => material.dispose())
   markers.dispose()
-  buildings.dispose()
   pickMaterial.dispose()
 })
 </script>
 
 <template>
-  <TresPerspectiveCamera ref="camera" :position="[3, 10, 11]" :fov="43" :near="0.1" :far="100" />
+  <TresPerspectiveCamera ref="camera" :position="[3, 10, 11]" :fov="43" :near="0.005" :far="100" />
   <primitive :object="root" :dispose="null" />
 </template>

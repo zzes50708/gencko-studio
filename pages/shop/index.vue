@@ -1,7 +1,7 @@
 ﻿<script setup>
 import { ref, computed, onBeforeUnmount, onMounted, watch, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { useHead, useAsyncData, useSupabaseClient } from '#imports'
+import { useHead, useAsyncData, useSupabaseClient, useState } from '#imports'
 import { useMainStore } from '~/stores/useMainStore'
 import { GENES_DB } from '~/utils/genes-db'
 import { getCleanUrl } from '~/utils/image'
@@ -52,12 +52,13 @@ const fil = ref({
   beginner: false
 })
 const showMobileFilter = ref(false)
+const desktopFiltersExpanded = useState('shop-filter-expanded', () => true)
 const filterPanelEl = ref(null)
 const filterTriggerEl = ref(null)
 const openFCat = ref(null)
 const sortOrder = ref('price_desc')
-const showOnlyFav = ref(false)
-const showOnlyHistory = ref(false)
+const showOnlyFav = useState('shop-only-favorites', () => false)
+const showOnlyHistory = useState('shop-only-history', () => false)
 
 const shopUrl = 'https://www.genckobreeding.com/shop'
 const shopImg =
@@ -237,7 +238,8 @@ onMounted(() => {
   if (q.genes) fil.value.genes = Array.isArray(q.genes) ? q.genes : q.genes.split(',')
   if (q.sort) sortOrder.value = q.sort
 
-  if (q.beginner === 'true') {
+  // 返回型錄時不能自動開啟對話框並聚焦，否則會改變剛恢復的捲動位置。
+  if (q.beginner === 'true' && !window.history.state?.scroll) {
     openMobileFilter()
   }
 })
@@ -533,7 +535,11 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="shop-root-container">
+  <div
+    class="site-document-page shop-root-container"
+    data-scroll-page="/shop"
+    :data-scroll-ready="!store.loading"
+  >
     <div class="shop-page-wrapper">
       <div class="common-document-meta" aria-label="選購目錄說明">
         <span>SELECTED GECKOS</span>
@@ -562,6 +568,16 @@ onBeforeUnmount(() => {
             <p>COLLECTION FILTER</p>
             <h2 id="shop-catalog-stage-title">設定條件</h2>
           </div>
+          <button
+            type="button"
+            class="btn-app btn-app--ghost btn-app--sm filter-collapse dt-only"
+            :aria-expanded="desktopFiltersExpanded"
+            aria-controls="shop-filter-panel"
+            @click="desktopFiltersExpanded = !desktopFiltersExpanded"
+          >
+            {{ desktopFiltersExpanded ? '收起篩選' : '展開篩選' }}
+            <span v-if="activeFilterCount">（{{ activeFilterCount }}）</span>
+          </button>
         </header>
         <div class="shop-layout">
           <!-- 手機篩選遮罩 -->
@@ -575,7 +591,7 @@ onBeforeUnmount(() => {
             ref="filterPanelEl"
             id="shop-filter-panel"
             class="filter-panel"
-            :class="{ 'm-show': showMobileFilter }"
+            :class="{ 'm-show': showMobileFilter, 'desktop-collapsed': !desktopFiltersExpanded }"
             :role="showMobileFilter ? 'dialog' : 'region'"
             :aria-modal="showMobileFilter ? 'true' : undefined"
             aria-labelledby="shop-filter-title"
@@ -666,14 +682,14 @@ onBeforeUnmount(() => {
                 母
               </label>
             </div>
-            <div v-if="availableYears.length" class="f-group">
+            <div v-if="availableYears.length" class="f-group f-group--years">
               <div class="f-label">年份</div>
               <label v-for="y in availableYears" :key="y" class="f-check">
                 <input type="checkbox" :value="y" v-model="fil.years" />
                 {{ y }} 年
               </label>
             </div>
-            <div class="f-group" style="padding-bottom: 30px">
+            <div class="f-group f-group--genes">
               <div class="f-label">基因篩選</div>
               <div v-for="(list, cat) in GENES_DB[sp]" :key="cat">
                 <button
@@ -2365,6 +2381,63 @@ onBeforeUnmount(() => {
   .btn-filter-icon,
   .empty-state-action {
     border-radius: 2px;
+  }
+}
+/* 電腦版壓縮篩選；手機保留原本可捲動的篩選對話框。 */
+@media (min-width: 769px) {
+  .shop-stage-heading {
+    grid-template-columns: 34px minmax(0, 1fr) auto;
+    gap: 10px;
+    margin-bottom: 12px;
+    align-items: center;
+  }
+  .filter-panel {
+    gap: 12px;
+    padding-bottom: 12px;
+    align-items: start;
+  }
+  .filter-panel.desktop-collapsed {
+    display: none;
+  }
+  .filter-panel > .f-group {
+    padding-right: 10px;
+  }
+  .filter-panel .f-check {
+    min-height: 32px;
+    margin: 0;
+    padding-block: 2px;
+  }
+  .filter-panel .f-cat {
+    min-height: 32px;
+    padding: 4px 6px;
+    margin-bottom: 4px;
+  }
+  .filter-panel .f-label {
+    margin-bottom: 4px;
+  }
+  .f-group--genes {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: 6px;
+  }
+  .f-group--genes > .f-label {
+    grid-column: 1 / -1;
+  }
+  .f-group--years {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0 6px;
+  }
+  .f-group--years > .f-label {
+    grid-column: 1 / -1;
+  }
+  .f-group--years .f-check {
+    font-size: 0.72rem;
+    gap: 6px;
+  }
+  .filter-reset-button {
+    min-height: 36px;
+    padding-block: 6px !important;
   }
 }
 </style>

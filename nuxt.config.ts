@@ -225,6 +225,10 @@ export default defineNuxtConfig({
 
   // 暴露 GA 設定給 plugins/ga-deferred.client.ts 使用
   runtimeConfig: {
+    // Vercel Cron 與 Supabase Edge Function 之間的私密設定，不會送到瀏覽器。
+    cronSecret: process.env.CRON_SECRET,
+    hospitalSyncSecret: process.env.HOSPITAL_SYNC_SECRET,
+    supabaseUrl: process.env.SUPABASE_URL,
     public: {
       gaId,
       enableGa
@@ -254,7 +258,7 @@ export default defineNuxtConfig({
           "img-src 'self' data: blob: https:",
           "media-src 'self' https:",
           "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://www.google-analytics.com https://*.analytics.google.com https://*.g.doubleclick.net https://api.line.me https://wsrv.nl",
-          "frame-src 'self' https://access.line.me",
+          "frame-src 'self' https://access.line.me https://maps.google.com https://www.google.com",
           "frame-ancestors 'self'",
           "object-src 'none'",
           "base-uri 'self'",
@@ -272,7 +276,7 @@ export default defineNuxtConfig({
     redirect: false
   },
 
-  css: ['~/assets/css/style.css'],
+  css: ['~/assets/css/style.css', '~/assets/css/page-headings.css'],
 
   // 🌟 全站應用程式設定
   app: {

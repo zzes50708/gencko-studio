@@ -91,7 +91,7 @@ useHead({
 </script>
 
 <template>
-  <div class="flow-page">
+  <div class="site-document-page flow-page">
     <div class="flow-document-meta" aria-label="購買流程說明">
       <span>GENCKO PURCHASE NOTES</span>
       <span>PREPARE / REVIEW / DECIDE</span>
@@ -777,6 +777,14 @@ useHead({
 :deep(.app-back-btn) {
   border: 1px solid var(--txt);
 }
-.decision-path-copy { padding: 0; border: 0; }
-@media (max-width: 768px) { .purchase-decision-path .decision-path-copy { border: 0; padding: 0 0 10px; } }
+.decision-path-copy {
+  padding: 0;
+  border: 0;
+}
+@media (max-width: 768px) {
+  .purchase-decision-path .decision-path-copy {
+    border: 0;
+    padding: 0 0 10px;
+  }
+}
 </style>

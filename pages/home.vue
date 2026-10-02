@@ -159,7 +159,11 @@ watch(
 </script>
 
 <template>
-  <div class="home-page-wrapper">
+  <div class="site-document-page home-page-wrapper">
+    <div class="home-document-meta" aria-label="首頁內容說明">
+      <span>GENCKO STUDIO</span>
+      <span>BREED / SELECT / CARE</span>
+    </div>
     <!-- Hero Section -->
     <section class="home-header-wrap home-hero" aria-labelledby="home-hero-title">
       <div class="hero-content hero-content-inner">
@@ -181,7 +185,7 @@ watch(
               to="/merch"
               class="home-hero__action home-hero__action--secondary"
             >
-              周邊商品
+              客製設備
             </NuxtLink>
           </div>
           <div class="home-hero__meta" aria-label="服務內容">

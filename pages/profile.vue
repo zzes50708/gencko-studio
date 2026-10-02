@@ -157,7 +157,7 @@ const getMapLink = (h) => {
 </script>
 
 <template>
-  <div class="profile-page-wrapper" data-testid="member-dashboard">
+  <div class="site-document-page profile-page-wrapper" data-testid="member-dashboard">
     <div class="profile-document-meta" aria-label="會員專區說明">
       <span>GENCKO MEMBER DESK</span>
       <span>SAVED / VIEWED / CONNECTED</span>

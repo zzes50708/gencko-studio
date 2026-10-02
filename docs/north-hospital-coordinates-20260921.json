@@ -1,0 +1,232 @@
+[
+  {
+    "id": "1",
+    "name": "不萊梅特殊寵物專科醫院",
+    "address": "台北市大同區民權西路227號",
+    "latitude": null,
+    "longitude": null,
+    "sourceUrl": null,
+    "status": "unresolved",
+    "evidence": "未取得可證實院所標記的精確座標；未以行政區、街道中心或地圖視窗中心替代。"
+  },
+  {
+    "id": "2",
+    "name": "牧光特殊寵物專科醫院",
+    "address": "台北市大同區民族西路65號",
+    "latitude": null,
+    "longitude": null,
+    "sourceUrl": "https://lumosvet.weebly.com/contact.html",
+    "status": "unresolved",
+    "evidence": "院方聯絡頁 Google embed 指向牧光地點 ID 0x0:0x22df439a7018763b。iframe 的 !2d121.5187188!3d25.0686728 僅能證實視窗中心，未證實為院所 pin，故不寫入。"
+  },
+  {
+    "id": "4",
+    "name": "良醫動物醫院",
+    "address": "台北市松山區八德路四段188號",
+    "latitude": null,
+    "longitude": null,
+    "sourceUrl": null,
+    "status": "unresolved",
+    "evidence": "未取得可證實院所標記的精確座標；未以行政區、街道中心或地圖視窗中心替代。"
+  },
+  {
+    "id": "5",
+    "name": "伊甸園動物醫院",
+    "address": "台北市中山區北安路554巷33號",
+    "latitude": null,
+    "longitude": null,
+    "sourceUrl": null,
+    "status": "unresolved",
+    "evidence": "未取得可證實院所標記的精確座標；未以行政區、街道中心或地圖視窗中心替代。"
+  },
+  {
+    "id": "6",
+    "name": "國寶動物醫院",
+    "address": "台北市中山區八德路二段229-2號",
+    "latitude": null,
+    "longitude": null,
+    "sourceUrl": "https://gobopet.com.tw/contact/",
+    "status": "unresolved",
+    "evidence": "院方官網聯絡頁未提供可解析的精確座標。"
+  },
+  {
+    "id": "8",
+    "name": "萊特特殊寵物醫院",
+    "address": "台北市大安區辛亥路一段50號",
+    "latitude": null,
+    "longitude": null,
+    "sourceUrl": null,
+    "status": "unresolved",
+    "evidence": "未取得可證實院所標記的精確座標；未以行政區、街道中心或地圖視窗中心替代。"
+  },
+  {
+    "id": "10",
+    "name": "亞馬森特寵專科醫院",
+    "address": "台北市內湖區內湖路二段39之2號1樓",
+    "latitude": null,
+    "longitude": null,
+    "sourceUrl": "https://amazonah.com/edcontent.php?lang=tw&tb=3",
+    "status": "unresolved",
+    "evidence": "院方交通頁 Google embed 指向亞馬森地點 ID 0x3442acec8ace5c1d:0x133340624804a0e5。iframe 的 !2d121.57769821484278!3d25.079016783951257 是視窗中心，不可作精確院所座標。"
+  },
+  {
+    "id": "12",
+    "name": "亞各動物醫院",
+    "address": "台北市南港區研究院路一段101巷12號",
+    "latitude": null,
+    "longitude": null,
+    "sourceUrl": null,
+    "status": "unresolved",
+    "evidence": "未取得可證實院所標記的精確座標；未以行政區、街道中心或地圖視窗中心替代。"
+  },
+  {
+    "id": "13",
+    "name": "馬達加斯加動物醫院",
+    "address": "新北市板橋區文化路二段500號1樓",
+    "latitude": null,
+    "longitude": null,
+    "sourceUrl": "https://www.madagascar.com.tw/",
+    "status": "unresolved",
+    "evidence": "官網确认文化路二段500號，僅提供 Google Maps 地址 query，無精確座標。"
+  },
+  {
+    "id": "14",
+    "name": "展翔動物醫院",
+    "address": "新北市板橋區南雅西路二段97號",
+    "latitude": null,
+    "longitude": null,
+    "sourceUrl": null,
+    "status": "unresolved",
+    "evidence": "未取得可證實院所標記的精確座標；未以行政區、街道中心或地圖視窗中心替代。"
+  },
+  {
+    "id": "16",
+    "name": "金氏動物醫院",
+    "address": "新北市新店區中興路一段208號",
+    "latitude": null,
+    "longitude": null,
+    "sourceUrl": null,
+    "status": "unresolved",
+    "evidence": "未取得可證實院所標記的精確座標；未以行政區、街道中心或地圖視窗中心替代。"
+  },
+  {
+    "id": "17",
+    "name": "綠野特殊寵物專科醫院",
+    "address": "新北市中和區景平路335-1號",
+    "latitude": null,
+    "longitude": null,
+    "sourceUrl": null,
+    "status": "unresolved",
+    "evidence": "未取得可證實院所標記的精確座標；未以行政區、街道中心或地圖視窗中心替代。"
+  },
+  {
+    "id": "18",
+    "name": "獴獴加非犬貓專科動物醫院",
+    "address": "新北市三重區重新路四段20號1樓",
+    "latitude": null,
+    "longitude": null,
+    "sourceUrl": null,
+    "status": "unresolved",
+    "evidence": "未取得可證實院所標記的精確座標；未以行政區、街道中心或地圖視窗中心替代。"
+  },
+  {
+    "id": "19",
+    "name": "小水豚特殊寵物醫院",
+    "address": "新北市新莊區幸福東路140號1樓",
+    "latitude": null,
+    "longitude": null,
+    "sourceUrl": null,
+    "status": "unresolved",
+    "evidence": "未取得可證實院所標記的精確座標；未以行政區、街道中心或地圖視窗中心替代。"
+  },
+  {
+    "id": "20",
+    "name": "嘉德動物醫院",
+    "address": "新北市汐止區福德一路206巷1號",
+    "latitude": null,
+    "longitude": null,
+    "sourceUrl": null,
+    "status": "unresolved",
+    "evidence": "未取得可證實院所標記的精確座標；未以行政區、街道中心或地圖視窗中心替代。"
+  },
+  {
+    "id": "22",
+    "name": "頂點動物醫院",
+    "address": "新北市永和區仁愛路87號",
+    "latitude": null,
+    "longitude": null,
+    "sourceUrl": "https://www.topvet.com.tw/contact.html",
+    "status": "unresolved",
+    "evidence": "院方聯絡頁 Google embed 指向頂點地點 ID 0x3442a9de30921d87:0xf89d123ca4673a23。iframe 的 !2d121.5131047!3d25.0131366 僅能證實視窗中心，未證實為院所 pin，故不寫入。"
+  },
+  {
+    "id": "23",
+    "name": "普羅動物醫院",
+    "address": "桃園市桃園區泰成路15號",
+    "latitude": null,
+    "longitude": null,
+    "sourceUrl": null,
+    "status": "unresolved",
+    "evidence": "未取得可證實院所標記的精確座標；未以行政區、街道中心或地圖視窗中心替代。"
+  },
+  {
+    "id": "24",
+    "name": "原野動物專科醫院",
+    "address": "桃園市平鎮區廣德街12號",
+    "latitude": 24.9565681,
+    "longitude": 121.2048637,
+    "sourceUrl": "https://wild-ah.com/",
+    "status": "verified",
+    "evidence": "院方官網原野特殊寵物專科醫院連結 https://maps.app.goo.gl/mTwwtsbMhEZMJuEXA HTTP 302 導向廣德街12號，地點資料 !8m2!3d24.9565681!4d121.2048637；採地點座標，不採 @24.9565681,121.2022834 地圖視窗中心。"
+  },
+  {
+    "id": "25",
+    "name": "野森非犬貓專科醫院",
+    "address": "桃園市中壢區民權路332號",
+    "latitude": null,
+    "longitude": null,
+    "sourceUrl": null,
+    "status": "unresolved",
+    "evidence": "未取得可證實院所標記的精確座標；未以行政區、街道中心或地圖視窗中心替代。"
+  },
+  {
+    "id": "28",
+    "name": "新竺動物醫院",
+    "address": "新竹市北區竹光路98號",
+    "latitude": null,
+    "longitude": null,
+    "sourceUrl": null,
+    "status": "unresolved",
+    "evidence": "未取得可證實院所標記的精確座標；未以行政區、街道中心或地圖視窗中心替代。"
+  },
+  {
+    "id": "29",
+    "name": "大福小幸動物醫院",
+    "address": "新竹市香山區經國路三段92巷6號",
+    "latitude": null,
+    "longitude": null,
+    "sourceUrl": null,
+    "status": "unresolved",
+    "evidence": "未取得可證實院所標記的精確座標；未以行政區、街道中心或地圖視窗中心替代。"
+  },
+  {
+    "id": "30",
+    "name": "度度鳥特殊寵物專科醫院",
+    "address": "新竹市東區西大路315巷7號1樓",
+    "latitude": null,
+    "longitude": null,
+    "sourceUrl": null,
+    "status": "unresolved",
+    "evidence": "未取得可證實院所標記的精確座標；未以行政區、街道中心或地圖視窗中心替代。"
+  },
+  {
+    "id": "31",
+    "name": "秘境野生動物專科醫院",
+    "address": "新竹縣竹北市自強六街15號",
+    "latitude": null,
+    "longitude": null,
+    "sourceUrl": null,
+    "status": "unresolved",
+    "evidence": "未取得可證實院所標記的精確座標；未以行政區、街道中心或地圖視窗中心替代。"
+  }
+]

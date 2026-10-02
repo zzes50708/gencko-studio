@@ -30,18 +30,36 @@ const normalizeSpace = (s) =>
     .replace(/\s+/g, ' ')
     .trim()
 
+const incubationProbability = (value) => {
+  const temperature = Number.parseFloat(String(value || ''))
+  if (!Number.isFinite(temperature)) return ''
+  if (temperature >= 31) return '90%公'
+  if (temperature >= 30) return '75%公'
+  if (temperature >= 28) return '公母均等'
+  if (temperature >= 27) return '75%母'
+  return '90%母'
+}
+
 const genderText = computed(() => {
   const t = normalizeSpace(props.item?.GenderType || '')
   if (!t) return '未登錄'
   if (t === '溫控') {
     const v = normalizeSpace(props.item?.GenderValue || '')
-    return v ? `孵化溫度:${v}度（不保證性別）` : '孵化溫度（不保證性別）'
+    const probability = incubationProbability(v)
+    return v
+      ? `孵化溫度:${v}度${probability ? `（${probability}，不保證性別）` : '（不保證性別）'}`
+      : '孵化溫度（不保證性別）'
   }
   return t
 })
 
-const mobileGenderText = computed(() => genderText.value.replace('（不保證性別）', ''))
 const isIncubationTemperature = computed(() => props.item?.GenderType === '溫控')
+const mobileGenderText = computed(() => {
+  if (!isIncubationTemperature.value) return genderText.value
+  const value = normalizeSpace(props.item?.GenderValue || '')
+  const probability = incubationProbability(value)
+  return value ? `孵化溫度:${value}度${probability ? `（${probability}）` : ''}` : '孵化溫度'
+})
 
 const birthdayText = computed(() => {
   const b = normalizeSpace(props.item?.Birthday || '')
@@ -462,7 +480,7 @@ const onImgLoad = () => {
   }
 
   .mobile-card-meta__note {
-    display: block;
+    display: inline;
     white-space: nowrap;
   }
 
@@ -475,12 +493,33 @@ const onImgLoad = () => {
 
   .flip-front-actions .card-action-btn {
     opacity: 1;
-    padding: 2px 7px;
-    font-size: 0.68rem;
+    min-height: 26px !important;
+    height: 26px;
+    padding: 0 5px;
+    font-size: 0.62rem;
+    line-height: 1;
     background: rgba(255, 255, 255, 0.92);
     border-color: rgba(0, 0, 0, 0.12);
     color: #111;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
+  }
+
+  .flip-front-actions {
+    top: auto;
+    bottom: 8px;
+    right: 5px;
+    gap: 2px;
+  }
+  .slim-price-row {
+    padding-right: 84px;
+    min-height: 24px;
+  }
+  .flip-front-actions .card-action-btn {
+    min-height: 24px !important;
+    height: 24px;
+    padding-inline: 4px;
+    font-size: 0.58rem;
+    box-shadow: none;
   }
 
   .flip-front-actions .card-action-btn--active {
@@ -492,6 +531,12 @@ const onImgLoad = () => {
 }
 
 /* 僅限桌機：hover 翻牌 */
+@media (max-width: 360px) {
+  .slim-price {
+    font-size: 0.75rem;
+    white-space: nowrap;
+  }
+}
 @media (min-width: 769px) and (hover: hover) and (pointer: fine) {
   .flip-back {
     display: block;

@@ -93,31 +93,25 @@ const hInterpretHowToLd = {
       '@type': 'HowToStep',
       position: 1,
       name: '先看精神與活動力',
-      text: '先觀察守宮是否能正常睜眼、抬頭、移動與對外界有反應。若明顯虛弱、無力、翻身困難或持續閉眼不動，應提高警覺。'
+      text: '先確認是否睜眼、抬頭、移動正常，有沒有持續無力、閉眼或反應變慢。'
     },
     {
       '@type': 'HowToStep',
       position: 2,
       name: '再看體態與外觀',
-      text: '檢查尾巴是否持續消瘦、四肢是否無力、脫皮是否卡在腳趾或眼周，並留意嘴角、鼻孔、腹部與泄殖腔附近是否有分泌物、腫脹或傷口。'
+      text: '留意尾巴是否快速變瘦、脫皮是否卡住、嘴角鼻孔與泄殖腔附近是否有異常。'
     },
     {
       '@type': 'HowToStep',
       position: 3,
-      name: '核對進食與排泄',
-      text: '把進食頻率、拒食天數、排便型態與體重變化一起看，而不是只看單一症狀。短期不吃不一定是疾病，但若合併明顯消瘦或排便異常，就要盡快處理。'
+      name: '把進食和排泄一起看',
+      text: '不要只看有沒有吃，還要一起比對體重、排便與拒食持續時間。'
     },
     {
       '@type': 'HowToStep',
       position: 4,
-      name: '確認環境是否先出問題',
-      text: '回頭檢查溫度、濕度、躲避點、底材與最近是否有搬動、驚嚇或新環境壓力。很多看似健康異常的狀況，實際上先是環境管理失衡。'
-    },
-    {
-      '@type': 'HowToStep',
-      position: 5,
-      name: '分辨觀察與就醫界線',
-      text: '若出現長期拒食、快速消瘦、神經症狀、呼吸異常、持續腹瀉、明顯外傷或無法站立翻身，應直接尋求特寵醫院，而不是只靠線上資訊自行判斷。'
+      name: '最後分辨是否該就醫',
+      text: '若有快速惡化、神經症狀、呼吸異常、無法站立翻身或外傷，直接找特寵醫院。'
     }
   ]
 }
@@ -363,7 +357,7 @@ const startMode = (m) => {
   if (m === 'checkup') answers.checkup = {}
   if (m === 'purchase') answers.purchase = {}
   nextTick(() => {
-    document.querySelector('.h-q-card')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    scrollPageTop()
   })
 }
 
@@ -754,6 +748,7 @@ const copied = ref(false)
         'health-container--nav-hidden': store.navHidden && mode !== 'entry' && !finished
       }
     ]"
+    class="site-document-page"
   >
     <TheBackButton
       wrapper-class="m-only"
@@ -767,16 +762,16 @@ const copied = ref(false)
         <span>GENCKO HEALTH DESK</span>
         <span>OBSERVE / ASSESS / ACT</span>
       </div>
+      <p class="site-page-kicker">HEALTH ASSESSMENT CONSOLE</p>
       <h1 class="page-title">健康評估系統</h1>
-      <p class="h-entry-sub">依目的選擇題組：緊急判斷、完整檢查或購入前評估。</p>
+      <p class="h-entry-sub">緊急判斷、完整檢查或購入前評估。</p>
       <nav class="health-tool-nav" aria-label="健康工具導覽">
         <div class="health-tool-nav-copy">
-          <span>CARE PATH / 使用順序</span>
-          <strong>還沒飼養先評估準備度；已有症狀就直接找醫院。</strong>
+          <strong>還沒飼養先評估適不適合飼養；守宮已有症狀就直接找醫院。</strong>
         </div>
         <div class="health-tool-nav-links">
-          <NuxtLink no-prefetch to="/qs">先做飼養前自評</NuxtLink>
-          <NuxtLink no-prefetch to="/hospital">直接查找特寵醫院</NuxtLink>
+          <NuxtLink no-prefetch to="/qs">飼養前自評</NuxtLink>
+          <NuxtLink no-prefetch to="/hospital">查找特寵醫院</NuxtLink>
         </div>
       </nav>
       <div class="h-entry-foot">
@@ -828,11 +823,7 @@ const copied = ref(false)
             <span class="h-entry-tag h-tag--urgent">URGENT</span>
           </div>
           <div class="h-entry-title">簡易緊急快篩</div>
-          <div class="h-entry-quote">
-            8 題快篩
-            <br />
-            先判斷是否需急診
-          </div>
+          <div class="h-entry-quote">先判斷是否需急診</div>
           <div class="h-entry-meta">
             <span class="h-entry-meta-num">8</span>
             <span>題</span>
@@ -854,11 +845,7 @@ const copied = ref(false)
             <span class="h-entry-tag h-tag--full">CHECKUP</span>
           </div>
           <div class="h-entry-title">完整健康檢查</div>
-          <div class="h-entry-quote">
-            30 題細查
-            <br />
-            完整盤點健康狀態
-          </div>
+          <div class="h-entry-quote">完整盤點健康狀態</div>
           <div class="h-entry-meta">
             <span class="h-entry-meta-num">{{ CHECKUP_QUESTIONS.length }}</span>
             <span>題</span>
@@ -884,11 +871,7 @@ const copied = ref(false)
             <span class="h-entry-tag h-tag--purchase">PRE-BUY</span>
           </div>
           <div class="h-entry-title">購入評估</div>
-          <div class="h-entry-quote">
-            4 題照片判斷
-            <br />
-            先看外觀值不值得買
-          </div>
+          <div class="h-entry-quote">先看外觀值不值得買</div>
           <div class="h-entry-meta">
             <span class="h-entry-meta-num">4</span>
             <span>題</span>
@@ -908,37 +891,46 @@ const copied = ref(false)
 
     <!-- ============ 問卷階段 ============ -->
     <div v-else-if="!finished" class="h-quiz">
-      <div class="h-quiz-head">
-        <button
-          type="button"
-          class="h-back-btn btn-app btn-app--ghost btn-app--md btn-app--pill"
-          @click="exitToEntry"
-        >
-          <svg
-            viewBox="0 0 24 24"
-            width="20"
-            height="20"
-            stroke="currentColor"
-            stroke-width="2.5"
-            fill="none"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            aria-hidden="true"
+      <div class="h-quiz-toolbar">
+        <div class="h-quiz-head">
+          <button
+            type="button"
+            class="h-back-btn btn-app btn-app--ghost btn-app--md"
+            @click="exitToEntry"
           >
-            <polyline points="15 18 9 12 15 6"></polyline>
-          </svg>
-          返回
-        </button>
-        <div class="h-quiz-title">{{ modeLabel }}</div>
-      </div>
-
-      <div class="h-progress-area">
-        <div class="h-progress-labels">
-          <span>進度</span>
-          <span>{{ Math.round(progress) }}%</span>
+            <svg
+              viewBox="0 0 24 24"
+              width="18"
+              height="18"
+              stroke="currentColor"
+              stroke-width="2.5"
+              fill="none"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <polyline points="15 18 9 12 15 6"></polyline>
+            </svg>
+            返回
+          </button>
+          <div class="h-quiz-title">{{ modeLabel }}</div>
         </div>
-        <div class="h-progress-track">
-          <div class="h-progress-fill" :style="{ width: progress + '%' }"></div>
+
+        <div class="h-progress-area">
+          <div class="h-progress-labels">
+            <span>進度</span>
+            <span>{{ Math.round(progress) }}%</span>
+          </div>
+          <div
+            class="h-progress-track"
+            role="progressbar"
+            aria-label="問卷作答進度"
+            aria-valuemin="0"
+            aria-valuemax="100"
+            :aria-valuenow="Math.round(progress)"
+          >
+            <div class="h-progress-fill" :style="{ width: progress + '%' }"></div>
+          </div>
         </div>
       </div>
 
@@ -964,6 +956,7 @@ const copied = ref(false)
               type="button"
               class="h-q-opt"
               :class="['h-sev-' + opt.severity, { 'is-selected': isSelected(q.id, opt.id) }]"
+              :aria-pressed="isSelected(q.id, opt.id)"
               @click="selectOption(q.id, opt.id)"
             >
               <div class="h-q-opt-dot" :style="{ background: SEVERITY[opt.severity].color }"></div>
@@ -1017,7 +1010,7 @@ const copied = ref(false)
     </div>
 
     <!-- ============ 結果頁 ============ -->
-    <div v-else class="h-result">
+    <div v-else class="h-result" aria-live="polite">
       <div class="h-result-head">
         <button
           type="button"
@@ -1205,7 +1198,7 @@ const copied = ref(false)
 
 <style scoped>
 .health-container {
-  --health-sticky-top: calc(90px + env(safe-area-inset-top, 0px));
+  --health-sticky-top: calc(64px + env(safe-area-inset-top, 0px));
   --health-quiz-head-height: 44px;
   --health-progress-height: 48px;
   --health-nav-shift: 0px;
@@ -1268,7 +1261,7 @@ const copied = ref(false)
   outline-offset: var(--focus-offset);
 }
 .health-container--nav-hidden {
-  --health-nav-shift: -50px;
+  --health-nav-shift: -64px;
 }
 .health-container--quiz {
   box-sizing: border-box;
@@ -3221,16 +3214,185 @@ const copied = ref(false)
 :deep(.app-back-btn) {
   border: 1px solid var(--txt);
 }
-.h-section, .h-note-block, .h-disease-card { border: 0; border-bottom: 1px solid var(--bd); background: transparent !important; box-shadow: none !important; }
-.h-verdict-action, .h-disease-disclaimer, .h-item-row { border: 0; border-bottom: 1px solid var(--bd); background: transparent; border-radius: 0; padding: 12px 0; }
-.h-item-head { align-items: baseline; gap: 12px; }
-.h-item-tag { flex: 0 0 auto; white-space: nowrap; }
-.h-item-q { min-width: 0; line-height: 1.65; }
-.h-verdict-emoji { display: none; }
-.h-verdict-title { font-family: var(--font-heading-zh); color: var(--txt) !important; }
-.h-verdict-card { padding: 20px 0; }
-.h-section-title { text-align: left; }
-.h-hospital-btn { background: var(--pri); box-shadow: none; }
-.h-hospital-btn:hover { transform: none; box-shadow: none; }
-.h-hospital-btn::after { display: none; }
+.h-section,
+.h-note-block,
+.h-disease-card {
+  border: 0;
+  border-bottom: 1px solid var(--bd);
+  background: transparent !important;
+  box-shadow: none !important;
+}
+.h-verdict-action,
+.h-disease-disclaimer,
+.h-item-row {
+  border: 0;
+  border-bottom: 1px solid var(--bd);
+  background: transparent;
+  border-radius: 0;
+  padding: 12px 0;
+}
+.h-item-head {
+  align-items: baseline;
+  gap: 12px;
+}
+.h-item-tag {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+.h-item-q {
+  min-width: 0;
+  line-height: 1.65;
+}
+.h-verdict-emoji {
+  display: none;
+}
+.h-verdict-title {
+  font-family: var(--font-heading-zh);
+  color: var(--txt) !important;
+}
+.h-verdict-card {
+  padding: 20px 0;
+}
+.h-section-title {
+  text-align: left;
+}
+.h-hospital-btn {
+  background: var(--pri);
+  box-shadow: none;
+}
+.h-hospital-btn:hover {
+  transform: none;
+  box-shadow: none;
+}
+.h-hospital-btn::after {
+  display: none;
+}
+
+/* 問卷置頂列：把返回、模式名稱與進度整合成單一緊湊工具列。 */
+.health-container {
+  --health-quiz-toolbar-height: 94px;
+}
+
+.health-container--quiz .h-quiz-toolbar {
+  position: fixed;
+  top: var(--health-sticky-top);
+  left: 50%;
+  z-index: 1011;
+  width: min(1000px, calc(100vw - 40px));
+  padding: 8px 20px 10px;
+  box-sizing: border-box;
+  border-bottom: 1px solid var(--bd);
+  background: var(--card-bg-solid);
+  transform: translate(-50%, var(--health-nav-shift));
+  transition: transform 0.2s ease-out;
+}
+
+.health-container--quiz .h-quiz-head {
+  position: static;
+  width: auto;
+  min-height: 44px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  transform: none;
+  backdrop-filter: none;
+}
+
+.health-container--quiz .h-progress-area {
+  position: static;
+  width: auto;
+  margin: 2px 0 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  transform: none;
+  backdrop-filter: none;
+}
+
+.h-progress-labels {
+  margin-bottom: 5px;
+  letter-spacing: 0;
+  text-transform: none;
+  font-variant-numeric: tabular-nums;
+}
+
+.h-progress-track {
+  height: 4px;
+  border-radius: 0;
+}
+
+.h-progress-fill {
+  border-radius: 0;
+  background: var(--pri);
+  box-shadow: none;
+  transition: width 0.2s ease-out;
+}
+
+.health-container--quiz .h-q-list {
+  padding-top: calc(var(--health-quiz-toolbar-height) + 10px);
+}
+
+.health-container--quiz .h-q-card {
+  scroll-margin-top: calc(var(--health-sticky-top) + var(--health-quiz-toolbar-height) + 12px);
+}
+
+.h-entry-sub {
+  margin-bottom: 18px;
+}
+
+.health-tool-nav {
+  margin-bottom: 0;
+}
+
+.h-entry-foot {
+  margin-top: 0;
+}
+
+.h-entry-title {
+  font-size: clamp(1.55rem, 2.2vw, 1.9rem);
+}
+
+.h-entry-quote {
+  margin-top: 0;
+  padding-top: 0;
+}
+
+@media (max-width: 768px) {
+  .health-container {
+    --health-quiz-toolbar-height: 90px;
+  }
+
+  .health-container--quiz .h-quiz-toolbar {
+    width: 100%;
+    padding: 6px 16px 9px;
+  }
+
+  .health-tool-nav {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 10px;
+  }
+
+  .health-tool-nav-links {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .health-tool-nav-links a {
+    min-width: 0;
+    padding-inline: 8px;
+    white-space: nowrap;
+  }
+
+  .h-quiz-title {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 1rem;
+  }
+}
 </style>
