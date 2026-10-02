@@ -352,7 +352,12 @@ const shopList = computed(() => {
 
     if (fil.value.years.length > 0 && !fil.value.years.includes(getItemYear(i))) return false
 
-    if (fil.value.beginner && (!i.Note || !String(i.Note).includes('新手'))) return false
+    if (
+      fil.value.beginner &&
+      (!(i.Tags || []).includes('新手推薦') ||
+        (i.Tags || []).some((tag) => ['有缺陷', '待觀察'].includes(tag)))
+    )
+      return false
 
     if (fil.value.genes.length > 0) {
       const iGenes = Array.isArray(i.Genes) ? i.Genes : []

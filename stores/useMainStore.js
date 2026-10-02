@@ -131,6 +131,7 @@ export const useMainStore = defineStore('main', () => {
         SoldPrice: i.sold_price,
         Status: i.status,
         Note: i.note,
+        Tags: Array.isArray(i.tags) ? i.tags : [],
         ImageURL: i.image_url,
         // is_hot 是純 boolean（CLAUDE.md 確認）
         IsHot: i.is_hot === true,
