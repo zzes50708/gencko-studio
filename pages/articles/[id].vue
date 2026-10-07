@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useHead, useAsyncData, useSupabaseClient } from '#imports'
 import { useMainStore } from '~/stores/useMainStore'
@@ -16,15 +16,51 @@ const router = useRouter()
 const store = useMainStore()
 const supabase = useSupabaseClient()
 const articleId = route.params.id
-const isHydrated = ref(false)
-
-onMounted(() => {
-  isHydrated.value = true
-})
+const content = ref(null)
+const outline = ref([])
+const selectedChapter = ref('')
+const buildOutline = () => {
+  if (!content.value) return
+  const seen = new Set()
+  outline.value = Array.from(content.value.querySelectorAll('h2, h3'))
+    .map((element, index) => {
+      let id = element.id || `article-section-${index + 1}`
+      let suffix = 1
+      while (seen.has(id)) id = `article-section-${index + 1}-${suffix++}`
+      seen.add(id)
+      element.id = id
+      return { id, label: element.textContent.trim(), element }
+    })
+    .filter((item) => item.label)
+}
+onMounted(buildOutline)
+const goToChapter = () => {
+  const target = outline.value.find((item) => item.id === selectedChapter.value)?.element
+  if (!target) return
+  const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  const offset =
+    window.innerWidth < 768
+      ? 12
+      : (parseFloat(
+          getComputedStyle(document.documentElement).getPropertyValue('--site-nav-height')
+        ) || 64) + 12
+  const lenis = window.__lenis
+  if (lenis) lenis.scrollTo(target, { offset: -offset, immediate: reduce })
+  else
+    window.scrollTo({
+      top: target.getBoundingClientRect().top + window.scrollY - offset,
+      behavior: reduce ? 'instant' : 'smooth'
+    })
+}
 
 // [SEO] 為了在伺服器端渲染 (SSR) 期間就能拿到該文章資料以產生正確的 Meta，
 // 我們使用 useAsyncData 獨立向 Supabase 請求單篇文章資料。
-const { data: readingArticle, pending } = await useAsyncData(`article-${articleId}`, async () => {
+const {
+  data: readingArticle,
+  pending,
+  error: articleError,
+  refresh: retryArticle
+} = await useAsyncData(`article-${articleId}`, async () => {
   // 若 Store 已經有了，可以直接用 (CSR 場景)
   if (store.articlesList && store.articlesList.length > 0) {
     const found = store.articlesList.find((a) => a.ID === articleId)
@@ -39,7 +75,8 @@ const { data: readingArticle, pending } = await useAsyncData(`article-${articleI
     .ilike('status', 'published')
     .maybeSingle()
 
-  if (error || !data) return null
+  if (error) throw new Error('文章暫時無法載入，請稍後重試。')
+  if (!data) return null
 
   // 自動把內文中的基因名連到 /genes/<name>（GEO topic cluster）
   let geneNames = []
@@ -67,10 +104,16 @@ const { data: readingArticle, pending } = await useAsyncData(`article-${articleI
   }
 })
 
-// 當文章被載入後，將其存入 Store 以供全域 Navbar 計算進度條使用
-if (readingArticle.value && import.meta.client) {
-  store.readingArticle = readingArticle.value
-}
+// 重試成功後同步閱讀狀態並重新建立目錄。
+watch(
+  readingArticle,
+  async (article) => {
+    if (import.meta.client) store.readingArticle = article || null
+    await nextTick()
+    buildOutline()
+  },
+  { immediate: true }
+)
 
 const fmtDate = (d) => {
   try {
@@ -252,8 +295,8 @@ const siteData = computed(() => {
 
   // Fallback if not found
   return {
-    title: '文章不存在',
-    desc: '找不到此文章',
+    title: articleError.value ? '文章暫時無法載入' : '文章不存在',
+    desc: articleError.value ? '請檢查連線後再試一次。' : '找不到此文章',
     keywords: '',
     img: 'https://wsrv.nl/?url=raw.githubusercontent.com%2Fzzes50708%2Fgencko-assets%2Fmain%2Fimg%2F11.png&w=1200&h=630&fit=contain&bg=e6e3e3&output=webp&q=85',
     url: `https://www.genckobreeding.com/articles/${articleId}`,
@@ -294,7 +337,9 @@ useHead({
 
 const goBack = () => {
   store.readingArticle = null
-  router.push('/articles')
+  const previous = window.history.state.back
+  if (previous && previous.split('?')[0] === '/articles') router.back()
+  else router.push('/articles')
 }
 
 // 🌟 相關文章：同分類優先，其次任意文章，排除自身，最多 4 篇
@@ -328,12 +373,24 @@ const relatedArticles = computed(() => {
 
 <template>
   <div class="site-document-page">
-    <div v-if="isHydrated && pending" style="text-align: center; padding: 100px 0; color: #888">
+    <div v-if="pending" class="detail-read-state" style="text-align: center; color: #888">
       <div class="loader" style="margin: 0 auto 20px auto"></div>
       <p>文章載入中...</p>
     </div>
 
-    <div v-else-if="!readingArticle" style="text-align: center; padding: 100px 0; color: #888">
+    <div v-else-if="articleError" class="reader-load-error" role="alert">
+      <h2>文章暫時無法載入</h2>
+      <p>請檢查連線後再試一次。</p>
+      <div class="reader-error-actions">
+        <button type="button" class="btn-app" @click="retryArticle()">重新載入文章</button>
+        <button type="button" class="btn-app" @click="goBack">返回列表</button>
+      </div>
+    </div>
+    <div
+      v-else-if="!readingArticle"
+      class="detail-read-state"
+      style="text-align: center; color: #888"
+    >
       <h2>找不到此文章或文章已下架</h2>
       <button
         type="button"
@@ -367,13 +424,6 @@ const relatedArticles = computed(() => {
         返回列表
       </button>
       <article class="reader-container">
-        <div v-if="readingArticle.ImageURL" class="article-hero-image">
-          <img
-            :src="getCleanUrl(readingArticle.ImageURL)"
-            :alt="readingArticle.Title"
-            loading="eager"
-          />
-        </div>
         <header class="reader-header">
           <div class="reader-category">{{ readingArticle.Category }}</div>
           <h1>{{ readingArticle.Title }}</h1>
@@ -385,7 +435,23 @@ const relatedArticles = computed(() => {
             <span>GENCKO FIELD NOTE</span>
           </div>
         </header>
-        <div class="reader-content" v-html="readingArticle.Content"></div>
+        <div v-if="readingArticle.ImageURL" class="article-hero-image">
+          <ArticleImage
+            :src="getCleanUrl(readingArticle.ImageURL)"
+            :alt="readingArticle.Title"
+            loading="eager"
+          />
+        </div>
+        <label v-if="outline.length > 1" class="reader-outline">
+          <span>文章章節</span>
+          <select v-model="selectedChapter" aria-label="跳至文章章節" @change="goToChapter">
+            <option value="" disabled>選擇章節</option>
+            <option v-for="item in outline" :key="item.id" :value="item.id">
+              {{ item.label }}
+            </option>
+          </select>
+        </label>
+        <div ref="content" class="reader-content" v-html="readingArticle.Content"></div>
 
         <!-- 🌟 E-E-A-T 作者資訊卡：提升 AI 引用可信度 & 品牌識別 -->
         <div class="author-card" itemscope itemtype="https://schema.org/Organization">
@@ -439,14 +505,10 @@ const relatedArticles = computed(() => {
             style="text-decoration: none; color: inherit"
           >
             <div class="related-art-img-wrap">
-              <img
-                v-if="art.ImageURL"
-                :src="getCleanUrl(art.ImageURL, 300)"
+              <ArticleImage
+                :src="art.ImageURL ? getCleanUrl(art.ImageURL, 300) : undefined"
                 :alt="art.Title"
-                loading="lazy"
-                decoding="async"
               />
-              <div v-else class="related-art-img-placeholder">📝</div>
             </div>
             <div class="related-art-info">
               <span class="related-art-cat">{{ art.Category }}</span>
@@ -546,6 +608,50 @@ const relatedArticles = computed(() => {
   max-width: none;
   height: auto !important;
   object-fit: contain;
+}
+/* 正文維持可讀字級，透過章節與段落節奏縮短閱讀高度。 */
+@media (max-width: 767px) {
+  .reader-outline {
+    margin-block: 6px;
+    gap: 6px;
+  }
+  .reader-content {
+    padding-block: 12px 6px;
+  }
+  .reader-content :deep(h2) {
+    margin-block: 24px 10px;
+  }
+  .reader-content :deep(h3) {
+    margin-block: 18px 8px;
+  }
+  .reader-content :deep(h2:first-child),
+  .reader-content :deep(h3:first-child) {
+    margin-top: 8px;
+  }
+  .reader-content :deep(p),
+  .reader-content :deep(ul),
+  .reader-content :deep(ol) {
+    margin-bottom: 12px;
+  }
+  .reader-content :deep(p),
+  .reader-content :deep(li) {
+    line-height: 1.75;
+  }
+  .reader-content :deep(blockquote) {
+    margin-block: 14px;
+    padding: 10px 12px;
+  }
+  .reader-content :deep(img),
+  .reader-content :deep(table) {
+    margin-block: 16px;
+  }
+  .author-card {
+    padding-block: 12px;
+    margin-top: 16px;
+  }
+  .related-articles-section {
+    margin-top: 16px;
+  }
 }
 
 .reader-header {
@@ -1042,5 +1148,80 @@ const relatedArticles = computed(() => {
 }
 :deep(.app-back-btn) {
   border: 1px solid var(--txt);
+}
+
+.reader-load-error {
+  padding: 30px 0;
+}
+.reader-error-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.reader-outline {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-block: 12px;
+  font-size: 0.86rem;
+}
+.reader-outline select {
+  flex: 1;
+  min-width: 0;
+  min-height: 44px;
+  padding: 6px 10px;
+  color: var(--txt);
+  background: var(--card-bg);
+  border: 1px solid var(--bd);
+  border-radius: 2px;
+  font: inherit;
+  font-size: 16px;
+}
+.article-hero-image {
+  aspect-ratio: 16 / 9;
+  max-height: 460px;
+  background: var(--card-bg);
+}
+.article-hero-image img {
+  height: 100% !important;
+  object-fit: contain;
+}
+</style>
+
+<style scoped>
+.detail-read-state {
+  padding: 100px 0;
+}
+@media (max-width: 767px) {
+  /* 載入與查無資料沿用相同緊湊節奏，保留清楚的返回操作。 */
+  .detail-read-state {
+    padding: 16px 0;
+    color: var(--txt) !important;
+    opacity: 1 !important;
+  }
+  .detail-read-state h2 {
+    font-size: 20px;
+    line-height: 1.4;
+    margin: 0 0 8px;
+  }
+  .detail-read-state p {
+    margin: 6px 0;
+  }
+  .detail-read-state .loader {
+    margin-bottom: 10px !important;
+  }
+  .detail-read-state :deep(.nav-action-row),
+  .detail-read-state > button {
+    margin: 10px auto 0 !important;
+  }
+  /* 放在章節選單基礎樣式之後，避免手機間距被覆蓋。 */
+  .reader-outline {
+    margin-block: 6px;
+    gap: 6px;
+  }
+  /* 這些入口已整合在手機底部導覽，正文前不再重複占一排。 */
+  .reader-context-nav {
+    display: none;
+  }
 }
 </style>

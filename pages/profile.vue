@@ -3,7 +3,6 @@ import { ref, computed, watch, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
 import { useHead, useSupabaseClient } from '#imports'
 import { useMainStore } from '~/stores/useMainStore'
-import { HOSPITAL_DATA } from '~/utils/hospitals'
 import { getCleanUrl } from '~/utils/image'
 
 const store = useMainStore()
@@ -26,7 +25,14 @@ useHead({
 })
 
 // 狀態管理
-const activeTab = ref('wishlist')
+const activeTab = useState('member-dashboard-tab', () => 'wishlist')
+const bidsError = ref('')
+const {
+  data: hospitalDirectory,
+  error: hospitalDirectoryError,
+  status: hospitalDirectoryStatus,
+  refresh: refreshHospitalDirectory
+} = await useHospitalDirectoryData()
 const myBids = ref([])
 const isLoadingBids = ref(false)
 let bidRequestId = 0
@@ -37,6 +43,7 @@ watch(
   (user) => {
     const requestId = ++bidRequestId
     myBids.value = []
+    bidsError.value = ''
     isLoadingBids.value = false
     if (user?.type === 'google') {
       void fetchMyBids(requestId)
@@ -51,6 +58,7 @@ onBeforeUnmount(() => {
 // 由伺服器端身份取得自己的競標紀錄，不讓瀏覽器以 phone/email 查詢。
 async function fetchMyBids(requestId) {
   isLoadingBids.value = true
+  bidsError.value = ''
   try {
     const { data: bidsData, error: bidsError } = await supabase.rpc('get_my_auction_bids')
     if (requestId !== bidRequestId) return
@@ -99,6 +107,7 @@ async function fetchMyBids(requestId) {
   } catch (e) {
     if (requestId !== bidRequestId) return
     console.error('讀取競標紀錄失敗:', e)
+    bidsError.value = '競標紀錄暫時無法載入，請稍後重試。'
   } finally {
     if (requestId === bidRequestId) isLoadingBids.value = false
   }
@@ -113,7 +122,9 @@ const wishlistItems = computed(() => {
 
 // 從 store 取得收藏的特寵醫院
 const hospWishlistItems = computed(() => {
-  return HOSPITAL_DATA.filter((h) => store.hospWishlist.includes(h.id))
+  return (hospitalDirectory.value || []).filter((h) =>
+    store.hospWishlist.map(String).includes(String(h.id))
+  )
 })
 
 // 從 store 取得最近瀏覽紀錄 (反轉陣列確保最新在最前)
@@ -142,6 +153,10 @@ const toggleHospWishlist = (id) => {
   }
   if (import.meta.client)
     localStorage.setItem('gencko_hosp_wishlist', JSON.stringify(store.hospWishlist))
+}
+
+const retryMyBids = () => {
+  if (store.currentUser?.type === 'google') void fetchMyBids(++bidRequestId)
 }
 
 const getAuctionStatus = (endTime) => {
@@ -199,7 +214,7 @@ const getMapLink = (h) => {
           </div>
           <div class="user-text">
             <h2 class="user-name">訪客</h2>
-            <span class="user-type">登入解鎖競標與雲端同步</span>
+            <span class="user-type">收藏保存在此瀏覽器，登入可查看競標</span>
           </div>
         </template>
       </div>
@@ -214,6 +229,7 @@ const getMapLink = (h) => {
             @click="store.loginWithLine"
             class="btn-quick line"
             title="LINE 登入"
+            aria-label="LINE 登入"
           >
             <img
               src="https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/line.png"
@@ -227,6 +243,7 @@ const getMapLink = (h) => {
             @click="store.loginWithGoogle"
             class="btn-quick google"
             title="Google 登入"
+            aria-label="Google 登入"
           >
             <svg
               width="18"
@@ -258,13 +275,12 @@ const getMapLink = (h) => {
     </div>
 
     <!-- 🌟 App-like 分段切換器 (新增歷史紀錄) -->
-    <div class="segmented-tabs" role="tablist" aria-label="會員資料分類">
+    <div class="segmented-tabs" role="group" aria-label="會員資料分類">
       <button
         type="button"
         class="seg-tab"
         :class="{ active: activeTab === 'wishlist' }"
-        role="tab"
-        :aria-selected="activeTab === 'wishlist'"
+        :aria-pressed="activeTab === 'wishlist'"
         @click="activeTab = 'wishlist'"
       >
         收藏
@@ -274,8 +290,7 @@ const getMapLink = (h) => {
         type="button"
         class="seg-tab"
         :class="{ active: activeTab === 'history' }"
-        role="tab"
-        :aria-selected="activeTab === 'history'"
+        :aria-pressed="activeTab === 'history'"
         @click="activeTab = 'history'"
       >
         瀏覽
@@ -285,8 +300,7 @@ const getMapLink = (h) => {
         type="button"
         class="seg-tab"
         :class="{ active: activeTab === 'hospitals' }"
-        role="tab"
-        :aria-selected="activeTab === 'hospitals'"
+        :aria-pressed="activeTab === 'hospitals'"
         @click="activeTab = 'hospitals'"
       >
         醫院
@@ -296,8 +310,7 @@ const getMapLink = (h) => {
         type="button"
         class="seg-tab"
         :class="{ active: activeTab === 'bids' }"
-        role="tab"
-        :aria-selected="activeTab === 'bids'"
+        :aria-pressed="activeTab === 'bids'"
         @click="activeTab = 'bids'"
       >
         競標
@@ -345,7 +358,7 @@ const getMapLink = (h) => {
             </div>
             <div style="position: relative">
               <!-- 🌟 核心修正：NuxtImg 替換為原生 img -->
-              <img
+              <ArticleImage
                 v-if="i.ImageURL"
                 :src="getCleanUrl(i.ImageURL, 400)"
                 :alt="i.Morph"
@@ -419,7 +432,7 @@ const getMapLink = (h) => {
             </div>
             <div style="position: relative">
               <!-- 🌟 核心修正：NuxtImg 替換為原生 img -->
-              <img
+              <ArticleImage
                 v-if="i.ImageURL"
                 :src="getCleanUrl(i.ImageURL, 400)"
                 :alt="i.Morph"
@@ -457,7 +470,16 @@ const getMapLink = (h) => {
 
       <!-- Tab 3: 收藏醫院 (本機) -->
       <div v-show="activeTab === 'hospitals'">
-        <div v-if="hospWishlistItems.length === 0" class="empty-state">
+        <div v-if="hospitalDirectoryStatus === 'pending'" role="status" class="empty-state">
+          讀取收藏醫院中…
+        </div>
+        <div v-else-if="hospitalDirectoryError" role="alert" class="empty-state">
+          <p>收藏醫院暫時無法載入。</p>
+          <button type="button" class="btn-hero" @click="refreshHospitalDirectory()">
+            重新載入醫院
+          </button>
+        </div>
+        <div v-else-if="hospWishlistItems.length === 0" class="empty-state">
           <div class="empty-icon">🏥</div>
           <p>您尚未收藏任何特寵醫院。</p>
           <button
@@ -535,11 +557,12 @@ const getMapLink = (h) => {
                   </button>
                 </div>
                 <a
-                  :href="'tel:' + h.phone.replace(/[^\d]/g, '')"
+                  v-if="h.phone"
+                  :href="'tel:' + String(h.phone || '').replace(/[^\d]/g, '')"
                   class="hosp-call-btn"
                   style="width: 100%; text-align: center"
                 >
-                  Call Now
+                  撥打電話
                 </a>
               </div>
             </div>
@@ -550,24 +573,14 @@ const getMapLink = (h) => {
       <!-- Tab 4: 競標紀錄 (雲端 - 需登入) -->
       <div v-show="activeTab === 'bids'">
         <!-- 🌟 將登入區塊移至此，保護雲端資料 -->
-        <div v-if="!store.currentUser" class="login-prompt-box">
+        <div v-if="store.currentUser?.type !== 'google'" class="login-prompt-box">
           <div class="empty-icon">🔐</div>
-          <h3 style="margin-bottom: 10px; color: var(--txt)">登入解鎖競標紀錄</h3>
+          <h3 style="margin-bottom: 10px; color: var(--txt)">使用 Google 登入查看競標紀錄</h3>
           <p style="color: #888; font-size: 0.9rem; margin-bottom: 25px">
             查看參與過的拍賣與出價進度。
           </p>
 
           <div class="login-buttons">
-            <button type="button" @click="store.loginWithLine" class="btn-login line">
-              <img
-                src="https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/line.png"
-                alt="LINE"
-                style="width: 24px; height: 24px; object-fit: contain"
-                loading="lazy"
-                decoding="async"
-              />
-              使用 LINE 帳號登入
-            </button>
             <button type="button" @click="store.loginWithGoogle" class="btn-login google">
               <svg
                 width="20"
@@ -603,6 +616,10 @@ const getMapLink = (h) => {
           讀取中...
         </div>
 
+        <div v-else-if="bidsError" role="alert" class="empty-state">
+          <p>{{ bidsError }}</p>
+          <button type="button" class="btn-hero" @click="retryMyBids">重新載入競標紀錄</button>
+        </div>
         <div v-else-if="myBids.length === 0" class="empty-state">
           <div class="empty-icon">🔨</div>
           <p>您尚未參與任何競標活動。</p>
@@ -625,7 +642,8 @@ const getMapLink = (h) => {
             :key="bid.auction_id"
           >
             <!-- 🌟 核心修正：NuxtImg 替換為原生 img -->
-            <img
+            <ArticleImage
+              :alt="bid.morph || '競標個體'"
               :src="
                 bid.image
                   ? getCleanUrl(bid.image)
@@ -1444,5 +1462,76 @@ const getMapLink = (h) => {
 .empty-state {
   border: 0;
   border-bottom: 1px solid var(--bd);
+}
+</style>
+
+<style scoped>
+.profile-heading {
+  padding: 10px 0;
+  margin-bottom: 10px;
+  gap: 10px;
+}
+.user-card {
+  padding: 12px 0;
+  margin-bottom: 10px;
+}
+.segmented-tabs {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 3px;
+  margin-bottom: 10px;
+  overflow: visible;
+}
+.seg-tab {
+  min-width: 0;
+  padding: 8px 2px;
+  gap: 4px;
+}
+.empty-state,
+.login-prompt-box {
+  padding: 16px 0;
+}
+.empty-icon {
+  font-size: 28px;
+  margin-bottom: 6px;
+}
+.user-text,
+.bid-info,
+.hosp-info {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.profile-page-wrapper .fav-btn {
+  width: 44px;
+  height: 44px;
+  min-height: 44px;
+}
+@media (max-width: 767px) {
+  .profile-page-wrapper {
+    min-height: 0;
+  }
+  .seg-tab {
+    font-size: 13px;
+  }
+  .seg-tab span {
+    padding: 2px 4px;
+    font-size: 11px;
+  }
+  .profile-heading p {
+    margin: 0;
+  }
+  .user-card {
+    gap: 8px;
+  }
+}
+</style>
+<style scoped>
+@media (max-width: 767px) {
+  .seg-tab {
+    flex-direction: row;
+    min-height: 44px;
+    height: 44px;
+    box-sizing: border-box;
+  }
 }
 </style>

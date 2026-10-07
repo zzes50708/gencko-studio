@@ -1,5 +1,6 @@
 import type { RouterConfig } from '@nuxt/schema'
 import { useNuxtApp } from '#app'
+import { useArticleListContext } from '~/composables/useArticleListContext'
 
 // 全站 scrollBehavior（Lenis-aware）
 // 背景：全站以 Lenis 接管捲動，原生 savedPosition 還原不可靠；且 <NuxtPage :page-key>
@@ -31,8 +32,11 @@ export default <RouterConfig>{
         }
         // page:finish 可能先於 Suspense 將新頁面插入 DOM；返回型錄必須等實際列表就緒。
         if (
-          to.path === '/shop' &&
-          !document.querySelector('[data-scroll-page="/shop"][data-scroll-ready="true"]')
+          (to.path === '/shop' ||
+            to.path === '/articles' ||
+            to.path === '/hospital' ||
+            to.path === '/genes') &&
+          !document.querySelector(`[data-scroll-page="${to.path}"][data-scroll-ready="true"]`)
         ) {
           if (!observer) {
             observer = new MutationObserver(() => requestAnimationFrame(run))
@@ -56,6 +60,8 @@ export default <RouterConfig>{
           if (el) top = el.getBoundingClientRect().top + (window.scrollY || 0)
         } else if (savedPosition) {
           top = savedPosition.top
+        } else if (to.path === '/articles' && from.path.startsWith('/articles/')) {
+          top = nuxtApp.runWithContext(() => useArticleListContext().value.scrollY)
         }
 
         if (lenis) {

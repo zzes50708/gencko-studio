@@ -145,7 +145,7 @@ useHead({
         <p class="overview-body">{{ item.body }}</p>
 
         <div class="preview-shell">
-          <img :src="item.image" :alt="item.alt" class="preview-image" loading="lazy" />
+          <ArticleImage :src="item.image" :alt="item.alt" class="preview-image" loading="lazy" />
         </div>
       </NuxtLink>
     </section>
@@ -683,5 +683,89 @@ useHead({
 }
 :deep(.app-back-btn) {
   border: 1px solid var(--txt);
+}
+</style>
+
+<style scoped>
+/* 短資訊兩欄，詳細介紹保持單欄；整張連結皆可觸控。 */
+.trust-page :deep(.page-hero) {
+  padding: 10px 0;
+  margin-bottom: 10px;
+}
+.reason-row {
+  padding: 10px 0;
+}
+.purchase-hub {
+  padding: 12px 0;
+}
+.purchase-card {
+  padding: 10px 0;
+  gap: 5px;
+  align-content: start;
+}
+.purchase-card > span {
+  min-height: 0;
+  line-height: 1.5;
+}
+.hub-heading {
+  margin-bottom: 8px;
+}
+.overview-grid {
+  margin-top: 10px;
+}
+.overview-card {
+  gap: 6px;
+  padding: 12px 0;
+}
+.preview-shell {
+  margin-top: 6px;
+}
+@media (max-width: 767px) {
+  .hero-reasons,
+  .purchase-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0 12px;
+  }
+  .reason-row {
+    gap: 4px;
+  }
+  .reason-head {
+    font-size: 14px;
+    gap: 4px;
+  }
+  .reason-body {
+    font-size: 13px;
+    line-height: 1.5;
+  }
+  .purchase-card {
+    min-width: 0;
+  }
+  .purchase-card h3 {
+    font-size: 15px;
+    line-height: 1.4;
+  }
+  .purchase-card p {
+    font-size: 13px;
+  }
+  .hub-heading h2 {
+    font-size: 18px;
+  }
+  .overview-grid {
+    grid-template-columns: 1fr;
+  }
+  .overview-title {
+    font-size: 18px;
+    line-height: 1.4;
+  }
+  .overview-cta {
+    min-height: 24px;
+  }
+  .preview-shell {
+    aspect-ratio: auto;
+    height: 140px;
+  }
+  .preview-image {
+    max-height: 140px;
+  }
 }
 </style>

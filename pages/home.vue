@@ -1,7 +1,6 @@
 <script setup>
 // 原本首頁內容已搬到 /home（保留舊首頁供導覽使用）
 import { computed, ref, watch } from 'vue'
-import { useRouter } from 'vue-router'
 import { useHead } from '#imports'
 import { useMainStore } from '~/stores/useMainStore'
 import { getCleanUrl } from '~/utils/image'
@@ -9,7 +8,6 @@ import heroGeckoUrl from '~/assets/NDBE.jpg'
 import HotPicksMarquee from '~/components/home/HotPicksMarquee.vue'
 
 const store = useMainStore()
-const router = useRouter()
 
 useHead({
   title: 'GENCKO專業選育工作室｜豹紋・肥尾守宮選購與新手飼養',
@@ -77,11 +75,6 @@ const fmtDate = (d) => {
   } catch (e) {
     return ''
   }
-}
-
-const goToStarterGuide = () => {
-  // 透過 query 傳遞參數，後續將在 Shop 頁面中接接並觸發篩選
-  router.push('/start-here')
 }
 
 // 熱門精選：處理圖片載入失敗（避免部分卡片顯示成黑塊）
@@ -217,20 +210,13 @@ watch(
 
     <!-- Scenarios Navigation -->
     <nav class="home-scenario-grid" aria-label="快速導覽">
-      <div
-        class="scenario-card"
-        @click="goToStarterGuide"
-        @keydown.enter.prevent="goToStarterGuide"
-        @keydown.space.prevent="goToStarterGuide"
-        role="button"
-        tabindex="0"
-      >
+      <NuxtLink no-prefetch to="/start-here" class="scenario-card">
         <div class="scenario-body">
           <div class="scenario-index">01</div>
           <div class="scenario-title">新手必看</div>
         </div>
         <div class="scenario-hint">第一次養守宮，不用心急</div>
-      </div>
+      </NuxtLink>
       <NuxtLink no-prefetch to="/auction" class="scenario-card">
         <div v-if="hasActiveAuction" class="live-badge">LIVE</div>
         <div class="scenario-body">
@@ -279,6 +265,12 @@ watch(
         />
       </div>
 
+      <div v-else-if="store.dataError" class="home-data-status" role="alert">
+        <p>熱門個體暫時無法載入。</p>
+        <button type="button" :disabled="loading" @click="store.ensureInventoryLoaded()">
+          重新載入
+        </button>
+      </div>
       <div v-else-if="hotList.length > 0" class="hot-marquee-mask home-product-marquee">
         <div class="home-product-marquee__rows">
           <HotPicksMarquee
@@ -311,7 +303,21 @@ watch(
           查看全部文章 &rarr;
         </NuxtLink>
       </div>
-      <div class="grid article-grid">
+      <div
+        v-if="store.articlesLoading && !articlesList.length"
+        class="home-data-status"
+        role="status"
+      >
+        正在載入文章
+      </div>
+      <div v-else-if="store.articlesError" class="home-data-status" role="alert">
+        <p>{{ store.articlesError }}</p>
+        <button type="button" :disabled="store.articlesLoading" @click="store.loadArticles()">
+          重新載入文章
+        </button>
+      </div>
+      <p v-else-if="!articlesList.length" class="empty-state-text">目前沒有已發布的文章</p>
+      <div v-else class="grid article-grid">
         <article class="card article-card" v-for="item in articlesList.slice(0, 4)" :key="item.ID">
           <NuxtLink
             no-prefetch
@@ -319,30 +325,11 @@ watch(
             style="display: block; text-decoration: none; color: inherit; height: 100%"
           >
             <div style="position: relative; overflow: hidden">
-              <!-- 🌟 核心修正：NuxtImg 替換為原生 img -->
-              <img
-                v-if="item.ImageURL"
+              <ArticleImage
                 :src="getCleanUrl(item.ImageURL, 600)"
                 :alt="item.Title"
                 class="card-img"
-                style="height: 180px"
-                loading="lazy"
-                decoding="async"
               />
-              <div
-                v-else
-                class="card-img"
-                style="
-                  height: 180px;
-                  display: flex;
-                  align-items: center;
-                  justify-content: center;
-                  font-size: 3rem;
-                  background: #1a1a1a;
-                "
-              >
-                📝
-              </div>
               <div class="art-cat-tag">{{ item.Category }}</div>
             </div>
             <div class="card-body">
@@ -401,6 +388,17 @@ watch(
 </template>
 
 <style scoped>
+.home-data-status {
+  padding-block: 12px;
+}
+.home-data-status button {
+  min-height: 44px;
+  padding: 6px 12px;
+  border: 1px solid var(--txt);
+  background: var(--card-bg);
+  color: var(--txt);
+}
+
 /* 
   [局部樣式修復] 
   已清除與 assets/css/style.css 重複的宣告，

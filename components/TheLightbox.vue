@@ -13,10 +13,16 @@ const dialog = useNativeModal(() => Boolean(props.item))
 
 // --- ?? PWA ?皛?餈質馱 ---
 const touchStartY = ref(0)
+const touchStartX = ref(0)
 const touchDeltaY = ref(0)
 const isDragging = ref(false)
 
 const onTouchStart = (e) => {
+  if (e.touches.length !== 1) {
+    cancelSwipe()
+    return
+  }
+  touchStartX.value = e.touches[0].clientX
   touchStartY.value = e.touches[0].clientY
   isDragging.value = true
   touchDeltaY.value = 0
@@ -24,17 +30,32 @@ const onTouchStart = (e) => {
 
 const onTouchMove = (e) => {
   if (!isDragging.value) return
-  touchDeltaY.value = e.touches[0].clientY - touchStartY.value
+  if (e.touches.length !== 1) {
+    cancelSwipe()
+    return
+  }
+  const deltaY = e.touches[0].clientY - touchStartY.value
+  if (Math.abs(e.touches[0].clientX - touchStartX.value) > Math.abs(deltaY)) {
+    cancelSwipe()
+    return
+  }
+  touchDeltaY.value = Math.max(0, deltaY)
 }
 
 const onTouchEnd = () => {
   if (!isDragging.value) return
   isDragging.value = false
 
-  if (Math.abs(touchDeltaY.value) > 100) {
+  if (touchDeltaY.value > 100) {
     emit('close')
   }
 
+  touchDeltaY.value = 0
+}
+
+// 多指、橫向或取消手勢不應關閉預覽。
+function cancelSwipe() {
+  isDragging.value = false
   touchDeltaY.value = 0
 }
 
@@ -48,7 +69,14 @@ const getImgSrc = (item) => {
 </script>
 
 <template>
-  <dialog v-if="item" ref="dialog" class="lightbox-overlay" aria-label="圖片預覽" @cancel.prevent="emit('close')" @click.self="emit('close')">
+  <dialog
+    v-if="item"
+    ref="dialog"
+    class="lightbox-overlay"
+    aria-label="圖片預覽"
+    @cancel.prevent="emit('close')"
+    @click.self="emit('close')"
+  >
     <div
       class="lightbox-content-wrapper"
       :style="{
@@ -60,6 +88,7 @@ const getImgSrc = (item) => {
       @touchstart="onTouchStart"
       @touchmove="onTouchMove"
       @touchend="onTouchEnd"
+      @touchcancel="cancelSwipe"
       @click.stop
     >
       <button class="lightbox-close-btn" type="button" @click="emit('close')" aria-label="關閉">

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
-import { useMediaQuery } from '@vueuse/core'
+import { useMediaQuery, useWindowSize } from '@vueuse/core'
 defineOptions({ inheritAttrs: false })
 const props = defineProps<{
   value?: string | number
@@ -24,7 +24,14 @@ const options = ref<{ value: string; label: string; disabled: boolean }[]>([])
 const numeric = computed(() =>
   options.value.every((option) => /^\d+(\s*(個|層|cm))?$/.test(option.label))
 )
-const numericColumns = computed(() => (options.value.length > 24 ? 6 : 3))
+const { width: viewportWidth, height: viewportHeight } = useWindowSize()
+const numericColumns = computed(() => {
+  const base = options.value.length > 24 ? 6 : 3
+  // 高度不足時增加欄數，保留完整選項與可觸控的高度。
+  const availableRows = Math.max(1, Math.floor((viewportHeight.value - 116) / 39))
+  const maxColumns = Math.max(base, Math.floor((viewportWidth.value - 48) / 44))
+  return Math.min(maxColumns, Math.max(base, Math.ceil(options.value.length / availableRows)))
+})
 const pickerRows = computed(() => Math.ceil(options.value.length / numericColumns.value))
 function open() {
   if (props.disabled || !native.value) return
@@ -44,6 +51,23 @@ function choose(value: string) {
   native.value.value = value
   native.value.dispatchEvent(new Event('change', { bubbles: true }))
   opened.value = false
+}
+function keepPickerFocus(event: KeyboardEvent) {
+  if (event.key !== 'Tab' || !popup.value) return
+  const buttons = Array.from(
+    popup.value.querySelectorAll<HTMLButtonElement>('button:not(:disabled)')
+  )
+  const first = buttons[0]
+  const last = buttons.at(-1)
+  if (!first || !last) return
+  // 避免原生選單循環時將焦點移到瀏覽器工具列。
+  if (event.shiftKey && document.activeElement === first) {
+    event.preventDefault()
+    last.focus()
+  } else if (!event.shiftKey && document.activeElement === last) {
+    event.preventDefault()
+    first.focus()
+  }
 }
 watch(mobile, () => {
   opened.value = false
@@ -79,6 +103,7 @@ watch(mobile, () => {
       ref="popup"
       class="cabinet-picker"
       :aria-label="title"
+      @keydown="keepPickerFocus"
       @cancel.prevent="opened = false"
       @click="$event.target === $event.currentTarget && (opened = false)"
     >
@@ -152,7 +177,7 @@ watch(mobile, () => {
 }
 .cabinet-picker-panel {
   width: 100%;
-  max-width: 600px;
+  max-width: 900px;
   margin-inline: auto;
   padding: 12px;
   background: #faf9f6;
@@ -165,8 +190,8 @@ watch(mobile, () => {
   margin-bottom: 8px;
 }
 .cabinet-picker header button {
-  width: 40px;
-  height: 40px;
+  width: 44px;
+  height: 44px;
   border: 0;
   background: none;
   font-size: 24px;
@@ -202,7 +227,7 @@ watch(mobile, () => {
 .cabinet-picker-list.is-numeric button {
   text-align: center;
   min-height: 0;
-  height: clamp(20px, calc((100svh - 180px) / var(--picker-rows) - 3px), 34px);
+  height: clamp(36px, calc((100svh - 116px) / var(--picker-rows) - 3px), 40px);
   padding: 2px;
   font-size: 11px;
 }

@@ -14,6 +14,7 @@ type Configuration = {
   boxColor?: string
   counts?: Record<string, number>
   ledLayers?: number
+  heatingMat?: string
   ledColor?: string
   lightLevel?: number
   storageHeight?: number
@@ -81,7 +82,7 @@ const inquiry = computed(() =>
       ? `預留間隙（cm）：水平 ${configuration.value.clearances.horizontal}／垂直 ${configuration.value.clearances.vertical}／深度 ${configuration.value.clearances.depth}；控制區高 ${configuration.value.clearances.controlHeight}`
       : '',
     `配置：每層 ${configuration.value.columns} 抽 × ${configuration.value.rows} 層，共 ${configuration.value.columns * configuration.value.rows} 抽`,
-    '標配：貼皮木製櫃體、內嵌式溫控、美國加熱墊',
+    `標配：貼皮木製櫃體、內嵌式溫控、${configuration.value.heatingMat === 'korea' ? '韓國加熱墊' : '美國加熱墊'}`,
     `貼皮：${needs.value.finish || configuration.value.finish}（以實際樣本確認）`,
     `選配：${equipmentSummary.value}`,
     `物種與數量：${needs.value.species || '待討論'}`,
@@ -152,6 +153,13 @@ useHead({
       <span>PLAN / BUILD / CARE</span>
     </div>
 
+    <header class="cabinet-hero">
+      <div class="cabinet-hero__copy">
+        <p class="cabinet-kicker">CUSTOM HABITAT SYSTEM</p>
+        <h1>客製化爬蟲設備</h1>
+      </div>
+    </header>
+
     <section id="cabinet-configurator" class="cabinet-3d-slot" aria-labelledby="cabinet-3d-title">
       <div class="cabinet-section-head">
         <span>01 / CONFIGURE IN 3D</span>
@@ -212,15 +220,6 @@ useHead({
         <h2 id="cabinet-cases-title">實際案例</h2>
       </div>
       <p class="cabinet-cases__intro">成品照片、尺寸與設備清單將在取得授權後陸續更新。</p>
-      <div class="cabinet-case-grid" aria-label="客製化設備案例佔位區">
-        <article v-for="item in ['A4 多層飼養系統', '壓克力抽盒木櫃', '盒體管理系統']" :key="item">
-          <div class="cabinet-case-placeholder" role="img" :aria-label="`${item}案例影像待置換`">
-            <span>CASE IMAGE</span>
-          </div>
-          <h3>{{ item }}</h3>
-          <p>案例規格、設備配置與成品影像待補。</p>
-        </article>
-      </div>
     </section>
 
     <section class="cabinet-process" aria-labelledby="cabinet-process-title">
@@ -473,7 +472,7 @@ useHead({
 }
 .cabinet-hero {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(260px, 0.38fr);
+  grid-template-columns: minmax(0, 1fr);
   gap: clamp(1.5rem, 4vw, 3.5rem);
   align-items: end;
   padding: 1.5rem 0 1.75rem;
@@ -481,8 +480,7 @@ useHead({
 }
 .cabinet-kicker,
 .cabinet-section-head > span,
-.cabinet-preview > div > span,
-.cabinet-partner > span {
+.cabinet-preview > div > span {
   color: var(--pri);
   font: 800 0.68rem/1.4 var(--font-body-zh);
   letter-spacing: 0.12em;
@@ -528,22 +526,6 @@ useHead({
   border-color: var(--pri);
   background: var(--pri);
   color: #fff;
-}
-.cabinet-partner {
-  display: grid;
-  gap: 0.6rem;
-  padding: 1.2rem;
-  border: 1px solid var(--bd);
-  border-top: 2px solid var(--pri);
-}
-.cabinet-partner strong {
-  color: var(--txt);
-  font: 700 clamp(1.35rem, 2.5vw, 2rem)/1.15 var(--font-heading-zh);
-}
-.cabinet-partner p {
-  margin: 0;
-  font-size: 0.95rem;
-  line-height: 1.7;
 }
 .cabinet-planning,
 .cabinet-systems,

@@ -1,17 +1,54 @@
 ﻿<script setup>
 import { computed, onMounted, onUnmounted, onBeforeUnmount, watch, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { useHead, useNuxtApp } from '#imports'
+import { useHead, useNuxtApp, useLoadingIndicator } from '#imports'
 import { useMainStore } from '~/stores/useMainStore'
 import { getRouteTab } from '~/utils/route-tab'
+import { getWishlistInquiryLink } from '~/utils/animal-inquiry'
+import { useOnline } from '@vueuse/core'
 // #U6：Lenis / gsap 改為動態 import（見 initGlobalLenis），把 ~528KB 移出每頁初始關鍵路徑，
 // 平滑捲動於 mount 後才啟用（漸進增強，不阻擋 LCP）。首頁（about）本就不啟用全域 Lenis。
 
 const store = useMainStore()
 const route = useRoute()
 const router = useRouter()
+const pageKey = (pageRoute) => pageRoute.path
+// 淡出中的舊頁面已停止響應，不能再接收觸控或鍵盤輸入。
+const pageTransition = {
+  name: 'page',
+  mode: 'out-in',
+  onBeforeLeave: (element) => {
+    element.inert = true
+  },
+  onLeaveCancelled: (element) => {
+    element.inert = false
+  }
+}
+// Hero Lab 等滿版場景已停用頁面轉場，保留它們原本的卸載方式。
+const activePageTransition = computed(() =>
+  router.currentRoute.value.meta.pageTransition === false ? false : pageTransition
+)
 const { $pwa } = useNuxtApp()
 const nuxtApp = useNuxtApp()
+const { isLoading: pageLoading } = useLoadingIndicator()
+const online = useOnline()
+const connectionReady = ref(false)
+const slowLoading = ref(false)
+let slowLoadingTimer = null
+onMounted(() => {
+  connectionReady.value = true
+})
+watch(pageLoading, (loading) => {
+  clearTimeout(slowLoadingTimer)
+  slowLoading.value = false
+  if (loading)
+    slowLoadingTimer = setTimeout(() => {
+      slowLoading.value = true
+    }, 8000)
+})
+onBeforeUnmount(() => {
+  clearTimeout(slowLoadingTimer)
+})
 const iosDialog = useNativeModal(() => store.showIOSGuide)
 const isDevelopment = import.meta.dev
 
@@ -208,6 +245,8 @@ onMounted(() => {
     localStorage.removeItem('gencko_wishlist')
   }
 
+  store.restoreCompare()
+
   try {
     const savedHospWish = localStorage.getItem('gencko_hosp_wishlist')
     if (savedHospWish) store.hospWishlist = JSON.parse(savedHospWish)
@@ -351,17 +390,30 @@ onBeforeUnmount(() => {
       @scroll-top="scrollToTop"
     />
 
-    <main id="main-content" style="padding-top: 0">
+    <NuxtLoadingIndicator color="var(--pri)" error-color="var(--pri)" :height="2" />
+    <p v-if="connectionReady && !online" class="connection-notice" role="status" aria-live="polite">
+      目前沒有網路連線，已載入的內容仍可瀏覽；連線恢復後請重試。
+    </p>
+    <span
+      v-if="pageLoading"
+      :class="slowLoading && online ? 'slow-loading-notice' : 'sr-only'"
+      role="status"
+      aria-live="polite"
+    >
+      {{ slowLoading && online ? '載入時間較長，請稍候；也可以選擇其他頁面。' : '正在載入頁面' }}
+    </span>
+    <main id="main-content" :aria-busy="pageLoading" style="padding-top: 0">
       <!--
-        1) NuxtPage 以 fullPath 作為 key，query 變動時仍可保留頁面狀態。
+        1) NuxtPage 以目標路由 path 作為 key，query 變動時保留頁面狀態。
         2) NuxtErrorBoundary 捕捉頁面 runtime error，避免整個應用程式直接中斷。
       -->
       <NuxtErrorBoundary>
         <!-- 避免 query 變動（例如選購切換物種/篩選）就整頁卸載重掛，造成「噸級閃爍」 -->
-        <NuxtPage :page-key="route.path" />
+        <NuxtPage :page-key="pageKey" :transition="activePageTransition" />
 
         <template #error="{ error, clearError }">
           <div
+            role="alert"
             style="
               max-width: 920px;
               margin: 0 auto;
@@ -391,6 +443,7 @@ onBeforeUnmount(() => {
             >
             <div style="display: flex; gap: 10px; justify-content: flex-start; flex-wrap: wrap">
               <button
+                type="button"
                 class="btn-app btn-app--primary"
                 style="min-width: 140px"
                 @click="clearAndGoHome(clearError)"
@@ -398,6 +451,7 @@ onBeforeUnmount(() => {
                 回到首頁
               </button>
               <button
+                type="button"
                 class="btn-app btn-app--ghost"
                 style="min-width: 140px; opacity: 0.85"
                 @click="clearAndReload(clearError)"
@@ -411,23 +465,15 @@ onBeforeUnmount(() => {
     </main>
 
     <a
-      v-if="store.wishlist.length > 0"
-      :href="
-        'https://line.me/R/ti/p/@219abdzn?text=' +
-        encodeURIComponent(
-          'Hi Gencko，我想詢問我收藏的守宮個體（共 ' +
-            store.wishlist.length +
-            ' 隻，ID：\n' +
-            store.wishlist.join(', ')
-        )
-      "
+      v-if="store.wishlist.length > 0 && route.path !== '/shop'"
+      :href="getWishlistInquiryLink(store.lineLink, store.wishlist)"
       target="_blank"
       class="btn-app btn-app--primary btn-app--md btn-app--pill floating-inquire-btn"
       :class="{
         'floating-inquire-btn--with-compare': route.path === '/shop' && store.compareList.length > 0
       }"
     >
-      <span>已選 {{ store.wishlist.length }} 隻｜一次詢問</span>
+      <span>收藏 {{ store.wishlist.length }} 隻｜一次詢問</span>
     </a>
 
     <TheFooter />
@@ -436,6 +482,18 @@ onBeforeUnmount(() => {
 </template>
 
 <style scoped>
+.connection-notice,
+.slow-loading-notice {
+  display: block;
+  margin: 0;
+  padding: 8px var(--site-page-gutter, 16px);
+  color: var(--text-muted, #666);
+  background: var(--bg, #fff);
+  border-bottom: 1px solid var(--border, #ddd);
+  font-size: 13px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
 /* Skip to content：預設離屏，鍵盤聚焦時才顯示 */
 .floating-inquire-btn.floating-inquire-btn--with-compare {
   top: calc(76px + env(safe-area-inset-top, 0px));

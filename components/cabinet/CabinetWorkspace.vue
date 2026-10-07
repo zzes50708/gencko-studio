@@ -21,7 +21,8 @@ import {
   PMREMGenerator,
   SRGBColorSpace,
   Vector3,
-  WebGLRenderer
+  WebGLRenderer,
+  WebGLRenderTarget
 } from 'three'
 import { HDRLoader } from 'three/examples/jsm/loaders/HDRLoader.js'
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js'
@@ -231,23 +232,23 @@ onErrorCaptured((error) => {
 const model = shallowRef<CabinetModel | null>(null)
 const woodTextures = shallowRef<CabinetWoodTextures | null>(null)
 const stoneTextures = shallowRef<CabinetWoodTextures | null>(null)
-let disposed = false,
-  texturesRequested = false
-watch(render3d, async (enabled) => {
-  if (!enabled || texturesRequested) return
-  texturesRequested = true
-  const [textures, stone] = await Promise.all([
-    loadCabinetWoodTextures(),
-    loadCabinetWoodTextures('stone')
-  ])
-  if (disposed) {
-    disposeCabinetWoodTextures(textures)
-    disposeCabinetWoodTextures(stone)
-  } else {
-    if (textures) woodTextures.value = markRaw(textures)
-    if (stone) stoneTextures.value = markRaw(stone)
+let disposed = false
+const requestedTextures = new Set<string>()
+watch(
+  () => ({ enabled: render3d.value, finish: configuration.value.finishId }),
+  async ({ enabled, finish }) => {
+    if (!enabled || !['concrete', 'stone'].includes(finish) || requestedTextures.has(finish)) return
+    requestedTextures.add(finish)
+    // 只載入目前貼皮；已載入的來源保留，切換回來不重複下載。
+    const textures = await loadCabinetWoodTextures(finish)
+    if (disposed) {
+      disposeCabinetWoodTextures(textures)
+    } else {
+      if (textures && finish === 'stone') stoneTextures.value = markRaw(textures)
+      else if (textures) woodTextures.value = markRaw(textures)
+    }
   }
-})
+)
 const modelKey = computed(() => {
   const {
     lighting: _lighting,
@@ -263,6 +264,8 @@ const modelKey = computed(() => {
   const { metalSwitch: _metalSwitch, ...counts } = modelCounts
   return JSON.stringify({ ...modelConfiguration, counts })
 })
+let modelBuildSerial = 0
+let prepareModel: (() => Promise<void>) | null = null
 const rebuildModel = async () => {
   if (!render3d.value) return
   const serial = ++buildSerial
@@ -275,6 +278,7 @@ const rebuildModel = async () => {
   if (disposed || serial !== buildSerial || !render3d.value) return
   const previous = model.value
   try {
+    modelBuildSerial = serial
     model.value = markRaw(
       createCabinetModel(
         layout.value,
@@ -291,9 +295,10 @@ const rebuildModel = async () => {
     failed.value = true
   }
   await nextTick()
+  await prepareModel?.()
   previous?.dispose()
   await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()))
-  if (serial === buildSerial) modelUpdating.value = false
+  if (serial === buildSerial && failed.value) modelUpdating.value = false
 }
 let buildSerial = 0
 let buildTimer: ReturnType<typeof setTimeout> | null = null
@@ -432,7 +437,7 @@ const sceneBackdrop = computed(() => {
 const Controller = defineComponent({
   setup() {
     const { camera, renderer, scene, invalidate, sizes } = useTres()
-    const { onBeforeRender } = useLoop()
+    const { onBeforeRender, render } = useLoop()
     const destination = new Vector3(),
       target = new Vector3(),
       offset = new Vector3(),
@@ -440,6 +445,140 @@ const Controller = defineComponent({
     let moving = false,
       environment: ReturnType<PMREMGenerator['fromScene']> | null = null
     let controllerDisposed = false
+    const preparationTarget = new WebGLRenderTarget(1, 1)
+    let preparing = true
+    let preparationSerial = 0
+    // 編譯期間保留已繪製的畫面，避免首次 render 同步等待著色器。
+    render((notifyFrameRendered) => {
+      if (preparing || controllerDisposed || !camera.value) return
+      renderer.render(scene.value, camera.value)
+      notifyFrameRendered()
+    })
+    const prepare = async () => {
+      const serial = ++preparationSerial
+      const build = modelBuildSerial
+      preparing = true
+      modelUpdating.value = true
+      try {
+        if (renderer instanceof WebGLRenderer && camera.value) {
+          // 使用與 compileAsync 相同的平行編譯擴充，另加入切頁取消，
+          // 避免 renderer 釋放後仍持續查詢已失效的 WebGL 程式。
+          // 分批編譯，避免一次建立整櫃所有程式而佔住主執行緒。
+          const objects: Parameters<WebGLRenderer['compile']>[0][] = []
+          scene.value.traverse((object) => {
+            if (
+              ['Mesh', 'InstancedMesh', 'Points', 'Line', 'LineSegments', 'Sprite'].includes(
+                object.type
+              )
+            )
+              objects.push(object)
+          })
+          for (const offscreen of [false, true]) {
+            let batchStart = performance.now()
+            for (const object of objects) {
+              if (controllerDisposed || serial !== preparationSerial) return
+              const previousTarget = renderer.getRenderTarget()
+              const previousFace = renderer.getActiveCubeFace()
+              const previousLevel = renderer.getActiveMipmapLevel()
+              try {
+                if (offscreen) renderer.setRenderTarget(preparationTarget)
+                // 由完整場景取得光源；只編譯本批物件，避免漏掉 LED。
+                renderer.compile(object, camera.value, scene.value)
+              } finally {
+                renderer.setRenderTarget(previousTarget, previousFace, previousLevel)
+              }
+              if (performance.now() - batchStart >= 8) {
+                await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()))
+                batchStart = performance.now()
+              }
+            }
+          }
+          const gl = renderer.getContext()
+          const extension = gl.getExtension('KHR_parallel_shader_compile')
+          if (extension) {
+            const programs = [...(renderer.info.programs || [])]
+            await new Promise<void>((resolve) => {
+              const check = () => {
+                if (
+                  controllerDisposed ||
+                  gl.isContextLost() ||
+                  programs.every(
+                    (program) =>
+                      !program.program ||
+                      gl.getProgramParameter(program.program, extension.COMPLETION_STATUS_KHR)
+                  )
+                )
+                  resolve()
+                else requestAnimationFrame(check)
+              }
+              requestAnimationFrame(check)
+            })
+          }
+        }
+      } catch (error) {
+        if (!controllerDisposed) console.warn('[cabinet] 材質預編譯失敗', error)
+      } finally {
+        if (!controllerDisposed && serial === preparationSerial) {
+          preparing = false
+          if (build === buildSerial) modelUpdating.value = false
+          invalidate()
+        }
+      }
+    }
+    prepareModel = prepare
+    watch(
+      model,
+      () => {
+        preparing = true
+      },
+      { flush: 'sync' }
+    )
+    const fitMeasurements = (position: Vector3) => {
+      if (!touchMode.value || !camera.value || !model.value || !sizes.height.value) return
+      const preview = camera.value.clone() as PerspectiveCamera
+      model.value.root.updateMatrixWorld(true)
+      // 用標註的實際投影邊界留出內距，窄螢幕不裁切右側文字。
+      for (let attempt = 0; attempt < 3; attempt++) {
+        preview.position.copy(position)
+        preview.lookAt(target)
+        preview.updateMatrixWorld(true)
+        const right = new Vector3(1, 0, 0).applyQuaternion(preview.quaternion)
+        const vertical = new Vector3(0, 1, 0).applyQuaternion(preview.quaternion)
+        let extent = 0
+        for (const label of model.value.measurements.children) {
+          if (label.type !== 'Sprite') continue
+          const centre = label.getWorldPosition(new Vector3())
+          const scale = label.getWorldScale(new Vector3())
+          // 拉遠視角時維持約 9px 的標註字高，避免完整顯示卻無法閱讀。
+          const depth = Math.abs(
+            centre
+              .clone()
+              .sub(preview.position)
+              .applyQuaternion(preview.quaternion.clone().invert()).z
+          )
+          const height =
+            (((9 * 112) / 43) * 2 * depth * Math.tan((preview.fov * Math.PI) / 360)) /
+            sizes.height.value
+          const factor = height / scale.y
+          label.scale.multiplyScalar(factor)
+          scale.multiplyScalar(factor)
+          for (const x of [-1, 1])
+            for (const y of [-1, 1]) {
+              const point = centre
+                .clone()
+                .addScaledVector(right, (x * scale.x) / 2)
+                .addScaledVector(vertical, (y * scale.y) / 2)
+                .project(preview)
+              extent = Math.max(extent, Math.abs(point.x), Math.abs(point.y))
+            }
+        }
+        if (!Number.isFinite(extent) || extent <= 0.94) break
+        position
+          .sub(target)
+          .multiplyScalar(extent / 0.94 + 0.02)
+          .add(target)
+      }
+    }
     const frame = (type = view.value) => {
       if (type === 'drawer') {
         invalidate()
@@ -472,6 +611,7 @@ const Controller = defineComponent({
       else if (type === 'perspective') destination.set(6.9, target.y + 4.3, 8.5)
       // 正面目標需落在 OrbitControls 的極角限制內，避免動畫與限制持續互相拉扯。
       else destination.set(0, target.y + 0.3, 11.3)
+      if (type === 'front') fitMeasurements(destination)
       controls.value?.instance?.target.copy(target)
       if (reducedMotion.value) {
         camera.value.position.copy(destination)
@@ -495,6 +635,8 @@ const Controller = defineComponent({
         if (distance < fitDistance)
           camera.value.position.sub(target).setLength(fitDistance).add(target)
         cam.updateProjectionMatrix()
+        fitMeasurements(cam.position)
+        if (moving) fitMeasurements(destination)
         invalidate()
       }
     }
@@ -531,7 +673,7 @@ const Controller = defineComponent({
             scene.value.environment = nextEnvironment.texture
             environment?.dispose()
             environment = nextEnvironment
-            invalidate()
+            void prepare()
           },
           undefined,
           () => {
@@ -542,6 +684,9 @@ const Controller = defineComponent({
       scene.value.environmentIntensity = lightRatio.value * 0.9
       frame('front')
       resize()
+      void nextTick().then(() => {
+        if (!controllerDisposed) return prepare()
+      })
     })
     watch(command, () => frame(command.value.type))
     watch(model, () => {
@@ -552,6 +697,8 @@ const Controller = defineComponent({
         camera.value.position.add(delta)
         destination.add(delta)
         target.copy(nextTarget)
+        fitMeasurements(camera.value.position)
+        if (moving) fitMeasurements(destination)
         controls.value?.instance?.target.copy(target)
         controls.value?.instance?.update()
       }
@@ -594,6 +741,9 @@ const Controller = defineComponent({
     })
     onBeforeUnmount(() => {
       controllerDisposed = true
+      ++preparationSerial
+      preparationTarget.dispose()
+      if (prepareModel === prepare) prepareModel = null
       controls.value?.instance?.removeEventListener('start', stopMovement)
       scene.value.environment = null
       environment?.dispose()
@@ -1124,6 +1274,14 @@ defineExpose({ reset, configuration, download })
         <span>寬 × 高 × 深 · 規劃尺寸</span>
       </div>
     </div>
+    <p
+      v-if="touchMode && downloadStatus"
+      class="mobile-export-status"
+      role="status"
+      aria-live="polite"
+    >
+      {{ downloadStatus }}
+    </p>
     <div v-if="!touchMode" class="workspace-footer">
       <span>
         {{
@@ -1136,6 +1294,14 @@ defineExpose({ reset, configuration, download })
 </template>
 
 <style scoped>
+.mobile-export-status {
+  margin: 0;
+  padding: 4px 8px;
+  font-size: 12px;
+  line-height: 1.4;
+  background: #faf9f6;
+  color: #29251f;
+}
 .cabinet-workspace {
   position: relative;
   width: 100%;
@@ -1570,6 +1736,12 @@ input[type='number'] {
   text-shadow: 0 0 3px white;
 }
 @media (max-width: 767px), (pointer: coarse), (hover: none) {
+  /* 更新提示避開右上角兩行尺寸資訊，仍不阻擋模型操作。 */
+  .workspace-updating {
+    top: 58px;
+  }
+}
+@media (max-width: 767px), (pointer: coarse), (hover: none) {
   .cabinet-workspace {
     height: calc(100svh - 160px);
     min-height: 500px;
@@ -1586,7 +1758,7 @@ input[type='number'] {
   }
   .toolbar-actions button {
     flex: 1;
-    min-height: 40px;
+    min-height: 44px;
     font-size: 0.75rem;
     padding: 6px;
   }

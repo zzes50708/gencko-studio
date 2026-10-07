@@ -9,6 +9,9 @@ test('手機整合導覽保留會員、主題切換與評估進度列', async ({
   })
   const page = await context.newPage()
   await page.goto('/shop')
+  await page.waitForFunction(
+    () => !!(document.querySelector('.bottom-nav') as any)?.__vueParentComponent
+  )
   await expect(page.locator('.sticky-nav')).toBeHidden()
   await expect(page.locator('.bottom-nav .label')).toHaveText([
     '首頁',

@@ -9,7 +9,7 @@ const props = defineProps({
 const statusCode = computed(() => Number(props.error?.statusCode) || 500)
 const is404 = computed(() => statusCode.value === 404)
 
-const headline = computed(() => (is404.value ? '找不到這隻守宮' : '出了一點狀況'))
+const headline = computed(() => (is404.value ? '找不到此頁面' : '出了一點狀況'))
 const subtitle = computed(() =>
   is404.value
     ? '這個頁面可能已下架、搬家了，或從來不存在。但 Gencko 還有很多地方值得逛。'
@@ -24,7 +24,7 @@ useHead({
   ]
 })
 
-const goHome = () => clearError({ redirect: '/' })
+const goHome = () => clearError({ redirect: '/home' })
 const goShop = () => clearError({ redirect: '/shop' })
 const goArticles = () => clearError({ redirect: '/articles' })
 const goCalc = () => clearError({ redirect: '/calculator' })
@@ -39,16 +39,32 @@ const goCalc = () => clearError({ redirect: '/calculator' })
     </div>
 
     <div class="err-actions">
-      <button class="btn-app btn-app--primary btn-app--md btn-app--pill" @click="goHome">
+      <button
+        type="button"
+        class="btn-app btn-app--primary btn-app--md btn-app--pill"
+        @click="goHome"
+      >
         回到首頁
       </button>
-      <button class="btn-app btn-app--ghost btn-app--md btn-app--pill" @click="goShop">
+      <button
+        type="button"
+        class="btn-app btn-app--ghost btn-app--md btn-app--pill"
+        @click="goShop"
+      >
         找在售個體
       </button>
-      <button class="btn-app btn-app--ghost btn-app--md btn-app--pill" @click="goArticles">
+      <button
+        type="button"
+        class="btn-app btn-app--ghost btn-app--md btn-app--pill"
+        @click="goArticles"
+      >
         閱讀飼養文章
       </button>
-      <button class="btn-app btn-app--ghost btn-app--md btn-app--pill" @click="goCalc">
+      <button
+        type="button"
+        class="btn-app btn-app--ghost btn-app--md btn-app--pill"
+        @click="goCalc"
+      >
         玩基因計算機
       </button>
     </div>
@@ -89,7 +105,8 @@ const goCalc = () => clearError({ redirect: '/calculator' })
 }
 .err-title {
   font-family: var(--font-heading-zh);
-  font-size: clamp(1.4rem, 4.5vw, 2rem);
+  font-size: var(--site-page-title-size, clamp(1.5rem, 3vw, 2.3rem));
+  line-height: var(--site-page-title-line, 1.12);
   font-weight: 900;
   margin: 0 0 12px 0;
 }
@@ -129,11 +146,38 @@ const goCalc = () => clearError({ redirect: '/calculator' })
 }
 @media (max-width: 480px) {
   .err-page {
-    padding: 32px 16px 24px;
+    padding: 12px 16px 20px;
+  }
+  .err-hero {
+    margin-bottom: 12px;
+  }
+  .err-code {
+    font-size: 36px;
+    margin-bottom: 4px;
+  }
+  .err-title {
+    margin-bottom: 6px;
+  }
+  .err-sub {
+    font-size: 13px;
+    line-height: 1.5;
+  }
+  .err-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px;
+    margin-bottom: 12px;
   }
   .err-actions .btn-app {
     width: 100%;
     justify-content: center;
+    padding-inline: 6px;
+    font-size: 13px;
+  }
+  .err-tip {
+    padding-top: 10px;
+    margin-top: 10px;
+    font-size: 12px;
   }
 }
 </style>

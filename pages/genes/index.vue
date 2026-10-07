@@ -14,7 +14,7 @@ const geneSpecies = computed({
   }
 })
 
-const geneQuery = ref('')
+const geneQuery = useState('gene-library-query', () => '')
 const normalizedGeneQuery = computed(() => geneQuery.value.trim().toLocaleLowerCase('zh-TW'))
 const filteredGeneGroups = computed(() => {
   const query = normalizedGeneQuery.value
@@ -195,7 +195,11 @@ useHead({
 </script>
 
 <template>
-  <div class="site-document-page genes-page-wrapper">
+  <div
+    class="site-document-page genes-page-wrapper"
+    data-scroll-page="/genes"
+    data-scroll-ready="true"
+  >
     <div class="genes-document-meta" aria-label="基因圖鑑說明">
       <span>GENCKO REFERENCE LIBRARY</span>
       <span>SPECIES / INHERITANCE / NOTES</span>
@@ -942,5 +946,25 @@ useHead({
 }
 :deep(.app-back-btn) {
   border: 1px solid var(--txt);
+}
+@media (max-width: 767px) {
+  /* 名稱以可讀字級呈現，不再用四欄壓縮長基因名稱。 */
+  .gene-btn-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: 12px;
+  }
+  .gene-btn-item {
+    padding: 6px 0;
+    min-height: 44px;
+  }
+  .g-name {
+    white-space: normal !important;
+    overflow-wrap: anywhere;
+    font-size: 14px;
+    line-height: 1.5;
+  }
+  .g-cta {
+    display: none;
+  }
 }
 </style>

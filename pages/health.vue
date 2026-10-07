@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, reactive, onMounted, watch, nextTick } from 'vue'
+import { ref, computed, reactive, onMounted, onBeforeUnmount, watch, nextTick } from 'vue'
 import { useHead } from '#imports'
 import { useMainStore } from '~/stores/useMainStore'
 import {
@@ -262,7 +262,20 @@ const mode = ref('entry')
 const answers = reactive({ triage: {}, checkup: {}, purchase: {} })
 const finished = ref(false)
 const season = getSeasonContext()
-const sliding = ref(false) // 自動滾動鎖，防止連點跳題
+const questionCards = ref([])
+const resultPanel = ref(null)
+let scrollTimer = null
+let copyTimer = null
+let copyRequest = 0
+const reduceMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches
+const cancelPending = () => {
+  clearTimeout(scrollTimer)
+  clearTimeout(highlightTimer)
+  clearTimeout(copyTimer)
+  copyRequest++
+  highlightedQuestionIndex.value = -1
+}
+onBeforeUnmount(cancelPending)
 const highlightedQuestionIndex = ref(-1)
 let highlightTimer = null
 
@@ -351,6 +364,7 @@ const progress = computed(() => {
 })
 
 const startMode = (m) => {
+  cancelPending()
   mode.value = m
   finished.value = false
   if (m === 'triage') answers.triage = {}
@@ -371,6 +385,7 @@ const scrollPageTop = () => {
 }
 
 const exitToEntry = () => {
+  cancelPending()
   mode.value = 'entry'
   finished.value = false
   clearState()
@@ -379,7 +394,7 @@ const exitToEntry = () => {
 // ============ 選項回答 ============
 const scrollToQuestionIndex = (index) => {
   if (typeof window === 'undefined') return
-  const targetEl = document.querySelectorAll('.h-q-card')[index]
+  const targetEl = questionCards.value[index]
   if (!targetEl) return
   highlightedQuestionIndex.value = index
   if (highlightTimer) clearTimeout(highlightTimer)
@@ -387,23 +402,23 @@ const scrollToQuestionIndex = (index) => {
     highlightedQuestionIndex.value = -1
     highlightTimer = null
   }, 1800)
-  sliding.value = true
-  targetEl.scrollIntoView({ behavior: 'smooth', block: 'start' })
-  setTimeout(() => {
-    sliding.value = false
-  }, 600)
+  targetEl.scrollIntoView({ behavior: reduceMotion() ? 'auto' : 'smooth', block: 'start' })
+  targetEl.focus({ preventScroll: true })
 }
 
 const scrollToNextUnanswered = (currentQid) => {
   const qs = currentQs.value
   const curIdx = qs.findIndex((q) => q.id === currentQid)
-  const nextIdx = curIdx + 1
-  if (nextIdx >= qs.length) return
+  const nextIdx = qs.findIndex((q, index) => {
+    const answer = currentAnswers.value[q.id]
+    return index > curIdx && !(Array.isArray(answer) ? answer.length : answer)
+  })
+  if (nextIdx < 0) return
   scrollToQuestionIndex(nextIdx)
 }
 
 const selectOption = (qId, optId) => {
-  if (sliding.value) return
+  clearTimeout(scrollTimer)
   const q = currentQs.value.find((x) => x.id === qId)
   if (!q) return
   if (q.type === 'multi') {
@@ -420,7 +435,7 @@ const selectOption = (qId, optId) => {
     }
   } else {
     currentAnswers.value[qId] = optId
-    setTimeout(() => scrollToNextUnanswered(qId), 250)
+    scrollTimer = setTimeout(() => scrollToNextUnanswered(qId), 200)
   }
 }
 
@@ -451,19 +466,33 @@ const submit = () => {
     }
     return
   }
+  cancelPending()
   finished.value = true
   nextTick(() => {
-    requestAnimationFrame(() => {
-      scrollPageTop()
-    })
+    scrollPageTop()
+    resultPanel.value?.focus({ preventScroll: true })
   })
 }
 
 const resetCurrent = () => {
+  cancelPending()
   if (mode.value === 'triage') answers.triage = {}
   if (mode.value === 'checkup') answers.checkup = {}
   if (mode.value === 'purchase') answers.purchase = {}
   finished.value = false
+  nextTick(() => {
+    scrollPageTop()
+    scrollToQuestionIndex(0)
+  })
+}
+
+const editCurrent = () => {
+  cancelPending()
+  finished.value = false
+  nextTick(() => {
+    scrollPageTop()
+    scrollToQuestionIndex(0)
+  })
 }
 
 // ============ 取出已選 option 物件（用於判讀） ============
@@ -717,25 +746,42 @@ const copyReportText = async () => {
     lines.push('【可能狀況（請以獸醫檢查為主）】')
     suspectedDiseases.value.forEach((d) => lines.push(`• ${d.name}`))
   }
+  const request = ++copyRequest
+  copyError.value = ''
+  copied.value = false
+  reportText.value = lines.join('\n')
+  let success = false
   try {
-    await navigator.clipboard.writeText(lines.join('\n'))
-    copied.value = true
-    setTimeout(() => {
-      copied.value = false
-    }, 2000)
-  } catch (e) {
+    await navigator.clipboard.writeText(reportText.value)
+    success = true
+  } catch {
+    // 舊瀏覽器的備用複製必須確認回傳值。
     const ta = document.createElement('textarea')
-    ta.value = lines.join('\n')
+    ta.value = reportText.value
+    ta.style.position = 'fixed'
+    ta.style.opacity = '0'
     document.body.appendChild(ta)
     ta.select()
-    document.execCommand('copy')
-    document.body.removeChild(ta)
+    try {
+      success = document.execCommand('copy')
+    } catch {
+      success = false
+    }
+    ta.remove()
+  }
+  if (request !== copyRequest) return
+  if (success) {
     copied.value = true
-    setTimeout(() => {
+    clearTimeout(copyTimer)
+    copyTimer = setTimeout(() => {
       copied.value = false
     }, 2000)
+  } else {
+    copyError.value = '無法自動複製，請選取下方報告文字後複製。'
   }
 }
+const copyError = ref('')
+const reportText = ref('')
 const copied = ref(false)
 </script>
 
@@ -938,6 +984,8 @@ const copied = ref(false)
         <div
           v-for="(q, qi) in currentQs"
           :key="q.id"
+          ref="questionCards"
+          tabindex="-1"
           class="h-q-card"
           :class="{ 'is-highlighted': highlightedQuestionIndex === qi }"
         >
@@ -1010,7 +1058,7 @@ const copied = ref(false)
     </div>
 
     <!-- ============ 結果頁 ============ -->
-    <div v-else class="h-result" aria-live="polite">
+    <div v-else ref="resultPanel" tabindex="-1" class="h-result" aria-live="polite">
       <div class="h-result-head">
         <button
           type="button"
@@ -1038,6 +1086,13 @@ const copied = ref(false)
           @click="resetCurrent"
         >
           重新作答
+        </button>
+        <button
+          type="button"
+          class="h-back-btn btn-app btn-app--ghost btn-app--md btn-app--pill"
+          @click="editCurrent"
+        >
+          修改答案
         </button>
       </div>
 
@@ -1148,6 +1203,15 @@ const copied = ref(false)
           </button>
         </div>
 
+        <div v-if="copyError" class="h-copy-error">
+          <p role="alert">{{ copyError }}</p>
+          <textarea
+            aria-label="可手動複製的健康評估報告"
+            readonly
+            :value="reportText"
+            rows="8"
+          ></textarea>
+        </div>
         <div class="h-report-card">
           <div class="h-report-title">守宮健康評估報告</div>
           <div class="h-report-date">{{ todayStr }}</div>
@@ -3277,8 +3341,8 @@ const copied = ref(false)
   position: fixed;
   top: var(--health-sticky-top);
   left: 50%;
-  z-index: 1011;
-  width: min(1000px, calc(100vw - 40px));
+  z-index: 900;
+  width: 100%;
   padding: 8px 20px 10px;
   box-sizing: border-box;
   border-bottom: 1px solid var(--bd);
@@ -3393,6 +3457,27 @@ const copied = ref(false)
     text-overflow: ellipsis;
     white-space: nowrap;
     font-size: 1rem;
+  }
+}
+</style>
+
+<style scoped>
+.h-copy-error textarea {
+  width: 100%;
+  box-sizing: border-box;
+  font: inherit;
+  color: inherit;
+  background: var(--card-bg-solid);
+  border: 1px solid var(--bd);
+  padding: 10px;
+}
+.h-result-head {
+  flex-wrap: wrap;
+}
+@media (prefers-reduced-motion: reduce) {
+  .h-progress-fill,
+  .h-quiz-toolbar {
+    transition: none;
   }
 }
 </style>

@@ -22,30 +22,20 @@ const flowSteps = [
 const lanes = [
   {
     no: '01',
-    icon: icons.care,
-    title: '了解飼養',
-    caption: '知熱區冷區怎麼擺放，一週餵幾次?',
-    actions: [
-      { label: '飼養指南', to: '/care' },
-      { label: '常見問題', to: '/faq' }
-    ]
+    icon: icons.assess,
+    title: '確認自己準備好了嗎',
+    caption: '評估時間、空間與照顧準備；個體健康問題請使用上方健康評估。',
+    actions: [{ label: '飼養前自我評估', to: '/qs' }]
   },
   {
     no: '02',
-    icon: icons.assess,
-    title: '評估準備',
-    caption: '怕買到不健康的守宮嗎?守宮入住前需要做什麼?',
+    icon: icons.pick,
+    title: '準備好，再挑選個體',
+    caption: '查看適合新手的個體，並了解購買流程。',
     actions: [
-      { label: '健康評估', to: '/health' },
+      { label: '新手推薦個體', to: '/shop?beginner=true' },
       { label: '購買流程', to: '/buying-guide' }
     ]
-  },
-  {
-    no: '03',
-    icon: icons.pick,
-    title: '挑選個體',
-    caption: '都準備好了，來看看有哪些守宮吧',
-    actions: [{ label: '新手推薦個體', to: '/shop?beginner=true' }]
   }
 ]
 
@@ -63,7 +53,7 @@ const prepNotes = [
     no: '02',
     icon: icons.rest,
     title: '到家先安置',
-    body: '給水並靜養2~3天，不要馬上上手或餵食'
+    body: '到家後先安置，適應與餵食安排依個體交接說明。'
   }
 ]
 
@@ -115,9 +105,9 @@ useHead({
 
     <nav class="starter-reading-index" aria-label="新手入門">
       <span>STARTING POINT</span>
-      <a href="#knowledge-hub-title">LEARNING MAP</a>
-      <a href="#starter-paths">THREE PATHS</a>
-      <a href="#starter-checklist">CHECK</a>
+      <a href="#knowledge-hub-title">了解飼養</a>
+      <a href="#starter-checklist">到家準備</a>
+      <a href="#starter-paths">下一步</a>
     </nav>
 
     <section
@@ -126,7 +116,7 @@ useHead({
       data-testid="newcomer-roadmap"
     >
       <div class="hub-heading">
-        <span>LEARNING MAP</span>
+        <span>了解飼養</span>
         <h2 id="knowledge-hub-title">這些問題都了解了嗎?選一個開始</h2>
       </div>
       <div class="knowledge-grid">
@@ -452,7 +442,7 @@ useHead({
 
 .lane-board {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: clamp(24px, 3vw, 42px);
 }
 
@@ -775,6 +765,64 @@ useHead({
   .lane-chip,
   .prep-link {
     transition: none;
+  }
+}
+/* 手機知識入口保持兩欄，減少重複區塊造成的長距離捲動。 */
+@media (max-width: 767px) {
+  .starter-reading-index a {
+    min-height: 44px;
+    font-size: 0.78rem;
+  }
+  .starter-reading-index span {
+    display: none;
+  }
+  .knowledge-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px 12px;
+  }
+  .knowledge-card,
+  .knowledge-card:first-child,
+  .knowledge-card:last-child {
+    padding: 10px 0;
+    border-bottom: 1px solid var(--bd);
+    gap: 4px;
+  }
+  .knowledge-card h3 {
+    font-size: 0.9rem;
+  }
+  .knowledge-card p {
+    font-size: 0.8rem;
+    line-height: 1.5;
+  }
+  .knowledge-hub,
+  .prep-panel,
+  .lane-board {
+    padding: 14px 0;
+  }
+  .hub-heading,
+  .panel-head {
+    margin-bottom: 10px;
+  }
+}
+</style>
+
+<style scoped>
+/* 詳細準備項目維持單欄閱讀，減少卡片之間的重複留白。 */
+@media (max-width: 767px) {
+  .prep-panel,
+  .lane-board {
+    padding-block: 10px !important;
+  }
+  .prep-card,
+  .lane-card {
+    padding-block: 10px;
+    gap: 6px;
+  }
+  .lane-actions {
+    gap: 6px;
+  }
+  .prep-grid {
+    row-gap: 0;
   }
 }
 </style>

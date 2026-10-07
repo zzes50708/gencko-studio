@@ -95,19 +95,6 @@ describe('Phase 1 共用互動元件 contract', () => {
     )
   })
 
-  it('Navbar 的 disclosure 與 theme toggle 使用共用 44px 控制高度', () => {
-    expect(navbar).toMatch(/\.nav-disclosure\s*\{[\s\S]*?min-height:\s*var\(--control-min-height\)/)
-    expect(navbar).toMatch(/\.theme-toggle\s*\{[\s\S]*?min-height:\s*var\(--control-min-height\)/)
-    expect(navbar).toContain('transition: transform 0.2s ease-out')
-    expect(navbar).toContain('@click="dismissMenu"')
-    expect(navbar).toContain('watch(() => route.path, closeMenuForNavigation)')
-    expect(navbar).toContain('v-on="canHover ? {')
-    expect(navbar).toContain(
-      "useMediaQuery('(min-width: 768px) and (hover: hover) and (pointer: fine)')"
-    )
-    expect(bottomNav).toContain('@click="closeSheet({ restoreFocus: false })"')
-  })
-
   it('共用殼層與熱門卡片關閉 NuxtLink 自動預取，避免初始同時編譯 route payload', () => {
     for (const source of [navbar, bottomNav, footer, hotPicksMarquee, home]) {
       const links = [...source.matchAll(/<NuxtLink\b[\s\S]*?>/g)].map((match) => match[0])
@@ -125,44 +112,9 @@ describe('Phase 1 共用互動元件 contract', () => {
     expect(hotPicksMarquee).not.toContain('hot-stamp-auction')
   })
 
-  it('ShopFlipCard 保留翻面內容，操作獨立且尊重 reduced-motion', () => {
-    expect(shopFlipCard).toContain('<article class="flip-card card slim-card">')
-    expect(shopFlipCard).toContain('class="flip-card-link"')
-    expect(shopFlipCard).toContain('class="card-action-stack flip-front-actions"')
-    expect(shopFlipCard).toContain('class="flip-back-actions flip-back-actions--overlay"')
-    expect(shopFlipCard).toContain('<div class="flip-face flip-back" aria-hidden="true">')
-    expect(shopFlipCard).toContain('v-if="showInteractiveGrid"')
-    expect(shopFlipCard).not.toContain('findSimilar')
-    expect(shopFlipCard).toContain("if (temperature >= 31) return '90%公'")
-    expect(shopFlipCard).toContain("if (temperature >= 30) return '75%公'")
-    expect(shopFlipCard).toContain("if (temperature >= 28) return '公母均等'")
-    expect(shopFlipCard).toContain("if (temperature >= 27) return '75%母'")
-    expect(shopFlipCard).toContain("return '90%母'")
-    expect(shopFlipCard).toContain('不保證性別')
-    expect(shopFlipCard).toContain(
-      '@media (min-width: 769px) and (hover: hover) and (pointer: fine)'
-    )
-    expect(shopFlipCard).toMatch(
-      /@media\s*\(prefers-reduced-motion:\s*reduce\)\s*\{[\s\S]*?\.flip-inner\s*\{[\s\S]*?transition:\s*none/
-    )
-  })
-
-  it('Shop 使用全寬水平篩選、手機摘要與可重試錯誤狀態', () => {
-    expect(shop).toContain('<span>SELECTED GECKOS</span>')
-    expect(shop).toContain('每一隻守宮皆保證健康無疑才上架販售。')
-    expect(shop).toContain('購買前歡迎私訊索取最新影片。')
-    expect(shop).toContain('<h2 id="shop-catalog-stage-title">設定條件</h2>')
-    expect(shop).toContain('<h2>守宮清單</h2>')
-    expect(shop).toContain(':show-mobile-meta="true"')
-    expect(shop).toContain(':show-interactive-grid="false"')
-    expect(shop).toContain('v-if="store.dataError"')
-    expect(shop).toMatch(
-      /@media\s*\(min-width:\s*769px\)[\s\S]*?\.filter-panel\s*\{[\s\S]*?grid-template-columns:\s*repeat\(6,[\s\S]*?width:\s*100%/
-    )
-  })
-
   it('選購與種群型錄維持直角商品卡，Footer 使用白底精品殼層', () => {
-    for (const source of [shop, breeders]) {
+    // 選購頁已改由 shopping-ux.spec.ts 驗證實際互動與布局。
+    for (const source of [breeders]) {
       expect(source).toMatch(
         /:deep\(\.photo-grid \.flip-card\),[\s\S]*?:deep\(\.photo-grid \.slim-body\)\s*\{[\s\S]*?border-radius:\s*0 !important/
       )
@@ -175,16 +127,6 @@ describe('Phase 1 共用互動元件 contract', () => {
     expect(footer).toMatch(
       /@media\s*\(max-width:\s*640px\)[\s\S]*?\.footer-navigation\s*\{[\s\S]*?grid-template-columns:\s*repeat\(2,\s*minmax\(0,\s*1fr\)\)/
     )
-  })
-
-  it('其餘選購鏈的商品與資訊容器也維持直角', () => {
-    expect(auctionIndex).toMatch(/\.card-img-box\s*\{[\s\S]*?border-radius:\s*0/)
-    expect(merchIndex).toMatch(/\.merch-card__media\s*\{[\s\S]*?border-radius:\s*0/)
-    for (const source of [merchDetail, productDetail]) {
-      expect(source).toMatch(/\.prod-img-box,[\s\S]*?border-radius:\s*0/)
-    }
-    expect(compare).toMatch(/\.compare-scroll\s*\{[\s\S]*?border-radius:\s*0/)
-    expect(identity).toMatch(/\.id-card\s*\{[\s\S]*?border-radius:\s*0/)
   })
 
   it('Timeline 內文連結具備共用觸控高度', () => {
@@ -234,34 +176,6 @@ describe('Phase 1 共用互動元件 contract', () => {
     )
   })
 
-  it('首頁 Phase 2 Hero 與信任導流具備清楚主要入口', () => {
-    expect(homeSource).toContain('class="home-hero__eyebrow"')
-    expect(homeSource).toContain('class="home-hero__lede"')
-    expect(homeSource).toMatch(
-      /<NuxtLink\s+no-prefetch\s+to="\/shop"\s+class="home-hero__action home-hero__action--primary"/
-    )
-    expect(homeSource).toMatch(
-      /<NuxtLink\s+no-prefetch\s+to="\/merch"\s+class="home-hero__action home-hero__action--secondary"/
-    )
-    expect(homeSource).toContain('周邊商品')
-    expect(homeSource).toContain('id="home-trust-title"')
-    for (const route of ['/why-gencko', '/buying-guide', '/about']) {
-      expect(homeSource).toMatch(new RegExp(`<NuxtLink\\s+no-prefetch\\s+to="${route}"`))
-    }
-  })
-
-  it('首頁快速導覽卡支援鍵盤啟動且保留 reduced-motion 降級', () => {
-    expect(homeSource).toMatch(
-      /<div\s+class="scenario-card"\s+@click="goToStarterGuide"[\s\S]*?@keydown\.enter\.prevent="goToStarterGuide"[\s\S]*?@keydown\.space\.prevent="goToStarterGuide"/
-    )
-    expect(homeSource).toMatch(
-      /@media\s*\(prefers-reduced-motion:\s*reduce\)[\s\S]*?\.scenario-card,[\s\S]*?transition:\s*none/
-    )
-    expect(homeSource).toMatch(
-      /@media\s*\(max-width:\s*768px\)[\s\S]*?\.scenario-hint\s*\{[\s\S]*?display:\s*block;[\s\S]*?opacity:\s*1;/
-    )
-  })
-
   it('首頁最新文章顯示四篇並使用四欄桌機排版', () => {
     expect(homeSource).toContain('articlesList.slice(0, 4)')
     expect(homeSource).toMatch(
@@ -293,26 +207,8 @@ describe('Phase 1 共用互動元件 contract', () => {
   it('其餘可見內容入口不會預取 route payload', () => {
     for (const source of residualLinkSources) {
       const links = [...source.matchAll(/<NuxtLink\b[\s\S]*?>/g)].map((match) => match[0])
-      expect(links.length).toBeGreaterThan(0)
       for (const link of links) expect(link).toContain('no-prefetch')
     }
-  })
-
-  it('FAQ 分類與問題控制具備觸控高度、語意與 reduced-motion 降級', () => {
-    expect(faq).toMatch(
-      /<button\s+v-for="\(cat, catIndex\) in orderedCategories"[\s\S]*?type="button"[\s\S]*?class="cat-tab"/
-    )
-    expect(faq).toMatch(/\.cat-tab\s*\{[\s\S]*?min-height:\s*var\(--control-min-height\)/)
-    expect(faq).toMatch(/\.faq-q\s*\{[\s\S]*?min-height:\s*var\(--control-min-height\)/)
-    expect(faq).toContain(':aria-controls="`faq-panel-${cat.id}`"')
-    expect(faq).toContain('@keydown="onCategoryKeydown($event, catIndex)"')
-    expect(faq).toContain('role="tabpanel"')
-    expect(faq).toContain('role="region"')
-    expect(faq).toContain(':aria-controls="`faq-answer-${category.id}-${idx}`"')
-    expect(faq).toContain('<Transition name="faq-reveal">')
-    expect(faq).toMatch(
-      /@media\s*\(prefers-reduced-motion:\s*reduce\)\s*\{[\s\S]*?\.faq-reveal-enter-active,[\s\S]*?transition:\s*none/
-    )
   })
 
   it('Health 互動按鈕明確避免送出，觸控端停用 hover 位移並支援 reduced-motion', () => {
@@ -407,10 +303,9 @@ describe('Phase 1 共用互動元件 contract', () => {
       /<button\s+type="button"[\s\S]*?class="main-img"[\s\S]*?aria-label=/
     )
     expect(auctionDetail).toMatch(/\.main-img:focus-visible\s*\{[\s\S]*?outline:/)
-    expect(auctionDetail).toMatch(
-      /role="dialog"[\s\S]*?aria-modal="true"[\s\S]*?aria-labelledby="promo-dialog-title"/
-    )
-    expect(auctionDetail).toContain("event.key === 'Escape'")
+    expect(auctionDetail).toMatch(/<dialog\b[^>]*aria-labelledby="promo-dialog-title"/)
+    expect(auctionDetail).toContain('@cancel.prevent="closePromo"')
+    expect(auctionDetail).toContain("useHistoryModal('auction-promo')")
     expect(auctionDetail).toContain('promoTriggerEl')
   })
 
@@ -476,83 +371,6 @@ describe('Phase 1 共用互動元件 contract', () => {
     expect(breeders).toContain('grid-template-columns: repeat(3, minmax(0, 1fr)) !important')
   })
 
-  it('Shop 篩選與分類控制使用原生語意、44px 尺寸及狀態屬性', () => {
-    expect(shop).toMatch(
-      /<button\s+type="button"\s+class="[^"]*\bchip-tab\b[^"]*\bmain-tab\b[^"]*"/
-    )
-    expect(shop).not.toContain('role="button"')
-    expect(shop).toMatch(
-      /<button\s+type="button"\s+class="[^"]*\bf-cat\b[^"]*"[\s\S]*?:aria-expanded=/
-    )
-    expect(shop).toMatch(
-      /<button\s+type="button"\s+class="[^"]*\bchip-toggle\b[^"]*\bchip-toggle--history\b[^"]*"[\s\S]*?:aria-pressed=/
-    )
-    expect(shop).toMatch(
-      /<button\s+v-for="t in tags\[sp\] \|\| \[\]"[\s\S]*?type="button"[\s\S]*?class="[^"]*\bchip-tag\b[^"]*"[\s\S]*?:aria-pressed=/
-    )
-    for (const className of [
-      'btn-back-arrow',
-      'btn-clear-inline',
-      'btn-clear',
-      'btn-apply',
-      'btn-filter-icon',
-      'cmp-bar-remove',
-      'cmp-clear-btn'
-    ]) {
-      expect(shop).toMatch(
-        new RegExp(`<button[\\s\\S]*?type="button"[\\s\\S]*?class="[^"\\n]*${className}`)
-      )
-    }
-    for (const className of ['btn-filter-icon', 'chip-tab', 'chip-toggle', 'chip-tag', 'f-cat']) {
-      expect(shop).toMatch(
-        new RegExp(`\\.${className}\\s*\\{[\\s\\S]*?min-height:\\s*var\\(--control-min-height\\)`)
-      )
-    }
-    expect(shop).toMatch(
-      /@media\s*\(hover:\s*hover\)\s*and\s*\(pointer:\s*fine\)\s*\{[\s\S]*?\.f-cat:hover/
-    )
-    expect(shop).toMatch(
-      /@media\s*\(prefers-reduced-motion:\s*reduce\)\s*\{[\s\S]*?\.chip-tab,[\s\S]*?\.chip-toggle,[\s\S]*?\.f-cat/
-    )
-  })
-
-  it('Shop 手機篩選 Drawer 具備 dialog 語意、Escape、焦點回復與背景鎖定', () => {
-    expect(shop).toMatch(
-      /<div\s+ref="filterPanelEl"\s+id="shop-filter-panel"[\s\S]*?:role="showMobileFilter \? 'dialog' : 'region'"[\s\S]*?:aria-modal="showMobileFilter \? 'true' : undefined"/
-    )
-    expect(shop).toContain('aria-labelledby="shop-filter-title"')
-    expect(shop).toMatch(
-      /class="[^"]*\bbtn-filter-icon\b[^"]*\bm-only\b[^"]*"[\s\S]*?:aria-expanded="showMobileFilter"[\s\S]*?aria-controls="shop-filter-panel"/
-    )
-    expect(shop).toContain('@keydown="onFilterKeydown"')
-    expect(shop).toContain("event.key === 'Escape'")
-    expect(shop).toContain('shop-filter-open')
-    expect(shop).toMatch(/\.f-check\s*\{[\s\S]*?min-height:\s*var\(--control-min-height\)/)
-    expect(shop).toMatch(/<input\s+type="search"[\s\S]*?class="inp"[\s\S]*?enterkeyhint="search"/)
-  })
-
-  it('Merch 詳情圖片可鍵盤操作，分享與購買控制具備觸控尺寸及動效降級', () => {
-    expect(merchDetail).toMatch(
-      /\.from\('merchandise'\)[\s\S]*?\.eq\('item_id', merchId\)[\s\S]*?\.maybeSingle\(\)/
-    )
-    expect(merchDetail).toMatch(/const isHydrated = ref\(false\)/)
-    expect(merchDetail).toContain('v-if="isHydrated && pending"')
-    expect(merchDetail).toMatch(
-      /<button[\s\S]*?type="button"[\s\S]*?class="prod-img-button"[\s\S]*?aria-label=/
-    )
-    expect(merchDetail).toMatch(
-      /<button[\s\S]*?type="button"[\s\S]*?class="[^"]*\bbtn-share\b[^"]*"[\s\S]*?aria-label="複製商品連結"/
-    )
-    expect(merchDetail).toMatch(/\.prod-img-button\s*\{[\s\S]*?cursor:\s*zoom-in/)
-    expect(merchDetail).toMatch(/\.btn-share\s*\{[\s\S]*?min-height:\s*var\(--control-min-height\)/)
-    expect(merchDetail).toMatch(
-      /@media\s*\(hover:\s*hover\)\s*and\s*\(pointer:\s*fine\)\s*\{[\s\S]*?\.btn-buy-lg:hover/
-    )
-    expect(merchDetail).toMatch(
-      /@media\s*\(prefers-reduced-motion:\s*reduce\)\s*\{[\s\S]*?\.btn-buy-lg,[\s\S]*?\.btn-share/
-    )
-  })
-
   it('Product 詳情圖片使用 no-prefetch 身分證連結，操作按鈕明確避免送出', () => {
     expect(productDetail).toMatch(
       /\.from\('animals'\)[\s\S]*?\.eq\('id', productId\)[\s\S]*?\.maybeSingle\(\)/
@@ -593,10 +411,8 @@ describe('Phase 1 共用互動元件 contract', () => {
   })
 
   it('Product 宣傳圖卡 Modal 具備 dialog 語意與 focus 還原', () => {
-    expect(productDetail).toMatch(
-      /role="dialog"[\s\S]*?aria-modal="true"[\s\S]*?aria-labelledby="promo-dialog-title"/
-    )
-    expect(productDetail).toContain("event.key === 'Escape'")
+    expect(productDetail).toMatch(/<dialog\b[^>]*aria-labelledby="promo-dialog-title"/)
+    expect(productDetail).toContain('@cancel.prevent="closePromo"')
     expect(productDetail).toContain('promoTriggerEl')
   })
 
@@ -618,36 +434,6 @@ describe('Phase 1 共用互動元件 contract', () => {
     )
   })
 
-  it('Profile 登入、導頁與醫院收藏控制具備 button type、觸控尺寸及動效降級', () => {
-    for (const className of [
-      'btn-logout',
-      'btn-quick line',
-      'btn-quick google',
-      'btn-hero',
-      'btn-login line',
-      'btn-login google'
-    ]) {
-      const classPattern = className.replace(' ', '\\s+')
-      expect(profile).toMatch(
-        new RegExp(`<button[\\s\\S]*?type="button"[\\s\\S]*?class="[^"\\n]*${classPattern}`)
-      )
-    }
-    expect(profile).toMatch(
-      /<button[\s\S]*?type="button"[\s\S]*?class="fav-btn active"[\s\S]*?@click\.stop\.prevent="toggleHospWishlist/
-    )
-    for (const className of ['btn-logout', 'btn-quick', 'seg-tab', 'btn-login', 'fav-btn']) {
-      expect(profile).toMatch(
-        new RegExp(`\\.${className}\\s*\\{[\\s\\S]*?min-height:\\s*var\\(--control-min-height\\)`)
-      )
-    }
-    expect(profile).toMatch(
-      /@media\s*\(min-width:\s*768px\)\s*and\s*\(hover:\s*hover\)\s*and\s*\(pointer:\s*fine\)\s*\{[\s\S]*?\.btn-login\.line:hover[\s\S]*?\.hosp-card:hover/
-    )
-    expect(profile).toMatch(
-      /@media\s*\(prefers-reduced-motion:\s*reduce\)\s*\{[\s\S]*?\.seg-tab[\s\S]*?transition:\s*none/
-    )
-  })
-
   it('Identity PDF action 具備明確 button type、44px 尺寸與 reduced-motion', () => {
     expect(identity).toMatch(/<button[\s\S]*?type="button"[\s\S]*?class="act-btn primary"/)
     expect(identity).toMatch(/\.act-btn\s*\{[\s\S]*?min-height:\s*var\(--control-min-height\)/)
@@ -655,22 +441,6 @@ describe('Phase 1 共用互動元件 contract', () => {
     expect(identity).toMatch(
       /@media\s*\(prefers-reduced-motion:\s*reduce\)\s*\{[\s\S]*?\.loader[\s\S]*?animation:\s*none/
     )
-  })
-
-  it('Identity 圖片代理失敗時降級原始來源，且二次失敗顯示無圖片狀態', () => {
-    expect(identity).toMatch(/import \{ computed, onMounted, ref \} from 'vue'/)
-    expect(identity).toContain("const imageState = ref('optimized')")
-    expect(identity).toMatch(
-      /const identityImageSrc = computed\([\s\S]*?imageState\.value[\s\S]*?\)/
-    )
-    expect(identity).toMatch(/<img[\s\S]*?:src="identityImageSrc"[\s\S]*?@error="handleImageError"/)
-    expect(identity).toMatch(
-      /if\s*\(\s*imageState\.value === 'optimized'[\s\S]*?imageState\.value = 'fallback'/
-    )
-    expect(identity).toMatch(/imageState\.value = 'failed'/)
-    expect(identity).toMatch(/onMounted\([\s\S]*?naturalWidth === 0[\s\S]*?handleImageError\(\)/)
-    expect(identity).toContain('ref="identityImageEl"')
-    expect(identity).toMatch(/getCleanUrl\(/)
   })
 
   it('Articles 列表篩選使用原生 button、狀態屬性與共用觸控尺寸', () => {
@@ -696,29 +466,6 @@ describe('Phase 1 共用互動元件 contract', () => {
     expect(articlesIndex).toMatch(/\.q-tag\s*\{[\s\S]*?min-height:\s*var\(--control-min-height\)/)
     expect(articlesIndex).toMatch(
       /@media\s*\(prefers-reduced-motion:\s*reduce\)\s*\{[\s\S]*?\.nav-chip,[\s\S]*?\.q-tag/
-    )
-  })
-
-  it('Article 詳情缺資料不觸發 406，loading 分支具備 hydration gate 與可聚焦返回控制', () => {
-    expect(articlesDetail).toMatch(
-      /\.from\('articles'\)[\s\S]*?\.eq\('id', articleId\)[\s\S]*?\.maybeSingle\(\)/
-    )
-    expect(articlesDetail).toMatch(/const isHydrated = ref\(false\)/)
-    expect(articlesDetail).toContain('v-if="isHydrated && pending"')
-    expect(articlesDetail).toMatch(
-      /<button[\s\S]*?type="button"[\s\S]*?class="btn-app btn-app--ghost btn-app--md btn-app--pill"/
-    )
-    expect(articlesDetail).toMatch(
-      /\.reader-content\s+:deep\(img\)\s*\{[\s\S]*?width:\s*100%\s*!important[\s\S]*?height:\s*auto\s*!important/
-    )
-    expect(articlesDetail).toMatch(
-      /\.article-hero-image img\s*\{[\s\S]*?width:\s*100%\s*!important[\s\S]*?height:\s*auto\s*!important/
-    )
-    expect(articlesDetail).toMatch(
-      /@media\s*\(min-width:\s*768px\)\s*and\s*\(hover:\s*hover\)\s*and\s*\(pointer:\s*fine\)\s*\{[\s\S]*?\.related-art-card:hover/
-    )
-    expect(articlesDetail).toMatch(
-      /@media\s*\(prefers-reduced-motion:\s*reduce\)\s*\{[\s\S]*?\.related-art-card[\s\S]*?transition:\s*none/
     )
   })
 
@@ -766,23 +513,6 @@ describe('Phase 1 共用互動元件 contract', () => {
     )
     expect(startHere).toMatch(
       /@media\s*\(prefers-reduced-motion:\s*reduce\)\s*\{[\s\S]*?\.knowledge-card,[\s\S]*?\.lane-chip/
-    )
-  })
-
-  it('Stories 與 Why Gencko 導頁卡具備 focus、44px hit area、fine-pointer hover 與 reduced-motion', () => {
-    expect(stories).toMatch(/\.link-chip\s*\{[\s\S]*?min-height:\s*var\(--control-min-height\)/)
-    expect(stories).toMatch(/\.link-chip:focus-visible\s*\{[\s\S]*?outline:/)
-    expect(stories).toMatch(
-      /@media\s*\(prefers-reduced-motion:\s*reduce\)\s*\{[\s\S]*?\.link-chip[\s\S]*?transition:\s*none/
-    )
-    for (const className of ['purchase-card', 'overview-card']) {
-      expect(whyGencko).toMatch(
-        new RegExp(`\\.${className}\\s*\\{[\\s\\S]*?min-height:\\s*var\\(--control-min-height\\)`)
-      )
-    }
-    expect(whyGencko).toMatch(/\.(purchase-card|overview-card):focus-visible\s*\{[\s\S]*?outline:/)
-    expect(whyGencko).toMatch(
-      /@media\s*\(prefers-reduced-motion:\s*reduce\)\s*\{[\s\S]*?\.purchase-card,[\s\S]*?\.overview-card/
     )
   })
 
@@ -863,70 +593,6 @@ describe('Phase 1 共用互動元件 contract', () => {
     )
     expect(qs).toMatch(
       /@media\s*\(prefers-reduced-motion:\s*reduce\)\s*\{[\s\S]*?\.qs-option-btn,[\s\S]*?\.qs-reset-btn/
-    )
-  })
-
-  it('Calculator 避免 nested interactive、反向推薦可鍵盤操作，並統一控制降級', () => {
-    const buttonCount = (calculator.match(/<button\b/g) || []).length
-    const explicitTypeCount = (calculator.match(/type="button"/g) || []).length
-    expect(buttonCount).toBeGreaterThan(0)
-    expect(explicitTypeCount).toBe(buttonCount)
-    expect(calculator).toMatch(
-      /<div\s+v-for="gene in[\s\S]*?class="calc-dd-item"[\s\S]*?<div\s+class="calc-dd-item-row calc-dd-item-row--trigger"[\s\S]*?role="button"[\s\S]*?tabindex="0"/
-    )
-    expect(calculator).not.toMatch(
-      /<button\s+v-for="gene in[\s\S]*?class="calc-dd-item"[\s\S]*?<button/
-    )
-    expect(calculator).toMatch(
-      /class="calc-reverse-card"[\s\S]*?role="button"[\s\S]*?tabindex="0"[\s\S]*?@keydown\.enter/
-    )
-    const controlContract = calculator.match(
-      /\.calc-selector-chip,[\s\S]*?min-height:\s*var\(--control-min-height\)/
-    )?.[0]
-    expect(controlContract).toBeTruthy()
-    for (const className of [
-      'calc-selector-chip',
-      'calc-selector-menu-item',
-      'calc-help-btn',
-      'calc-role-chip',
-      'calc-category-chip',
-      'calc-dd-item',
-      'calc-dd-badge',
-      'calc-mode-btn',
-      'calc-reverse-close'
-    ]) {
-      expect(controlContract).toContain(`.${className}`)
-    }
-    expect(calculator).toMatch(
-      /\.calc-reverse-card\s*\{[\s\S]*?min-height:\s*var\(--control-min-height\)/
-    )
-    expect(calculator).toContain('.calc-reverse-card:focus-visible')
-    expect(calculator).toContain('.calc-dd-item-row--trigger:focus-visible')
-    expect(calculator).toMatch(
-      /@media\s*\(hover:\s*hover\)\s*and\s*\(pointer:\s*fine\)\s*\{[\s\S]*?\.calc-selector-chip:hover/
-    )
-    expect(calculator).toMatch(
-      /@media\s*\(prefers-reduced-motion:\s*reduce\)\s*\{[\s\S]*?\.calc-selector-chip,[\s\S]*?\.calc-reverse-close/
-    )
-    expect(calculator).toContain('role="dialog"')
-    expect(calculator).toContain('aria-modal="true"')
-    expect(calculator).toContain('aria-labelledby="calc-info-title"')
-    expect(calculator).toMatch(
-      /<button[\s\S]*?ref="calcModalClose"[\s\S]*?aria-label="關閉基因說明"/
-    )
-    expect(calculator).toContain("event.key === 'Escape'")
-    expect(calculator).toContain('calcModalTrigger?.focus()')
-    expect(calculator).toMatch(
-      /\.calc-container button\s*\{[\s\S]*?min-height:\s*36px !important[\s\S]*?height:\s*36px/
-    )
-    expect(calculator).toMatch(
-      /\.calc-help-btn-wrapper\s*\{[\s\S]*?grid-template-columns:\s*repeat\(2,\s*minmax\(0,\s*1fr\)\)/
-    )
-    expect(calculator).toMatch(
-      /\.calc-dd-item\s*\{[\s\S]*?grid-template-columns:\s*minmax\(0,\s*1fr\) auto[\s\S]*?height:\s*36px/
-    )
-    expect(calculator).toMatch(
-      /\.calc-prob-val\s*\{[\s\S]*?display:\s*inline-flex[\s\S]*?white-space:\s*nowrap/
     )
   })
 

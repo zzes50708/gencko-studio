@@ -35,6 +35,11 @@ describe('getProbFraction', () => {
     expect(getProbFraction(0.25)).toBe('1/4')
     expect(getProbFraction(0.125)).toBe('1/8')
   })
+  it('does not round nearby probabilities into reciprocal fractions', () => {
+    expect(getProbFraction(27 / 64)).toBe('')
+    expect(getProbFraction(3 / 64)).toBe('')
+    expect(getProbFraction(0.49)).toBe('')
+  })
   it('returns "" for non-Mendelian numbers', () => {
     // 0.17 → round(1/0.17)=6，不在 [2,3,4,8,16,32,...] 允許清單
     expect(getProbFraction(0.17)).toBe('')

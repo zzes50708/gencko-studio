@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { computed, nextTick, ref } from 'vue'
-import { useHead } from '#imports'
+import { computed, nextTick, onMounted, ref, watch } from 'vue'
+import { useHead, useRoute, useRouter } from '#imports'
 import { FAQ_CATEGORIES, FAQ_DATA } from '~/utils/faq'
 import { absUrl, DEFAULT_OG_IMAGE } from '~/utils/site-constants'
 import {
@@ -70,6 +70,17 @@ useHead({
   ]
 })
 
+const route = useRoute()
+const router = useRouter()
+const searchQuery = ref('')
+const searchReady = ref(false)
+// 初始化與跨頁期間不接受即將被卸載的搜尋欄輸入。
+onMounted(() => {
+  searchReady.value = true
+})
+const searchAvailable = computed(
+  () => searchReady.value && route.path === '/faq' && router.currentRoute.value.path === '/faq'
+)
 const activeCategory = ref('gecko')
 const activeIndex = ref<string | null>(null) // 格式：'catId-qIdx'
 const categoryTabs = ref<HTMLButtonElement[]>([])
@@ -86,6 +97,61 @@ const switchCategory = (id: string) => {
   activeIndex.value = null
 }
 
+// 使用 replace 記錄閱讀上下文，不為每次展開增加一筆歷史。
+watch(
+  () => [route.query.category, route.query.question, route.query.q],
+  () => {
+    if (route.path !== '/faq' || router.currentRoute.value.path !== '/faq') return
+    const category = route.query.category
+    activeCategory.value =
+      typeof category === 'string' && FAQ_CATEGORIES.some((item) => item.id === category)
+        ? category
+        : 'gecko'
+    searchQuery.value = typeof route.query.q === 'string' ? route.query.q : ''
+    const question = route.query.question
+    activeIndex.value =
+      typeof question === 'string' &&
+      FAQ_CATEGORIES.some((item) =>
+        item.questions.some((_, idx) => question === `${item.id}-${idx}`)
+      )
+        ? question
+        : null
+    if (activeIndex.value && !searchQuery.value.trim())
+      activeCategory.value = activeIndex.value.split('-')[0]
+  },
+  { immediate: true }
+)
+watch([activeCategory, activeIndex, searchQuery], () => {
+  if (!import.meta.client || route.path !== '/faq' || router.currentRoute.value.path !== '/faq')
+    return
+  const query = {
+    ...route.query,
+    category: activeCategory.value,
+    question: activeIndex.value || undefined,
+    q: searchQuery.value || undefined
+  }
+  if (
+    route.query.category === query.category &&
+    (route.query.question || undefined) === query.question &&
+    (route.query.q || undefined) === query.q
+  )
+    return
+  router.replace({ query })
+})
+const searching = computed(() => Boolean(searchQuery.value.trim()))
+const visibleQuestions = (category: (typeof FAQ_CATEGORIES)[number]) => {
+  const terms = searchQuery.value.toLocaleLowerCase().trim().split(/\s+/).filter(Boolean)
+  return category.questions
+    .map((question, index) => ({ question, index }))
+    .filter(({ question }) =>
+      terms.every((term) =>
+        `${question.title} ${stripFaq(question.ans)}`.toLocaleLowerCase().includes(term)
+      )
+    )
+}
+const resultCount = computed(() =>
+  orderedCategories.value.reduce((sum, category) => sum + visibleQuestions(category).length, 0)
+)
 const toggleQ = (key: string) => {
   activeIndex.value = activeIndex.value === key ? null : key
 }
@@ -132,8 +198,34 @@ const onCategoryKeydown = async (event: KeyboardEvent, index: number) => {
         </nav>
       </header>
 
+      <div class="faq-search">
+        <label class="sr-only" for="faq-search-input">搜尋所有常見問題</label>
+        <input
+          id="faq-search-input"
+          v-model="searchQuery"
+          :disabled="!searchAvailable"
+          :aria-busy="!searchAvailable"
+          type="search"
+          placeholder="搜尋所有問題與答案"
+          aria-label="搜尋所有常見問題"
+        />
+        <button
+          v-if="searchQuery"
+          type="button"
+          class="btn-app"
+          :disabled="!searchAvailable"
+          @click="searchQuery = ''"
+        >
+          清除搜尋
+        </button>
+      </div>
+      <p v-if="searching" class="faq-result-count" role="status">找到 {{ resultCount }} 個問題</p>
+      <div v-if="searching && !resultCount" class="faq-no-results">
+        <p>沒有符合的問題，請試試其他關鍵字。</p>
+        <button type="button" class="btn-app" @click="searchQuery = ''">清除搜尋</button>
+      </div>
       <!-- 分類 Tab -->
-      <div class="cat-tabs" role="tablist" aria-label="常見問題分類">
+      <div v-if="!searching" class="cat-tabs" role="tablist" aria-label="常見問題分類">
         <button
           v-for="(cat, catIndex) in orderedCategories"
           :key="cat.id"
@@ -157,15 +249,18 @@ const onCategoryKeydown = async (event: KeyboardEvent, index: number) => {
       <!-- 問題列表 -->
       <section
         v-for="category in orderedCategories"
-        v-show="activeCategory === category.id"
+        v-show="searching ? visibleQuestions(category).length > 0 : activeCategory === category.id"
         :id="`faq-panel-${category.id}`"
         :key="category.id"
         class="faq-list"
-        role="tabpanel"
-        :aria-labelledby="`faq-tab-${category.id}`"
+        :role="searching ? undefined : 'tabpanel'"
+        :aria-labelledby="searching ? `faq-result-${category.id}` : `faq-tab-${category.id}`"
         :tabindex="0"
       >
-        <div v-for="(q, idx) in category.questions" :key="idx">
+        <h2 v-if="searching" :id="`faq-result-${category.id}`" class="faq-result-category">
+          {{ category.title }}
+        </h2>
+        <div v-for="{ question: q, index: idx } in visibleQuestions(category)" :key="idx">
           <div class="faq-item" :class="{ active: activeIndex === `${category.id}-${idx}` }">
             <button
               :id="`faq-question-${category.id}-${idx}`"
@@ -678,5 +773,47 @@ const onCategoryKeydown = async (event: KeyboardEvent, index: number) => {
 }
 :deep(.app-back-btn) {
   border: 1px solid var(--txt);
+}
+
+.faq-search {
+  display: flex;
+  gap: 8px;
+  margin-block: 10px;
+}
+.faq-search input {
+  flex: 1;
+  min-width: 0;
+  min-height: 44px;
+  padding: 8px 10px;
+  border: 1px solid var(--bd);
+  border-radius: 2px;
+  background: var(--card-bg);
+  color: var(--txt);
+  font: inherit;
+}
+.faq-result-count,
+.faq-no-results {
+  margin-block: 10px;
+  font-size: 0.86rem;
+}
+.faq-result-category {
+  font-size: 1rem;
+  margin-block: 16px 8px;
+}
+@media (max-width: 767px) {
+  .faq-search input {
+    font-size: 16px;
+  }
+  .faq-route-map {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .faq-route-map a {
+    font-size: 0.82rem;
+  }
+}
+@media (min-width: 768px) {
+  .faq-route-map a {
+    font-size: 0.82rem;
+  }
 }
 </style>

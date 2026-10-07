@@ -1,5 +1,6 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { computed } from 'vue'
+import { onBeforeRouteLeave } from 'vue-router'
 import { useHead, useAsyncData } from '#imports'
 import { useMainStore } from '~/stores/useMainStore'
 import { getCleanUrl } from '~/utils/image'
@@ -11,8 +12,22 @@ await useAsyncData('published-articles-ready', async () => {
   return true
 })
 const seoArticles = computed(() => store.articlesList)
-const artCat = ref('All')
-const searchQuery = ref('')
+const context = useArticleListContext()
+const artCat = computed({
+  get: () => context.value.category,
+  set: (value) => {
+    context.value.category = value
+  }
+})
+const searchQuery = computed({
+  get: () => context.value.query,
+  set: (value) => {
+    context.value.query = value
+  }
+})
+onBeforeRouteLeave(() => {
+  context.value.scrollY = window.scrollY
+})
 
 const categoryOrder = ['新手必看', '環境佈置', '健康照護', '行為與互動', '餵食與營養']
 
@@ -41,7 +56,6 @@ const categoryOptions = computed(() => {
 
 const setCategory = (catValue) => {
   artCat.value = catValue
-  searchQuery.value = ''
 }
 
 // 清除篩選（合併為方法，避免行內 @click 多語句被 prettier 拆掉分號而解析失敗）
@@ -282,7 +296,11 @@ const fmtDate = (d) => {
 </script>
 
 <template>
-  <div class="site-document-page articles-page-wrapper">
+  <div
+    class="site-document-page articles-page-wrapper"
+    data-scroll-page="/articles"
+    :data-scroll-ready="!store.articlesLoading"
+  >
     <div class="articles-document-meta" aria-label="文章資料庫說明">
       <span>GENCKO FIELD JOURNAL</span>
       <span>SEARCH / READ / APPLY</span>
@@ -330,6 +348,14 @@ const fmtDate = (d) => {
         </button>
       </div>
 
+      <label class="article-category-select">
+        <span>文章分類</span>
+        <select v-model="artCat" aria-label="文章分類">
+          <option v-for="cat in categoryOptions" :key="cat.value" :value="cat.value">
+            {{ cat.label }}
+          </option>
+        </select>
+      </label>
       <div class="category-nav-row" aria-label="文章分類">
         <button
           v-for="cat in categoryOptions"
@@ -415,16 +441,11 @@ const fmtDate = (d) => {
             :to="`/articles/${item.ID}`"
           >
             <div class="article-thumb-wrap">
-              <img
-                v-if="item.ImageURL"
-                :src="getCleanUrl(item.ImageURL, 600)"
+              <ArticleImage
+                :src="item.ImageURL ? getCleanUrl(item.ImageURL, 600) : undefined"
                 :alt="item.Title"
                 class="article-image"
-                loading="lazy"
               />
-              <div v-else class="article-image article-thumb-fallback" aria-hidden="true">
-                FIELD NOTE
-              </div>
               <div class="article-category-badge">{{ item.Category }}</div>
             </div>
             <div class="article-body">
@@ -821,6 +842,47 @@ a:focus-visible {
   .q-tag,
   .clear-btn {
     transition: none;
+  }
+}
+
+.article-category-select {
+  display: none;
+}
+@media (max-width: 767px), (pointer: coarse) {
+  .search-input {
+    font-size: 16px;
+  }
+  .category-nav-row {
+    display: none;
+  }
+  .article-category-select {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-block: 8px;
+    font-size: 0.82rem;
+  }
+  .article-category-select select {
+    flex: 1;
+    min-width: 0;
+    min-height: 44px;
+    padding: 6px 10px;
+    border: 1px solid var(--bd);
+    border-radius: 2px;
+    background: var(--card-bg);
+    color: var(--txt);
+    font: inherit;
+    font-size: 16px;
+  }
+  .tags-scroll {
+    flex-wrap: wrap;
+    overflow: visible;
+    gap: 6px;
+  }
+  .q-tag {
+    min-height: 40px;
+    padding: 5px 8px;
+    font-size: 0.8rem;
   }
 }
 </style>

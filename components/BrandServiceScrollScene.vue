@@ -76,10 +76,6 @@ const destroyObserver = () => {
     window.removeEventListener('keydown', keydownHandler)
     keydownHandler = null
   }
-
-  try {
-    Observer.getAll().forEach((o) => o.kill())
-  } catch (e) {}
 }
 
 onMounted(async () => {
@@ -119,6 +115,12 @@ onMounted(async () => {
 
   // PageDown / ArrowDown = 往下；PageUp / ArrowUp = 往上
   keydownHandler = (e) => {
+    // 導覽、彈窗與表單各自處理方向鍵，避免同時切換背景場景。
+    const target = e.target
+    if (e.defaultPrevented || !(target instanceof Element) || !stageEl.value?.contains(target))
+      return
+    if (target.closest('a, button, input, select, textarea, [contenteditable="true"], dialog'))
+      return
     if (e.key === 'ArrowDown' || e.key === 'PageDown') {
       e.preventDefault()
       navigateTo(currentSceneIndex.value + 1)
@@ -372,6 +374,8 @@ const geneTokens = computed(() => {
   <div
     ref="stageEl"
     class="stage"
+    tabindex="0"
+    aria-label="品牌動畫，方向鍵或滑動切換場景"
     :class="{ 'stage--day': isDayMode, 'stage--touch': !isDesktop, 'stage--cards': cardShowing }"
   >
     <!-- ?? z-index 2: WebGL 3D canvas嚗?璈?+ ?????剁??? -->
@@ -460,6 +464,8 @@ const geneTokens = computed(() => {
           v-for="(scene, idx) in carouselScenes"
           :key="idx"
           class="carousel-item"
+          :inert="activeDot !== idx + 1"
+          :aria-hidden="activeDot !== idx + 1"
           :style="{
             transform: isDesktop
               ? `rotateY(${idx * CAROUSEL_STEP}deg) translateZ(${carouselRadius}px)`
@@ -495,8 +501,10 @@ const geneTokens = computed(() => {
         v-for="(scene, idx) in scenes"
         :key="idx"
         class="scene-block"
-        :class="{ 'scene-block--hero': scene.hero }"
+        :class="{ 'scene-block--hero': scene.hero, 'scene-block--intro': idx === 0 }"
         :style="sceneStyle(idx)"
+        :inert="activeDot !== idx"
+        :aria-hidden="activeDot !== idx"
       >
         <!-- Hero ?湔 (0/5)嚗??圈＊蝷箏之璅? -->
         <span v-if="scene.hero && scene.kicker" class="scene-kicker">{{ scene.kicker }}</span>
@@ -1579,6 +1587,13 @@ const geneTokens = computed(() => {
   justify-content: center;
   gap: 8px;
   padding: 0 12px;
+}
+@media (max-width: 767px) {
+  .stage--touch .scene-block--intro {
+    justify-content: flex-start;
+    padding-top: clamp(48px, 12dvh, 96px);
+    gap: 12px;
+  }
 }
 .stage--touch .holo-card {
   position: relative;

@@ -3,7 +3,7 @@ import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import { useHead } from '#imports'
 import { useMainStore } from '~/stores/useMainStore'
 import { ZYG, CALC_TYPES } from '~/utils/genes'
-import { calculateGenetics, getProbFraction } from '~/utils/calcUtils'
+import { calculateGenetics } from '~/utils/calcUtils'
 import { getSpeciesConfig } from '~/utils/genetics/index'
 import { expandMorphComponents, findMatchingMorph } from '~/utils/genetics/morphs'
 
@@ -254,13 +254,24 @@ useHead({
   ]
 })
 
-const calcSp = ref('豹紋守宮')
-const calcSpeciesGroup = ref('terrestrial_gecko')
+const calcSp = useState('calculator-species', () => '豹紋守宮')
+const calcSpeciesGroup = useState('calculator-group', () => 'terrestrial_gecko')
 const calcSpeciesGroupMenuOpen = ref(false)
 const calcSpeciesMenuOpen = ref(false)
-const calcMale = ref([])
-const calcFemale = ref([])
+const calcMale = useState('calculator-male', () => [])
+const calcFemale = useState('calculator-female', () => [])
 const calcResult = ref(null)
+const calcSavedSpecies = useState('calculator-species-drafts', () => ({}))
+const activeParent = useState('calculator-active-parent', () => 'Male')
+const resultSection = ref(null)
+const showResults = async () => {
+  await nextTick()
+  resultSection.value?.scrollIntoView({
+    behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth',
+    block: 'start'
+  })
+  resultSection.value?.focus({ preventScroll: true })
+}
 const calcModalOpen = ref(false)
 const calcActiveInfo = ref(null)
 const calcModalClose = ref(null)
@@ -288,7 +299,9 @@ const handleCalcModalKeydown = (event) => {
   }
   if (event.key !== 'Tab' || !calcModalPanel.value) return
 
-  const focusable = [...calcModalPanel.value.querySelectorAll('button:not([disabled]), [href]')]
+  const focusable = [
+    ...calcModalPanel.value.querySelectorAll('button:not([disabled]), [href], [tabindex="0"]')
+  ]
   if (!focusable.length) return
   const first = focusable[0]
   const last = focusable[focusable.length - 1]
@@ -300,8 +313,11 @@ const handleCalcModalKeydown = (event) => {
     first.focus()
   }
 }
-const calcExpandedCategories = ref({ Male: 'recessive', Female: 'recessive' })
-const calcCardRoles = ref({ Male: 'male', Female: 'female' })
+const calcExpandedCategories = useState('calculator-categories', () => ({
+  Male: 'recessive',
+  Female: 'recessive'
+}))
+const calcCardRoles = useState('calculator-roles', () => ({ Male: 'male', Female: 'female' }))
 const calcExpandedGenes = ref({})
 const calcReverseMatchBackup = ref(null)
 const calcParentCards = [
@@ -392,7 +408,7 @@ const calcRun = () => {
   )
 }
 
-watch(() => calcMale.value, calcRun, { deep: true })
+watch(() => calcMale.value, calcRun, { deep: true, immediate: true })
 watch(() => calcFemale.value, calcRun, { deep: true })
 watch(calcCardRoles, calcRun, { deep: true })
 watch(calcSpeciesGroup, (nextGroupId) => {
@@ -403,12 +419,18 @@ watch(calcSpeciesGroup, (nextGroupId) => {
   calcSpeciesGroupMenuOpen.value = false
   calcSpeciesMenuOpen.value = false
 })
-watch(calcSp, () => {
-  calcMale.value = []
-  calcFemale.value = []
+watch(calcSp, (nextSpecies, previousSpecies) => {
+  calcSavedSpecies.value[previousSpecies] = {
+    male: JSON.parse(JSON.stringify(calcMale.value)),
+    female: JSON.parse(JSON.stringify(calcFemale.value)),
+    roles: { ...calcCardRoles.value }
+  }
+  const draft = calcSavedSpecies.value[nextSpecies]
+  calcMale.value = draft ? JSON.parse(JSON.stringify(draft.male)) : []
+  calcFemale.value = draft ? JSON.parse(JSON.stringify(draft.female)) : []
   calcResult.value = null
   calcExpandedCategories.value = { Male: 'recessive', Female: 'recessive' }
-  calcCardRoles.value = { Male: 'male', Female: 'female' }
+  calcCardRoles.value = draft?.roles || { Male: 'male', Female: 'female' }
   const matchedGroup = calcSpeciesGroups.find((group) => group.species.includes(calcSp.value))
   if (matchedGroup) {
     calcSpeciesGroup.value = matchedGroup.id
@@ -822,6 +844,10 @@ const formatWarningText = (text) => {
   if (!text) return ''
   return text.replace(/Lethal/gi, '致死').replace(/Super/gi, '超級')
 }
+const formatPercent = (probability) => {
+  if (probability > 0 && probability * 100 < 0.01) return '<0.01'
+  return Number((probability * 100).toFixed(2)).toString()
+}
 </script>
 
 <template>
@@ -837,21 +863,6 @@ const formatWarningText = (text) => {
         <p>依序設定物種與雙親基因，系統會沿用既有遺傳規則即時計算所有可能子代。</p>
       </div>
 
-      <ol class="calc-stage-rail" aria-label="計算流程">
-        <li>
-          <span>01</span>
-          選擇物種
-        </li>
-        <li>
-          <span>02</span>
-          設定雙親
-        </li>
-        <li>
-          <span>03</span>
-          判讀機率
-        </li>
-      </ol>
-
       <section class="calc-stage calc-stage--species" aria-labelledby="calc-stage-species-title">
         <header class="calc-stage-heading">
           <span>01</span>
@@ -863,61 +874,18 @@ const formatWarningText = (text) => {
         <div class="calc-species-selector">
           <div class="calc-species-row">
             <div class="calc-species-group-col">
-              <div class="calc-selector-dropdown">
-                <button
-                  type="button"
-                  :class="[
-                    'calc-selector-chip',
-                    'calc-selector-chip--dropdown',
-                    { active: calcSpeciesGroupMenuOpen }
-                  ]"
-                  @click.stop="calcToggleSpeciesGroupMenu()"
-                >
-                  <span>{{ calcCurrentSpeciesGroupLabel }}</span>
-                  <span class="calc-selector-arrow">
-                    {{ calcSpeciesGroupMenuOpen ? '▲' : '▼' }}
-                  </span>
-                </button>
-                <div v-if="calcSpeciesGroupMenuOpen" class="calc-selector-menu">
-                  <button
-                    v-for="group in calcSpeciesGroups"
-                    :key="group.id"
-                    type="button"
-                    :class="['calc-selector-menu-item', { active: calcSpeciesGroup === group.id }]"
-                    @click.stop="calcSelectSpeciesGroup(group.id)"
-                  >
-                    {{ group.label }}
-                  </button>
-                </div>
-              </div>
+              <select class="calc-selector-chip" aria-label="物種群組" v-model="calcSpeciesGroup">
+                <option v-for="group in calcSpeciesGroups" :key="group.id" :value="group.id">
+                  {{ group.label }}
+                </option>
+              </select>
             </div>
             <div class="calc-species-item-col">
-              <div class="calc-selector-dropdown">
-                <button
-                  type="button"
-                  :class="[
-                    'calc-selector-chip',
-                    'calc-selector-chip--dropdown',
-                    'calc-selector-chip--species',
-                    { active: calcSpeciesMenuOpen }
-                  ]"
-                  @click.stop="calcToggleSpeciesMenu()"
-                >
-                  <span>{{ calcCurrentSpeciesLabel }}</span>
-                  <span class="calc-selector-arrow">{{ calcSpeciesMenuOpen ? '▲' : '▼' }}</span>
-                </button>
-                <div v-if="calcSpeciesMenuOpen" class="calc-selector-menu">
-                  <button
-                    v-for="species in calcSpeciesOptions"
-                    :key="species"
-                    type="button"
-                    :class="['calc-selector-menu-item', { active: calcSp === species }]"
-                    @click.stop="calcSelectSpecies(species)"
-                  >
-                    {{ species }}
-                  </button>
-                </div>
-              </div>
+              <select class="calc-selector-chip" aria-label="物種" v-model="calcSp">
+                <option v-for="species in calcSpeciesOptions" :key="species" :value="species">
+                  {{ species }}
+                </option>
+              </select>
             </div>
           </div>
         </div>
@@ -955,8 +923,25 @@ const formatWarningText = (text) => {
           <h2 id="calc-stage-parents-title">設定雙親基因</h2>
         </div>
       </header>
+      <div class="calc-mobile-parents" aria-label="切換親代設定">
+        <button
+          v-for="parent in calcParentCards"
+          :key="parent.key"
+          type="button"
+          :aria-pressed="activeParent === parent.key"
+          @click="activeParent = parent.key"
+        >
+          <strong>{{ calcCardRoles[parent.key] === 'child' ? '子代' : parent.label }}</strong>
+          <span>{{ calcSelectedGeneSummary(parent.key) }}</span>
+        </button>
+      </div>
       <div class="calc-parent-grid">
-        <div v-for="parent in calcParentCards" :key="parent.key" class="calc-parent-card">
+        <div
+          v-for="parent in calcParentCards"
+          :key="parent.key"
+          class="calc-parent-card"
+          :class="{ 'mobile-parent-inactive': activeParent !== parent.key }"
+        >
           <div class="calc-p-header">
             <div class="calc-role-switch">
               <button
@@ -1070,6 +1055,9 @@ const formatWarningText = (text) => {
                         <button
                           v-if="gene.type === CALC_TYPES.REC"
                           type="button"
+                          :aria-pressed="
+                            getSelectedGeneEntry(parent.key, gene.id)?.zygosity === ZYG.HET
+                          "
                           :class="[
                             'calc-dd-badge',
                             {
@@ -1092,6 +1080,9 @@ const formatWarningText = (text) => {
                         <button
                           v-else-if="gene.type === CALC_TYPES.CODOM"
                           type="button"
+                          :aria-pressed="
+                            getSelectedGeneEntry(parent.key, gene.id)?.zygosity === ZYG.SUP
+                          "
                           :class="[
                             'calc-dd-badge',
                             {
@@ -1123,7 +1114,13 @@ const formatWarningText = (text) => {
       </div>
     </section>
 
-    <section class="calc-result-shell" role="region" aria-label="配對結果">
+    <section
+      ref="resultSection"
+      tabindex="-1"
+      class="calc-result-shell"
+      role="region"
+      aria-label="配對結果"
+    >
       <header class="calc-result-heading">
         <span class="calc-result-index">03</span>
         <div>
@@ -1167,18 +1164,19 @@ const formatWarningText = (text) => {
                 v-for="(match, idx) in calcReverseMatches"
                 :key="`reverse-${idx}`"
                 class="calc-reverse-card"
-                role="button"
-                tabindex="0"
-                :aria-label="`套用推薦配對：${match.label}`"
                 style="cursor: pointer"
-                @click="calcApplyRecommendedParent(match.genes)"
-                @keydown.enter.prevent="calcApplyRecommendedParent(match.genes)"
-                @keydown.space.prevent="calcApplyRecommendedParent(match.genes)"
               >
                 <div style="flex: 1">
                   <div style="font-size: 0.95rem; font-weight: 500; color: var(--txt); margin: 0">
                     {{ match.label }}
                   </div>
+                  <button
+                    class="calc-apply-pair"
+                    type="button"
+                    @click="calcApplyRecommendedParent(match.genes)"
+                  >
+                    套用此配對
+                  </button>
                 </div>
                 <div style="text-align: right; margin-left: 12px">
                   <div
@@ -1189,16 +1187,10 @@ const formatWarningText = (text) => {
                       margin-bottom: 4px;
                     "
                   >
-                    {{ Math.round(match.prob * 100) }}
+                    {{ formatPercent(match.prob) }}
                     <small style="font-size: 0.8rem">%</small>
                   </div>
                   <div style="font-size: 0.9rem; color: #666">出現 {{ match.childLabel }}</div>
-                  <div
-                    style="font-size: 0.7rem; color: #888; font-family: monospace"
-                    v-if="match.prob < 0.99"
-                  >
-                    {{ getProbFraction(match.prob) }}
-                  </div>
                 </div>
               </div>
             </div>
@@ -1248,23 +1240,14 @@ const formatWarningText = (text) => {
               >
                 <div class="calc-prob-box">
                   <div class="calc-prob-val">
-                    {{ Math.round(o.prob * 100) }}
+                    {{ formatPercent(o.prob) }}
                     <small style="font-size: 0.8rem">%</small>
-                  </div>
-                  <div
-                    class="calc-prob-sub"
-                    style="font-size: 0.75rem; color: #888; font-family: monospace; margin-top: 0"
-                    v-if="o.prob < 0.99"
-                  >
-                    {{ getProbFraction(o.prob) }}
                   </div>
                 </div>
                 <div class="calc-res-info" style="display: flex; align-items: center">
-                  <div
-                    class="calc-res-name"
-                    style="margin: 0; line-height: 1.4"
-                    v-html="formatResultText(o.fullLabel)"
-                  ></div>
+                  <div class="calc-res-name" style="margin: 0; line-height: 1.4">
+                    <span v-html="formatResultText(o.fullLabel)"></span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -1277,134 +1260,66 @@ const formatWarningText = (text) => {
       </div>
     </section>
 
-    <!-- Info Modal Overlay -->
-    <div
-      v-if="calcModalOpen"
-      class="lightbox-overlay"
-      @click="closeCalcInfo"
-      style="justify-content: center; padding: 20px"
-    >
+    <!-- 基因說明：固定關閉入口，內容獨立捲動。 -->
+    <div v-if="calcModalOpen" class="lightbox-overlay calc-info-overlay" @click="closeCalcInfo">
       <div
         ref="calcModalPanel"
-        class="page-text-box"
+        class="page-text-box calc-info-dialog"
         role="dialog"
         aria-modal="true"
         aria-labelledby="calc-info-title"
-        style="
-          width: 100%;
-          max-width: 600px;
-          max-height: 80vh;
-          overflow-y: auto;
-          position: relative;
-        "
         @click.stop
         @keydown="handleCalcModalKeydown"
       >
-        <button
-          ref="calcModalClose"
-          type="button"
-          class="lightbox-close"
-          aria-label="關閉基因說明"
-          @click="closeCalcInfo"
-          style="top: 10px; right: 10px; width: 40px; height: 40px; border: 0; font-size: 1.5rem"
-        >
-          ✕
-        </button>
-        <h2 id="calc-info-title" style="color: var(--pri); margin-top: 0; margin-bottom: 0">
-          {{ calcActiveInfo === 'types' ? '基礎觀念' : '多遺傳基因與選育品系' }}
-        </h2>
-
-        <div v-if="calcActiveInfo === 'types'">
-          <p
-            style="
-              color: #ff5252;
-              font-weight: bold;
-              border-left: 4px solid #ff5252;
-              padding-left: 10px;
-            "
+        <header class="calc-info-header">
+          <h2 id="calc-info-title">
+            {{ calcActiveInfo === 'types' ? '基礎觀念' : '多遺傳基因與選育品系' }}
+          </h2>
+          <button
+            ref="calcModalClose"
+            type="button"
+            class="calc-info-close"
+            aria-label="關閉基因說明"
+            @click="closeCalcInfo"
           >
-            ⚠️ 提醒：
-            不同物種的遺傳法則與基因交互作用（如等位基因）可能存在差異，請依據對應物種的專屬基因庫進行判讀。
-          </p>
-          <h4
-            style="
-              color: var(--txt);
-              border-bottom: 1px solid var(--bd);
-              padding-bottom: 5px;
-              margin-top: 0;
-            "
-          >
-            完全顯性
-          </h4>
-          <p style="font-size: 0.95rem; color: var(--txt); opacity: 0.7">
-            只要遺傳到一份基因，就會在視覺上表現出來。其最大特徵是：單基因與雙基因的外觀表現完全相同，不存在進階的超級型態。
-          </p>
-          <h4
-            style="
-              color: var(--txt);
-              border-bottom: 1px solid var(--bd);
-              padding-bottom: 5px;
-              margin-top: 0;
-            "
-          >
-            不完全顯性 / 共顯性
-          </h4>
-          <p style="font-size: 0.95rem; color: var(--txt); opacity: 0.7">
-            只要帶有一份基因就會改變外觀。若同時遺傳到兩份相同的基因，則會疊加表現出更極端的「超級」型態。
-          </p>
-          <h4
-            style="
-              color: var(--txt);
-              border-bottom: 1px solid var(--bd);
-              padding-bottom: 5px;
-              margin-top: 0;
-            "
-          >
-            隱性
-          </h4>
-          <p style="font-size: 0.95rem; color: var(--txt); opacity: 0.7">
-            必須同時具備兩份相同的基因，才能在視覺上表現出來。若體內只有一份隱性基因，外觀會與普通原色無異，這在繁育上被稱為「帶基因
-            (Het)」。
-          </p>
-        </div>
-
-        <div v-if="calcActiveInfo === 'poly'">
-          <p style="border-left: 4px solid var(--pri); padding-left: 10px">
-            多基因特徵無法使用傳統的遺傳法則來精確計算機率。這類品系是由繁育者挑選具備特定優勢的個體，經過多代交配，將特徵「越洗越純」的結果。子代最終的表現優劣，高度取決於親代的視覺表現等級。
-          </p>
-          <div
-            style="
-              margin-top: 0;
-              background: rgba(255, 69, 0, 0.05);
-              border: 1px solid rgba(255, 69, 0, 0.1);
-              padding: 10px;
-              border-radius: 8px;
-            "
-          >
-            <div style="color: var(--pri); font-weight: bold">🟥 體色強化</div>
-            <p style="font-size: 0.9rem; margin: 5px 0 0 0; color: var(--txt); opacity: 0.8">
-              透過選育讓特定底色加深、提亮或擴大覆蓋面積。
+            ✕
+          </button>
+        </header>
+        <div class="calc-info-body" tabindex="0" role="region" aria-labelledby="calc-info-title">
+          <div v-if="calcActiveInfo === 'types'">
+            <p>
+              ⚠️ 提醒：
+              不同物種的遺傳法則與基因交互作用（如等位基因）可能存在差異，請依據對應物種的專屬基因庫進行判讀。
             </p>
-            <p style="font-size: 0.9rem; margin: 5px 0 0 0; color: var(--txt); opacity: 0.8">
-              常見舉例：豹紋/肥尾守宮的橘化、黑夜；豬鼻蛇的極端紅、綠。
+            <h4>完全顯性</h4>
+            <p>
+              只要遺傳到一份基因，就會在視覺上表現出來。其最大特徵是：單基因與雙基因的外觀表現完全相同，不存在進階的超級型態。
+            </p>
+            <h4>不完全顯性 / 共顯性</h4>
+            <p>
+              只要帶有一份基因就會改變外觀。若同時遺傳到兩份相同的基因，則會疊加表現出更極端的「超級」型態。
+            </p>
+            <h4>隱性</h4>
+            <p>
+              必須同時具備兩份相同的基因，才能在視覺上表現出來。若體內只有一份隱性基因，外觀會與普通原色無異，這在繁育上被稱為「帶基因
+              (Het)」。
             </p>
           </div>
-          <div
-            style="
-              margin-top: 0;
-              background: rgba(255, 69, 0, 0.05);
-              border: 1px solid rgba(255, 69, 0, 0.1);
-              padding: 10px;
-              border-radius: 8px;
-            "
-          >
-            <div style="color: var(--pri); font-weight: bold">🔲 紋路改造</div>
-            <p style="font-size: 0.9rem; margin: 5px 0 0 0; color: var(--txt); opacity: 0.8">
-              透過代代挑選，改變頭部、背部或尾部的斑塊排列與粗細。
+
+          <div v-if="calcActiveInfo === 'poly'">
+            <p>
+              多基因特徵無法使用傳統的遺傳法則來精確計算機率。這類品系是由繁育者挑選具備特定優勢的個體，經過多代交配，將特徵「越洗越純」的結果。子代最終的表現優劣，高度取決於親代的視覺表現等級。
             </p>
-            <p style="font-size: 0.9rem; margin: 5px 0 0 0; color: var(--txt); opacity: 0.8">
-              常見舉例：豹紋守宮的土匪、直線；豬鼻蛇的老虎、雙斑。
-            </p>
+            <div>
+              <div>體色強化</div>
+              <p>透過選育讓特定底色加深、提亮或擴大覆蓋面積。</p>
+              <p>常見舉例：豹紋/肥尾守宮的橘化、黑夜；豬鼻蛇的極端紅、綠。</p>
+            </div>
+            <div>
+              <div>紋路改造</div>
+              <p>透過代代挑選，改變頭部、背部或尾部的斑塊排列與粗細。</p>
+              <p>常見舉例：豹紋守宮的土匪、直線；豬鼻蛇的老虎、雙斑。</p>
+            </div>
           </div>
         </div>
       </div>
@@ -3284,5 +3199,385 @@ const formatWarningText = (text) => {
 }
 :deep(.app-back-btn) {
   border: 1px solid var(--txt);
+}
+</style>
+
+<style scoped>
+.calc-mobile-parents {
+  display: none;
+}
+.calc-view-result {
+  min-height: 44px;
+  padding: 8px 14px;
+  border: 1px solid var(--bd);
+  background: var(--card-bg-solid);
+  color: var(--txt);
+  font: inherit;
+  margin-bottom: 10px;
+}
+.calc-result-shell {
+  scroll-margin-top: 80px;
+}
+@media (max-width: 767px), (pointer: coarse) {
+  .calc-mobile-parents {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+  .calc-mobile-parents button {
+    min-width: 0;
+    min-height: 52px !important;
+    height: auto !important;
+    overflow: visible;
+    border: 1px solid var(--bd);
+    background: var(--card-bg-solid);
+    color: var(--txt);
+    padding: 8px;
+    font: inherit;
+    text-align: left;
+  }
+  .calc-mobile-parents button[aria-pressed='true'] {
+    border-color: var(--pri);
+  }
+  .calc-mobile-parents span {
+    display: block;
+    font-size: 12px;
+    overflow-wrap: anywhere;
+  }
+  .calc-stage--parents .calc-parent-grid {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+  .calc-parent-card.mobile-parent-inactive {
+    display: none;
+  }
+  .calc-dd-item-row--trigger {
+    min-height: 44px !important;
+    height: auto !important;
+  }
+  .calc-dd-item {
+    min-height: 44px !important;
+    height: auto !important;
+  }
+  .calc-result-shell {
+    scroll-margin-top: 12px;
+  }
+}
+</style>
+
+<style scoped>
+/* 物種與說明共用緊湊網格，縮短進入基因設定前的距離。 */
+.calc-stage--species .calc-species-selector {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+}
+.calc-stage--species .calc-species-row,
+.calc-stage--species .calc-help-btn-wrapper {
+  display: contents;
+}
+.calc-stage--species .calc-selector-chip {
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
+  height: 44px;
+  padding: 6px 10px;
+  box-sizing: border-box;
+}
+.calc-stage--species .calc-help-btn {
+  min-height: 44px !important;
+  height: 44px;
+  margin: 0;
+}
+.calc-stage {
+  margin-top: 12px;
+  padding-top: 10px;
+}
+.calc-stage-heading {
+  margin-bottom: 10px;
+  gap: 10px;
+  align-items: center;
+}
+.calc-stage-heading > div {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+}
+.calc-stage-heading p {
+  margin: 0;
+}
+.calc-stage-heading h2 {
+  font-size: 1.35rem;
+  line-height: 1.3;
+}
+@media (max-width: 767px) {
+  .calc-stage--species .calc-species-selector {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px;
+  }
+  .calc-stage-heading {
+    grid-template-columns: 38px minmax(0, 1fr);
+  }
+  .calc-stage-heading h2 {
+    font-size: 1.2rem;
+  }
+}
+</style>
+<style scoped>
+.calc-stage--species .calc-species-selector {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.calc-stage--species .calc-help-btn-wrapper {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  width: 100%;
+  gap: 6px;
+}
+.calc-stage--species .calc-helper-btns {
+  margin: 6px 0 0;
+  padding: 0;
+}
+@media (min-width: 768px) {
+  .calc-stage--species {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    column-gap: 8px;
+  }
+  .calc-stage--species .calc-stage-heading {
+    grid-column: 1 / -1;
+  }
+  .calc-stage--species .calc-helper-btns {
+    margin: 0;
+  }
+}
+</style>
+
+<style scoped>
+.calc-info-overlay {
+  justify-content: center;
+  padding: max(12px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right))
+    max(12px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
+  box-sizing: border-box;
+}
+.calc-info-dialog {
+  width: min(100%, 600px);
+  max-height: 85dvh;
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  margin: 0;
+  overflow: hidden;
+  box-sizing: border-box;
+  border: 1px solid var(--bd);
+  background: var(--card-bg-solid);
+  border-radius: 2px;
+}
+.calc-info-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--bd);
+  flex-shrink: 0;
+}
+.calc-info-header h2 {
+  margin: 0;
+  font-size: 20px;
+  line-height: 1.4;
+  color: var(--txt);
+  font-family: var(--font-heading-zh);
+}
+.calc-container .calc-info-close {
+  display: grid;
+  place-items: center;
+  min-width: 44px;
+  min-height: 44px !important;
+  height: 44px;
+  padding: 0;
+  flex-shrink: 0;
+  border: 1px solid var(--bd);
+  background: transparent;
+  color: var(--txt);
+  font-size: 20px;
+  cursor: pointer;
+}
+.calc-info-body {
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 12px 16px;
+  color: var(--txt);
+  font-size: 15px;
+  line-height: 1.65;
+}
+.calc-info-body p {
+  margin: 6px 0 12px;
+}
+.calc-info-body h4 {
+  margin: 12px 0 4px;
+  padding-top: 10px;
+  border-top: 1px solid var(--bd);
+  font-size: 16px;
+}
+.calc-info-body > div > p:first-child {
+  margin-top: 0;
+  color: var(--txt-muted);
+}
+.calc-info-body > div > div {
+  border-top: 1px solid var(--bd);
+  padding-top: 10px;
+  margin-top: 10px;
+}
+.calc-info-body > div > div > div {
+  font-weight: 700;
+}
+@media (max-width: 767px) {
+  .calc-info-header h2 {
+    font-size: 18px;
+  }
+  .calc-info-body {
+    padding: 10px 12px;
+    font-size: 14px;
+  }
+  .calc-info-dialog {
+    max-height: 88dvh;
+  }
+}
+</style>
+<style scoped>
+/* 保留原有基因／Het 按鈕，讓清單緊湊且保有觸控空間。 */
+.calc-gene-category-panel {
+  padding: 0;
+  border: 0;
+}
+.calc-gene-category-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+.calc-container .calc-category-chip,
+.calc-container .calc-dd-badge,
+.calc-container .calc-role-chip {
+  min-height: 44px !important;
+  height: 44px;
+}
+.calc-dd-badge {
+  min-width: 44px;
+}
+.calc-dd-item {
+  min-width: 0;
+}
+.calc-dd-item-main {
+  min-width: 0;
+}
+.calc-dd-item-main span {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+@media (max-width: 767px), (pointer: coarse) {
+  .calc-stage--parents .calc-selected-summary {
+    display: none;
+  }
+  .calc-p-body {
+    padding: 8px;
+    gap: 8px;
+  }
+  .calc-parent-card .calc-dd-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 5px;
+  }
+  .calc-dd-sub--inline {
+    padding: 0;
+  }
+  .calc-dd-item-row--trigger {
+    display: flex;
+    align-items: center;
+    padding-block: 4px;
+    box-sizing: border-box;
+  }
+  .calc-dd-item {
+    padding-inline: 5px;
+  }
+  .calc-dd-flags {
+    margin-left: 3px;
+  }
+  .calc-mobile-parents {
+    align-items: start;
+  }
+}
+</style>
+<style scoped>
+.calc-gene-category-list .calc-category-chip {
+  width: auto;
+  flex: 0 0 auto;
+  padding-inline: 10px;
+}
+</style>
+
+<style scoped>
+/* 結果直接顯示百分比與原本文字，移除重複資訊及固定空白。 */
+.calc-result-heading {
+  margin-bottom: 8px;
+  padding-bottom: 8px;
+  gap: 8px;
+}
+.calc-result-shell {
+  padding: 10px;
+}
+.calc-res-card-grid {
+  gap: 6px;
+}
+.calc-res-card {
+  min-height: 44px;
+  padding: 0;
+  align-items: stretch;
+}
+.calc-prob-box {
+  width: 76px;
+  box-sizing: border-box;
+  padding: 6px 4px;
+  height: auto;
+}
+.calc-prob-val {
+  font-size: 20px;
+}
+.calc-res-info {
+  min-width: 0;
+  padding: 8px;
+  overflow: visible;
+}
+.calc-res-name {
+  font-size: 15px;
+}
+.calc-container .calc-apply-pair {
+  min-height: 44px !important;
+  height: auto;
+  padding: 6px 10px !important;
+  margin-top: 6px;
+  border: 1px solid var(--bd);
+  background: var(--card-bg-solid);
+  color: var(--txt);
+  font: inherit;
+  cursor: pointer;
+}
+.calc-reverse-card {
+  cursor: default !important;
+}
+@media (max-width: 767px), (pointer: coarse) {
+  .calc-result-area {
+    padding-bottom: 0;
+  }
+  .calc-res-card {
+    min-height: 44px;
+  }
+  .calc-prob-box {
+    width: 76px;
+  }
+  .calc-res-info {
+    padding: 8px;
+  }
 }
 </style>

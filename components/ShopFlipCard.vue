@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useMainStore } from '~/stores/useMainStore'
 import { getCleanUrl } from '~/utils/image'
 
@@ -89,37 +89,33 @@ const imgLoaded = ref(false)
 const onImgLoad = () => {
   imgLoaded.value = true
 }
-</script>
 
+const imageFailed = ref(false)
+watch(
+  () => props.item.ImageURL,
+  () => {
+    imageFailed.value = false
+    imgLoaded.value = false
+  }
+)
+const birthYear = computed(() => String(props.item.Birthday || '').match(/\d{4}/)?.[0] || '')
+const previewGenes = computed(() => (props.item.Genes || []).slice(0, 2))
+</script>
 <template>
   <article class="flip-card card slim-card">
     <NuxtLink
       no-prefetch
       :to="linkTo"
       class="flip-card-link"
-      :aria-label="`查看 ${item.Morph} 詳情`"
+      :aria-label="`查看 ${item.Morph}（${item.ID}）詳情`"
     >
-      <span class="sr-only">查看 {{ item.Morph }} 詳情</span>
+      <span class="sr-only">查看 {{ item.Morph }}（{{ item.ID }}）詳情</span>
     </NuxtLink>
-
     <div class="flip-inner">
       <div class="flip-face flip-front">
-        <div v-if="item.Status === 'Sold'" class="sold-stamp">SOLD</div>
-
-        <div style="position: relative">
-          <InteractiveGridPattern v-if="showInteractiveGrid" class="igp-overlay" />
-
-          <div
-            v-if="isWishlisted || isCompared"
-            class="flip-front-indicators dt-only"
-            aria-hidden="true"
-          >
-            <span v-if="isWishlisted" class="flip-indicator">已收藏</span>
-            <span v-if="isCompared" class="flip-indicator">比較中</span>
-          </div>
-
+        <div class="card-photo">
           <img
-            v-if="item.ImageURL"
+            v-if="item.ImageURL && !imageFailed"
             :src="getCleanUrl(item.ImageURL, 400)"
             :alt="item.Morph"
             class="card-img slim-img flip-img"
@@ -128,433 +124,365 @@ const onImgLoad = () => {
             :fetchpriority="index < 6 ? 'high' : 'auto'"
             decoding="async"
             @load="onImgLoad"
+            @error="imageFailed = true"
           />
-          <div
-            v-else
-            class="card-img slim-img"
-            style="
-              display: flex;
-              align-items: center;
-              justify-content: center;
-              color: #333;
-              font-size: 1rem;
-              background: #000;
-            "
-          >
-            無圖片
+          <div v-else class="card-image-placeholder">
+            {{ imageFailed ? '照片暫時無法載入' : '尚無照片' }}
           </div>
+          <span v-if="item.Status === 'Sold'" class="card-status">已售出</span>
+          <span v-else-if="item.Status === 'Reserved'" class="card-status">已保留</span>
+          <span v-else-if="item.Status === 'Auction' && hasAuction" class="card-status">
+            競標中
+          </span>
         </div>
-
         <div class="card-body slim-body">
-          <h3 class="slim-title" style="margin: 0">{{ item.Morph }}</h3>
-          <div v-if="showMobileMeta" class="mobile-card-meta" aria-label="種群資料">
-            <span v-if="genderText !== '未登錄'" class="mobile-card-meta__item">
-              性別 {{ mobileGenderText }}
-              <span v-if="isIncubationTemperature" class="mobile-card-meta__note">
-                （不保證性別）
-              </span>
+          <span class="card-id">{{ item.ID }}</span>
+          <h3 class="slim-title" :title="item.Morph">{{ item.Morph }}</h3>
+          <div v-if="showMobileMeta" class="mobile-card-meta">
+            <span :title="genderText">
+              {{ isIncubationTemperature ? mobileGenderText : genderText }}
+              <small v-if="isIncubationTemperature">不保證性別</small>
             </span>
-            <span v-if="birthdayText !== '未登錄'" class="mobile-card-meta__item">
-              生日 {{ birthdayText }}
-            </span>
-            <span
-              v-if="showMobileGenes && geneText"
-              class="mobile-card-meta__item mobile-card-meta__item--gene"
-            >
-              {{ geneText }}
-            </span>
+            <span v-if="birthYear">{{ birthYear }} 年出生</span>
           </div>
-          <div class="slim-price-row" style="margin-top: 4px">
-            <template v-if="item.Status === 'Sold'">
-              <span class="status-badge s-sold">售出</span>
-            </template>
-            <template v-else-if="item.Status === 'Auction' && hasAuction">
-              <span class="status-badge s-auction">競標中</span>
-            </template>
-            <template v-else-if="item.Status === 'SelfKeep'">
-              <span v-if="showStatusBadge" class="status-badge s-nfs">自留</span>
-            </template>
-            <template v-else>
-              <span v-if="store.isExhibitionMode" class="exhibition-note">
-                {{ store.exhibitionNote }}
-              </span>
-              <div v-else class="price slim-price">${{ item.ListingPrice }}</div>
-            </template>
-          </div>
-        </div>
-      </div>
-
-      <div class="flip-face flip-back" aria-hidden="true">
-        <div class="flip-back-inner">
-          <div class="flip-back-title">{{ item.Morph }}</div>
-          <div class="flip-back-row">
-            <span class="k">性別</span>
-            <span class="v">{{ genderText }}</span>
-          </div>
-          <div class="flip-back-row">
-            <span class="k">生日</span>
-            <span class="v">{{ birthdayText }}</span>
-          </div>
-          <div v-if="uploadedText" class="flip-back-row">
-            <span class="k">上傳</span>
-            <span class="v">{{ uploadedText }}</span>
-          </div>
-          <div v-if="showBackPrice" class="flip-back-row">
-            <span class="k">價格</span>
-            <span class="v">{{ priceText }}</span>
+          <div v-if="showMobileGenes && previewGenes.length" class="card-genes">
+            <span v-for="gene in previewGenes" :key="gene">{{ gene }}</span>
+            <span v-if="item.Genes.length > 2">+{{ item.Genes.length - 2 }}</span>
           </div>
         </div>
       </div>
     </div>
-
-    <!-- 控制項與整卡連結同層，保持鍵盤與觸控操作獨立。 -->
-    <div class="card-action-stack flip-front-actions">
-      <button
-        v-if="showWishlist"
-        type="button"
-        class="btn-app btn-app--ghost btn-app--xs btn-app--pill card-action-btn"
-        :class="{ 'card-action-btn--active': isWishlisted }"
-        @click="onToggleWishlist(item.ID)"
-      >
-        收藏
-      </button>
-
-      <button
-        v-if="showCompare && item.Status !== 'Sold'"
-        type="button"
-        class="btn-app btn-app--ghost btn-app--xs btn-app--pill card-action-btn"
-        :class="{ 'card-action-btn--active': isCompared }"
-        :disabled="compareDisabled"
-        @click="onToggleCompare(item.ID)"
-        :title="isCompared ? '移出比較' : compareDisabled ? '最多 3 隻' : '加入比較'"
-      >
-        加入比較
-      </button>
+    <div class="card-purchase-row">
+      <div class="slim-price-row">
+        <span v-if="item.Status === 'Sold'" class="status-badge">售出</span>
+        <span v-else-if="item.Status === 'Auction' && hasAuction" class="status-badge">競標中</span>
+        <span v-else-if="item.Status === 'SelfKeep' && showStatusBadge" class="status-badge">
+          自留
+        </span>
+        <span v-else-if="store.isExhibitionMode" class="exhibition-note">
+          {{ store.exhibitionNote }}
+        </span>
+        <span v-else class="price slim-price">${{ item.ListingPrice }}</span>
+      </div>
+      <div v-if="showWishlist || showCompare" class="card-action-stack flip-front-actions">
+        <button
+          v-if="showWishlist"
+          type="button"
+          class="card-action-btn"
+          :class="{ 'card-action-btn--active': isWishlisted }"
+          :aria-pressed="isWishlisted"
+          :aria-label="isWishlisted ? '已收藏' : '收藏'"
+          @click="onToggleWishlist(item.ID)"
+        >
+          <span class="action-text">{{ isWishlisted ? '已收藏' : '收藏' }}</span>
+          <span class="action-icon" aria-hidden="true">{{ isWishlisted ? '♥' : '♡' }}</span>
+        </button>
+        <button
+          v-if="showCompare && item.Status !== 'Sold'"
+          type="button"
+          class="card-action-btn"
+          :class="{ 'card-action-btn--active': isCompared }"
+          :aria-pressed="isCompared"
+          :aria-label="isCompared ? '移出比較' : '加入比較'"
+          :disabled="compareDisabled"
+          :title="compareDisabled ? '最多比較三隻，請先移除一隻' : undefined"
+          @click="onToggleCompare(item.ID)"
+        >
+          <span class="action-text">{{ isCompared ? '移出比較' : '加入比較' }}</span>
+          <span class="action-icon" aria-hidden="true">⇄</span>
+        </button>
+      </div>
     </div>
-
-    <div class="flip-back-actions flip-back-actions--overlay">
-      <button
-        v-if="showWishlist"
-        type="button"
-        class="btn-app btn-app--ghost btn-app--xs btn-app--pill flip-action-btn"
-        :class="{ 'flip-action-btn--active': isWishlisted }"
-        @click="onToggleWishlist(item.ID)"
-      >
-        收藏
-      </button>
-
-      <button
-        v-if="showCompare && item.Status !== 'Sold'"
-        type="button"
-        class="btn-app btn-app--ghost btn-app--xs btn-app--pill flip-action-btn"
-        :class="{ 'flip-action-btn--active': isCompared }"
-        :disabled="compareDisabled"
-        @click="onToggleCompare(item.ID)"
-        :title="isCompared ? '移出比較' : compareDisabled ? '最多 3 隻' : '加入比較'"
-      >
-        加入比較
-      </button>
-    </div>
+    <details class="mobile-card-details">
+      <summary :aria-label="`查看 ${item.Morph} 的基本資訊`">基本資訊</summary>
+      <div class="mobile-card-details-body">
+        <span>編號：{{ item.ID }}</span>
+        <span>
+          {{ isIncubationTemperature ? mobileGenderText : genderText }}
+          <template v-if="isIncubationTemperature">，不保證性別</template>
+        </span>
+        <span v-if="birthYear">{{ birthYear }} 年出生</span>
+        <span v-if="geneText">{{ geneText }}</span>
+      </div>
+    </details>
   </article>
 </template>
-
 <style scoped>
 .flip-card {
   position: relative;
-  perspective: 1200px;
+  min-width: 0;
+  border: 1px solid var(--bd);
+  background: var(--card-bg-solid);
+  border-radius: 0;
+  overflow: hidden;
+  box-shadow: none;
+  display: flex;
+  flex-direction: column;
 }
-
 .flip-card-link {
   position: absolute;
   inset: 0;
-  z-index: 10;
-  color: inherit;
-  text-decoration: none;
+  z-index: 1;
 }
-
 .flip-card-link:focus-visible {
   outline: 3px solid var(--pri);
-  outline-offset: 3px;
+  outline-offset: -3px;
 }
-
-.mobile-card-meta {
-  display: none;
-}
-
-/* 展場模式：價格改顯示提示文字（#task4） */
-.exhibition-note {
-  font-size: 0.82rem;
-  font-weight: 700;
-  color: var(--pri);
-}
-
 .flip-inner {
-  position: relative;
-  transform-style: preserve-3d;
-  transition: transform 320ms cubic-bezier(0.2, 0.8, 0.2, 1);
-  height: 100%;
+  flex: 1;
+  transform: none !important;
+  transition: none;
 }
-
-/* will-change 只在 hover 時才啟用，避免所有卡片同時佔用 GPU 合成層 */
-@media (min-width: 769px) and (hover: hover) and (pointer: fine) {
-  .flip-card:hover .flip-inner {
-    will-change: transform;
-  }
-}
-
-.flip-img {
-  opacity: 0;
-  transition: opacity 220ms ease;
-}
-
-.flip-img--loaded {
-  opacity: 1;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .flip-inner {
-    transition: none;
-  }
-
-  .flip-img {
-    transition: none;
-    opacity: 1;
-  }
-}
-
 .flip-face {
-  backface-visibility: hidden;
-  -webkit-backface-visibility: hidden;
   height: 100%;
 }
-
-.flip-back {
-  position: absolute;
-  inset: 0;
-  transform: rotateY(180deg);
-  display: none; /* 預設不顯示，避免手機/無 hover 裝置出現背面 */
+.card-photo {
+  position: relative;
+  aspect-ratio: 1;
 }
-
-.flip-back-inner {
+.card-photo img,
+.card-image-placeholder {
+  display: block;
+  width: 100%;
   height: 100%;
-  padding: 14px 14px 12px 14px;
-  background: var(--card-bg-solid);
-  color: var(--txt);
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  gap: 10px;
+  aspect-ratio: 1;
+  object-fit: cover;
 }
-
-.flip-back-title {
-  font-weight: 900;
-  font-size: 0.95rem;
-  color: var(--pri);
+.card-image-placeholder {
+  display: grid;
+  place-items: center;
+  background: var(--bg);
+  color: var(--txt-muted);
+  font-size: 12px;
+  padding: 10px;
   text-align: center;
-  margin-bottom: 2px;
 }
-
-.flip-back-row {
-  display: flex;
-  justify-content: space-between;
-  gap: 10px;
-  font-size: 0.82rem;
-  line-height: 1.3;
-}
-
-.flip-back-row .k {
-  opacity: 0.75;
-  flex: 0 0 auto;
-}
-
-.flip-back-row .v {
-  font-weight: 800;
-  text-align: right;
-  flex: 1 1 auto;
-  /* 禁止 ... 省略：允許換行顯示完整內容 */
-  overflow: visible;
-  text-overflow: clip;
-  white-space: normal;
-  word-break: break-word;
-}
-
-.flip-back-actions {
-  display: flex;
-  gap: 8px;
-  justify-content: center;
-  margin-top: 4px;
-  pointer-events: auto;
-}
-
-.flip-back-actions--overlay {
-  display: none;
-  position: absolute;
-  right: 14px;
-  bottom: 12px;
-  left: 14px;
-  z-index: 30;
-}
-
-.flip-action-btn {
-  opacity: 1;
-}
-
-.flip-action-btn--active {
-  border-color: var(--bd-hover-solid);
-  color: var(--pri);
-}
-
-.flip-front-actions {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  display: flex;
-  flex-direction: row;
-  gap: 4px;
-  z-index: 20;
-}
-
-.flip-front-indicators {
+.card-status {
   position: absolute;
   top: 8px;
   left: 8px;
+  background: var(--card-bg-solid);
+  color: var(--txt);
+  padding: 3px 7px;
+  font-size: 12px;
+  border: 1px solid var(--bd);
+}
+.slim-body {
+  padding: 10px !important;
+}
+.card-id {
+  font-size: 11px;
+  color: var(--txt-muted);
+  font-variant-numeric: tabular-nums;
+}
+.slim-title {
+  font-size: 17px !important;
+  line-height: 1.4;
+  margin: 3px 0 5px !important;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  white-space: normal;
+  color: var(--txt);
+}
+.mobile-card-meta {
   display: flex;
-  flex-direction: column;
-  gap: 6px;
-  z-index: 20;
-  pointer-events: none;
+  flex-wrap: wrap;
+  gap: 3px 8px;
+  line-height: 1.45;
+  font-size: 12px;
+  color: var(--txt-muted);
 }
-
-/* 互動格線：手機不顯示，桌機定位在圖片上層（低於按鈕） */
-.igp-overlay {
+.mobile-card-meta small {
+  font-size: 11px;
+  display: block;
+}
+.card-genes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin: 5px 0;
+  color: var(--txt-muted);
+  font-size: 11px;
+}
+.card-genes span {
+  padding: 1px 4px;
+  background: var(--bg);
+  border: 1px solid var(--bd);
+}
+.slim-price-row {
+  display: flex;
+  flex-wrap: wrap;
+  margin-top: 6px;
+  padding: 0 !important;
+  min-width: 0;
+}
+.slim-price {
+  font-size: 20px !important;
+  line-height: 1.4;
+  max-width: none !important;
+  white-space: nowrap;
+  overflow: visible !important;
+  text-overflow: clip !important;
+  font-variant-numeric: tabular-nums;
+}
+.exhibition-note {
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+.flip-front-actions {
+  position: relative;
+  inset: auto;
+  display: flex !important;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 0 10px 8px;
+  z-index: 2;
+}
+.card-action-btn {
+  min-height: 32px;
+  min-width: 40px;
+  padding: 4px 7px;
+  font-size: 12px;
+  line-height: 1.2;
+  color: var(--txt);
+  background: var(--card-bg-solid);
+  border: 1px solid var(--bd);
+  border-radius: 2px;
+  cursor: pointer;
+}
+.card-action-btn--active {
+  background: var(--pri);
+  border-color: var(--pri);
+  color: white;
+}
+.card-action-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+.card-action-btn:focus-visible {
+  outline: 2px solid var(--pri);
+  outline-offset: 2px;
+}
+.flip-img {
+  opacity: 0;
+}
+.flip-img--loaded {
+  opacity: 1;
+}
+.mobile-card-details,
+.action-icon {
   display: none;
 }
-@media (min-width: 769px) and (hover: hover) and (pointer: fine) {
-  .igp-overlay {
-    display: block;
-    position: absolute;
-    inset: 0;
-    z-index: 3;
-  }
+.card-purchase-row > .slim-price-row {
+  padding: 0 10px 8px !important;
 }
-
-/* 只在桌機顯示正面標示 */
-.dt-only {
-  display: none;
-}
-@media (min-width: 769px) and (hover: hover) and (pointer: fine) {
-  .dt-only {
-    display: flex;
+@media (max-width: 767px) {
+  .flip-card {
+    align-self: start;
+    height: auto;
   }
-}
-
-.flip-indicator {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 4px 8px;
-  border-radius: 999px;
-  font-size: 0.72rem;
-  font-weight: 900;
-  letter-spacing: 0.2px;
-  color: #fff;
-  background: rgba(232, 68, 10, 0.92);
-  box-shadow: 0 8px 22px rgba(232, 68, 10, 0.22);
-}
-
-/* 手機/無 hover：白底黑字，已選擇維持主色 */
-@media (hover: none), (pointer: coarse), (max-width: 768px) {
-  .mobile-card-meta {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 3px 8px;
-    margin-top: 5px;
-    color: var(--txt);
-    font-size: 0.7rem;
-    line-height: 1.35;
-    opacity: 0.75;
+  .flip-inner {
+    flex: none;
   }
-
-  .mobile-card-meta__item {
-    min-width: 0;
-  }
-
-  .mobile-card-meta__note {
-    display: inline;
-    white-space: nowrap;
-  }
-
-  .mobile-card-meta__item--gene {
-    flex-basis: 100%;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  .flip-front-actions .card-action-btn {
-    opacity: 1;
-    min-height: 26px !important;
-    height: 26px;
-    padding: 0 5px;
-    font-size: 0.62rem;
-    line-height: 1;
-    background: rgba(255, 255, 255, 0.92);
-    border-color: rgba(0, 0, 0, 0.12);
-    color: #111;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
-  }
-
-  .flip-front-actions {
-    top: auto;
-    bottom: 8px;
-    right: 5px;
-    gap: 2px;
-  }
-  .slim-price-row {
-    padding-right: 84px;
-    min-height: 24px;
-  }
-  .flip-front-actions .card-action-btn {
-    min-height: 24px !important;
-    height: 24px;
-    padding-inline: 4px;
-    font-size: 0.58rem;
-    box-shadow: none;
-  }
-
-  .flip-front-actions .card-action-btn--active {
-    background: var(--pri);
-    border-color: var(--pri);
-    color: #fff;
-    box-shadow: 0 4px 12px rgba(232, 68, 10, 0.28);
-  }
-}
-
-/* 僅限桌機：hover 翻牌 */
-@media (max-width: 360px) {
-  .slim-price {
-    font-size: 0.75rem;
-    white-space: nowrap;
-  }
-}
-@media (min-width: 769px) and (hover: hover) and (pointer: fine) {
-  .flip-back {
-    display: block;
-  }
-
-  /* 桌機有背面按鈕時，正面就隱藏（避免重複） */
-  .flip-front-actions {
+  .slim-body > .card-id,
+  .slim-body > .mobile-card-meta,
+  .slim-body > .card-genes {
     display: none;
   }
-
-  .flip-card:hover .flip-inner,
-  .flip-card:focus-within .flip-inner {
-    transform: rotateY(180deg);
+  .slim-title {
+    min-height: 0;
+    margin: 0 !important;
+  }
+  .card-purchase-row {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    padding: 0 6px 2px;
+  }
+  .card-purchase-row > .slim-price-row {
+    flex: 1;
+    margin: 0;
+    padding: 0 !important;
+  }
+  .card-purchase-row .flip-front-actions {
+    padding: 0;
+    flex-wrap: nowrap;
+    gap: 2px;
+    flex-shrink: 0;
+  }
+  .card-purchase-row .card-action-btn {
+    width: 32px;
+    min-width: 32px;
+    padding: 0;
+    border: 0;
+  }
+  .action-text {
+    display: none;
+  }
+  .action-icon {
+    display: inline;
+    font-size: 21px;
+  }
+  .mobile-card-details {
+    display: block;
+    position: relative;
+    z-index: 2;
+    border-top: 1px solid var(--bd);
+    margin: 0 8px;
+  }
+  .mobile-card-details summary {
+    min-height: 32px;
+    padding: 6px 0;
+    cursor: pointer;
+    font-size: 11px;
+    color: var(--txt-muted);
+  }
+  .mobile-card-details summary:focus-visible {
+    outline: 2px solid var(--pri);
+  }
+  .mobile-card-details-body {
+    display: grid;
+    gap: 4px;
+    padding: 2px 0 8px;
+    font-size: 11px;
+    overflow-wrap: anywhere;
+    color: var(--txt-muted);
   }
 
-  .flip-card:hover .flip-back-actions--overlay,
-  .flip-card:focus-within .flip-back-actions--overlay {
-    display: flex;
+  .slim-body {
+    padding: 8px !important;
+  }
+  .slim-title {
+    font-size: 14px !important;
+  }
+  .slim-price {
+    font-size: 17px !important;
+  }
+  .flip-front-actions {
+    padding: 0 8px 8px;
+    gap: 4px;
+  }
+  .card-action-btn {
+    font-size: 11px;
+    min-height: 44px;
+    padding: 4px 5px;
+  }
+  .mobile-card-meta {
+    font-size: 11px;
+  }
+  .card-id {
+    font-size: 10px;
+  }
+  .card-genes {
+    font-size: 10px;
+  }
+}
+@media (pointer: coarse) and (min-width: 768px) {
+  .card-action-btn {
+    min-height: 40px;
   }
 }
 </style>

@@ -1,5 +1,6 @@
 <script setup>
 import { ref, computed, onMounted, onBeforeUnmount, nextTick, watch } from 'vue'
+import { onBeforeRouteLeave } from 'vue-router'
 import { useHead } from '#imports'
 import { QUIZ_DATA, QUIZ_DIMENSIONS, QUIZ_TRACKS } from '~/utils/quiz'
 import { useMainStore } from '~/stores/useMainStore'
@@ -205,7 +206,23 @@ const totalQs = questions.length
 const step = ref(0)
 const answers = ref({})
 const finished = ref(false)
-const sliding = ref(false)
+const editingResult = ref(false)
+const questionHeading = ref(null)
+const resultHeading = ref(null)
+let advanceTimer = null
+const cancelAdvance = () => {
+  clearTimeout(advanceTimer)
+  advanceTimer = null
+}
+// 開始離頁就停止換題，避免等待下一頁載入時仍推進並覆寫進度。
+onBeforeRouteLeave(cancelAdvance)
+const reduceMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches
+const focusCurrent = async () => {
+  await nextTick()
+  const target = finished.value ? resultHeading.value : questionHeading.value
+  target?.focus({ preventScroll: true })
+  target?.scrollIntoView({ behavior: reduceMotion() ? 'auto' : 'smooth', block: 'center' })
+}
 const selectedOptionId = ref(null)
 const hydrated = ref(false)
 
@@ -238,7 +255,7 @@ const currentOptions = computed(
 
 // ============ 選項點擊 ============
 const selectOption = (qId, opt) => {
-  if (sliding.value) return
+  cancelAdvance()
   const q = questions.find((x) => x.id === qId)
   selectedOptionId.value = opt.id
   answers.value[qId] = {
@@ -253,48 +270,58 @@ const selectOption = (qId, opt) => {
     trackTag: opt.trackTag
   }
   saveProgress()
-  sliding.value = true
-  setTimeout(() => {
-    if (step.value < totalQs - 1) {
-      step.value++
-      selectedOptionId.value = null
-    } else {
+  advanceTimer = setTimeout(() => {
+    advanceTimer = null
+    if (editingResult.value || step.value === totalQs - 1) {
       finished.value = true
+      editingResult.value = false
+    } else {
+      step.value++
+      selectedOptionId.value = answers.value[currentQ.value.id]?.optionId || null
     }
-    sliding.value = false
     saveProgress()
-  }, 450)
+    focusCurrent()
+  }, 200)
 }
 
 const prevStep = () => {
-  if (sliding.value || step.value === 0) return
-  const prevId = questions[step.value - 1].id
-  delete answers.value[prevId]
+  if (step.value === 0) return
+  cancelAdvance()
   step.value--
-  selectedOptionId.value = null
+  selectedOptionId.value = answers.value[currentQ.value.id]?.optionId || null
   saveProgress()
+  focusCurrent()
 }
 
 const resetQuiz = () => {
+  cancelAdvance()
+  editingResult.value = false
   answers.value = {}
   step.value = 0
   finished.value = false
   selectedOptionId.value = null
-  buildShuffledOptions() // 重置時重新洗牌
+  buildShuffledOptions()
   clearProgress()
+  focusCurrent()
 }
 
 const jumpToQuestion = (idx) => {
   if (idx < 0) return
+  cancelAdvance()
+  editingResult.value = true
   finished.value = false
   step.value = idx
-  const qId = questions[idx]?.id
-  if (qId) delete answers.value[qId]
-  selectedOptionId.value = null
+  selectedOptionId.value = answers.value[currentQ.value.id]?.optionId || null
   saveProgress()
-  nextTick(() => {
-    document.querySelector('.qs-container')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-  })
+  focusCurrent()
+}
+
+const returnToResult = () => {
+  cancelAdvance()
+  editingResult.value = false
+  finished.value = true
+  saveProgress()
+  focusCurrent()
 }
 
 // ============ localStorage ============
@@ -307,6 +334,7 @@ const saveProgress = () => {
         step: step.value,
         answers: answers.value,
         finished: finished.value,
+        editingResult: editingResult.value,
         shuffled: shuffledOptions.value, // 連同隨機順序一起存，避免復原後順序變了
         ts: Date.now()
       })
@@ -327,6 +355,8 @@ const loadProgress = () => {
       answers.value = data.answers
       step.value = Math.min(data.step, totalQs - 1)
       finished.value = !!data.finished
+      editingResult.value = !!data.editingResult
+      selectedOptionId.value = answers.value[currentQ.value.id]?.optionId || null
       if (data.shuffled) shuffledOptions.value = data.shuffled
     }
   } catch (e) {}
@@ -406,6 +436,7 @@ const ensureChart = async () => {
     Legend,
     RadarController
   } = await import('chart.js')
+  if (!finished.value || !radarRef.value) return
   Chart.register(
     RadialLinearScale,
     PointElement,
@@ -469,7 +500,7 @@ const ensureChart = async () => {
     options: {
       responsive: true,
       maintainAspectRatio: false,
-      animation: { duration: 800 },
+      animation: { duration: reduceMotion() ? 0 : 800 },
       plugins: {
         legend: { display: false },
         tooltip: { callbacks: { label: (ctx) => ` ${ctx.parsed.r} / 10` } }
@@ -521,6 +552,7 @@ onMounted(() => {
 })
 
 onBeforeUnmount(() => {
+  cancelAdvance()
   if (chartInstance) chartInstance.destroy()
   if (themeObserver) themeObserver.disconnect()
 })
@@ -591,7 +623,13 @@ onBeforeUnmount(() => {
               {{ QUIZ_DIMENSIONS[currentQ.dim].icon }} {{ QUIZ_DIMENSIONS[currentQ.dim].label }}
             </span>
           </div>
-          <h2 :id="`qs-question-${currentQ.id}`" class="qs-question-text" aria-live="polite">
+          <h2
+            ref="questionHeading"
+            tabindex="-1"
+            :id="`qs-question-${currentQ.id}`"
+            class="qs-question-text"
+            aria-live="polite"
+          >
             {{ currentQ.text }}
           </h2>
           <div class="qs-options-grid" role="group" :aria-label="currentQ.text">
@@ -618,8 +656,11 @@ onBeforeUnmount(() => {
         </template>
       </ClientOnly>
 
-      <button type="button" v-if="step > 0" @click="prevStep" class="qs-nav-btn">
+      <button type="button" v-if="step > 0 && !editingResult" @click="prevStep" class="qs-nav-btn">
         <span>← 返回上一題</span>
+      </button>
+      <button v-if="editingResult" type="button" class="qs-nav-btn" @click="returnToResult">
+        返回結果
       </button>
     </div>
 
@@ -630,7 +671,7 @@ onBeforeUnmount(() => {
         <span>YOUR PERSONAL REVIEW</span>
       </div>
       <p class="site-page-kicker">READINESS ASSESSMENT REVIEW</p>
-      <h1 class="page-title">飼養前自我評估結果</h1>
+      <h1 ref="resultHeading" tabindex="-1" class="page-title">飼養前自我評估結果</h1>
       <!-- 總分摘要 -->
       <div class="qs-result-box">
         <span class="qs-badge">Evaluation Complete</span>

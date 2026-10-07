@@ -222,25 +222,33 @@ useHead({
           <i lang="la">Hemitheconyx caudicinctus</i>
         </div>
       </div>
-      <div class="cmp-grid cmp-desktop">
-        <div class="cmp-row cmp-head">
-          <span></span>
-          <span>豹紋守宮</span>
-          <span>肥尾守宮</span>
-        </div>
-        <div v-for="row in compareRows" :key="row.dim" class="cmp-row">
-          <span class="cmp-dim">{{ row.dim }}</span>
-          <span>{{ row.leopard }}</span>
-          <span>{{ row.fat }}</span>
-        </div>
-      </div>
+      <table class="species-comparison cmp-desktop" aria-label="豹紋守宮與肥尾守宮差異">
+        <thead>
+          <tr>
+            <th scope="col">比較項目</th>
+            <th scope="col">豹紋守宮</th>
+            <th scope="col">肥尾守宮</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="row in compareRows" :key="row.dim">
+            <th scope="row">{{ row.dim }}</th>
+            <td>{{ row.leopard }}</td>
+            <td>{{ row.fat }}</td>
+          </tr>
+        </tbody>
+      </table>
       <div class="cmp-mobile">
-        <section v-for="species in ['leopard', 'fat'] as const" :key="species" class="cmp-species">
-          <h3>{{ species === 'leopard' ? '豹紋守宮' : '肥尾守宮' }}</h3>
+        <section v-for="row in compareRows" :key="row.dim" class="cmp-species">
+          <h3>{{ row.dim }}</h3>
           <dl>
-            <div v-for="row in compareRows" :key="row.dim">
-              <dt>{{ row.dim }}</dt>
-              <dd>{{ row[species] }}</dd>
+            <div>
+              <dt>豹紋守宮</dt>
+              <dd>{{ row.leopard }}</dd>
+            </div>
+            <div>
+              <dt>肥尾守宮</dt>
+              <dd>{{ row.fat }}</dd>
             </div>
           </dl>
         </section>
@@ -250,14 +258,6 @@ useHead({
         <NuxtLink no-prefetch to="/shop" class="guide-inline-link">可選個體 →</NuxtLink>
       </p>
     </section>
-
-    <div class="starter-route">
-      <div>
-        <span>START HERE</span>
-        <strong>第一次飼養，先了解守宮</strong>
-      </div>
-      <NuxtLink no-prefetch to="/start-here" class="guide-inline-link">查看新手入門 →</NuxtLink>
-    </div>
 
     <section id="guide-faq" class="guide-sec">
       <div class="faq-head">
@@ -943,6 +943,41 @@ useHead({
   .guide-inline-link,
   .guide-orientation-map a {
     transition: none;
+  }
+}
+/* 比較表保留原生欄列語意，手機按比較項目相鄰閱讀。 */
+.species-comparison {
+  width: 100%;
+  table-layout: fixed;
+  border-collapse: collapse;
+  margin-bottom: 14px;
+  font-size: 0.86rem;
+}
+.species-comparison th,
+.species-comparison td {
+  padding: 10px 12px;
+  border: 1px solid var(--bd);
+  text-align: left;
+  vertical-align: top;
+  overflow-wrap: anywhere;
+}
+.species-comparison th:first-child {
+  width: 20%;
+}
+@media (max-width: 767px) {
+  .guide-orientation-map a {
+    min-height: 44px;
+    font-size: 0.82rem;
+  }
+  .cmp-mobile {
+    gap: 12px;
+  }
+  .cmp-species dt,
+  .cmp-species dd {
+    font-size: 0.82rem;
+  }
+  .cmp-species dl > div {
+    padding: 7px 0;
   }
 }
 </style>

@@ -19,6 +19,8 @@ const emit = defineEmits(['toggle-theme', 'scroll-top'])
 const store = useMainStore() // ?? ??摰?????寞?
 const route = useRoute()
 const openMenu = ref(null)
+const navFocused = ref(false)
+const navIsHidden = computed(() => props.navHidden && !navFocused.value)
 const clickedMenu = ref(null)
 const canHover = useMediaQuery('(min-width: 768px) and (hover: hover) and (pointer: fine)')
 const dismissedMenu = ref(null)
@@ -71,7 +73,12 @@ const navLogoUrl = computed(() => (store.logoUrl ? getCleanUrl(store.logoUrl, 72
 <template>
   <div>
     <!-- Sticky Nav -->
-    <div class="sticky-nav" :class="{ 'nav-hidden': navHidden }">
+    <div
+      class="sticky-nav"
+      :class="{ 'nav-hidden': navIsHidden }"
+      @focusin="navFocused = true"
+      @focusout="navFocused = $event.currentTarget.contains($event.relatedTarget)"
+    >
       <div class="nav-container">
         <!-- Logo -->
         <NuxtLink
@@ -251,7 +258,7 @@ const navLogoUrl = computed(() => (store.logoUrl ? getCleanUrl(store.logoUrl, 72
     <div
       v-if="curTab === 'articles' && readingArticle"
       class="reading-progress-bar"
-      :class="{ 'reading-progress-bar--nav-hidden': navHidden }"
+      :class="{ 'reading-progress-bar--nav-hidden': navIsHidden }"
     >
       <div class="progress-fill" :style="{ width: readingProgress + '%' }"></div>
     </div>
@@ -480,7 +487,7 @@ const navLogoUrl = computed(() => (store.logoUrl ? getCleanUrl(store.logoUrl, 72
   transition: transform 0.2s ease-out;
 }
 .reading-progress-bar--nav-hidden {
-  transform: translateY(-50px);
+  transform: translateY(calc(-1 * var(--site-nav-height, 64px)));
 }
 .progress-fill {
   height: 100%;
@@ -651,7 +658,7 @@ const navLogoUrl = computed(() => (store.logoUrl ? getCleanUrl(store.logoUrl, 72
 }
 
 .reading-progress-bar {
-  top: calc(env(safe-area-inset-top, 0px) + 64px);
+  top: calc(env(safe-area-inset-top, 0px) + var(--site-nav-height, 64px));
   height: 1px;
 }
 
@@ -688,6 +695,18 @@ const navLogoUrl = computed(() => (store.logoUrl ? getCleanUrl(store.logoUrl, 72
   .reading-progress-bar--nav-hidden {
     top: env(safe-area-inset-top, 0px);
     transform: none;
+  }
+}
+.nav-item-dt-link {
+  min-height: 44px;
+}
+@media (min-width: 768px) and (pointer: coarse) {
+  .nav-item-dt {
+    padding-inline: 4px;
+  }
+  .nav-disclosure {
+    width: 44px;
+    min-width: 44px;
   }
 }
 </style>

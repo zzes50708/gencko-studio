@@ -54,14 +54,10 @@ const displayedHospitals = computed(() => props.visibleHospitals || props.hospit
 const preciseHospitals = computed(() => preciseMapHospitals(displayedHospitals.value))
 const selectedHospital = ref<MapHospital | null>(null)
 const selectedCity = computed(() => normalizeMapCity(props.selected))
-const selectedSummary = computed(() =>
-  selectedCity.value === 'all'
-    ? {
-        count: props.hospitals.length,
-        saved: [...summaries.value.values()].reduce((sum, county) => sum + county.saved, 0)
-      }
-    : summaries.value.get(selectedCity.value) || { count: 0, saved: 0 }
-)
+const selectedSummary = computed(() => ({
+  count: displayedHospitals.value.length,
+  saved: displayedHospitals.value.filter((h) => props.wishlist.includes(h.id)).length
+}))
 const active = computed(
   () => visible.value && documentVisible.value && !failed.value && mapMode.value === '3d'
 )

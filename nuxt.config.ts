@@ -7,6 +7,8 @@ const enableGa =
 export default defineNuxtConfig({
   compatibilityDate: '2024-04-16',
   devtools: { enabled: true },
+  // 測試截圖、追蹤與獨立建置不是網站原始碼，避免寫入時觸發整頁重載。
+  ignore: ['output/**', 'test-results/**'],
 
   // 注意：不要在這裡用 routeRules 對 `/` 做 redirect，
   // 會影響 Nuxt 內部導覽（例如點 Logo 回 `/` 也會被導到 `/about`）。
@@ -18,6 +20,11 @@ export default defineNuxtConfig({
 
   // 修正 dev 模式 Vite 無法解析 `#app-manifest`（避免全站掉樣式/只剩文字）
   vite: {
+    // 開發模式的同一 CSS 網址會依 Accept 回傳樣式或 JS 模組，快取必須分開。
+    server: {
+      headers: { Vary: 'Origin, Accept' },
+      watch: { ignored: ['**/output/**', '**/test-results/**'] }
+    },
     resolve: {
       alias: {
         '#app-manifest': fileURLToPath(new URL('./app-manifest.stub.mjs', import.meta.url))

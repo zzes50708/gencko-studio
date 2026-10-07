@@ -395,7 +395,7 @@ export const LEOPARD_GECKO_CHECKS = {
     const albinoTypes = ['tremper', 'bell', 'rainwater']
     const albinoGenes = allGenes.filter((gene) => albinoTypes.includes(gene.geneId))
 
-    if (albinoGenes.length > 1) {
+    if (new Set(albinoGenes.map((gene) => gene.geneId)).size > 1) {
       return {
         hasWarning: true,
         warning: '不同白化基因 (川普/貝爾/雨水) 互配，子代將不表現白化且造成基因混亂。\n'

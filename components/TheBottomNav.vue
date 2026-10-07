@@ -1,20 +1,21 @@
 <script setup>
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { MOBILE_NAV_ITEMS, getNavigationGroup } from '~/utils/site-navigation'
 import { useMainStore } from '~/stores/useMainStore'
 import { useMediaQuery } from '@vueuse/core'
 
 const route = useRoute()
+const router = useRouter()
 const store = useMainStore()
 const mobile = useMediaQuery('(max-width: 767px)')
 const navItems = MOBILE_NAV_ITEMS
 const sheetOpen = ref(false)
 const activeSheet = ref(null)
 const closeButton = ref(null)
-const sheet = ref(null)
+const sheet = useNativeModal(() => sheetOpen.value)
 const triggerRefs = new Map()
-let previousBodyOverflow = ''
+let ownsHistoryEntry = false
 const activeGroup = computed(() => getNavigationGroup(route.path))
 const currentItem = computed(() => navItems.find((item) => item.key === activeSheet.value))
 
@@ -26,66 +27,60 @@ const setTriggerRef = (key, el) => {
   if (el) triggerRefs.set(key, el)
 }
 
-const openSheet = async (key) => {
+const openSheet = async (key, fromHistory = false) => {
   activeSheet.value = key
+  if (!sheetOpen.value && !fromHistory) {
+    window.history.pushState({ ...window.history.state, genckoNavigationSheet: key }, '')
+  }
+  ownsHistoryEntry = true
   sheetOpen.value = true
   await nextTick()
   closeButton.value?.focus()
 }
 
-const closeSheet = async ({ restoreFocus = true } = {}) => {
+const closeSheet = async ({ restoreFocus = true, consumeHistory = true } = {}) => {
   const previousKey = activeSheet.value
   sheetOpen.value = false
   activeSheet.value = null
+  if (consumeHistory && ownsHistoryEntry && window.history.state?.genckoNavigationSheet) {
+    const popped = new Promise((resolve) =>
+      window.addEventListener('popstate', resolve, { once: true })
+    )
+    window.history.back()
+    await popped
+  }
+  ownsHistoryEntry = false
   if (restoreFocus) {
     await nextTick()
-    triggerRefs.get(previousKey)?.focus()
+    triggerRefs.get(previousKey)?.focus({ preventScroll: true })
   }
 }
 
-const handleKeydown = (event) => {
-  if (event.key === 'Escape' && sheetOpen.value) closeSheet()
-  if (event.key !== 'Tab' || !sheetOpen.value || !sheet.value) return
+const navigateFromSheet = async (to) => {
+  await closeSheet({ restoreFocus: false })
+  await router.push(to)
+}
 
-  const focusable = [...sheet.value.querySelectorAll('a[href], button:not([disabled])')]
-  if (!focusable.length) return
-  const first = focusable[0]
-  const last = focusable[focusable.length - 1]
-  if (event.shiftKey && document.activeElement === first) {
-    event.preventDefault()
-    last.focus()
-  } else if (!event.shiftKey && document.activeElement === last) {
-    event.preventDefault()
-    first.focus()
+const handlePopState = (event) => {
+  const key = event.state?.genckoNavigationSheet
+  if (key && mobile.value && navItems.some((item) => item.key === key)) {
+    openSheet(key, true)
+  } else if (sheetOpen.value) {
+    closeSheet({ consumeHistory: false })
   }
 }
 
 watch(
   () => route.path,
   () => {
-    if (sheetOpen.value) closeSheet({ restoreFocus: false })
+    if (sheetOpen.value) closeSheet({ restoreFocus: false, consumeHistory: false })
   }
 )
-
-watch(sheetOpen, (open) => {
-  if (!import.meta.client) return
-  if (open) {
-    previousBodyOverflow = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
-  } else {
-    document.body.style.overflow = previousBodyOverflow
-  }
-})
-
 watch(mobile, (enabled) => {
   if (!enabled && sheetOpen.value) closeSheet({ restoreFocus: false })
 })
-
-onMounted(() => window.addEventListener('keydown', handleKeydown))
-onUnmounted(() => {
-  window.removeEventListener('keydown', handleKeydown)
-  if (import.meta.client && sheetOpen.value) document.body.style.overflow = previousBodyOverflow
-})
+onMounted(() => window.addEventListener('popstate', handlePopState))
+onUnmounted(() => window.removeEventListener('popstate', handlePopState))
 </script>
 
 <template>
@@ -120,72 +115,63 @@ onUnmounted(() => {
       </template>
     </nav>
 
-    <Transition name="sheet-fade">
-      <button
-        v-if="sheetOpen"
-        type="button"
-        class="sheet-overlay"
-        aria-label="關閉導覽選單"
-        @click="closeSheet()"
-      />
-    </Transition>
-
-    <Transition name="sheet-slide">
-      <section
-        v-if="sheetOpen && currentItem"
+    <Teleport to="body">
+      <dialog
         ref="sheet"
         id="mobile-navigation-sheet"
-        class="sheet"
-        role="dialog"
-        aria-modal="true"
-        :aria-label="`${currentItem.label}導覽選單`"
+        class="navigation-dialog"
+        :aria-label="currentItem ? currentItem.label + '導覽選單' : '導覽選單'"
+        @cancel.prevent="closeSheet()"
+        @click.self="closeSheet()"
       >
-        <div class="sheet-handle" aria-hidden="true" />
-        <div class="sheet-header">
-          <div class="sheet-title">{{ currentItem.label }}</div>
-          <button ref="closeButton" type="button" class="sheet-close" @click="closeSheet()">
-            關閉
-          </button>
-        </div>
-
-        <div class="sheet-body">
-          <div v-if="activeSheet === 'more'" class="mobile-settings">
-            <button type="button" class="sheet-item" @click="store.toggleTheme">
-              {{ store.isDayMode ? '切換深色' : '切換亮色' }}
-            </button>
-            <button
-              v-if="store.canInstall"
-              type="button"
-              class="sheet-item"
-              @click="store.installApp"
-            >
-              安裝 App
+        <section v-if="sheetOpen && currentItem" class="sheet">
+          <div class="sheet-handle" aria-hidden="true" />
+          <div class="sheet-header">
+            <div class="sheet-title">{{ currentItem.label }}</div>
+            <button ref="closeButton" type="button" class="sheet-close" @click="closeSheet()">
+              關閉
             </button>
           </div>
-          <section
-            v-for="section in currentItem.sections"
-            :key="section.label"
-            class="sheet-section"
-          >
-            <h2 class="sheet-section-title">{{ section.label }}</h2>
-            <div class="sheet-list">
-              <NuxtLink
-                no-prefetch
-                v-for="link in section.links"
-                :key="link.to"
-                :to="link.to"
-                :aria-current="route.path === link.to ? 'page' : undefined"
+
+          <div class="sheet-body">
+            <div v-if="activeSheet === 'more'" class="mobile-settings">
+              <button type="button" class="sheet-item" @click="store.toggleTheme">
+                {{ store.isDayMode ? '切換深色' : '切換亮色' }}
+              </button>
+              <button
+                v-if="store.canInstall"
+                type="button"
                 class="sheet-item"
-                @click="closeSheet({ restoreFocus: false })"
+                @click="store.installApp"
               >
-                {{ link.label }}
-                <span aria-hidden="true">→</span>
-              </NuxtLink>
+                安裝 App
+              </button>
             </div>
-          </section>
-        </div>
-      </section>
-    </Transition>
+            <section
+              v-for="section in currentItem.sections"
+              :key="section.label"
+              class="sheet-section"
+            >
+              <h2 class="sheet-section-title">{{ section.label }}</h2>
+              <div class="sheet-list">
+                <NuxtLink
+                  no-prefetch
+                  v-for="link in section.links"
+                  :key="link.to"
+                  :to="link.to"
+                  :aria-current="route.path === link.to ? 'page' : undefined"
+                  class="sheet-item"
+                  @click.prevent="navigateFromSheet(link.to)"
+                >
+                  {{ link.label }}
+                  <span aria-hidden="true">→</span>
+                </NuxtLink>
+              </div>
+            </section>
+          </div>
+        </section>
+      </dialog>
+    </Teleport>
   </div>
 </template>
 
@@ -220,7 +206,7 @@ onUnmounted(() => {
     min-height: 48px;
     padding: 0 4px;
     color: var(--txt);
-    opacity: 0.62;
+    opacity: 1;
     text-decoration: none;
     transition:
       color 180ms ease,
@@ -308,7 +294,7 @@ onUnmounted(() => {
   }
 
   .sheet-close {
-    min-height: 40px;
+    min-height: 44px;
     padding: 7px 13px;
     color: var(--txt);
     font-weight: 800;
@@ -473,5 +459,23 @@ onUnmounted(() => {
     border-color: var(--pri);
     background: color-mix(in srgb, var(--pri) 8%, transparent);
   }
+}
+.navigation-dialog {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100dvh;
+  max-width: none;
+  max-height: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+.navigation-dialog::backdrop {
+  background: rgba(10, 12, 12, 0.62);
+}
+.navigation-dialog[open] {
+  display: block;
 }
 </style>

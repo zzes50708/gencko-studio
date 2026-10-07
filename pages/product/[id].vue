@@ -1,9 +1,11 @@
 <script setup>
-import { computed, ref, onMounted, nextTick } from 'vue'
+import { computed, ref, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { useHead, useAsyncData, useSupabaseClient } from '#imports'
 import { useMainStore } from '~/stores/useMainStore'
 import { getCleanUrl } from '~/utils/image'
+import { getAnimalInquiryLink, getAnimalInquiryText } from '~/utils/animal-inquiry'
+import { auctionState } from '~/utils/auction-presentation'
 
 definePageMeta({
   key: (route) => route.fullPath
@@ -15,6 +17,7 @@ const supabase = useSupabaseClient()
 
 const productId = String(route.params.id || '').trim()
 const isHydrated = ref(false)
+const mainPhotoRefs = ref([])
 
 // 展場設定於 SSR 先載入到 store，避免個體頁價格「先顯示原價再切成提示」的閃爍
 const { data: ssrSiteSettings } = await useAsyncData('product-site-settings', async () => {
@@ -28,7 +31,12 @@ const { data: ssrSiteSettings } = await useAsyncData('product-site-settings', as
 })
 if (ssrSiteSettings.value) store.siteSettings = ssrSiteSettings.value
 
-const { data: currentProduct, pending } = await useAsyncData(`product-${productId}`, async () => {
+const {
+  data: currentProduct,
+  pending,
+  error: productError,
+  refresh: retryProduct
+} = await useAsyncData(`product-${productId}`, async () => {
   if (!productId) return null
   try {
     const { data, error } = await supabase
@@ -39,7 +47,8 @@ const { data: currentProduct, pending } = await useAsyncData(`product-${productI
       .eq('id', productId)
       .maybeSingle()
 
-    if (error || !data) {
+    if (error) throw error
+    if (!data) {
       console.warn('[product] 查無此個體或查詢失敗:', productId, error?.message)
       return null
     }
@@ -62,7 +71,7 @@ const { data: currentProduct, pending } = await useAsyncData(`product-${productI
     }
   } catch (e) {
     console.error('[product] 載入失敗:', e)
-    return null
+    throw e
   }
 })
 
@@ -360,13 +369,8 @@ const getSexCls = (i) => {
 const matchedAuctionId = computed(() => {
   if (!currentProduct.value || currentProduct.value.Status !== 'Auction') return null
   const pid = currentProduct.value.ID
-  const morph = (currentProduct.value.Morph || '').trim().toLowerCase()
-  const exactMatch = (store.auctionList || []).find((a) => a.animal_id === pid)
-  if (exactMatch) return exactMatch.id
-  const morphMatch = (store.auctionList || []).find(
-    (a) => (a.morph || '').trim().toLowerCase() === morph
-  )
-  return morphMatch?.id || null
+  const active = (store.auctionList || []).filter((a) => auctionState(a).status === 'active')
+  return active.find((a) => a.animal_id === pid)?.id || null
 })
 
 const normalizeMorphName = (value) =>
@@ -451,6 +455,9 @@ const toggleWishlist = () => {
 
 onMounted(() => {
   isHydrated.value = true
+  // SSR 圖片可能早於觸控事件綁定失敗，掛載時補查一次。
+  if (mainPhotoRefs.value.some((img) => img.complete && img.naturalWidth === 0))
+    photoFailed.value = true
   if (currentProduct.value?.ID) {
     const id = currentProduct.value.ID
     store.history = [id, ...(store.history || []).filter((x) => x !== id)].slice(0, 50)
@@ -460,7 +467,11 @@ onMounted(() => {
   }
 })
 
+const shareStatus = ref('')
+const manualShareUrl = ref('')
 const shareLink = async () => {
+  shareStatus.value = ''
+  manualShareUrl.value = ''
   if (navigator.share) {
     try {
       await navigator.share({
@@ -468,26 +479,47 @@ const shareLink = async () => {
         text: siteData.value.desc,
         url: window.location.href
       })
+      return
     } catch (err) {
-      console.log('分享已取消或失敗', err)
+      if (err?.name === 'AbortError') return
     }
-  } else {
-    try {
-      await navigator.clipboard.writeText(window.location.href)
-      store.triggerToast()
-    } catch (err) {
-      console.error('複製失敗:', err)
-    }
+  }
+  try {
+    await navigator.clipboard.writeText(window.location.href)
+    shareStatus.value = '連結已複製'
+  } catch {
+    shareStatus.value = '請選取下方連結手動複製。'
+    manualShareUrl.value = window.location.href
+  }
+}
+const photoFailed = ref(false)
+const failedRelatedPhotos = ref(new Set())
+const markRelatedFailed = (id) => {
+  failedRelatedPhotos.value = new Set([...failedRelatedPhotos.value, id])
+}
+const isCompared = computed(() => (store.compareList || []).includes(productId))
+const toggleCompare = () => store.toggleCompare(productId)
+
+const inquiryCopyStatus = ref('')
+const copyInquiry = async () => {
+  if (!currentProduct.value) return
+  try {
+    await navigator.clipboard.writeText(getAnimalInquiryText(currentProduct.value))
+    inquiryCopyStatus.value = '已複製個體 ID 與連結，可貼到私訊。'
+  } catch {
+    inquiryCopyStatus.value = '無法自動複製，請複製上方 ID 與網址。'
   }
 }
 
 const generatedImage = ref(null)
 const isGenerating = ref(false)
+const promoPagePath = route.path
 const promoTriggerEl = ref(null)
-const promoDialogEl = ref(null)
+const promoModal = useHistoryModal('product-promo')
+const promoDialogEl = promoModal.dialog
 
 const generatePromo = async () => {
-  if (!currentProduct.value) return
+  if (!currentProduct.value || isGenerating.value || route.path !== promoPagePath) return
   isGenerating.value = true
   try {
     const canvas = document.createElement('canvas')
@@ -504,6 +536,7 @@ const generatePromo = async () => {
       img.onload = resolve
       img.onerror = reject
     })
+    if (route.path !== promoPagePath) return
     const imgAreaHeight = 820
     ctx.filter = 'blur(40px)'
     const bgScale = Math.max(1080 / img.width, imgAreaHeight / img.height)
@@ -544,9 +577,9 @@ const generatePromo = async () => {
     ctx.font = 'bold 65px Arial, sans-serif'
     ctx.fillText('STUDIO', 1030, 1000)
     generatedImage.value = canvas.toDataURL('image/jpeg', 0.9)
-    await nextTick()
-    promoDialogEl.value?.focus()
+    promoModal.open()
   } catch (err) {
+    if (route.path !== promoPagePath) return
     console.error('圖卡生成失敗', err)
     alert('圖片生成失敗，可能是因為網路跨域限制。')
   } finally {
@@ -554,35 +587,7 @@ const generatePromo = async () => {
   }
 }
 
-const closePromo = async () => {
-  generatedImage.value = null
-  await nextTick()
-  promoTriggerEl.value?.focus()
-}
-
-const handlePromoKeydown = (event) => {
-  if (event.key === 'Escape') {
-    event.preventDefault()
-    void closePromo()
-    return
-  }
-  if (event.key !== 'Tab' || !promoDialogEl.value) return
-
-  const focusable = [
-    ...promoDialogEl.value.querySelectorAll('button, [href], input, select, textarea')
-  ].filter((element) => !element.disabled && element.offsetParent !== null)
-  if (!focusable.length) return
-
-  const first = focusable[0]
-  const last = focusable[focusable.length - 1]
-  if (event.shiftKey && document.activeElement === first) {
-    event.preventDefault()
-    last.focus()
-  } else if (!event.shiftKey && document.activeElement === last) {
-    event.preventDefault()
-    first.focus()
-  }
-}
+const closePromo = () => promoModal.close()
 </script>
 
 <template>
@@ -592,7 +597,11 @@ const handlePromoKeydown = (event) => {
         <span>GENCKO ANIMAL RECORD</span>
         <span>DETAIL / CARE / INQUIRE</span>
       </div>
-      <div v-if="isHydrated && pending" style="text-align: center; padding: 100px 0; color: #888">
+      <div
+        v-if="isHydrated && pending"
+        class="detail-read-state"
+        style="text-align: center; color: #888"
+      >
         <div class="loader" style="margin: 0 auto 20px auto"></div>
         <p>正在尋找這隻守宮的資料...</p>
         <TheBackButton
@@ -602,7 +611,16 @@ const handlePromoKeydown = (event) => {
         />
       </div>
 
-      <div v-else-if="!currentProduct" style="text-align: center; padding: 100px 0; color: #888">
+      <div v-else-if="productError" class="product-read-error" role="alert">
+        <h2>個體資料載入失敗</h2>
+        <button type="button" @click="retryProduct">重試資料</button>
+        <TheBackButton fallback="/shop" text="返回商城列表" />
+      </div>
+      <div
+        v-else-if="!currentProduct"
+        class="detail-read-state"
+        style="text-align: center; color: #888"
+      >
         <h2>找不到此守宮</h2>
         <p>該商品可能已下架或不存在。</p>
         <TheBackButton
@@ -612,7 +630,11 @@ const handlePromoKeydown = (event) => {
         />
       </div>
 
-      <div v-else-if="!productModules" style="text-align: center; padding: 100px 0; color: #888">
+      <div
+        v-else-if="!productModules"
+        class="detail-read-state"
+        style="text-align: center; color: #888"
+      >
         <div class="loader" style="margin: 0 auto 20px auto"></div>
         <p>資料載入中，請稍候...</p>
       </div>
@@ -630,18 +652,28 @@ const handlePromoKeydown = (event) => {
             <NuxtLink
               no-prefetch
               class="prod-img-link"
+              v-if="productModules.visuals.list.length && !photoFailed"
               :to="`/identity/${productModules.identity.id}`"
               :aria-label="`查看 ${productModules.identity.morph} 專屬電子身分證`"
             >
               <img
                 v-for="(img, idx) in productModules.visuals.list"
                 :key="idx"
+                ref="mainPhotoRefs"
                 :src="getCleanUrl(img)"
+                :alt="`${productModules.identity.morph}（${productModules.identity.id}）`"
+                @error="photoFailed = true"
                 class="prod-main-img"
                 loading="eager"
                 decoding="async"
               />
             </NuxtLink>
+            <div v-else class="product-photo-fallback">
+              {{ photoFailed ? '照片載入失敗' : '尚無照片' }}
+              <button v-if="photoFailed" type="button" @click="photoFailed = false">
+                重試照片
+              </button>
+            </div>
             <div class="prod-hint">點擊圖片可查看專屬電子身分證</div>
           </div>
           <div class="prod-info-box">
@@ -671,10 +703,13 @@ const handlePromoKeydown = (event) => {
               <template v-if="productModules.transaction.status === 'Sold'">
                 <span class="status-badge s-sold">已售出</span>
               </template>
-              <template
-                v-else-if="productModules.transaction.status === 'Auction' && matchedAuctionId"
-              >
-                <span class="status-badge s-auction">競標中</span>
+              <template v-else-if="productModules.transaction.status === 'Auction'">
+                <span class="status-badge s-auction">
+                  {{ matchedAuctionId ? '競標中' : '場次待確認' }}
+                </span>
+              </template>
+              <template v-else-if="productModules.transaction.status === 'Reserved'">
+                <span class="status-badge">已預訂</span>
               </template>
               <template v-else-if="productModules.transaction.status === 'SelfKeep'">
                 <span class="status-badge s-nfs">非賣（自留）</span>
@@ -694,26 +729,42 @@ const handlePromoKeydown = (event) => {
             </div>
 
             <div class="prod-actions">
+              <p v-if="shareStatus" role="status">{{ shareStatus }}</p>
+              <input
+                v-if="manualShareUrl"
+                :value="manualShareUrl"
+                readonly
+                aria-label="手動複製個體連結"
+                @focus="$event.target.select()"
+              />
               <NuxtLink
                 no-prefetch
-                v-if="productModules.transaction.status === 'Auction' && matchedAuctionId"
-                :to="`/auction/${matchedAuctionId}`"
+                v-if="productModules.transaction.status === 'Auction'"
+                :to="matchedAuctionId ? `/auction/${matchedAuctionId}` : '/auction'"
                 class="btn-app btn-app--primary btn-app--lg btn-buy-lg"
               >
-                🔨 前往競標場次
+                {{ matchedAuctionId ? '前往競標場次' : '查看競標列表' }}
               </NuxtLink>
               <a
                 v-else-if="
                   productModules.transaction.status === 'ForSale' ||
                   productModules.transaction.status === 'Auction'
                 "
-                :href="store.lineLink"
+                :href="getAnimalInquiryLink(store.lineLink, currentProduct)"
                 target="_blank"
                 class="btn-app btn-app--primary btn-app--lg btn-buy-lg"
               >
                 私訊購買（Line）
               </a>
               <div class="action-sub-buttons">
+                <button
+                  type="button"
+                  class="btn-app btn-app--secondary btn-app--md btn-compare"
+                  :aria-pressed="isCompared"
+                  @click="toggleCompare"
+                >
+                  {{ isCompared ? '移出比較' : '加入比較' }}
+                </button>
                 <button
                   type="button"
                   class="btn-app btn-app--secondary btn-app--md btn-wishlist"
@@ -741,6 +792,16 @@ const handlePromoKeydown = (event) => {
                   {{ isGenerating ? '⏳ 生成中...' : '產生圖卡' }}
                 </button>
               </div>
+              <button
+                type="button"
+                class="btn-app btn-app--secondary btn-app--sm"
+                @click="copyInquiry"
+              >
+                複製詢問內容（含 ID 與連結）
+              </button>
+              <p v-if="inquiryCopyStatus" role="status" style="font-size: 12px; margin: 0">
+                {{ inquiryCopyStatus }}
+              </p>
             </div>
           </div>
         </div>
@@ -770,7 +831,8 @@ const handlePromoKeydown = (event) => {
             >
               <div class="related-img-wrap">
                 <img
-                  v-if="item.ImageURL"
+                  v-if="item.ImageURL && !failedRelatedPhotos.has(item.ID)"
+                  @error="markRelatedFailed(item.ID)"
                   :src="getCleanUrl(item.ImageURL, 300)"
                   :alt="item.Morph"
                   loading="lazy"
@@ -819,42 +881,42 @@ const handlePromoKeydown = (event) => {
         </div>
       </div>
 
-      <div v-if="generatedImage" class="promo-modal-overlay" @click="closePromo">
-        <div
+      <Teleport to="body">
+        <dialog
           ref="promoDialogEl"
-          class="promo-modal-content"
-          role="dialog"
-          aria-modal="true"
+          class="promo-modal-overlay"
           aria-labelledby="promo-dialog-title"
-          tabindex="-1"
-          @click.stop
-          @keydown="handlePromoKeydown"
+          @cancel.prevent="closePromo"
+          @click.self="closePromo"
         >
-          <button
-            type="button"
-            class="btn-app btn-app--ghost btn-app--sm btn-close-promo"
-            aria-label="關閉宣傳圖卡"
-            @click="closePromo"
-          >
-            <span aria-hidden="true">✕</span>
-          </button>
-          <h3 id="promo-dialog-title" style="color: var(--txt); margin-top: 10px">
-            📸 宣傳圖卡已生成
-          </h3>
-          <p style="color: var(--txt); opacity: 0.8; font-size: 0.9rem">
-            請長按圖片儲存（或點擊右鍵另存），
-            <br />
-            即可完美分享至 IG 限時動態！
-          </p>
-          <img
-            :src="generatedImage"
-            alt="Promo Result"
-            class="promo-result-img"
-            loading="lazy"
-            decoding="async"
-          />
-        </div>
-      </div>
+          <div v-if="generatedImage" class="promo-modal-content" tabindex="-1" @click.stop>
+            <button
+              type="button"
+              class="btn-app btn-app--ghost btn-app--sm btn-close-promo"
+              autofocus
+              aria-label="關閉宣傳圖卡"
+              @click="closePromo"
+            >
+              <span aria-hidden="true">✕</span>
+            </button>
+            <h3 id="promo-dialog-title" style="color: var(--txt); margin-top: 10px">
+              📸 宣傳圖卡已生成
+            </h3>
+            <p style="color: var(--txt); opacity: 0.8; font-size: 0.9rem">
+              請長按圖片儲存（或點擊右鍵另存），
+              <br />
+              即可完美分享至 IG 限時動態！
+            </p>
+            <img
+              :src="generatedImage"
+              alt="Promo Result"
+              class="promo-result-img"
+              loading="lazy"
+              decoding="async"
+            />
+          </div>
+        </dialog>
+      </Teleport>
     </div>
   </div>
 </template>
@@ -1519,5 +1581,121 @@ const handlePromoKeydown = (event) => {
 .prod-terms-box {
   border-width: 1px 0;
   background-image: none;
+}
+</style>
+
+<style scoped>
+.product-photo-fallback {
+  min-height: 180px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--bd);
+}
+.product-photo-fallback button,
+.product-read-error button {
+  min-height: 44px;
+}
+.prod-actions input {
+  width: 100%;
+  min-height: 40px;
+  font-size: 16px;
+}
+.btn-compare {
+  min-height: 44px;
+}
+.action-sub-buttons {
+  flex-wrap: wrap;
+}
+.action-sub-buttons .btn-app {
+  flex: 1 1 calc(50% - 8px);
+}
+dialog.promo-modal-overlay {
+  margin: auto;
+  width: min(560px, calc(100vw - 24px));
+  height: auto;
+  max-height: calc(100dvh - 24px);
+  border: 0;
+  padding: 16px;
+  overflow: auto;
+  background: var(--bg);
+  color: var(--txt);
+}
+dialog.promo-modal-overlay:not([open]) {
+  display: none;
+}
+dialog.promo-modal-overlay[open] {
+  display: block;
+}
+dialog.promo-modal-overlay::backdrop {
+  background: rgba(0, 0, 0, 0.65);
+}
+@media (min-width: 768px) and (max-width: 1023px) {
+  .prod-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 20px;
+  }
+  .prod-info-box {
+    min-width: 0;
+  }
+}
+@media (max-width: 767px) {
+  .prod-layout {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .prod-info-box {
+    display: contents;
+  }
+  .prod-header {
+    order: 0;
+  }
+  .prod-price-area {
+    order: 1;
+  }
+  .prod-img-box {
+    order: 2;
+  }
+  .guarantee-icons-row {
+    order: 3;
+  }
+  .prod-actions {
+    order: 4;
+  }
+  .prod-header,
+  .prod-price-area {
+    margin: 0;
+    padding: 4px 0;
+  }
+}
+</style>
+
+<style scoped>
+.detail-read-state {
+  padding: 100px 0;
+}
+@media (max-width: 767px) {
+  /* 載入與查無資料沿用相同緊湊節奏，保留清楚的返回操作。 */
+  .detail-read-state {
+    padding: 16px 0;
+    color: var(--txt) !important;
+    opacity: 1 !important;
+  }
+  .detail-read-state h2 {
+    font-size: 20px;
+    line-height: 1.4;
+    margin: 0 0 8px;
+  }
+  .detail-read-state p {
+    margin: 6px 0;
+  }
+  .detail-read-state .loader {
+    margin-bottom: 10px !important;
+  }
+  .detail-read-state :deep(.nav-action-row),
+  .detail-read-state > button {
+    margin: 10px auto 0 !important;
+  }
 }
 </style>

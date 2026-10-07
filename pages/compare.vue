@@ -4,6 +4,9 @@ import { useRoute, useRouter } from 'vue-router'
 import { useHead } from '#imports'
 import { useMainStore } from '~/stores/useMainStore'
 import { getCleanUrl } from '~/utils/image'
+import { sanitizeCompareIds } from '~/utils/shop-catalog'
+import { getAnimalInquiryLink } from '~/utils/animal-inquiry'
+import { auctionState } from '~/utils/auction-presentation'
 
 const store = useMainStore()
 const route = useRoute()
@@ -14,6 +17,10 @@ const clearAndGoShop = () => {
   store.clearCompare()
   router.push('/shop')
 }
+onMounted(() => {
+  store.restoreCompare()
+  retryInventory()
+})
 
 const cmpUrl = 'https://www.genckobreeding.com/compare'
 const cmpImg =
@@ -176,8 +183,8 @@ useHead({
 
 // 🌟 加入 (store.compareList || []) 保護
 const ids = computed(() => {
-  if (route.query.ids) return String(route.query.ids).split(',').filter(Boolean).slice(0, 3)
-  return (store.compareList || []).slice(0, 3)
+  if (route.query.ids !== undefined) return sanitizeCompareIds(String(route.query.ids).split(','))
+  return sanitizeCompareIds(store.compareList || [])
 })
 
 // 🌟 加入 (store.inv || []) 保護
@@ -185,13 +192,50 @@ const items = computed(() =>
   ids.value.map((id) => (store.inv || []).find((i) => i.ID === id)).filter(Boolean)
 )
 
+const missingIds = computed(() => ids.value.filter((id) => !items.value.some((i) => i.ID === id)))
+const inventoryReady = ref(false)
+const retryInventory = async () => {
+  inventoryReady.value = false
+  try {
+    await store.loadDataFromAPI()
+  } finally {
+    inventoryReady.value = true
+  }
+}
+const failedPhotos = ref(new Set())
+const failPhoto = (id) => {
+  failedPhotos.value = new Set([...failedPhotos.value, id])
+}
+const retryPhoto = (id) => {
+  const next = new Set(failedPhotos.value)
+  next.delete(id)
+  failedPhotos.value = next
+}
+const copyStatus = ref('')
+const manualShareUrl = ref('')
+const copyCompareLink = async () => {
+  const url = new URL('/compare', window.location.origin)
+  url.searchParams.set('ids', ids.value.join(','))
+  manualShareUrl.value = ''
+  try {
+    await navigator.clipboard.writeText(url.href)
+    copyStatus.value = '比較連結已複製'
+  } catch {
+    manualShareUrl.value = url.href
+    copyStatus.value = '請選取下方連結手動複製。'
+  }
+}
+const geneDescription = (g) => {
+  const owners = allGenes.value.find((gene) => gene.gene === g)?.owners || 0
+  return items.value.length < 2 ? g : `${g}（${owners}/${items.value.length} 隻）`
+}
 const allGenes = computed(() => {
   const sets = items.value.map((i) => new Set(Array.isArray(i.Genes) ? i.Genes : []))
   const allSet = new Set(sets.flatMap((s) => [...s]))
   return [...allSet]
     .map((g) => ({
       gene: g,
-      shared: sets.every((s) => s.has(g)),
+      shared: sets.length > 1 && sets.every((s) => s.has(g)),
       owners: items.value.filter((_, idx) => sets[idx].has(g)).length
     }))
     .sort((a, b) => b.owners - a.owners)
@@ -213,29 +257,35 @@ const fmtSex = (i) => {
 const fmtStatus = (i) => {
   if (!i) return '-'
   if (i.Status === 'ForSale') return '出售中'
-  if (i.Status === 'Auction') return '競標中'
+  if (i.Status === 'Auction') return hasActiveAuction(i.ID) ? '競標中' : '場次待確認'
   if (i.Status === 'Sold') return '已售出'
-  return i.Status
+  return { Reserved: '已預訂', SelfKeep: '自留種群', Hidden: '未開放' }[i.Status] || '狀態待確認'
 }
 
 const fmtPrice = (i) => {
   if (!i) return '-'
+  if (store.isExhibitionMode) return store.exhibitionNote
   if (i.Status === 'Sold') return `已售 $${i.SoldPrice || '?'}`
   if (i.ListingPrice) return `NT$ ${i.ListingPrice}`
   return '-'
 }
 
 // 🌟 加入 (store.auctionList || []) 保護
-const hasActiveAuction = (id) => (store.auctionList || []).some((a) => a.animal_id === id)
+const hasActiveAuction = (id) =>
+  (store.auctionList || []).some((a) => a.animal_id === id && auctionState(a).status === 'active')
 
 const getAuctionLink = (id) => {
-  const auction = (store.auctionList || []).find((a) => a.animal_id === id)
+  const auction = (store.auctionList || []).find(
+    (a) => a.animal_id === id && auctionState(a).status === 'active'
+  )
   return auction ? `/auction/${auction.id}` : '/auction'
 }
 
 const removeItem = (id) => {
-  store.toggleCompare(id)
-  if ((store.compareList || []).length === 0) router.push('/shop')
+  const remaining = ids.value.filter((value) => value !== id)
+  store.compareList = (store.compareList || []).filter((value) => value !== id)
+  if (route.query.ids !== undefined)
+    router.replace({ query: { ...route.query, ids: remaining.join(',') } })
 }
 </script>
 
@@ -252,12 +302,12 @@ const removeItem = (id) => {
         <p>相似個體挑選，看看喜歡哪個。</p>
       </div>
       <div class="compare-header__actions">
-        <span class="compare-count">已選擇 {{ items.length }} / 3 隻</span>
+        <span class="compare-count">已選擇 {{ ids.length }} / 3 隻</span>
         <NuxtLink no-prefetch to="/shop" class="btn-app btn-app--ghost btn-app--sm back-btn">
           返回商城
         </NuxtLink>
         <button
-          v-if="items.length > 0"
+          v-if="ids.length > 0"
           type="button"
           class="btn-app btn-app--secondary btn-app--sm clear-all-btn"
           @click="clearAndGoShop()"
@@ -267,7 +317,30 @@ const removeItem = (id) => {
       </div>
     </header>
 
-    <section v-if="items.length === 0" class="empty-compare" aria-labelledby="empty-title">
+    <p v-if="!inventoryReady && !items.length" role="status">載入比較資料中…</p>
+    <p v-if="store.dataError" role="alert">
+      資料載入失敗，請重試。
+      <button type="button" @click="retryInventory">重試資料</button>
+    </p>
+    <div
+      v-if="inventoryReady && !store.dataError && missingIds.length"
+      class="missing-items"
+      role="status"
+    >
+      <p>以下個體無法取得，可能已下架：</p>
+      <div v-for="id in missingIds" :key="id">
+        {{ id }}
+        <button type="button" @click="removeItem(id)" :aria-label="`移除失效個體 ${id}`">
+          移除
+        </button>
+      </div>
+      <button type="button" @click="retryInventory">重新查詢</button>
+    </div>
+    <section
+      v-if="inventoryReady && !store.dataError && ids.length === 0"
+      class="empty-compare"
+      aria-labelledby="empty-title"
+    >
       <p class="empty-compare__index" aria-hidden="true">00 / 03</p>
       <h2 id="empty-title">尚未選擇任何個體</h2>
       <p>回到商城加入最多三隻個體，就能在這裡直接比較基因與價格。</p>
@@ -276,9 +349,9 @@ const removeItem = (id) => {
       </NuxtLink>
     </section>
 
-    <template v-else>
+    <template v-if="items.length">
       <div class="compare-toolbar">
-        <div class="gene-legend" aria-label="基因標記說明">
+        <div v-if="items.length > 1" class="gene-legend" aria-label="基因標記說明">
           <span>
             <i class="legend-dot shared" aria-hidden="true"></i>
             所有個體共有
@@ -288,7 +361,26 @@ const removeItem = (id) => {
             單一個體獨有
           </span>
         </div>
-        <p class="compare-scroll-hint">可左右滑動查看完整比較</p>
+        <p class="compare-scroll-hint">
+          {{
+            items.length > 2
+              ? '目前先顯示兩隻，向左滑動查看第三隻'
+              : items.length === 1
+                ? '加入第二隻，即可比較基因差異'
+                : ''
+          }}
+        </p>
+        <button type="button" class="btn-app btn-app--ghost btn-app--sm" @click="copyCompareLink">
+          複製比較連結
+        </button>
+        <p v-if="copyStatus" role="status">{{ copyStatus }}</p>
+        <input
+          v-if="manualShareUrl"
+          :value="manualShareUrl"
+          readonly
+          aria-label="手動複製比較連結"
+          @focus="$event.target.select()"
+        />
       </div>
 
       <section class="compare-scroll" role="region" aria-label="個體比較表" tabindex="0">
@@ -315,17 +407,23 @@ const removeItem = (id) => {
                   :aria-label="`查看 ${item.Morph} 詳細資料`"
                 >
                   <img
-                    v-if="item.ImageURL"
+                    v-if="item.ImageURL && !failedPhotos.has(item.ID)"
+                    @error="failPhoto(item.ID)"
                     :src="getCleanUrl(item.ImageURL, 400)"
                     :alt="item.Morph"
                     class="compare-img"
                     loading="lazy"
                     decoding="async"
                   />
-                  <div v-else class="compare-img-placeholder" aria-hidden="true">無圖片</div>
+                  <div v-else class="compare-img-placeholder">
+                    {{ failedPhotos.has(item.ID) ? '照片載入失敗' : '無圖片' }}
+                  </div>
                   <span class="item-morph">{{ item.Morph }}</span>
                   <span class="item-id">ID {{ item.ID }}</span>
                 </NuxtLink>
+                <button v-if="failedPhotos.has(item.ID)" type="button" @click="retryPhoto(item.ID)">
+                  重試照片
+                </button>
               </th>
             </tr>
           </thead>
@@ -354,10 +452,11 @@ const removeItem = (id) => {
                     class="gene-tag"
                     :class="{
                       shared: allGenes.find((gene) => gene.gene === g)?.shared,
-                      unique: allGenes.find((gene) => gene.gene === g)?.owners === 1
+                      unique:
+                        items.length > 1 && allGenes.find((gene) => gene.gene === g)?.owners === 1
                     }"
                   >
-                    {{ g }}
+                    {{ geneDescription(g) }}
                   </span>
                   <span v-if="!item.Genes || item.Genes.length === 0" class="empty-value">
                     未登錄
@@ -393,7 +492,7 @@ const removeItem = (id) => {
                   <NuxtLink
                     no-prefetch
                     v-if="item.Status === 'ForSale'"
-                    :href="store.lineLink"
+                    :href="getAnimalInquiryLink(store.lineLink, item)"
                     target="_blank"
                     class="btn-app btn-app--primary btn-app--sm btn-action"
                   >
@@ -826,6 +925,11 @@ const removeItem = (id) => {
   font-variant-numeric: tabular-nums;
 }
 
+.compare-table .gene-tag {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  max-width: 100%;
+}
 .compare-toolbar {
   display: flex;
   align-items: center;
@@ -1205,6 +1309,98 @@ const removeItem = (id) => {
   .item-link,
   .compare-scroll {
     scroll-behavior: auto !important;
+  }
+}
+</style>
+
+<style scoped>
+/* 手機同時看清兩隻，第三隻才需要橫向移動。 */
+.compare-table.cols-1,
+.compare-table.cols-2 {
+  min-width: 0;
+}
+.compare-table .item-morph {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+@media (max-width: 767px) {
+  .compare-table.cols-1,
+  .compare-table.cols-2 {
+    width: 100%;
+    min-width: 0;
+  }
+  .compare-table.cols-3 {
+    width: calc(150% - 32px);
+    min-width: calc(150% - 32px);
+  }
+  .compare-table .row-label {
+    width: 64px;
+    padding: 8px 6px;
+  }
+  .compare-table th,
+  .compare-table td {
+    padding: 8px;
+  }
+  .compare-table .btn-action {
+    white-space: normal;
+    font-size: 12px;
+    padding: 6px;
+  }
+  .compare-table .item-heading {
+    min-width: 0;
+  }
+  .compare-table .remove-btn {
+    width: 44px;
+    height: 44px;
+    min-height: 44px;
+  }
+  .compare-table .price-cell {
+    font-size: 16px;
+    white-space: normal;
+  }
+  .compare-scroll {
+    max-width: 100%;
+    scrollbar-gutter: auto;
+  }
+}
+</style>
+
+<style scoped>
+.compare-toolbar {
+  gap: 8px;
+  margin: 8px 0 10px;
+  padding: 0;
+  flex-wrap: wrap;
+}
+.compare-toolbar p {
+  margin: 0;
+  font-size: 12px;
+}
+.compare-toolbar input {
+  width: 100%;
+  font-size: 16px;
+  min-height: 40px;
+}
+.missing-items {
+  padding: 10px;
+  border: 1px solid var(--bd);
+  margin: 8px 0;
+}
+.missing-items button {
+  min-height: 44px;
+}
+@media (max-width: 767px) {
+  .compare-header {
+    margin-bottom: 8px;
+  }
+  .compare-table .compare-img,
+  .compare-table .compare-img-placeholder {
+    max-height: 110px;
+    object-fit: cover;
+  }
+  .compare-table .item-heading {
+    padding-top: 6px;
+    padding-bottom: 6px;
   }
 }
 </style>

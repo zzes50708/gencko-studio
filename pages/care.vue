@@ -285,9 +285,17 @@ const scrollTo = (id) => {
   if (typeof window === 'undefined') return
   const el = document.getElementById(id)
   if (!el) return
-  const offset = window.innerWidth <= 1024 ? 156 : 110
+  // 使用全站導覽尺寸；手機沒有頂部導覽，不沿用桌面預留空間。
+  const rootStyle = getComputedStyle(document.documentElement)
+  const offset =
+    window.innerWidth < 768
+      ? 12
+      : (parseFloat(rootStyle.getPropertyValue('--site-nav-height')) || 64) + 12
   const top = el.getBoundingClientRect().top + window.scrollY - offset
-  window.scrollTo({ top, behavior: 'smooth' })
+  window.scrollTo({
+    top,
+    behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth'
+  })
 }
 
 const handlePersona = (p) => {
@@ -402,19 +410,42 @@ const handlePersona = (p) => {
 
         <section id="food" class="care-section">
           <h2 class="care-h">餵食頻率與營養</h2>
-          <div class="care-table care-table--feed">
-            <div class="care-tr care-tr-head">
-              <div>年齡</div>
-              <div>頻率</div>
-              <div>份量</div>
-              <div>主食</div>
-            </div>
-            <div v-for="row in FEED_FREQ" :key="row.age" class="care-tr">
-              <div>{{ row.age }}</div>
-              <div>{{ row.freq }}</div>
-              <div>{{ row.qty }}</div>
-              <div>{{ row.menu }}</div>
-            </div>
+          <table class="care-data-table" aria-label="餵食頻率與份量">
+            <thead>
+              <tr>
+                <th scope="col">年齡</th>
+                <th scope="col">頻率</th>
+                <th scope="col">份量</th>
+                <th scope="col">主食</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="row in FEED_FREQ" :key="row.age">
+                <th scope="row">{{ row.age }}</th>
+                <td>{{ row.freq }}</td>
+                <td>{{ row.qty }}</td>
+                <td>{{ row.menu }}</td>
+              </tr>
+            </tbody>
+          </table>
+          <div class="care-mobile-data" aria-label="餵食頻率與份量">
+            <section v-for="row in FEED_FREQ" :key="row.age" class="care-data-row">
+              <h3>{{ row.age }}</h3>
+              <dl>
+                <div>
+                  <dt>頻率</dt>
+                  <dd>{{ row.freq }}</dd>
+                </div>
+                <div>
+                  <dt>份量</dt>
+                  <dd>{{ row.qty }}</dd>
+                </div>
+                <div class="care-data-wide">
+                  <dt>主食</dt>
+                  <dd>{{ row.menu }}</dd>
+                </div>
+              </dl>
+            </section>
           </div>
 
           <div class="care-feed-rule">💡 餌料尺寸不超過守宮頭部寬度。</div>
@@ -454,17 +485,36 @@ const handlePersona = (p) => {
             </div>
           </div>
 
-          <div class="care-table care-table--supp">
-            <div class="care-tr care-tr-head">
-              <div>年齡</div>
-              <div>鈣粉（含 D3）</div>
-              <div>綜合維生素</div>
-            </div>
-            <div v-for="s in SUPPLEMENTS" :key="s.name" class="care-tr care-tr-3">
-              <div>{{ s.name }}</div>
-              <div>{{ s.juvenile }}</div>
-              <div>{{ s.adult }}</div>
-            </div>
+          <table class="care-data-table" aria-label="營養補充安排">
+            <thead>
+              <tr>
+                <th scope="col">年齡</th>
+                <th scope="col">鈣粉（含 D3）</th>
+                <th scope="col">綜合維生素</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="item in SUPPLEMENTS" :key="item.name">
+                <th scope="row">{{ item.name }}</th>
+                <td>{{ item.juvenile }}</td>
+                <td>{{ item.adult }}</td>
+              </tr>
+            </tbody>
+          </table>
+          <div class="care-mobile-data" aria-label="營養補充安排">
+            <section v-for="item in SUPPLEMENTS" :key="item.name" class="care-data-row">
+              <h3>{{ item.name }}</h3>
+              <dl>
+                <div>
+                  <dt>鈣粉（含 D3）</dt>
+                  <dd>{{ item.juvenile }}</dd>
+                </div>
+                <div>
+                  <dt>綜合維生素</dt>
+                  <dd>{{ item.adult }}</dd>
+                </div>
+              </dl>
+            </section>
           </div>
 
           <div class="care-supp-warn">{{ SUPPLEMENT_WARN }}</div>
@@ -3200,6 +3250,77 @@ const handlePersona = (p) => {
 
   .care-chip {
     width: 100%;
+  }
+}
+/* 資料沿用既有內容，手機以帶標籤的資料列呈現。 */
+.care-data-table {
+  width: 100%;
+  table-layout: fixed;
+  border-collapse: collapse;
+  font-size: 0.86rem;
+}
+.care-data-table th,
+.care-data-table td {
+  padding: 10px 8px;
+  border-bottom: 1px solid var(--bd);
+  text-align: left;
+  vertical-align: top;
+  overflow-wrap: anywhere;
+}
+.care-data-table thead {
+  background: var(--card-bg);
+}
+.care-mobile-data {
+  display: none;
+}
+@media (max-width: 767px) {
+  .care-decision-map {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0 10px;
+  }
+  .care-decision-map a,
+  .care-reading-index-links button {
+    font-size: 0.82rem;
+    min-height: 44px;
+  }
+  .care-data-table {
+    display: none;
+  }
+  .care-mobile-data {
+    display: block;
+  }
+  .care-data-row {
+    display: grid;
+    grid-template-columns: 68px minmax(0, 1fr);
+    gap: 10px;
+    padding: 9px 0;
+    border-bottom: 1px solid var(--bd);
+    font-size: 0.82rem;
+  }
+  .care-data-row h3 {
+    margin: 0;
+    font-size: inherit;
+    line-height: 1.6;
+  }
+  .care-data-row dl {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 5px 10px;
+    margin: 0;
+  }
+  .care-data-row dt {
+    color: var(--txt-muted);
+  }
+  .care-data-row dd {
+    margin: 0;
+  }
+  .care-data-wide {
+    grid-column: 1 / -1;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .care-progress-fill {
+    transition: none;
   }
 }
 </style>

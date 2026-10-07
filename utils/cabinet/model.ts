@@ -241,8 +241,10 @@ export function createCabinetModel(
     textures.push(result)
     return result
   }
-  const woodMap = texture(true),
-    woodRoughness = texture(true, true)
+  // 已有正式貼圖時直接使用；純色貼皮不需要產生備援木紋。
+  const needsWoodFallback = !woodTextures && !['white', 'charcoal'].includes(cfg.finishId)
+  const woodMap = woodTextures?.color ?? (needsWoodFallback ? texture(true) : null),
+    woodRoughness = woodTextures?.roughness ?? (needsWoodFallback ? texture(true, true) : null)
   const finish = FINISHES.find((item) => item.id === cfg.finishId) || FINISHES[0]!
   const palette: Record<string, MeshStandardMaterial | MeshPhysicalMaterial> = {
     wood: ownMaterial(
@@ -730,7 +732,7 @@ export function createCabinetModel(
   textures.push(flatNormal)
   const woodMaps: CabinetWoodTextures = woodTextures
     ? woodTextures
-    : { color: woodMap, normal: flatNormal, roughness: woodRoughness }
+    : { color: woodMap!, normal: flatNormal, roughness: woodRoughness! }
   const boardTint = woodTextures ? '#ffffff' : finish.color
   const faceMaterial = (w: number, h: number) => {
     const key = `${w}:${h}`

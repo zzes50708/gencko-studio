@@ -22,7 +22,9 @@ export interface CalcResult {
 export function getProbFraction(prob: number): string {
   if (prob >= 0.99) return ''
   const frac = Math.round(1 / prob)
-  if ([2, 3, 4, 8, 16, 32, 64, 128, 256].includes(frac)) return `1/${frac}`
+  // 只有精確相符才顯示分數，避免把 42.19% 等機率誤標為 1/2。
+  if ([2, 3, 4, 8, 16, 32, 64, 128, 256].includes(frac) && Math.abs(prob - 1 / frac) < 1e-10)
+    return `1/${frac}`
   return ''
 }
 

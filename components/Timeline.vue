@@ -9,6 +9,7 @@ interface TimelineNode {
   body: string
   to?: string
   linkLabel?: string
+  external?: boolean
 }
 
 // buying-guide 專用的縱向時間軸。連接線以 flex 剩餘空間繪製，自動跟隨節點內容高度。
@@ -46,7 +47,15 @@ defineProps({
         </div>
         <h2 class="node-title">{{ node.title }}</h2>
         <p class="node-body">{{ node.body }}</p>
-        <NuxtLink no-prefetch v-if="node.to" :to="node.to" class="node-link">
+        <NuxtLink
+          no-prefetch
+          v-if="node.to"
+          :to="node.to"
+          :external="node.external"
+          :target="node.external ? '_blank' : undefined"
+          :rel="node.external ? 'noopener noreferrer' : undefined"
+          class="node-link"
+        >
           {{ node.linkLabel || '看更多' }}
           <span aria-hidden="true">→</span>
         </NuxtLink>

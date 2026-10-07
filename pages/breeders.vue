@@ -33,6 +33,16 @@ const { data: ssrBreeders } = await useAsyncData('breeders-list-seo-v1', async (
 
 // 物種切換（使用本地 ref，store 中未定義 breeder_sp，直接寫入 store 不具響應性）
 const breederSp = ref('豹紋守宮')
+const breederKeyword = ref('')
+const failedPhotos = ref(new Set())
+const markPhotoFailed = (id) => {
+  failedPhotos.value = new Set([...failedPhotos.value, id])
+}
+const retryPhoto = (id) => {
+  const next = new Set(failedPhotos.value)
+  next.delete(id)
+  failedPhotos.value = next
+}
 
 onMounted(() => {
   store.ensureInventoryLoaded()
@@ -47,6 +57,12 @@ const selectBreederSp = (species) => {
 const breedersList = computed(() => {
   return store.inv
     .filter((i) => i.Species === breederSp.value && i.Status === 'SelfKeep')
+    .filter((i) =>
+      [i.ID, i.Morph, ...(i.Genes || [])]
+        .join(' ')
+        .toLowerCase()
+        .includes(breederKeyword.value.trim().toLowerCase())
+    )
     .slice()
     .sort((a, b) => {
       const hotA = a.IsHot ? 1 : 0
@@ -224,13 +240,16 @@ useHead({
     </div>
 
     <section class="breeders-directory-stage" aria-labelledby="breeders-directory-title">
-      <header class="breeders-stage-heading">
-        <span>01</span>
-        <div>
-          <p>BREEDING COLLECTION</p>
-          <h2 id="breeders-directory-title">{{ breederSp }}精選種群</h2>
-        </div>
-      </header>
+      <div class="breeders-catalog-tools">
+        <h2 id="breeders-directory-title" class="sr-only">{{ breederSp }}精選種群</h2>
+        <input
+          v-model="breederKeyword"
+          type="search"
+          aria-label="搜尋種群品系、基因或編號"
+          placeholder="搜尋品系、基因或編號"
+        />
+        <span aria-live="polite">{{ breedersList.length }} 隻</span>
+      </div>
 
       <div
         v-if="store.loading && !store.inventoryLoaded && breedersList.length === 0"
@@ -258,7 +277,8 @@ useHead({
 
       <div v-else-if="breedersList.length === 0" class="breeders-empty-state">
         <span>ARCHIVE UPDATING</span>
-        <h3>此物種目前尚無公開種群。</h3>
+        <h3>{{ breederKeyword ? '沒有符合搜尋的種群' : '此物種目前尚無公開種群。' }}</h3>
+        <button v-if="breederKeyword" type="button" @click="breederKeyword = ''">清除搜尋</button>
         <p>完成個體資料整理後會陸續更新；你可以先瀏覽在售個體或探索基因圖鑑。</p>
         <div>
           <NuxtLink no-prefetch to="/shop">瀏覽在售個體</NuxtLink>
@@ -269,10 +289,11 @@ useHead({
       <div class="grid photo-grid" v-else>
         <article v-for="(i, index) in breedersList" :key="i.ID" class="breeder-photo-card">
           <img
-            v-if="i.ImageURL"
+            v-if="i.ImageURL && !failedPhotos.has(i.ID)"
             :src="getCleanUrl(i.ImageURL, 600)"
-            :alt="`${i.Morph} 種群`"
+            :alt="`${i.Morph} 種群（${i.ID}）`"
             class="breeder-photo"
+            @error="markPhotoFailed(i.ID)"
             :loading="index < 8 ? 'eager' : 'lazy'"
             :fetchpriority="index < 8 ? 'high' : 'auto'"
             decoding="async"
@@ -283,9 +304,15 @@ useHead({
             role="img"
             :aria-label="`${i.Morph} 無圖片`"
           >
-            <span>無圖片</span>
+            <span>{{ failedPhotos.has(i.ID) ? '照片載入失敗' : '無圖片' }}</span>
+            <button v-if="failedPhotos.has(i.ID)" type="button" @click="retryPhoto(i.ID)">
+              重試照片
+            </button>
           </div>
-          <h3 class="breeder-morph">{{ i.Morph }}</h3>
+          <div class="breeder-caption">
+            <h3 class="breeder-morph">{{ i.Morph }}</h3>
+            <small>{{ i.ID }}</small>
+          </div>
         </article>
       </div>
     </section>
@@ -792,6 +819,89 @@ useHead({
     bottom: 6px;
     left: 6px;
     font-size: clamp(0.76rem, 3.4vw, 0.95rem);
+  }
+}
+
+.breeders-catalog-tools {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 8px 0;
+}
+.breeders-catalog-tools input {
+  min-width: 0;
+  flex: 1;
+  min-height: 40px;
+  padding: 6px 10px;
+  border: 1px solid var(--bd);
+  background: var(--card-bg-solid);
+  color: var(--txt);
+  font-size: 16px;
+}
+.breeders-catalog-tools span {
+  font-size: 12px;
+  color: var(--txt-muted);
+  white-space: nowrap;
+}
+.breeders-directory-stage {
+  margin-top: 8px;
+  padding-top: 0;
+}
+.breeder-photo-card {
+  aspect-ratio: auto;
+  display: flex;
+  flex-direction: column;
+  background: var(--card-bg-solid);
+}
+.breeder-photo {
+  position: relative;
+  inset: auto;
+  aspect-ratio: 1;
+  height: auto;
+}
+.breeder-photo--empty {
+  min-height: 100px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 8px;
+}
+.breeder-photo--empty button {
+  min-height: 40px;
+  padding: 4px 8px;
+}
+.breeder-caption {
+  padding: 6px;
+}
+.breeder-caption .breeder-morph {
+  position: static;
+  text-align: left;
+  white-space: normal;
+  color: var(--txt);
+  text-shadow: none;
+  font-size: 14px;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+.breeder-caption small {
+  display: block;
+  font-size: 10px;
+  color: var(--txt-muted);
+  margin-top: 3px;
+}
+@media (max-width: 767px) {
+  .grid.photo-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 10px;
+  }
+  .breeders-directory-stage {
+    margin-top: 6px !important;
+    padding-top: 0 !important;
+  }
+}
+@media (min-width: 768px) and (max-width: 1199px) {
+  .grid.photo-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
   }
 }
 </style>

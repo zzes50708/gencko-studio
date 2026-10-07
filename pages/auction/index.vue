@@ -1,8 +1,15 @@
 <script setup>
-import { computed, ref, onMounted, onUnmounted } from 'vue'
+import { computed, ref, onMounted, onUnmounted, watch } from 'vue'
 import { useHead, useAsyncData, useSupabaseClient } from '#imports'
 import { useMainStore } from '~/stores/useMainStore'
 import { getCleanUrl } from '~/utils/image'
+import {
+  auctionState,
+  auctionCountdown,
+  hasBuyNowPrice,
+  summarizeAuctionBids,
+  readAuctionBids
+} from '~/utils/auction-presentation'
 
 const store = useMainStore()
 const supabase = useSupabaseClient()
@@ -17,7 +24,7 @@ const { data: ssrAuctions } = await useAsyncData('auction-list-seo-v1', async ()
     // 過濾掉已結束的（schema 只放進行中以維持品質）
     const nowMs = Date.now()
     return data
-      .filter((a) => a.end_time && new Date(a.end_time).getTime() > nowMs)
+      .filter((a) => auctionState(a, nowMs).status === 'active')
       .map((a) => ({
         id: a.id,
         morph: a.morph,
@@ -218,28 +225,88 @@ useHead({
   ])
 })
 
-const loading = computed(() => store.loading)
+const loading = computed(() => store.auctionLoading)
 const displayAuctions = computed(() => store.auctionList || [])
 
 const now = ref(new Date().getTime())
 let timer = null
+let refreshTimer = null
+let summaryController = null
+let disposed = false
+let refreshing = false
+const bidSummaries = ref({})
+const summaryError = ref(false)
+const summaryReady = ref(false)
+const failedPhotos = ref(new Set())
+const markPhotoFailed = (id) => {
+  failedPhotos.value = new Set([...failedPhotos.value, id])
+}
+const loadSummary = async () => {
+  if (disposed) return
+  summaryController?.abort()
+  const controller = new AbortController()
+  summaryController = controller
+  try {
+    const rows = await readAuctionBids(
+      supabase,
+      displayAuctions.value.map((a) => a.id),
+      'id, auction_id, amount',
+      controller.signal
+    )
+    if (controller.signal.aborted) return
+    bidSummaries.value = summarizeAuctionBids(rows)
+    summaryReady.value = true
+    summaryError.value = false
+  } catch {
+    if (!controller.signal.aborted) summaryError.value = true
+  }
+}
+const refreshAuctions = async () => {
+  if (disposed || refreshing) return
+  refreshing = true
+  try {
+    await store.loadAuctions()
+    // 切頁後不再延續舊頁的摘要更新。
+    if (!disposed) await loadSummary()
+  } finally {
+    refreshing = false
+  }
+}
+const resumeRefresh = () => {
+  if (!document.hidden) void refreshAuctions()
+}
+watch(
+  () => displayAuctions.value.map((a) => a.id).join(','),
+  () => {
+    if (import.meta.client) void loadSummary()
+  },
+  { immediate: true }
+)
 
 onMounted(() => {
+  void refreshAuctions()
+  refreshTimer = setInterval(resumeRefresh, 15000)
+  document.addEventListener('visibilitychange', resumeRefresh)
   timer = setInterval(() => {
     now.value = new Date().getTime()
   }, 1000)
 })
 
-onUnmounted(() => {
-  if (timer) clearInterval(timer)
+onBeforeRouteLeave(() => {
+  // 路由轉場尚未卸載元件時，也要立即停止舊頁的後續更新。
+  disposed = true
+  summaryController?.abort()
 })
 
-const getAuctionStatus = (item) => {
-  if (!item) return { status: 'unknown', text: '未知', class: '' }
-  if (now.value >= new Date(item.end_time).getTime())
-    return { status: 'ended', text: '已結標', class: 'badge-ended' }
-  return { status: 'active', text: '競標中', class: 'badge-active' }
-}
+onUnmounted(() => {
+  disposed = true
+  if (timer) clearInterval(timer)
+  clearInterval(refreshTimer)
+  summaryController?.abort()
+  document.removeEventListener('visibilitychange', resumeRefresh)
+})
+
+const getAuctionStatus = (item) => auctionState(item, now.value)
 
 const isEndingSoon = (item) => {
   if (!item) return false
@@ -247,19 +314,7 @@ const isEndingSoon = (item) => {
   return diff > 0 && diff <= 180000 // 3 分鐘內
 }
 
-const getCountdownText = (item) => {
-  if (!item) return ''
-  const diff = new Date(item.end_time).getTime() - now.value
-  if (diff <= 0) return '已結束'
-  const d = Math.floor(diff / (1000 * 60 * 60 * 24))
-  const h = Math.floor((diff / (1000 * 60 * 60)) % 24)
-  const m = Math.floor((diff / 1000 / 60) % 60)
-  const s = Math.floor((diff / 1000) % 60)
-  let res = ''
-  if (d > 0) res += `${d}天 `
-  res += `${h.toString().padStart(2, '0')}時 ${m.toString().padStart(2, '0')}分 ${s.toString().padStart(2, '0')}秒`
-  return res
-}
+const getCountdownText = (item) => auctionCountdown(item, now.value)
 
 const formatPrice = (value, fallback) => {
   if (value === null || value === undefined || value === '') return fallback
@@ -284,16 +339,17 @@ const formatPrice = (value, fallback) => {
         </div>
         <p class="auction-mobile-desc">限時競標，結標前 3 分鐘出價自動延長。</p>
       </header>
-      <TheBackButton wrapper-class="m-only" fallback="/" text="返回" />
 
       <section class="auction-catalog-stage" aria-labelledby="auction-live-catalog-title">
-        <header class="auction-stage-heading">
-          <span>01</span>
-          <div>
-            <p>LIVE AUCTION RECORDS</p>
-            <h2 id="auction-live-catalog-title">目前可參與的競標</h2>
-          </div>
-        </header>
+        <h2 id="auction-live-catalog-title" class="sr-only">目前可參與的競標</h2>
+        <p v-if="store.auctionError" role="alert" class="auction-read-error">
+          {{ store.auctionError }}
+          <button type="button" @click="refreshAuctions">重試</button>
+        </p>
+        <p v-if="summaryError && displayAuctions.length" role="status">
+          出價摘要暫時無法更新。
+          <button type="button" @click="loadSummary">重試</button>
+        </p>
         <div v-if="loading && displayAuctions.length === 0" class="auction-grid" aria-busy="true">
           <div v-for="n in 6" :key="n" class="auction-card auction-card--loading">
             <SkeletonCard :square="true" />
@@ -310,7 +366,15 @@ const formatPrice = (value, fallback) => {
             :aria-label="`查看 ${item.morph} 競標詳情`"
           >
             <div class="card-img-box">
+              <span
+                v-if="failedPhotos.has(item.id) || !item.images?.length"
+                class="auction-photo-fallback"
+              >
+                {{ failedPhotos.has(item.id) ? '照片載入失敗，進入詳情重試' : '尚無照片' }}
+              </span>
               <img
+                v-else
+                @error="markPhotoFailed(item.id)"
                 :src="
                   item.images && item.images.length
                     ? getCleanUrl(item.images[0], 400)
@@ -335,12 +399,10 @@ const formatPrice = (value, fallback) => {
               </ClientOnly>
             </div>
             <div class="card-info">
-              <h3 class="morph-name">
-                {{ item.morph }}
-                <span class="gender-tag" v-if="item.gender && item.gender !== '未定'">
-                  ({{ item.gender }})
-                </span>
-              </h3>
+              <h3 class="morph-name">{{ item.morph }}</h3>
+              <span class="gender-tag" v-if="item.gender && item.gender !== '未定'">
+                {{ item.gender }}
+              </span>
               <p class="morph-desc" v-if="item.note">
                 {{ item.note.substring(0, 20) }}{{ item.note.length > 20 ? '...' : '' }}
               </p>
@@ -349,8 +411,8 @@ const formatPrice = (value, fallback) => {
                   <span class="price-label">起標價</span>
                   <strong class="price-val">{{ formatPrice(item.start_price, '尚未設定') }}</strong>
                 </div>
-                <div class="price-divider"></div>
-                <div class="price-col">
+                <div v-if="hasBuyNowPrice(item)" class="price-divider"></div>
+                <div v-if="hasBuyNowPrice(item)" class="price-col">
                   <span class="price-label">直購價</span>
                   <strong class="price-val">
                     {{ formatPrice(item.buy_now_price, '未提供直購') }}
@@ -358,6 +420,16 @@ const formatPrice = (value, fallback) => {
                 </div>
               </div>
 
+              <p
+                v-if="summaryReady && !summaryError"
+                :title="`${bidSummaries[item.id]?.count || 0} 次出價；最高 ${formatPrice(bidSummaries[item.id]?.highest, '—')}`"
+                class="bid-summary"
+              >
+                {{ bidSummaries[item.id]?.count || 0 }} 次出價
+                <span v-if="bidSummaries[item.id]?.count">
+                  · {{ formatPrice(bidSummaries[item.id].highest, '—') }}
+                </span>
+              </p>
               <ClientOnly>
                 <div
                   class="countdown"
@@ -379,7 +451,7 @@ const formatPrice = (value, fallback) => {
           </NuxtLink>
         </div>
 
-        <div v-else class="empty-state">
+        <div v-else-if="!store.auctionError" class="empty-state">
           <p class="empty-state__eyebrow">NO LIVE AUCTIONS</p>
           <h3>目前沒有進行中的競標</h3>
           <p>新場次開放後會在此顯示；你可以先瀏覽目前在售的守宮個體。</p>
@@ -939,7 +1011,8 @@ const formatPrice = (value, fallback) => {
 }
 
 .price-info {
-  display: grid;
+  display: flex;
+  flex-direction: row;
   grid-template-columns: minmax(0, 1fr) 1px minmax(0, 1fr);
   gap: 12px;
   align-items: stretch;
@@ -1132,6 +1205,92 @@ const formatPrice = (value, fallback) => {
 
   .empty-state .btn-app {
     width: 100%;
+  }
+}
+
+.auction-catalog-stage {
+  margin-top: 10px;
+  padding-top: 10px;
+}
+.morph-name {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+.gender-tag {
+  font-size: 11px;
+}
+.auction-photo-fallback {
+  display: grid;
+  place-items: center;
+  height: 100%;
+  padding: 12px;
+  font-size: 12px;
+  text-align: center;
+}
+.bid-summary {
+  margin: 6px 0;
+  font-size: 11px;
+  color: var(--txt-muted);
+}
+.auction-read-error button {
+  min-height: 40px;
+}
+@media (max-width: 767px) {
+  .card-info {
+    padding: 8px !important;
+  }
+  .morph-name {
+    margin: 0 !important;
+    font-size: 14px !important;
+    min-height: 0 !important;
+  }
+  .price-info {
+    display: flex !important;
+    flex-direction: row !important;
+    gap: 8px;
+    padding: 4px 0 !important;
+    margin: 4px 0 !important;
+  }
+  .price-col {
+    flex: 1;
+    min-width: 0;
+  }
+  .price-val {
+    font-size: 12px !important;
+    overflow-wrap: anywhere;
+  }
+  .price-divider {
+    display: none;
+  }
+  .countdown {
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: wrap;
+    gap: 4px !important;
+    font-size: 11px !important;
+    padding: 6px 0 !important;
+  }
+  .bid-summary {
+    font-size: 10px;
+    margin: 4px 0;
+    white-space: nowrap;
+  }
+  .countdown span {
+    display: none;
+  }
+  .countdown strong {
+    font-size: 12px !important;
+  }
+  .morph-desc {
+    display: none;
+  }
+}
+@media (min-width: 768px) and (max-width: 1199px) {
+  .auction-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
   }
 }
 </style>

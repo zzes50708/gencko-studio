@@ -24,7 +24,12 @@ const zeroGeneNote = computed(() =>
 
 // [SEO] 為了在 SSR 期間取得資料，我們使用 useAsyncData。
 // 若 Store 中已經存在該筆資料，則直接拿來用；否則向資料庫查詢。
-const { data: viewingGene, pending } = await useAsyncData(`gene-${geneName}`, async () => {
+const {
+  data: viewingGene,
+  pending,
+  error: geneError,
+  refresh: refreshGene
+} = await useAsyncData(`gene-${geneName}`, async () => {
   if (store.genePages && store.genePages.length > 0) {
     const found = store.genePages.find((g) => g.Name === geneName)
     if (found) return found
@@ -36,7 +41,8 @@ const { data: viewingGene, pending } = await useAsyncData(`gene-${geneName}`, as
     .eq('name', geneName)
     .maybeSingle()
 
-  if (error || !data) return null
+  if (error) throw new Error('基因資料暫時無法載入')
+  if (!data) return null
 
   return {
     Name: data.name,
@@ -266,15 +272,23 @@ useHead({
     </div>
     <div
       v-if="isHydrated && pending"
-      style="text-align: center; padding: 100px 0; color: var(--txt); opacity: 0.6"
+      class="detail-read-state"
+      style="text-align: center; color: var(--txt); opacity: 0.6"
     >
       <div class="loader" style="margin: 0 auto 20px auto"></div>
       <p>基因資料載入中...</p>
     </div>
 
+    <div v-else-if="geneError" class="gene-load-error" role="alert">
+      <h2>基因資料暫時無法載入</h2>
+      <p>請稍後重試，或返回圖鑑。</p>
+      <button type="button" @click="refreshGene()">重新載入</button>
+      <TheBackButton fallback="/genes" text="返回圖鑑列表" />
+    </div>
     <div
       v-else-if="!viewingGene"
-      style="text-align: center; padding: 100px 0; color: var(--txt); opacity: 0.6"
+      class="detail-read-state"
+      style="text-align: center; color: var(--txt); opacity: 0.6"
     >
       <h2>找不到「{{ geneName }}」的資料</h2>
       <p>可能該基因條目尚未建立或已被移除。</p>
@@ -286,33 +300,31 @@ useHead({
     </div>
 
     <div v-else class="gene-container">
-      <TheBackButton fallback="/genes" text="返回圖鑑" style="margin-bottom: 10px" />
-
-      <nav class="gene-tool-nav" aria-label="基因詞條工具">
+      <header class="gene-title-row">
         <div>
-          <span>GENE WORKFLOW</span>
+          <span class="gene-kicker site-page-kicker">GENETIC PROFILE</span>
+          <h1 class="gene-title">{{ viewingGene.Name }}</h1>
         </div>
-        <NuxtLink no-prefetch to="/calculator" class="gene-tool-link">前往基因計算機</NuxtLink>
+        <dl class="gene-facts">
+          <div v-if="viewingGene.InheritanceMode">
+            <dt>遺傳模式</dt>
+            <dd>{{ viewingGene.InheritanceMode }}</dd>
+          </div>
+          <div v-if="viewingGene.DiscoveryYear">
+            <dt>發現年份</dt>
+            <dd>{{ viewingGene.DiscoveryYear }}</dd>
+          </div>
+        </dl>
+      </header>
+      <nav class="gene-tool-nav" aria-label="基因詞條工具">
+        <span>GENE WORKFLOW</span>
+        <div class="gene-tools-actions">
+          <TheBackButton fallback="/genes" text="返回圖鑑" />
+          <NuxtLink no-prefetch to="/calculator" class="gene-tool-link">前往基因計算機</NuxtLink>
+        </div>
       </nav>
 
       <div class="content-card">
-        <header class="gene-title-row">
-          <div>
-            <span class="gene-kicker">GENETIC PROFILE</span>
-            <h1 class="gene-title">{{ viewingGene.Name }}</h1>
-          </div>
-          <dl class="gene-facts">
-            <div v-if="viewingGene.InheritanceMode">
-              <dt>遺傳模式</dt>
-              <dd>{{ viewingGene.InheritanceMode }}</dd>
-            </div>
-            <div v-if="viewingGene.DiscoveryYear">
-              <dt>發現年份</dt>
-              <dd>{{ viewingGene.DiscoveryYear }}</dd>
-            </div>
-          </dl>
-        </header>
-
         <div v-if="geneWarningText" class="warn-box">
           <span class="warn-icon" aria-hidden="true">⚠️</span>
           <span class="warn-text">{{ geneWarningText }}</span>
@@ -320,7 +332,7 @@ useHead({
 
         <div class="gene-layout">
           <!-- 🌟 核心修正：將 NuxtImg 替換為原生 img -->
-          <img
+          <ArticleImage
             v-if="viewingGene.ImageURL"
             :src="getCleanUrl(viewingGene.ImageURL)"
             :alt="`${viewingGene.Name} 守宮基因外觀範例｜豹紋守宮 Eublepharis macularius`"
@@ -718,5 +730,105 @@ p {
 }
 :deep(.app-back-btn) {
   border: 1px solid var(--txt);
+}
+/* 標題先呈現，工具操作保留同列，窄螢幕可自然換行。 */
+.gene-title-row {
+  align-items: start;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.gene-tool-nav {
+  display: block;
+  margin: 0 0 12px;
+  padding: 8px 0;
+}
+.gene-tool-nav > span {
+  display: block;
+  margin-bottom: 4px;
+}
+.gene-tool-nav .gene-tools-actions {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.gene-tools-actions :deep(.nav-action-row) {
+  width: auto;
+  margin-bottom: 0;
+}
+.gene-tools-actions .gene-tool-link {
+  width: auto;
+}
+</style>
+
+<style scoped>
+.gene-load-error {
+  padding: 24px 0;
+}
+.gene-load-error button {
+  min-height: 44px;
+  padding: 8px 14px;
+  background: var(--card-bg-solid);
+  color: var(--txt);
+  border: 1px solid var(--bd);
+  font: inherit;
+}
+@media (max-width: 767px) {
+  /* 工具操作直接呈現，減少閱讀正文前的重複標籤與間距。 */
+  .gene-tool-nav {
+    padding-block: 6px;
+    margin-bottom: 6px;
+  }
+  .gene-tool-nav > span {
+    display: none;
+  }
+  .gene-tools-actions {
+    gap: 6px;
+  }
+  .gene-layout {
+    padding-top: 10px;
+    gap: 12px;
+  }
+  .gene-section-title {
+    margin-bottom: 6px;
+  }
+  .detail-section {
+    margin-top: 12px;
+    padding-top: 8px;
+  }
+  .source-text {
+    margin-top: 14px;
+    padding-top: 8px;
+  }
+}
+</style>
+
+<style scoped>
+.detail-read-state {
+  padding: 100px 0;
+}
+@media (max-width: 767px) {
+  /* 載入與查無資料沿用相同緊湊節奏，保留清楚的返回操作。 */
+  .detail-read-state {
+    padding: 16px 0;
+    color: var(--txt) !important;
+    opacity: 1 !important;
+  }
+  .detail-read-state h2 {
+    font-size: 20px;
+    line-height: 1.4;
+    margin: 0 0 8px;
+  }
+  .detail-read-state p {
+    margin: 6px 0;
+  }
+  .detail-read-state .loader {
+    margin-bottom: 10px !important;
+  }
+  .detail-read-state :deep(.nav-action-row),
+  .detail-read-state > button {
+    margin: 10px auto 0 !important;
+  }
 }
 </style>

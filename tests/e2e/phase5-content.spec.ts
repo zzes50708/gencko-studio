@@ -139,7 +139,7 @@ test.describe('Phase 5 內容與購買信任路徑', () => {
     const routeLinkTops = await routeLinks.evaluateAll((links) =>
       links.map((link) => Math.round(link.getBoundingClientRect().top))
     )
-    expect(new Set(routeLinkTops).size).toBe(1)
+    expect(new Set(routeLinkTops).size).toBe(2)
     await expect(page.locator('.app-back-btn')).toHaveCount(0)
     await expect
       .poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1))
@@ -151,7 +151,7 @@ test.describe('Phase 5 內容與購買信任路徑', () => {
     const flow = page.getByTestId('purchase-decision-path')
     await expect(flow).toBeVisible()
     await expect(flow.locator('a[href="/why-gencko"]')).toBeVisible()
-    await expect(flow.locator('a[href="/faq"]')).toBeVisible()
+    await expect(flow.locator('a[href="/faq?category=purchase"]')).toBeVisible()
     await expect(flow.locator('a[href="/shop"]')).toBeVisible()
 
     await page.goto('/why-gencko')
@@ -181,7 +181,7 @@ test.describe('Phase 5 內容與購買信任路徑', () => {
     await expect(dashboard.getByRole('tablist', { name: '會員資料分類' })).toBeVisible()
   })
 
-  test('照護頁手機導覽維持單列且餵食表格不產生橫向捲動', async ({ page }) => {
+  test('照護頁手機入口雙欄、章節單列且資料不產生橫向捲動', async ({ page }) => {
     await page.setViewportSize({ width: 320, height: 844 })
     await page.goto('/care')
 
@@ -190,7 +190,7 @@ test.describe('Phase 5 內容與購買信任路徑', () => {
     const decisionY = await decisionLinks.evaluateAll((links) =>
       links.map((link) => Math.round(link.getBoundingClientRect().top))
     )
-    expect(new Set(decisionY).size).toBe(1)
+    expect(new Set(decisionY).size).toBe(2)
 
     const indexButtons = page.locator('.care-reading-index-links button')
     await expect(indexButtons).toHaveCount(4)
@@ -204,7 +204,7 @@ test.describe('Phase 5 內容與購買信任路徑', () => {
     await expect
       .poll(() =>
         page
-          .locator('.care-table--feed, .care-table--supp')
+          .locator('.care-mobile-data')
           .evaluateAll((tables) =>
             tables.every((table) => table.scrollWidth <= table.clientWidth + 1)
           )

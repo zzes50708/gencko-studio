@@ -1,4 +1,3 @@
-/* 全站標題契約：字級取自爬櫃 3D 區塊，頂部節奏取自基因計算機。 */
 :root {
   --site-content-gutter: clamp(16px, 4vw, 64px);
   --site-content-max: 1600px;
@@ -32,6 +31,7 @@
 #main-content
   .site-document-page
   :is(
+    .article-page,
     .shop-page-wrapper,
     .auction-container,
     .product-page-wrapper,
@@ -45,6 +45,7 @@
   margin-inline: 0 !important;
 }
 #main-content .site-document-page [class*='document-meta'] {
+  width: 100%;
   max-width: none !important;
 }
 /* 區塊間距保留閱讀層次，移除過大的展示留白。 */
@@ -295,20 +296,43 @@
 /* 手機優先縮減資料列、標題與說明的展示留白。 */
 @media (max-width: 767px) {
   :root {
-    --site-page-top-space: 10px;
+    --site-page-top-space: 8px;
     --site-page-heading-height: 0px;
     --site-page-meta-gap: 5px;
   }
+  .cont:has(#main-content .site-document-page) {
+    padding-top: 0;
+  }
   #main-content .site-document-page [class*='document-meta'] {
     flex-direction: row;
-    flex-wrap: wrap;
-    gap: 3px 12px;
-    padding-bottom: 6px !important;
+    flex-wrap: nowrap;
+    gap: 8px;
+    padding-bottom: 4px !important;
     font-size: 0.6rem !important;
     line-height: 1.3 !important;
   }
+  #main-content .site-document-page [class*='document-meta'] > span {
+    display: block;
+    width: auto;
+    min-width: 0;
+    max-width: 55%;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    line-height: inherit;
+  }
+  #main-content .site-document-page [class*='document-meta'] > span:last-child {
+    flex: 1;
+    text-align: right;
+  }
   #main-content h1:not(.sr-only),
   #main-content h2.page-title {
+    font-size: 24px !important;
+    line-height: 1.12 !important;
+    min-height: 0 !important;
+    height: auto !important;
+    padding: 0 !important;
+    border-left: 0 !important;
     margin-block: 4px !important;
   }
   #main-content
@@ -330,30 +354,93 @@
       .home-hero,
       .stories-page > .hero
     ) {
-    gap: 6px !important;
+    display: block;
+    gap: 0 !important;
     align-items: start !important;
-    margin-bottom: 8px !important;
-    padding-bottom: 8px !important;
+    margin-top: 0 !important;
+    margin-bottom: 6px !important;
+    padding-bottom: 6px !important;
+  }
+  /* 標題文字容器不繼承各頁的網格列間距或展示高度。 */
+  #main-content
+    .site-document-page
+    :is(
+      .calc-heading-block,
+      .shop-intro > div:first-child,
+      .auction-intro > div:first-child,
+      .cabinet-hero__copy,
+      .faq-intro-copy,
+      .masthead-copy,
+      .profile-heading > div:first-child,
+      .care-hero-copy,
+      .hero-copy,
+      .hero-content-inner,
+      .home-hero__copy
+    ) {
+    display: block;
+    min-height: 0 !important;
+    height: auto;
+    padding-top: 0 !important;
+    margin-top: 0 !important;
+    row-gap: 0 !important;
+  }
+  #main-content
+    .site-document-page
+    :is(
+      .shop-intro__eyebrow,
+      .auction-eyebrow,
+      .breeders-eyebrow,
+      .cabinet-kicker,
+      .calc-kicker,
+      .site-page-kicker,
+      .hosp-hero > span,
+      .masthead-kicker,
+      .genes-kicker,
+      .profile-kicker,
+      .care-hero-kicker,
+      .hero-kicker,
+      .home-hero__eyebrow,
+      .compare-eyebrow,
+      .stories-page .eyebrow
+    ) {
+    margin: 0 !important;
+    padding: 0 !important;
+    font-size: 11.2px !important;
+    line-height: 1.4 !important;
   }
   #main-content
     .site-document-page
     :is(
       .shop-intro__copy,
       .auction-mobile-desc,
-      .breeders-intro > p,
-      .cabinet-hero__copy > p,
+      .breeders-intro > p:not(.breeders-eyebrow),
+      .cabinet-hero__copy > p:not(.cabinet-kicker),
+      .stories-page .hero .lead,
       .hero-lead,
       .home-hero__lede,
+      .calc-heading-block > p,
+      .hosp-hero > p,
+      .genes-hero > p:not(.genes-kicker),
+      .masthead-copy > p:not(.masthead-kicker),
+      .profile-heading > div:first-child > p:not(.profile-kicker),
+      .compare-header__copy > p:not(.compare-eyebrow),
       .faq-intro-copy > p:not(.site-page-kicker),
       .care-hero-copy > p:not(.care-hero-kicker)
     ) {
-    margin-block: 4px !important;
+    font-size: 12px !important;
+    margin-block: 2px 0 !important;
     line-height: 1.5 !important;
   }
   #main-content .site-document-page .shop-photo-notice {
     margin-block: 4px !important;
-    padding-block: 6px !important;
+    padding-block: 0 !important;
     gap: 8px;
+  }
+  #main-content .site-document-page .article-page {
+    padding-top: 0 !important;
+  }
+  #main-content .site-document-page :is(.reader-header, .identity-heading) {
+    padding-block: 6px !important;
   }
   #main-content
     .site-document-page
@@ -380,6 +467,10 @@
   #main-content .site-document-page :is(.cabinet-3d-slot__intro, .cabinet-cases__intro) {
     margin-block: 6px !important;
     line-height: 1.5 !important;
+  }
+  #main-content .site-document-page :is(.shop-catalog-stage, .auction-catalog-stage) {
+    margin-block: 6px !important;
+    padding-block: 0 !important;
   }
 }
 
@@ -450,5 +541,454 @@
   }
   #main-content .stage--touch {
     bottom: var(--mobile-nav-height);
+  }
+}
+
+/* 手機壓縮主要內容之前的導流與工具列；桌面保留原有排版。 */
+@media (max-width: 767px) {
+  #main-content
+    .site-document-page
+    :is(
+      .masthead-routes,
+      .care-decision-map,
+      .guide-orientation-map,
+      .purchase-decision-path,
+      .faq-route-map,
+      .health-tool-nav-links,
+      .qs-tool-nav
+    ) {
+    display: flex !important;
+    flex-wrap: wrap;
+    gap: 0 12px !important;
+    margin-block: 4px !important;
+    padding-block: 0 !important;
+  }
+  #main-content
+    .site-document-page
+    :is(
+      .masthead-routes a,
+      .care-decision-map a,
+      .guide-orientation-map a,
+      .purchase-decision-path a,
+      .faq-route-map a,
+      .health-tool-nav-links a,
+      .qs-tool-nav a
+    ) {
+    min-height: 36px;
+    padding-block: 6px !important;
+    font-size: 12px !important;
+  }
+  #main-content
+    :is(.guide-orientation-map .orientation-copy, .purchase-decision-path .decision-path-copy) {
+    display: none;
+  }
+  #main-content .care-reading-index {
+    padding-block: 4px !important;
+    margin-block: 4px !important;
+    gap: 0 !important;
+  }
+  #main-content .care-reading-index > div:first-child {
+    display: none;
+  }
+  #main-content .care-reading-index-links {
+    gap: 6px !important;
+  }
+  #main-content .care-reading-index-links button {
+    min-height: 40px !important;
+    padding: 6px 4px !important;
+    font-size: 13px !important;
+  }
+  #main-content .site-document-page .care-main > .care-section {
+    padding-block: 10px !important;
+    margin-block: 0 !important;
+  }
+  #main-content .care-h {
+    margin-block: 4px 10px !important;
+  }
+  #main-content .tool-hub {
+    margin-block: 4px !important;
+    gap: 8px !important;
+  }
+  #main-content .tool-hub-card {
+    display: flex !important;
+    align-items: center;
+    justify-content: space-between;
+    gap: 4px;
+    min-height: 40px !important;
+    padding: 4px 0 !important;
+  }
+  #main-content .tool-hub-card strong {
+    font-size: 13px !important;
+  }
+  #main-content .tool-hub-card > span {
+    display: none;
+  }
+  #main-content .tool-hub-card small {
+    min-height: 0 !important;
+    font-size: 12px;
+  }
+  #main-content .site-document-page .gene-library-controls {
+    padding-block: 6px !important;
+    gap: 6px !important;
+  }
+  #main-content .gene-search > span {
+    display: none;
+  }
+  #main-content .gene-search input {
+    padding-block: 6px !important;
+    font-size: 16px;
+  }
+  #main-content .gene-library-controls .segment {
+    height: 40px !important;
+    min-height: 40px !important;
+    padding-block: 4px !important;
+    font-size: 13px;
+  }
+  #main-content .gene-result-count {
+    padding-block: 0 !important;
+    font-size: 13px;
+  }
+  #main-content .gene-section {
+    margin-block: 8px !important;
+  }
+  #main-content .gene-section .section-header {
+    margin-block: 4px !important;
+    padding-block: 4px !important;
+  }
+  #main-content .site-document-page .article-control-deck {
+    padding-block: 6px !important;
+  }
+  #main-content .search-bar-wrap {
+    margin-bottom: 6px !important;
+  }
+  #main-content .search-input {
+    min-height: 44px !important;
+    padding-block: 6px !important;
+  }
+  #main-content .article-category-select {
+    margin-block: 4px !important;
+  }
+  #main-content .quick-tags {
+    margin-top: 4px !important;
+    gap: 6px !important;
+  }
+  #main-content .tag-label {
+    font-size: 11px;
+  }
+  #main-content .q-tag {
+    min-height: 36px !important;
+    padding: 4px 6px !important;
+    font-size: 12px !important;
+  }
+  #main-content .article-group {
+    margin-top: 12px !important;
+  }
+  #main-content .article-group-heading {
+    padding-block: 6px !important;
+    margin-bottom: 8px !important;
+  }
+  #main-content .reader-context-nav {
+    margin-block: 4px !important;
+    padding-block: 0 !important;
+    gap: 6px !important;
+  }
+  #main-content .article-page > .btn-app {
+    min-height: 44px !important;
+    padding: 4px 10px !important;
+    margin-block: 4px !important;
+    font-size: 13px;
+  }
+  #main-content .reader-container {
+    margin-top: 4px !important;
+  }
+  #main-content .reader-header {
+    margin-bottom: 6px !important;
+  }
+  #main-content .reader-category {
+    margin-bottom: 2px !important;
+  }
+  #main-content .reader-meta {
+    margin-top: 4px !important;
+    font-size: 11px !important;
+    gap: 8px !important;
+  }
+  #main-content .hosp-filter-panel {
+    padding-block: 4px !important;
+  }
+  #main-content .hosp-alert-box {
+    padding-block: 4px !important;
+    margin-bottom: 6px !important;
+    gap: 6px !important;
+  }
+  #main-content .hosp-alert-box .text-content {
+    display: block !important;
+    font-size: 11px !important;
+    line-height: 1.4 !important;
+  }
+  #main-content .hosp-alert-box strong {
+    font-size: 11px !important;
+    margin-right: 6px;
+  }
+  #main-content .hosp-alert-box .text-content > span {
+    font-size: 11px !important;
+  }
+  #main-content .hosp-search-group > .hosp-label {
+    display: none;
+  }
+  #main-content .hosp-label {
+    font-size: 11px !important;
+    margin-bottom: 2px !important;
+  }
+  #main-content :is(.hosp-search-group, .hosp-filter-row) {
+    margin-bottom: 6px !important;
+  }
+  #main-content :is(.hosp-search, .hosp-select) {
+    padding-block: 6px !important;
+    height: 44px !important;
+  }
+  #main-content .hosp-filter-actions {
+    gap: 6px !important;
+  }
+  #main-content .hosp-filter-actions button {
+    min-height: 36px !important;
+    padding: 4px 8px !important;
+    font-size: 12px;
+  }
+  #main-content .hosp-count-row {
+    padding-top: 4px !important;
+    margin-top: 4px !important;
+  }
+  #main-content .hosp-intro {
+    margin-bottom: 6px !important;
+    gap: 6px !important;
+  }
+  #main-content .hosp-list-heading {
+    padding-block: 4px !important;
+    margin-bottom: 4px !important;
+  }
+  #main-content .calc-stage {
+    margin-top: 6px !important;
+    padding-top: 6px !important;
+  }
+  #main-content .calc-stage-heading {
+    margin-bottom: 6px !important;
+    gap: 6px !important;
+  }
+  #main-content .calc-stage-heading > span {
+    padding-block: 3px !important;
+  }
+  #main-content .calc-stage-heading p {
+    font-size: 10px !important;
+  }
+  #main-content .calc-stage-heading h2 {
+    font-size: 18px !important;
+  }
+  #main-content .calc-stage--species :is(.calc-selector-chip, .calc-help-btn) {
+    min-height: 40px !important;
+    height: 40px !important;
+    padding-block: 4px !important;
+    font-size: 13px !important;
+  }
+  #main-content .calc-mobile-parents {
+    margin-block: 6px !important;
+  }
+}
+
+/* 全站標題契約：字級取自爬櫃 3D 區塊，頂部節奏取自基因計算機。 */
+
+/* 手機以短列、留白節奏與細分隔線呈現次要入口，避免堆疊大按鈕。 */
+@media (max-width: 767px) {
+  #main-content :is(.profile-heading > p, .compare-header__copy > p, .health-tool-nav-copy strong) {
+    font-size: 12px !important;
+    line-height: 1.5 !important;
+    margin-block: 2px !important;
+  }
+  #main-content
+    .site-document-page
+    :is(
+      .faq-route-map,
+      .guide-orientation-map,
+      .purchase-decision-path,
+      .health-tool-nav-links,
+      .qs-tool-links
+    ) {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0 12px !important;
+    padding-block: 0 !important;
+    margin-block: 4px !important;
+  }
+  #main-content
+    .site-document-page
+    :is(
+      .faq-route-map a,
+      .guide-orientation-map a,
+      .purchase-decision-path a,
+      .health-tool-nav-links a,
+      .qs-tool-links a
+    ) {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    min-height: 44px !important;
+    padding: 6px 0 !important;
+    border: 0 !important;
+    border-bottom: 1px solid var(--bd) !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    color: var(--txt);
+    font-size: 13px !important;
+    line-height: 1.4;
+    text-align: left;
+  }
+  #main-content
+    .site-document-page
+    :is(.purchase-decision-path a.is-primary, .health-tool-nav-links a:last-child) {
+    color: var(--pri);
+  }
+  #main-content :is(.health-tool-nav, .qs-tool-nav) {
+    padding-block: 6px !important;
+    margin-block: 6px !important;
+    gap: 4px !important;
+  }
+  #main-content .qs-tool-nav > div:first-child {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 3px 8px;
+  }
+  #main-content .qs-tool-nav strong {
+    font-size: 12px;
+    line-height: 1.5;
+  }
+  #main-content .qs-tool-nav > div:first-child > span {
+    font-size: 10px;
+  }
+  #main-content .h-entry-foot {
+    margin-block: 6px !important;
+    padding-block: 4px !important;
+  }
+  #main-content .h-entry-guide {
+    margin-top: 8px !important;
+    padding-top: 8px !important;
+  }
+  #main-content .h-guide-steps {
+    gap: 0 !important;
+    margin-block: 8px !important;
+  }
+  #main-content .h-guide-step {
+    padding-block: 10px !important;
+  }
+  #main-content .profile-page-wrapper .user-card {
+    padding-block: 8px !important;
+    margin-bottom: 6px !important;
+    gap: 8px !important;
+  }
+  #main-content .profile-page-wrapper .user-type {
+    font-size: 11px;
+    line-height: 1.4;
+  }
+  #main-content .profile-page-wrapper .user-name {
+    margin-block: 0 !important;
+    font-size: 15px;
+  }
+  #main-content .profile-page-wrapper .segmented-tabs {
+    margin-block: 6px !important;
+  }
+  #main-content .profile-page-wrapper :is(.empty-state, .login-prompt-box) {
+    padding-block: 16px !important;
+  }
+  #main-content .stories-page .action-grid {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 0 12px !important;
+  }
+  #main-content .stories-page .link-chip {
+    min-height: 44px !important;
+    padding: 6px 0 !important;
+    border: 0;
+    border-bottom: 1px solid var(--bd);
+    text-align: left;
+    justify-content: flex-start;
+    font-size: 13px;
+  }
+  #main-content .stories-page .section-head {
+    margin-bottom: 4px !important;
+  }
+  #main-content .breeders-page-wrapper .tabs {
+    margin-block: 4px !important;
+  }
+  #main-content .breeders-page-wrapper .tab {
+    min-height: 40px !important;
+    padding-block: 6px !important;
+    font-size: 13px;
+  }
+  #main-content .breeders-page-wrapper .breeders-directory-stage {
+    margin-block: 6px !important;
+    padding-block: 0 !important;
+  }
+  #main-content .breeders-catalog-tools {
+    margin-block: 6px !important;
+  }
+  #main-content .starter-reading-index {
+    margin-block: 6px !important;
+    padding-block: 0 !important;
+  }
+  #main-content .starter-reading-index a {
+    min-height: 44px !important;
+    padding-block: 6px !important;
+    font-size: 13px;
+  }
+  #main-content .starter-page .hero-flow {
+    margin-block: 6px !important;
+    padding-block: 4px !important;
+  }
+  #main-content .starter-page .flow-node {
+    padding-block: 4px !important;
+  }
+  #main-content .starter-page .knowledge-hub {
+    margin-block: 8px !important;
+    padding-block: 8px !important;
+  }
+  #main-content .starter-page .hub-heading {
+    margin-bottom: 8px !important;
+  }
+  #main-content .compare-header__actions {
+    display: flex !important;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px !important;
+  }
+  #main-content .compare-header__actions .btn-app {
+    min-height: 40px !important;
+    padding-block: 6px !important;
+  }
+  #main-content .compare-toolbar {
+    margin-block: 6px !important;
+    padding-block: 6px !important;
+    gap: 6px !important;
+  }
+  #main-content .site-document-page .empty-compare {
+    padding-block: 16px !important;
+    margin-block: 6px !important;
+  }
+  #main-content .site-document-page .empty-compare__index {
+    margin-block: 0 8px !important;
+    font-size: 32px;
+  }
+  #main-content .site-document-page .empty-compare h2 {
+    margin-block: 6px !important;
+    font-size: 20px;
+  }
+  #main-content .site-document-page .empty-compare > p:not(.empty-compare__index) {
+    margin-block: 8px !important;
+    font-size: 13px;
+    line-height: 1.5;
+  }
+  #main-content .calc-container .calc-heading-block {
+    margin-bottom: 6px !important;
+  }
+  #main-content .qs-container .qs-card {
+    padding-top: 10px !important;
   }
 }

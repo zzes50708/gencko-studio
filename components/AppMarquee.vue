@@ -30,7 +30,7 @@ const styleVars = computed(() => ({
       <div class="app-marquee__group">
         <slot :group-index="0" />
       </div>
-      <div class="app-marquee__group" aria-hidden="true">
+      <div class="app-marquee__group" aria-hidden="true" inert>
         <slot :group-index="1" />
       </div>
     </div>
@@ -51,6 +51,10 @@ const styleVars = computed(() => ({
   animation: app-marquee var(--marquee-duration) linear infinite;
   animation-direction: var(--marquee-direction);
   will-change: transform;
+}
+
+.app-marquee:focus-within .app-marquee__track {
+  animation-play-state: paused;
 }
 
 .app-marquee__group {

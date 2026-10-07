@@ -190,4 +190,20 @@ import { SOCIAL_LINKS } from '~/utils/site-constants'
     gap: 0;
   }
 }
+/* 底部導覽的預留高度由頁面外框處理，頁尾不再重複墊高。 */
+@media (max-width: 767px) {
+  .site-footer {
+    margin-top: 12px;
+    padding: 20px max(16px, env(safe-area-inset-left, 0px)) 16px;
+  }
+  .footer-brand p {
+    margin: 6px auto 4px;
+  }
+  .social-links a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    padding-bottom: 0;
+  }
+}
 </style>

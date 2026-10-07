@@ -1,9 +1,16 @@
 <script setup>
-import { computed, ref, onMounted, onUnmounted, watch, nextTick } from 'vue'
+import { computed, ref, onMounted, onUnmounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { useHead, useAsyncData, useSupabaseClient } from '#imports'
 import { useMainStore } from '~/stores/useMainStore'
 import { getCleanUrl } from '~/utils/image'
+import {
+  auctionState,
+  auctionCountdown,
+  hasBuyNowPrice,
+  readAuctionBids
+} from '~/utils/auction-presentation'
+import { getLineMessageLink } from '~/utils/animal-inquiry'
 
 definePageMeta({ key: (route) => route.fullPath })
 
@@ -13,20 +20,31 @@ const supabase = useSupabaseClient()
 const auctionId = route.params.id
 
 //[SEO] 為了在伺服器端渲染 (SSR) 期間就能拿到該商品資料以產生正確的 Meta
-const { data: currentAuction, pending } = await useAsyncData(`auction-${auctionId}`, async () => {
+const {
+  data: currentAuction,
+  pending,
+  error: auctionLoadError,
+  refresh: retryAuction
+} = await useAsyncData(`auction-${auctionId}`, async () => {
   if (store.auctionList && store.auctionList.length > 0) {
     const found = store.auctionList.find((a) => a.id === auctionId)
     if (found) return found
   }
 
-  const { data, error } = await supabase.from('auctions').select('*').eq('id', auctionId).single()
+  const { data, error } = await supabase
+    .from('auctions')
+    .select('*')
+    .eq('id', auctionId)
+    .maybeSingle()
 
-  if (error || !data) return null
+  if (error) throw error
+  if (!data) return null
 
   return data
 })
 
 const realBids = ref([])
+const photoFailed = ref(false)
 let bidsRefreshTimer = null
 
 const isPlacingBid = ref(false)
@@ -61,42 +79,68 @@ watch(
   { immediate: true }
 )
 
-const loadBids = async (id) => {
+const bidsLoading = ref(false)
+const bidsError = ref('')
+const bidsReady = ref(false)
+const metadataError = ref('')
+let bidsController = null
+let metadataBusy = false
+let disposed = false
+const loadBids = async (id = auctionId) => {
+  if (bidsLoading.value) return
+  bidsLoading.value = true
+  const controller = new AbortController()
+  bidsController = controller
   try {
-    const { data, error } = await supabase
-      .from('auction_bids')
-      .select('id, auction_id, user_name, amount, bid_time')
-      .eq('auction_id', id)
-    if (error) throw error
-    realBids.value = data || []
-  } catch (err) {
-    console.error('載入出價紀錄失敗:', err)
+    const rows = await readAuctionBids(
+      supabase,
+      [id],
+      'id, auction_id, user_name, amount, bid_time',
+      controller.signal
+    )
+    if (disposed || controller.signal.aborted) return
+    realBids.value = rows
+    bidsReady.value = true
+    bidsError.value = ''
+  } catch {
+    if (!controller.signal.aborted)
+      bidsError.value = '出價紀錄無法更新，請重試；目前顯示的資料可能不是最新。'
+  } finally {
+    bidsLoading.value = false
   }
 }
-
-const startBidsRefresh = (id) => {
-  if (!import.meta.client) return
-  if (bidsRefreshTimer) clearInterval(bidsRefreshTimer)
-  bidsRefreshTimer = setInterval(() => void loadBids(id), 15000)
+const refreshMetadata = async () => {
+  if (metadataBusy || disposed) return
+  metadataBusy = true
+  try {
+    const { data, error } = await supabase
+      .from('auctions')
+      .select('*')
+      .eq('id', auctionId)
+      .maybeSingle()
+    if (error) throw error
+    if (disposed) return
+    currentAuction.value = data
+    metadataError.value = ''
+  } catch {
+    if (!disposed) metadataError.value = '場次資料無法更新，請重試。'
+  } finally {
+    metadataBusy = false
+  }
 }
-
+const refreshAuction = async () => {
+  await Promise.all([loadBids(), refreshMetadata()])
+}
+const resumeRefresh = () => {
+  if (!document.hidden) void refreshAuction()
+}
 watch(
-  () => route.params.id,
-  async (newId) => {
-    if (newId) {
-      if (import.meta.client) {
-        await loadBids(newId)
-        startBidsRefresh(newId)
-      }
-    } else {
-      realBids.value = []
-      if (import.meta.client && bidsRefreshTimer) {
-        clearInterval(bidsRefreshTimer)
-        bidsRefreshTimer = null
-      }
-    }
+  () => store.auctionList.find((a) => a.id === auctionId),
+  (item, old) => {
+    if (item) currentAuction.value = { ...item }
+    else if (old && import.meta.client) void refreshMetadata()
   },
-  { immediate: true }
+  { deep: true }
 )
 
 const now = ref(new Date().getTime())
@@ -104,6 +148,10 @@ let timer = null
 
 onMounted(() => {
   if (import.meta.client) {
+    void refreshAuction()
+    bidsRefreshTimer = setInterval(resumeRefresh, 15000)
+    document.addEventListener('visibilitychange', resumeRefresh)
+    window.addEventListener('online', resumeRefresh)
     timer = setInterval(() => {
       now.value = new Date().getTime()
     }, 1000)
@@ -111,18 +159,19 @@ onMounted(() => {
 })
 
 onUnmounted(() => {
+  disposed = true
+  bidsController?.abort()
+  if (import.meta.client) {
+    document.removeEventListener('visibilitychange', resumeRefresh)
+    window.removeEventListener('online', resumeRefresh)
+  }
   if (import.meta.client) {
     if (timer) clearInterval(timer)
     if (bidsRefreshTimer) clearInterval(bidsRefreshTimer)
   }
 })
 
-const getAuctionStatus = (item) => {
-  if (!item) return { status: 'unknown', text: '未知', class: '' }
-  if (now.value >= new Date(item.end_time).getTime())
-    return { status: 'ended', text: '已結標', class: 'badge-ended' }
-  return { status: 'active', text: '競標中', class: 'badge-active' }
-}
+const getAuctionStatus = (item) => auctionState(item, now.value)
 
 const isEndingSoon = (item) => {
   if (!item) return false
@@ -130,19 +179,7 @@ const isEndingSoon = (item) => {
   return diff > 0 && diff <= 180000
 }
 
-const getCountdownText = (item) => {
-  if (!item) return ''
-  const diff = new Date(item.end_time).getTime() - now.value
-  if (diff <= 0) return '已結束'
-  const d = Math.floor(diff / (1000 * 60 * 60 * 24))
-  const h = Math.floor((diff / (1000 * 60 * 60)) % 24)
-  const m = Math.floor((diff / 1000 / 60) % 60)
-  const s = Math.floor((diff / 1000) % 60)
-  let res = ''
-  if (d > 0) res += `${d}天 `
-  res += `${h.toString().padStart(2, '0')}時 ${m.toString().padStart(2, '0')}分 ${s.toString().padStart(2, '0')}秒`
-  return res
-}
+const getCountdownText = (item) => auctionCountdown(item, now.value)
 
 const formatTime = (isoString) => {
   if (!isoString) return ''
@@ -152,7 +189,7 @@ const formatTime = (isoString) => {
 
 const formatPrice = (value) => {
   const amount = Number(value)
-  if (!Number.isFinite(amount)) return 'NT$ —'
+  if (value == null || value === '' || !Number.isFinite(amount)) return 'NT$ —'
   return `NT$ ${amount.toLocaleString('zh-TW')}`
 }
 
@@ -375,6 +412,7 @@ useHead({
 })
 
 const placeBid = async () => {
+  if (isPlacingBid.value || !bidsReady.value || bidsError.value || metadataError.value) return
   if (!store.currentUser) {
     alert('請先點擊按鈕登入後，再進行出價！')
     return
@@ -428,19 +466,31 @@ const placeBid = async () => {
 
 const buyNow = () => {
   if (
+    !hasBuyNowPrice(currentAuction.value) ||
+    getAuctionStatus(currentAuction.value).status !== 'active'
+  )
+    return
+  if (
     confirm(
       `確定要以直購價 $${currentAuction.value.buy_now_price} 直接購買嗎？\n點選「確定」將為您開啟官方 LINE。`
     )
   ) {
     window.open(
-      `https://line.me/R/ti/p/@219abdzn?text=${encodeURIComponent(`Hi, 我要直購競標個體！\n編號：${currentAuction.value.id}`)}`,
+      getLineMessageLink(
+        'https://line.me/R/ti/p/@219abdzn',
+        `Hi Gencko，我想直購競標個體 ${currentAuction.value.morph}\n編號：${currentAuction.value.id}\n直購價：${formatPrice(currentAuction.value.buy_now_price)}\nhttps://www.genckobreeding.com/auction/${encodeURIComponent(currentAuction.value.id)}`
+      ),
       '_blank'
     )
   }
 }
 
 // 🌟 方案一：原生系統分享
+const shareMessage = ref('')
+const manualShareUrl = ref('')
 const shareLink = async () => {
+  shareMessage.value = ''
+  manualShareUrl.value = ''
   if (navigator.share) {
     try {
       await navigator.share({
@@ -448,27 +498,30 @@ const shareLink = async () => {
         text: siteData.value.desc,
         url: window.location.href
       })
+      return
     } catch (err) {
-      console.log('分享已取消或失敗', err)
+      if (err?.name === 'AbortError') return
     }
-  } else {
-    try {
-      await navigator.clipboard.writeText(window.location.href)
-      store.triggerToast()
-    } catch (err) {
-      console.error('複製失敗:', err)
-    }
+  }
+  try {
+    await navigator.clipboard.writeText(window.location.href)
+    shareMessage.value = '連結已複製'
+  } catch {
+    shareMessage.value = '無法自動複製，請選取下方連結手動複製。'
+    manualShareUrl.value = window.location.href
   }
 }
 
 // 🌟 方案二：生成正方形 IG 宣傳圖卡 (Canvas 升級版)
 const generatedImage = ref(null)
 const isGenerating = ref(false)
+const promoPagePath = route.path
 const promoTriggerEl = ref(null)
-const promoDialogEl = ref(null)
+const promoModal = useHistoryModal('auction-promo')
+const promoDialogEl = promoModal.dialog
 
 const generatePromo = async () => {
-  if (!currentAuction.value) return
+  if (!currentAuction.value || isGenerating.value || route.path !== promoPagePath) return
   isGenerating.value = true
 
   try {
@@ -490,6 +543,7 @@ const generatePromo = async () => {
       img.onload = resolve
       img.onerror = reject
     })
+    if (route.path !== promoPagePath) return
 
     const imgAreaHeight = 820
 
@@ -546,9 +600,9 @@ const generatePromo = async () => {
     ctx.fillText('STUDIO', 1030, 1000)
 
     generatedImage.value = canvas.toDataURL('image/jpeg', 0.9)
-    await nextTick()
-    promoDialogEl.value?.focus()
+    promoModal.open()
   } catch (err) {
+    if (route.path !== promoPagePath) return
     console.error('圖卡生成失敗', err)
     alert('圖片生成失敗，可能是因為網路跨域限制。')
   } finally {
@@ -556,35 +610,7 @@ const generatePromo = async () => {
   }
 }
 
-const closePromo = async () => {
-  generatedImage.value = null
-  await nextTick()
-  promoTriggerEl.value?.focus()
-}
-
-const handlePromoKeydown = (event) => {
-  if (event.key === 'Escape') {
-    event.preventDefault()
-    void closePromo()
-    return
-  }
-  if (event.key !== 'Tab') return
-
-  const focusable = [
-    ...promoDialogEl.value.querySelectorAll('button, [href], input, select, textarea')
-  ].filter((element) => !element.disabled && element.offsetParent !== null)
-  if (!focusable.length) return
-
-  const first = focusable[0]
-  const last = focusable[focusable.length - 1]
-  if (event.shiftKey && document.activeElement === first) {
-    event.preventDefault()
-    last.focus()
-  } else if (!event.shiftKey && document.activeElement === last) {
-    event.preventDefault()
-    first.focus()
-  }
-}
+const closePromo = () => promoModal.close()
 </script>
 
 <template>
@@ -608,10 +634,16 @@ const handlePromoKeydown = (event) => {
       <p>載入競標資料中...</p>
     </div>
 
+    <div v-else-if="auctionLoadError" class="not-found" role="alert">
+      <h2>競標資料載入失敗</h2>
+      <button type="button" class="btn-app" @click="retryAuction">重試</button>
+      <TheBackButton fallback="/auction" text="返回競標列表" wrapper-class="not-found__action" />
+    </div>
     <div v-else-if="currentAuction" class="detail-layout">
       <div class="left-col">
         <button
           type="button"
+          v-if="!photoFailed"
           class="main-img"
           aria-label="放大競標商品圖片"
           @click="
@@ -632,11 +664,16 @@ const handlePromoKeydown = (event) => {
                 : 'https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/placeholder.jpg'
             "
             :alt="currentAuction.morph"
+            @error="photoFailed = true"
             loading="eager"
             decoding="async"
           />
           <div class="zoom-hint">點擊放大圖片</div>
         </button>
+        <div v-else class="auction-photo-error" role="status">
+          照片載入失敗
+          <button type="button" @click="photoFailed = false">重新載入照片</button>
+        </div>
         <div class="bid-history">
           <div class="history-header">
             <h3>出價紀錄 ({{ currentBids.length }})</h3>
@@ -650,7 +687,12 @@ const handlePromoKeydown = (event) => {
             </button>
           </div>
 
-          <div v-if="currentBids.length === 0" class="empty-history">
+          <p v-if="bidsError" role="alert">
+            {{ bidsError }}
+            <button type="button" :disabled="bidsLoading" @click="loadBids()">重試</button>
+          </p>
+          <p v-if="!bidsReady && bidsLoading" role="status">載入出價紀錄中…</p>
+          <div v-if="bidsReady && !bidsError && currentBids.length === 0" class="empty-history">
             <p>目前尚無出價，搶先成為第一位！</p>
             <div class="bid-example">
               <span class="bid-example__label">顯示範例</span>
@@ -660,7 +702,7 @@ const handlePromoKeydown = (event) => {
               <span>{{ formatPrice(minNextBid) }}</span>
             </div>
           </div>
-          <ul v-else class="history-list">
+          <ul v-if="currentBids.length" class="history-list">
             <template v-if="isBidsExpanded">
               <li
                 v-for="(bid, index) in currentBids"
@@ -725,14 +767,31 @@ const handlePromoKeydown = (event) => {
           </button>
         </div>
 
+        <p v-if="shareMessage" role="status">{{ shareMessage }}</p>
+        <input
+          v-if="manualShareUrl"
+          class="manual-share-url"
+          :value="manualShareUrl"
+          readonly
+          aria-label="手動複製競標連結"
+          @focus="$event.target.select()"
+        />
+        <p v-if="metadataError" role="alert">
+          {{ metadataError }}
+          <button type="button" @click="refreshAuction">重試</button>
+        </p>
         <div class="price-dashboard">
           <div class="price-row">
             <span class="p-lbl">最高出價：</span>
-            <span class="highest-price">{{ formatPrice(highestBidAmount) }}</span>
+            <span class="highest-price">
+              {{ bidsReady ? formatPrice(highestBidAmount) : '等待出價資料' }}
+            </span>
           </div>
           <div class="price-row sub">
             <span>最低增額：{{ formatPrice(currentAuction.min_increment) }}</span>
-            <span>直購價：{{ formatPrice(currentAuction.buy_now_price) }}</span>
+            <span v-if="hasBuyNowPrice(currentAuction)">
+              直購價：{{ formatPrice(currentAuction.buy_now_price) }}
+            </span>
           </div>
         </div>
 
@@ -796,12 +855,13 @@ const handlePromoKeydown = (event) => {
                   type="button"
                   class="btn-app btn-app--primary btn-app--md btn-bid"
                   @click="placeBid"
-                  :disabled="isPlacingBid"
+                  :disabled="isPlacingBid || !bidsReady || !!bidsError || !!metadataError"
                 >
                   {{ isPlacingBid ? '處理中...' : '確認出價' }}
                 </button>
                 <button
                   type="button"
+                  v-if="hasBuyNowPrice(currentAuction)"
                   class="btn-app btn-app--secondary btn-app--md btn-buy-now"
                   @click="buyNow"
                 >
@@ -848,13 +908,18 @@ const handlePromoKeydown = (event) => {
             </template>
           </div>
           <div class="action-box ended" v-else>
-            競標已結束，得標者為：
-            <br />
-            <span class="winner-name">
-              {{
-                highestBidAmount > 0 && currentBids.length > 0 ? currentBids[0].user_name : '流標'
-              }}
-            </span>
+            {{ getAuctionStatus(currentAuction).text }}
+            <template v-if="getAuctionStatus(currentAuction).status === 'ended'">
+              <br />
+              <span v-if="!bidsReady || bidsError">得標結果待確認</span>
+              <span v-else class="winner-name">
+                {{
+                  currentBids.length
+                    ? `最高出價者：${currentBids[0].user_name}（結果以工作室確認為準）`
+                    : '無出價紀錄'
+                }}
+              </span>
+            </template>
           </div>
         </ClientOnly>
 
@@ -899,37 +964,37 @@ const handlePromoKeydown = (event) => {
       <TheBackButton fallback="/auction" text="返回列表" wrapper-class="not-found__action" />
     </div>
 
-    <div v-if="generatedImage" class="promo-modal-overlay" @click="closePromo">
-      <div
+    <Teleport to="body">
+      <dialog
         ref="promoDialogEl"
-        class="promo-modal-content"
-        role="dialog"
-        aria-modal="true"
+        class="promo-modal-overlay"
         aria-labelledby="promo-dialog-title"
-        tabindex="-1"
-        @click.stop
-        @keydown="handlePromoKeydown"
+        @cancel.prevent="closePromo"
+        @click.self="closePromo"
       >
-        <button
-          type="button"
-          class="btn-app btn-app--ghost btn-app--xs btn-close-promo"
-          aria-label="關閉宣傳圖卡"
-          @click="closePromo"
-        >
-          關閉
-        </button>
-        <p class="promo-modal-eyebrow">SHARE CARD</p>
-        <h3 id="promo-dialog-title">宣傳圖卡已生成</h3>
-        <p class="promo-modal-desc">長按圖片儲存，或在桌機點擊右鍵另存，即可分享至社群。</p>
-        <img
-          :src="generatedImage"
-          :alt="`${currentAuction?.morph || 'Gencko'} 競標宣傳圖卡`"
-          class="promo-result-img"
-          loading="lazy"
-          decoding="async"
-        />
-      </div>
-    </div>
+        <div v-if="generatedImage" class="promo-modal-content" tabindex="-1" @click.stop>
+          <button
+            type="button"
+            class="btn-app btn-app--ghost btn-app--xs btn-close-promo"
+            autofocus
+            aria-label="關閉宣傳圖卡"
+            @click="closePromo"
+          >
+            關閉
+          </button>
+          <p class="promo-modal-eyebrow">SHARE CARD</p>
+          <h3 id="promo-dialog-title">宣傳圖卡已生成</h3>
+          <p class="promo-modal-desc">長按圖片儲存，或在桌機點擊右鍵另存，即可分享至社群。</p>
+          <img
+            :src="generatedImage"
+            :alt="`${currentAuction?.morph || 'Gencko'} 競標宣傳圖卡`"
+            class="promo-result-img"
+            loading="lazy"
+            decoding="async"
+          />
+        </div>
+      </dialog>
+    </Teleport>
   </div>
 </template>
 
@@ -2343,6 +2408,62 @@ const handlePromoKeydown = (event) => {
   .not-found {
     min-height: 220px;
     padding: 36px 0;
+  }
+}
+
+.auction-photo-error {
+  min-height: 160px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--bd);
+}
+.manual-share-url {
+  width: 100%;
+  min-height: 40px;
+  font-size: 16px;
+}
+dialog.promo-modal-overlay {
+  margin: auto;
+  border: 0;
+  padding: 16px;
+  width: min(560px, calc(100vw - 24px));
+  height: auto;
+  max-height: calc(100dvh - 24px);
+  overflow: auto;
+  background: var(--bg);
+  color: var(--txt);
+}
+dialog.promo-modal-overlay:not([open]) {
+  display: none;
+}
+dialog.promo-modal-overlay[open] {
+  display: block;
+}
+dialog.promo-modal-overlay::backdrop {
+  background: rgba(0, 0, 0, 0.65);
+}
+@media (max-width: 767px) {
+  /* 相鄰資訊區共用緊湊節奏，保留登入及出價的觸控尺寸。 */
+  .price-dashboard {
+    padding-block: 8px;
+    margin-bottom: 6px;
+  }
+  .timer-box {
+    padding-block: 8px;
+    margin-block: 4px;
+  }
+  .action-box {
+    padding-block: 8px;
+    margin-bottom: 10px;
+  }
+  .login-prompt {
+    padding-block: 4px;
+  }
+  .login-prompt p {
+    margin-bottom: 8px;
+  }
+  .bid-history {
+    padding-top: 10px;
   }
 }
 </style>

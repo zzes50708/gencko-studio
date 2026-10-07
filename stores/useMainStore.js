@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
+import { sanitizeCompareIds } from '~/utils/shop-catalog'
 import { useSupabaseClient } from '#imports'
 import { useRouter } from 'vue-router'
 import { withRetry } from '~/utils/supabase-retry'
@@ -59,7 +60,32 @@ export const useMainStore = defineStore('main', () => {
 
   // 🌟 並排比較清單（最多 3 隻）
   const compareList = ref([])
+  let compareRestored = false
+  const restoreCompare = () => {
+    if (!import.meta.client || compareRestored) return
+    try {
+      compareList.value = sanitizeCompareIds(
+        JSON.parse(localStorage.getItem('gencko_compare') || '[]')
+      )
+    } catch {
+      compareList.value = []
+    }
+    compareRestored = true
+  }
+  watch(
+    compareList,
+    (value) => {
+      if (!import.meta.client || !compareRestored) return
+      try {
+        localStorage.setItem('gencko_compare', JSON.stringify(sanitizeCompareIds(value)))
+      } catch {
+        /* 瀏覽器不允許儲存時，保留本次瀏覽的比較清單。 */
+      }
+    },
+    { deep: true, flush: 'sync' }
+  )
   const toggleCompare = (id) => {
+    restoreCompare()
     const idx = compareList.value.indexOf(id)
     if (idx !== -1) {
       compareList.value.splice(idx, 1)
@@ -131,6 +157,7 @@ export const useMainStore = defineStore('main', () => {
         SoldPrice: i.sold_price,
         Status: i.status,
         Note: i.note,
+        Tags: Array.isArray(i.tags) ? i.tags : [],
         ImageURL: i.image_url,
         // is_hot 是純 boolean（CLAUDE.md 確認）
         IsHot: i.is_hot === true,
@@ -273,7 +300,12 @@ export const useMainStore = defineStore('main', () => {
     () => siteSettings.value?.exhibition_note || '展場期間價格請洽現場'
   )
 
+  const auctionLoading = ref(false)
+  const auctionError = ref(null)
   async function loadAuctions() {
+    if (auctionLoading.value) return
+    auctionLoading.value = true
+    auctionError.value = null
     try {
       const now = new Date().toISOString()
       const { data: auctionsData, error } = await withRetry(
@@ -344,7 +376,10 @@ export const useMainStore = defineStore('main', () => {
         isAuctionSubscribed.value = true
       }
     } catch (error) {
+      auctionError.value = '競標資料載入失敗，請重試。'
       console.error('讀取競標資料失敗:', error)
+    } finally {
+      auctionLoading.value = false
     }
   }
 
@@ -651,11 +686,14 @@ export const useMainStore = defineStore('main', () => {
     canInstall,
     showIOSGuide,
     compareList,
+    restoreCompare,
     toggleCompare,
     clearCompare,
     loadDataFromAPI,
     ensureInventoryLoaded,
     loadAuctions,
+    auctionLoading,
+    auctionError,
     initLiff,
     hasPendingLineAuth,
     restoreLineUser,

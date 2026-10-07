@@ -1,5 +1,8 @@
 <script setup lang="ts">
 import { useHead } from '#imports'
+import { useMainStore } from '~/stores/useMainStore'
+
+const store = useMainStore()
 
 const pageUrl = 'https://www.genckobreeding.com/buying-guide'
 
@@ -14,7 +17,7 @@ const icons = {
 
 const flowLabels = ['挑選', '詢問', '確認', '到家']
 
-// 連結地圖：只有 01（有守宮可逛）、04（對到飼養頁）掛連結，其餘純流程不連。
+// 在對應步驟提供聯絡與購買規定入口，沿用現有官方資訊。
 const flowNodes = [
   {
     no: '01',
@@ -30,14 +33,19 @@ const flowNodes = [
     icon: icons.chat,
     group: '私訊',
     title: '私訊官方',
-    body: '喜歡的守宮還在不在?基因不了解請先詢問。私訊前請確保已經了解購買規定。'
+    body: '喜歡的守宮還在不在?基因不了解請先詢問。私訊前請確保已經了解購買規定。',
+    to: store.lineLink,
+    external: true,
+    linkLabel: '聯絡官方 LINE'
   },
   {
     no: '03',
     icon: icons.deal,
     group: '購買',
     title: '確保已經了解規定',
-    body: '匯款方式、交易時間、保留幾天、訂金多少。'
+    body: '先閱讀購買與售後規定，付款方式、交易時間與保留安排請向工作室確認。',
+    to: '/faq?category=purchase',
+    linkLabel: '查看購買與售後規定'
   },
   {
     no: '04',
@@ -68,7 +76,7 @@ const checkpoints = [
   },
   {
     title: '到家後',
-    rows: ['靜養3~5天', '拍照錄影，有疑慮第一時間詢問不要拖']
+    rows: ['到家後先安置，適應與餵食安排依個體交接說明。', '拍照錄影，有疑慮第一時間詢問不要拖']
   }
 ]
 
@@ -122,7 +130,7 @@ useHead({
         <strong>先確認資訊，再進入交易</strong>
       </div>
       <NuxtLink no-prefetch to="/why-gencko">了解品牌與資料</NuxtLink>
-      <NuxtLink no-prefetch to="/faq">閱讀購買問答</NuxtLink>
+      <NuxtLink no-prefetch to="/faq?category=purchase">閱讀購買問答</NuxtLink>
       <NuxtLink no-prefetch to="/care">準備飼養環境</NuxtLink>
       <NuxtLink no-prefetch to="/shop" class="is-primary">查看可選個體</NuxtLink>
     </nav>
@@ -785,6 +793,71 @@ useHead({
   .purchase-decision-path .decision-path-copy {
     border: 0;
     padding: 0 0 10px;
+  }
+}
+@media (max-width: 767px) {
+  .purchase-decision-path {
+    padding: 10px 0;
+    gap: 6px;
+    margin-block: 10px;
+  }
+  .purchase-decision-path .decision-path-copy {
+    grid-column: 1 / -1;
+    padding: 0;
+    min-height: 26px;
+  }
+  .decision-path-copy span {
+    display: none;
+  }
+  .decision-path-copy strong {
+    font-size: 0.85rem;
+  }
+  .purchase-decision-path a {
+    min-height: 44px;
+    padding: 6px 8px;
+    font-size: 0.8rem;
+  }
+}
+</style>
+
+<style scoped>
+/* 流程維持原有順序與完整資訊，以緊湊節奏呈現。 */
+@media (max-width: 767px) {
+  .content-grid {
+    gap: 16px;
+    margin-bottom: 10px;
+  }
+  .flow-page :deep(.poster-node) {
+    grid-template-columns: 36px minmax(0, 1fr);
+    column-gap: 8px;
+  }
+  .flow-page :deep(.poster-node:not(:last-child)) {
+    padding-bottom: 8px;
+  }
+  .flow-page :deep(.poster-node:not(:last-child) .node-pin::after) {
+    margin-bottom: -8px;
+  }
+  .flow-page :deep(.node-no) {
+    width: 32px;
+    height: 32px;
+    font-size: 12px;
+  }
+  .flow-page :deep(.node-card) {
+    padding-block: 8px;
+    gap: 4px;
+  }
+  .flow-page :deep(.node-title) {
+    font-size: 16px;
+    line-height: 1.4;
+  }
+  .flow-page :deep(.node-body) {
+    font-size: 13px;
+    line-height: 1.5;
+  }
+  .check-panel,
+  .check-group,
+  .check-card {
+    padding-block: 10px;
   }
 }
 </style>

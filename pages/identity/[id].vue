@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { useHead, useAsyncData, useSupabaseClient } from '#imports'
 import { getCleanUrl } from '~/utils/image'
@@ -12,7 +12,8 @@ const identityId = route.params.id
 const {
   data: item,
   pending,
-  error
+  error,
+  refresh
 } = await useAsyncData(`identity-${identityId}`, async () => {
   const { data, error: fetchError } = await supabase
     .from('animals')
@@ -21,7 +22,11 @@ const {
     .single()
 
   if (fetchError || !data) {
-    throw new Error('找不到此個體資料或已下架')
+    throw new Error(
+      fetchError?.code === 'PGRST116' || !fetchError
+        ? '找不到此個體資料或已下架'
+        : '資料暫時無法載入，請重新嘗試'
+    )
   }
 
   return {
@@ -55,6 +60,12 @@ const getIdentityImageSource = (url) => {
 }
 
 const imageState = ref('optimized')
+watch(
+  () => item.value?.ImageURL,
+  () => {
+    imageState.value = 'optimized'
+  }
+)
 const identityImageEl = ref(null)
 
 const originalImg = computed(() => {
@@ -98,7 +109,7 @@ const fmtSex = computed(() => {
   if (i.GenderType === '溫控') {
     return `孵化溫度:${i.GenderValue || '?'}度`
   }
-  return i.GenderType || 'Unsexed'
+  return i.GenderType || '未確認'
 })
 
 // 性別顏色標籤
@@ -166,6 +177,7 @@ const triggerPrint = () => {
     <div v-else-if="error" class="status-msg err">
       <h1>無法顯示電子身分證</h1>
       <p role="alert">{{ error.message || '找不到此個體資料或已下架' }}</p>
+      <button type="button" class="act-btn" @click="refresh()">重新載入</button>
       <TheBackButton
         fallback="/"
         text="返回上一頁"
@@ -204,7 +216,7 @@ const triggerPrint = () => {
               decoding="async"
               @error="handleImageError"
             />
-            <div v-else class="no-img">No Image</div>
+            <div v-else class="no-img">暫無照片</div>
           </div>
 
           <div class="card-info-box">
@@ -216,19 +228,19 @@ const triggerPrint = () => {
 
             <dl class="info-grid">
               <div class="ig-row">
-                <dt>Morph</dt>
+                <dt>品系</dt>
                 <dd class="ig-val highlight">{{ item.Morph }}</dd>
               </div>
               <div class="ig-row">
-                <dt>Gender</dt>
+                <dt>性別</dt>
                 <dd class="ig-val" :class="sexClass">{{ fmtSex }}</dd>
               </div>
               <div class="ig-row">
-                <dt>Birthday</dt>
-                <dd class="ig-val">{{ item.Birthday || 'Unknown' }}</dd>
+                <dt>出生日</dt>
+                <dd class="ig-val">{{ item.Birthday || '未登錄' }}</dd>
               </div>
               <div v-if="item.Species" class="ig-row">
-                <dt>Species</dt>
+                <dt>物種</dt>
                 <dd class="ig-val">{{ item.Species }}</dd>
               </div>
             </dl>
@@ -890,6 +902,87 @@ const triggerPrint = () => {
     margin-bottom: 0;
   }
 }
+/* 螢幕版縮減照片與操作距離，列印仍使用原證書版面。 */
+@media screen {
+  .identity-navigation {
+    margin-bottom: 6px;
+  }
+  .identity-certificate {
+    padding-top: 0;
+  }
+  .identity-heading {
+    margin-bottom: 8px;
+    padding-bottom: 8px;
+  }
+  .card-photo-box {
+    min-height: 0;
+  }
+  .card-photo-box img {
+    position: absolute;
+    inset: 0;
+    object-fit: contain;
+  }
+  .card-info-box {
+    padding: 20px;
+  }
+  .ig-val {
+    overflow-wrap: anywhere;
+  }
+  .identity-note {
+    margin-top: 8px;
+    padding: 8px 0;
+  }
+  .id-actions {
+    margin-top: 8px;
+  }
+  .status-msg {
+    gap: 12px;
+  }
+}
+@media screen and (max-width: 620px) {
+  .card-photo-box {
+    height: clamp(180px, 28svh, 240px);
+    aspect-ratio: auto;
+  }
+  .card-info-box {
+    padding: 12px;
+  }
+  .card-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px 12px;
+    margin-bottom: 8px;
+    padding-bottom: 8px;
+  }
+  .brand-sub {
+    display: none;
+  }
+  .card-id {
+    font-size: 1.25rem;
+    margin: 0;
+  }
+  .info-grid {
+    border: 0;
+    gap: 8px 12px;
+  }
+  .card-footer {
+    margin-top: 10px;
+  }
+  .cf-line {
+    display: none;
+  }
+  .identity-heading {
+    gap: 6px;
+  }
+  .verified-mark {
+    padding: 3px 6px;
+  }
+  .identity-note {
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 8px;
+  }
+}
 /* 本頁返回與次要操作使用同一按鈕形式。 */
 :deep(.app-back-btn),
 .btn-app {
@@ -900,6 +993,55 @@ const triggerPrint = () => {
 }
 :deep(.app-back-btn) {
   border: 1px solid var(--txt);
+}
+@media screen and (max-width: 767px) {
+  /* 短狀態不撐高半個畫面，主要與返回操作在同列。 */
+  .id-page-container {
+    min-height: 0;
+    justify-content: flex-start;
+    padding-bottom: 12px;
+  }
+  .status-msg {
+    gap: 8px;
+    padding-block: 12px;
+    width: 100%;
+  }
+  .status-msg h1 {
+    margin: 0;
+  }
+  .status-msg p {
+    margin: 0;
+    font-size: 14px;
+    line-height: 1.5;
+  }
+  .status-msg.err {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+  }
+  .status-msg.err h1,
+  .status-msg.err p {
+    grid-column: 1 / -1;
+  }
+  .status-msg.err p {
+    margin-bottom: 4px;
+  }
+  .status-msg.err .act-btn {
+    width: 100%;
+    padding-inline: 6px;
+    margin: 0;
+    font-size: 14px;
+  }
+  .status-msg.err :deep(.nav-action-row) {
+    width: 100%;
+    margin: 0 !important;
+  }
+  .status-msg.err :deep(.app-back-btn) {
+    width: 100%;
+    justify-content: center;
+    padding-inline: 6px;
+    font-size: 14px;
+  }
 }
 </style>
 

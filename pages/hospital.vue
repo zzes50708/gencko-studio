@@ -1,49 +1,20 @@
 <script setup>
-import { ref, computed, nextTick } from 'vue'
-import { useHead, useAsyncData, useSupabaseClient } from '#imports'
+import { ref, computed, nextTick, toRef, watch, onMounted } from 'vue'
+import { useMediaQuery } from '@vueuse/core'
+import { useHead } from '#imports'
 import { useMainStore } from '~/stores/useMainStore'
 // HOSPITAL_REGIONS 仍從 js 讀（縣市區域分組是固定常數）；HOSPITAL_DATA 已搬到 Supabase
-import { HOSPITAL_REGIONS } from '~/utils/hospitals'
+import { HOSPITAL_REGIONS as hospitalRegions } from '~/utils/hospitals'
 
 const store = useMainStore()
-const supabase = useSupabaseClient()
 
 // SSR：從 Supabase 抓特寵醫院清單
-const { data: hospitalsData } = await useAsyncData('hospitals-v1', async () => {
-  try {
-    const { data, error } = await supabase
-      .from('hospitals')
-      .select(
-        'id, name, address, city, district, phone, map_url, region, hours, has_emergency, accept_species, verified_at, latitude, longitude, geocode_source, geocode_source_id'
-      )
-      .eq('status', 'active')
-      .order('id', { ascending: true })
-    if (error || !data) return []
-    return data.map((h) => ({
-      id: String(h.id),
-      name: h.name,
-      address: h.address,
-      city: String(h.city || '')
-        .replaceAll('臺', '台')
-        .trim(),
-      district: h.district,
-      phone: h.phone,
-      mapUrl: h.map_url || null,
-      region: h.region,
-      hours: h.hours,
-      hasEmergency: h.has_emergency,
-      acceptSpecies: h.accept_species || [],
-      verifiedAt: h.verified_at,
-      latitude: h.latitude == null ? null : Number(h.latitude),
-      longitude: h.longitude == null ? null : Number(h.longitude),
-      geocodeSource: h.geocode_source || null,
-      geocodeSourceId: h.geocode_source_id || null
-    }))
-  } catch (e) {
-    console.error('[hospitals SSR] fetch failed:', e?.message)
-    return []
-  }
-})
+const {
+  data: hospitalsData,
+  error: hospitalsError,
+  status: hospitalsStatus,
+  refresh: refreshHospitals
+} = await useHospitalDirectoryData()
 
 // 對外暴露給原本邏輯用
 const HOSPITAL_DATA = computed(() => hospitalsData.value || [])
@@ -59,10 +30,57 @@ const hospitalsVerifiedDate = computed(() => {
   return dates[dates.length - 1] || null
 })
 
-const hospCity = ref('all')
-const hospDistrict = ref('all')
-const hospQuery = ref('')
-const hospExpanded = ref(new Set())
+const directoryContext = useState('hospital-directory-context', () => ({
+  city: 'all',
+  district: 'all',
+  query: '',
+  savedOnly: false,
+  expanded: [],
+  scrollY: 0
+}))
+const hospCity = toRef(directoryContext.value, 'city')
+const hospDistrict = toRef(directoryContext.value, 'district')
+const hospQuery = toRef(directoryContext.value, 'query')
+const savedOnly = toRef(directoryContext.value, 'savedOnly')
+const hospExpanded = ref(new Set(directoryContext.value.expanded))
+watch(hospExpanded, (value) => {
+  directoryContext.value.expanded = [...value]
+})
+onBeforeRouteLeave(() => {
+  directoryContext.value.scrollY = window.scrollY
+})
+const isMobile = useMediaQuery('(max-width: 767px), (pointer: coarse)')
+const viewportReady = ref(false)
+onMounted(() => {
+  viewportReady.value = true
+})
+const mobileMapOpen = ref(false)
+const mobileMapInteractive = ref(false)
+const toggleMobileMap = () => {
+  mobileMapOpen.value = !mobileMapOpen.value
+  mobileMapInteractive.value = false
+}
+const closeMobileMap = () => {
+  mobileMapOpen.value = false
+  mobileMapInteractive.value = false
+}
+const hospitalCards = ref([])
+const clearFilters = () => {
+  hospCity.value = 'all'
+  hospDistrict.value = 'all'
+  hospQuery.value = ''
+  savedOnly.value = false
+  focusedHospital.value = null
+}
+const scrollBehavior = () =>
+  window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth'
+const mobileMapUrl = computed(() => {
+  const hospital = focusedHospital.value
+  const query = hospital
+    ? `${hospital.name} ${hospital.address}`
+    : `${hospCity.value === 'all' ? '台灣' : hospCity.value} 特寵醫院`
+  return `https://maps.google.com/maps?q=${encodeURIComponent(query)}&output=embed&hl=zh-TW`
+})
 const focusedHospital = ref(null)
 const mapFocusSequence = ref(0)
 const mapSection = ref(null)
@@ -102,7 +120,12 @@ const hospFiltered = computed(() => {
           .toLocaleLowerCase('zh-TW')
           .includes(query)
       )
-    return cityMatch && districtMatch && keywordMatch
+    return (
+      cityMatch &&
+      districtMatch &&
+      keywordMatch &&
+      (!savedOnly.value || hospWishlist.value.includes(h.id))
+    )
   })
 })
 
@@ -122,18 +145,20 @@ const focusHospital = (hospital) => {
 const showHospitalDetails = async (hospital) => {
   focusHospital(hospital)
   await nextTick()
-  document.getElementById(`hospital-${hospital.id}`)?.scrollIntoView({
-    behavior: 'smooth',
-    block: 'center'
-  })
+  const card = hospitalCards.value.find((el) => el.id === `hospital-${hospital.id}`)
+  card?.scrollIntoView({ behavior: scrollBehavior(), block: 'center' })
+  card?.querySelector('.hosp-header-toggle')?.focus({ preventScroll: true })
 }
 const showHospitalOnMap = async (hospital) => {
   focusHospital(hospital)
+  mobileMapOpen.value = true
+  mobileMapInteractive.value = false
   await nextTick()
   mapSection.value?.scrollIntoView({
-    behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth',
+    behavior: scrollBehavior(),
     block: 'start'
   })
+  mapSection.value?.focus({ preventScroll: true })
 }
 
 const toggleHospWishlist = (id) => {
@@ -184,7 +209,7 @@ const toE164 = (phone) => {
 }
 
 const hospRegionOf = (city) => {
-  for (const [region, cities] of Object.entries(HOSPITAL_REGIONS)) {
+  for (const [region, cities] of Object.entries(hospitalRegions)) {
     if (cities.includes(city)) return region
   }
   return ''
@@ -394,7 +419,11 @@ useHead({
 </script>
 
 <template>
-  <div class="site-document-page hosp-page-wrapper">
+  <div
+    class="site-document-page hosp-page-wrapper"
+    data-scroll-page="/hospital"
+    :data-scroll-ready="viewportReady && hospitalsStatus !== 'pending'"
+  >
     <div class="hosp-intro">
       <header class="hosp-hero">
         <div class="hosp-document-meta" aria-label="醫院名錄說明">
@@ -440,13 +469,13 @@ useHead({
               <option
                 v-if="
                   hospCity !== 'all' &&
-                  !Object.values(HOSPITAL_REGIONS).some((cities) => cities.includes(hospCity))
+                  !Object.values(hospitalRegions).some((cities) => cities.includes(hospCity))
                 "
                 :value="hospCity"
               >
                 {{ hospCity }}
               </option>
-              <optgroup v-for="(cities, region) in HOSPITAL_REGIONS" :key="region" :label="region">
+              <optgroup v-for="(cities, region) in hospitalRegions" :key="region" :label="region">
                 <option
                   v-for="city in cities"
                   :key="city"
@@ -474,8 +503,32 @@ useHead({
           </div>
         </div>
 
+        <div class="hosp-filter-actions">
+          <label>
+            <input type="checkbox" v-model="savedOnly" />
+            只看收藏（{{ hospWishlist.length }}）
+          </label>
+          <button type="button" @click="clearFilters">清除篩選</button>
+          <button
+            v-if="isMobile"
+            type="button"
+            :aria-expanded="mobileMapOpen"
+            aria-controls="hospital-mobile-map"
+            @click="toggleMobileMap"
+          >
+            {{ mobileMapOpen ? '收起地圖' : '查看地圖' }}
+          </button>
+        </div>
         <div class="hosp-count-row" aria-live="polite">
-          <span class="hosp-count">{{ hospFiltered.length }} 間符合條件</span>
+          <span class="hosp-count">
+            {{
+              hospitalsStatus === 'pending'
+                ? '載入醫院中…'
+                : hospitalsError
+                  ? '暫時無法載入'
+                  : hospFiltered.length + ' 間符合條件'
+            }}
+          </span>
           <span v-if="hospitalsVerifiedDate" class="hosp-verified">
             更新 {{ hospitalsVerifiedDate }}
           </span>
@@ -483,8 +536,36 @@ useHead({
       </aside>
     </div>
 
-    <div ref="mapSection" class="hosp-map-section">
+    <div
+      v-if="viewportReady && (!isMobile || mobileMapOpen)"
+      ref="mapSection"
+      tabindex="-1"
+      class="hosp-map-section"
+      id="hospital-mobile-map"
+    >
+      <div v-if="isMobile" class="hosp-mobile-map">
+        <div class="hosp-mobile-map-actions">
+          <span>{{ hospFiltered.length }} 間符合條件</span>
+          <button
+            type="button"
+            :aria-pressed="mobileMapInteractive"
+            @click="mobileMapInteractive = !mobileMapInteractive"
+          >
+            {{ mobileMapInteractive ? '停止操作地圖' : '啟用地圖操作' }}
+          </button>
+          <button type="button" @click="closeMobileMap">關閉地圖</button>
+        </div>
+        <p>Google 地圖顯示搜尋位置；符合條件的院所請以本站清單為準。</p>
+        <iframe
+          :src="mobileMapUrl"
+          title="院所 Google 地圖"
+          loading="lazy"
+          :tabindex="mobileMapInteractive ? 0 : -1"
+          :class="{ interactive: mobileMapInteractive }"
+        ></iframe>
+      </div>
       <LazyHospitalMap
+        v-else
         :hospitals="HOSPITAL_DATA"
         :wishlist="hospWishlist"
         :selected="hospCity"
@@ -506,14 +587,30 @@ useHead({
 
         <!-- Hospital List -->
         <div class="hosp-list">
-          <div v-if="hospFiltered.length === 0" class="hosp-empty">
-            沒有找到符合的醫院，請放寬縣市或關鍵字條件。
+          <div v-if="hospitalsStatus === 'pending'" class="hosp-empty" role="status">
+            正在載入醫院名錄…
+          </div>
+          <div v-else-if="hospitalsError" class="hosp-empty" role="alert">
+            <p>醫院名錄暫時無法載入，請稍後重試。</p>
+            <button type="button" @click="refreshHospitals()">重新載入</button>
+          </div>
+          <div v-else-if="!HOSPITAL_DATA.length" class="hosp-empty">目前尚未收錄院所。</div>
+          <div v-else-if="hospFiltered.length === 0" class="hosp-empty">
+            <p>
+              {{
+                savedOnly && !hospWishlist.length
+                  ? '尚未收藏院所，可點擊醫院旁的愛心收藏。'
+                  : '沒有找到符合的醫院，請放寬縣市或關鍵字條件。'
+              }}
+            </p>
+            <button type="button" @click="clearFilters">清除篩選</button>
           </div>
 
           <article
             v-for="h in hospFiltered"
             :key="h.id"
             :id="`hospital-${h.id}`"
+            ref="hospitalCards"
             class="hosp-card"
             :class="{ expanded: isHospExpanded(h.id) }"
           >
@@ -1487,6 +1584,58 @@ useHead({
     grid-template-columns: minmax(0, 1fr);
     gap: 6px;
     margin-bottom: 8px;
+  }
+}
+</style>
+
+<style scoped>
+.hosp-filter-actions,
+.hosp-mobile-map-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+}
+.hosp-filter-actions label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+}
+.hosp-filter-actions button,
+.hosp-mobile-map-actions button,
+.hosp-empty button {
+  min-height: 44px;
+  padding: 6px 10px;
+  border: 1px solid var(--bd);
+  background: var(--card-bg-solid);
+  color: var(--txt);
+  font: inherit;
+  cursor: pointer;
+}
+.hosp-mobile-map iframe {
+  width: 100%;
+  height: 270px;
+  border: 0;
+  pointer-events: none;
+}
+.hosp-mobile-map iframe.interactive {
+  pointer-events: auto;
+}
+.hosp-mobile-map p {
+  font-size: 12px;
+  margin: 8px 0;
+}
+.hosp-map-section {
+  scroll-margin-top: 80px;
+}
+@media (max-width: 767px), (pointer: coarse) {
+  .hosp-filter-actions {
+    font-size: 13px;
+  }
+  .hosp-map-section {
+    scroll-margin-top: 12px;
   }
 }
 </style>
