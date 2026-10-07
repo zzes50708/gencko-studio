@@ -47,6 +47,7 @@ for (const item of [
 test('手機爬櫃選單鍵盤焦點限制、Escape 還原及解鎖', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 850 })
   await page.goto('/merch')
+  await page.getByRole('button', { name: '開啟 3D 客製模擬系統', exact: true }).click()
   await page.waitForFunction(
     () => !!(document.querySelector('.cabinet-select-trigger') as any)?.__vueParentComponent
   )
@@ -62,5 +63,8 @@ test('手機爬櫃選單鍵盤焦點限制、Escape 還原及解鎖', async ({ p
   await page.keyboard.press('Escape')
   await expect(dialog).toBeHidden()
   await expect(trigger).toBeFocused()
+  expect(await page.evaluate(() => document.body.style.overflow)).toBe('hidden')
+  await page.keyboard.press('Escape')
+  await expect(page.getByRole('dialog', { name: '3D 客製模擬系統', exact: true })).toBeHidden()
   expect(await page.evaluate(() => document.body.style.overflow)).not.toBe('hidden')
 })

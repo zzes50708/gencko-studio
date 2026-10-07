@@ -10,10 +10,15 @@ test('手機加熱墊、匯出與操作回饋同步', async ({ browser, baseURL 
   })
   const page = await context.newPage()
   await page.goto('/merch')
-  await expect(page.locator('.cabinet-workspace canvas')).toBeVisible({ timeout: 30000 })
+  await page.getByRole('button', { name: '開啟 3D 客製模擬系統', exact: true }).tap()
   await page.getByRole('button', { name: '加熱墊款式', exact: true }).tap()
-  await page.locator('dialog[open]').getByRole('button', { name: /韓國/ }).tap()
+  await page
+    .getByRole('dialog', { name: '加熱墊款式', exact: true })
+    .getByRole('button', { name: /韓國/ })
+    .tap()
   await expect(page.locator('#cabinet-summary')).toHaveValue(/標配：.*韓國加熱墊/)
+  await page.getByRole('button', { name: '確認生成模型', exact: true }).tap()
+  await expect(page.locator('.cabinet-workspace canvas')).toBeVisible({ timeout: 30000 })
   const pending = page.waitForEvent('download')
   await page.getByRole('button', { name: '匯出清單', exact: true }).tap()
   const download = await pending
@@ -51,9 +56,10 @@ test('橫向數量選單完整顯示並保留觸控高度', async ({ browser, ba
   })
   const page = await context.newPage()
   await page.goto('/merch')
-  await expect(page.locator('.cabinet-workspace canvas')).toBeVisible({ timeout: 30000 })
+  await page.getByRole('button', { name: '開啟 3D 客製模擬系統', exact: true }).tap()
   await page.getByRole('button', { name: '收納抽屜內高', exact: true }).tap()
-  const bounds = await page.locator('dialog[open]').evaluate((el) => {
+  const picker = page.getByRole('dialog', { name: '收納抽屜內高', exact: true })
+  const bounds = await picker.evaluate((el) => {
     const panel = el.querySelector('section')!.getBoundingClientRect()
     return {
       top: panel.top,
@@ -71,6 +77,7 @@ test('橫向數量選單完整顯示並保留觸控高度', async ({ browser, ba
   expect(bounds.bottom).toBeLessThanOrEqual(bounds.height)
   expect(bounds.min).toBeGreaterThanOrEqual(36)
   await page.getByRole('button', { name: '關閉選單', exact: true }).tap()
-  await expect(page.locator('dialog[open]')).toHaveCount(0)
+  await expect(picker).toBeHidden()
+  await expect(page.getByRole('dialog', { name: '3D 客製模擬系統', exact: true })).toBeVisible()
   await context.close()
 })

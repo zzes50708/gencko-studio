@@ -11,7 +11,10 @@ describe('爬櫃實體材質', () => {
   it('壓克力透射清晰，PP 盒仍保留磨砂', () => {
     const acrylic = createAcrylicMaterial(false, 0.05)
     const pp = createPpMaterial(false, 0.05)
-    expect(acrylic.transmission).toBe(0.99)
+    expect(acrylic.transmission).toBeGreaterThan(pp.transmission)
+    expect(acrylic.transmission).toBeLessThan(1)
+    expect(acrylic.thickness).toBeCloseTo(0.3 * 0.05)
+    expect(acrylic.ior).toBe(1.49)
     expect(acrylic.roughness).toBeLessThan(pp.roughness)
     acrylic.dispose()
     pp.dispose()

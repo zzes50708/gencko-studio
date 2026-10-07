@@ -4,6 +4,40 @@ import { useHead } from '#imports'
 import { SOCIAL_LINKS } from '~/utils/site-constants'
 
 const selectedTemplateId = ref('a4')
+const mobileCabinet = useMediaQuery('(max-width: 767px), (pointer: coarse), (hover: none)')
+const mobileCabinetModal = useHistoryModal('mobile-cabinet', () => mobileCabinet.value)
+const mobileCabinetDialog = mobileCabinetModal.dialog
+const mobileCabinetContent = ref<HTMLElement | null>(null)
+const mobileCabinetLaunch = ref<HTMLButtonElement | null>(null)
+let mobileClosePointer: { id: number; x: number; y: number } | null = null
+function closeMobileCabinet() {
+  if (mobileCabinetModal.isOpen.value) void mobileCabinetModal.close()
+}
+function startMobileClose(event: PointerEvent) {
+  if (event.pointerType === 'touch' && event.isPrimary) event.preventDefault()
+  mobileClosePointer =
+    event.pointerType === 'touch' && event.isPrimary
+      ? { id: event.pointerId, x: event.clientX, y: event.clientY }
+      : null
+}
+function finishMobileClose(event: PointerEvent) {
+  const start = mobileClosePointer
+  mobileClosePointer = null
+  // WebGL 手勢後部分瀏覽器會抑制相容 click；只接受原地輕點，不接受拖曳。
+  if (
+    start?.id === event.pointerId &&
+    Math.hypot(event.clientX - start.x, event.clientY - start.y) < 8
+  )
+    closeMobileCabinet()
+}
+function openMobileCabinet() {
+  // 觸控瀏覽器不一定自動聚焦按鈕，先記住正確的返回位置。
+  mobileCabinetLaunch.value?.focus({ preventScroll: true })
+  mobileCabinetModal.open()
+}
+watch(mobileCabinet, (mobile) => {
+  if (!mobile && mobileCabinetModal.isOpen.value) void mobileCabinetModal.close()
+})
 const equipment = ref<string[]>([])
 type Configuration = {
   rows: number
@@ -166,7 +200,43 @@ useHead({
         <h2 id="cabinet-3d-title">3D 客製模擬系統</h2>
       </div>
       <ClientOnly>
-        <CabinetConfigurator3D v-model="selectedTemplateId" @change="updateConfiguration" />
+        <button
+          v-if="mobileCabinet"
+          ref="mobileCabinetLaunch"
+          class="mobile-cabinet-launch"
+          type="button"
+          @click="openMobileCabinet"
+        >
+          開啟 3D 客製模擬系統
+        </button>
+        <dialog
+          ref="mobileCabinetDialog"
+          class="mobile-cabinet-dialog"
+          aria-labelledby="mobile-cabinet-title"
+          @cancel.prevent="mobileCabinetModal.close()"
+        >
+          <header>
+            <h2 id="mobile-cabinet-title">3D 客製模擬系統</h2>
+            <button
+              type="button"
+              aria-label="關閉模擬視窗"
+              @pointerdown="startMobileClose"
+              @pointerup="finishMobileClose"
+              @pointercancel="mobileClosePointer = null"
+              @click="closeMobileCabinet"
+            >
+              ×
+            </button>
+          </header>
+          <div ref="mobileCabinetContent" class="mobile-cabinet-content" />
+        </dialog>
+        <Teleport v-if="mobileCabinetContent" :to="mobileCabinetContent" :disabled="!mobileCabinet">
+          <CabinetConfigurator3D
+            v-model="selectedTemplateId"
+            :active="!mobileCabinet || mobileCabinetModal.isOpen.value"
+            @change="updateConfiguration"
+          />
+        </Teleport>
         <template #fallback>
           <p class="cabinet-note">正在準備配置預覽；也可以直接填寫下方訂製需求。</p>
         </template>
@@ -773,5 +843,69 @@ a:focus-visible {
     grid-row: span 2;
     min-height: 96px;
   }
+}
+.mobile-cabinet-launch {
+  width: 100%;
+  min-height: 48px;
+  padding: 10px 14px;
+  border: 0;
+  background: var(--red, #cd3016);
+  color: white;
+  font: inherit;
+  font-weight: 700;
+}
+.mobile-cabinet-dialog {
+  position: fixed;
+  inset: 0;
+  margin: 0;
+  width: 100%;
+  max-width: none;
+  height: 100dvh;
+  max-height: none;
+  padding: 0;
+  border: 0;
+  background: #faf9f6;
+  color: #29251f;
+  overflow: hidden;
+}
+.mobile-cabinet-dialog[open] {
+  display: flex;
+  flex-direction: column;
+}
+.mobile-cabinet-dialog::backdrop {
+  background: #faf9f6;
+}
+.mobile-cabinet-dialog > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+  padding: calc(6px + env(safe-area-inset-top)) 10px 6px;
+  border-bottom: 1px solid #d7d3ca;
+}
+.mobile-cabinet-dialog h2 {
+  margin: 0;
+  font-size: 18px;
+  line-height: 1.3;
+}
+.mobile-cabinet-dialog > header button {
+  touch-action: manipulation;
+  min-width: 44px;
+  min-height: 44px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font-size: 26px;
+}
+.mobile-cabinet-content {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+.mobile-cabinet-content :deep(.cabinet-workspace) {
+  height: 100%;
+  min-height: 0;
+  border: 0;
+  padding-bottom: env(safe-area-inset-bottom);
 }
 </style>

@@ -20,6 +20,20 @@ const input = (changes: Partial<CabinetInput> = {}): CabinetInput => ({
 })
 
 describe('爬櫃實體配置與匯出資料', () => {
+  it('收納高度使用五公分級距並保留不加裝選項', () => {
+    for (const [requested, expected] of [
+      [0, 0],
+      [1, 10],
+      [12, 10],
+      [13, 15],
+      [78, 80],
+      [100, 80]
+    ]) {
+      expect(
+        calculateCabinet(input({ storageHeight: requested })).configuration.storageHeight
+      ).toBe(expected)
+    }
+  })
   it('底部收納預設抽屜，雙開門與無門款式保留於配置', () => {
     expect(calculateCabinet(input({ storageHeight: 25 })).configuration.storageStyle).toBe('drawer')
     for (const storageStyle of ['doors', 'open'] as const) {

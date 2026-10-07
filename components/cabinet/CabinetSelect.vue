@@ -26,7 +26,10 @@ const numeric = computed(() =>
 )
 const { width: viewportWidth, height: viewportHeight } = useWindowSize()
 const numericColumns = computed(() => {
-  const base = options.value.length > 24 ? 6 : 3
+  const base =
+    options.value.length > 24
+      ? 6
+      : Math.min(options.value.length, Math.max(1, Math.floor((viewportWidth.value - 48) / 60)))
   // 高度不足時增加欄數，保留完整選項與可觸控的高度。
   const availableRows = Math.max(1, Math.floor((viewportHeight.value - 116) / 39))
   const maxColumns = Math.max(base, Math.floor((viewportWidth.value - 48) / 44))
@@ -221,13 +224,17 @@ watch(mobile, () => {
   font-size: 13px;
 }
 .cabinet-picker-list.is-numeric {
+  align-content: start;
+  width: 100%;
+  max-width: calc(var(--picker-columns) * 60px);
+  margin-inline: auto;
   grid-template-columns: repeat(var(--picker-columns), minmax(0, 1fr));
   gap: 3px;
 }
 .cabinet-picker-list.is-numeric button {
   text-align: center;
   min-height: 0;
-  height: clamp(36px, calc((100svh - 116px) / var(--picker-rows) - 3px), 40px);
+  height: 36px;
   padding: 2px;
   font-size: 11px;
 }

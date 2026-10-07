@@ -16,6 +16,8 @@ async function state(page: any) {
 }
 async function ready(page: any) {
   await page.goto('/merch')
+  await page.getByRole('button', { name: '開啟 3D 客製模擬系統', exact: true }).tap()
+  await page.getByRole('button', { name: '確認生成模型', exact: true }).tap()
   await expect(page.locator('.cabinet-workspace canvas')).toBeVisible({ timeout: 30000 })
   await expect(page.locator('.cabinet-workspace')).toHaveAttribute('aria-busy', 'false', {
     timeout: 20000
@@ -99,19 +101,29 @@ test('更新期間選項可操作，最後配置生效且保留旋轉視角', as
   await page.keyboard.press('ArrowRight')
   await page.waitForTimeout(250)
   const before = await state(page)
+  await page.getByRole('button', { name: '調整配置', exact: true }).tap()
   await page.getByRole('button', { name: '層數', exact: true }).tap()
-  await page.locator('dialog[open]').getByRole('button', { name: '8', exact: true }).tap()
+  await page
+    .getByRole('dialog', { name: '層數', exact: true })
+    .getByRole('button', { name: '8', exact: true })
+    .tap()
+  await page.getByRole('button', { name: '確認生成模型', exact: true }).tap()
   await expect(page.locator('.cabinet-workspace')).toHaveAttribute('aria-busy', 'true')
-  await expect(page.getByRole('button', { name: '層數', exact: true })).toBeEnabled()
+  await expect(page.getByRole('button', { name: '調整配置', exact: true })).toBeEnabled()
   await expect(page.locator('.workspace-updating')).toHaveCSS('pointer-events', 'none')
   const updating = await page.locator('.workspace-updating').boundingBox(),
     dimensions = await page.locator('.mobile-dimensions').boundingBox()
   expect(updating!.y).toBeGreaterThanOrEqual(dimensions!.y + dimensions!.height)
+  await page.getByRole('button', { name: '調整配置', exact: true }).tap()
   await page.getByRole('button', { name: '層數', exact: true }).tap()
-  await page.locator('dialog[open]').getByRole('button', { name: '3', exact: true }).tap()
+  await page
+    .getByRole('dialog', { name: '層數', exact: true })
+    .getByRole('button', { name: '3', exact: true })
+    .tap()
   await page.evaluate(() => {
     ;(window as any).cabinetHoldCompilation = false
   })
+  await page.getByRole('button', { name: '確認生成模型', exact: true }).tap()
   await expect(page.locator('.cabinet-workspace')).toHaveAttribute('aria-busy', 'false', {
     timeout: 20000
   })
@@ -122,8 +134,11 @@ test('更新期間選項可操作，最後配置生效且保留旋轉視角', as
     (before.distance * after.distance)
   expect(dot).toBeGreaterThan(0.98)
   await expect(page.locator('#cabinet-summary')).toHaveValue(/2 抽 × 3 層/)
+  await page.getByRole('button', { name: '調整配置', exact: true }).tap()
   await page.getByRole('button', { name: '層數', exact: true }).tap()
   await page.getByRole('button', { name: '關閉選單', exact: true }).tap()
+  await expect.poll(() => page.evaluate(() => document.body.style.overflow)).toBe('hidden')
+  await page.getByRole('button', { name: '關閉模擬視窗', exact: true }).tap()
   await expect.poll(() => page.evaluate(() => document.body.style.overflow)).not.toBe('hidden')
   await page.locator('.bottom-nav a[href="/home"]').click()
   await expect(page.locator('.cabinet-workspace')).toHaveCount(0)

@@ -42,6 +42,8 @@ for (const width of [320, 390])
       }),
       page = await context.newPage()
     await page.goto('/merch')
+    await page.getByRole('button', { name: '開啟 3D 客製模擬系統', exact: true }).tap()
+    await page.getByRole('button', { name: '確認生成模型', exact: true }).tap()
     await expect(page.locator('.cabinet-workspace canvas')).toBeVisible({ timeout: 30000 })
     await expect(page.locator('.cabinet-workspace')).toHaveAttribute('aria-busy', 'false', {
       timeout: 30000
@@ -51,10 +53,15 @@ for (const width of [320, 390])
       .toBeLessThanOrEqual(0.96)
     for (const label of await projectedLabels(page))
       expect(label.fontHeight).toBeGreaterThanOrEqual(8.5)
+    await page.getByRole('button', { name: '調整配置', exact: true }).tap()
     await page.getByRole('button', { name: '層數', exact: true }).tap()
-    await page.locator('dialog[open]').getByRole('button', { name: '8', exact: true }).tap()
+    await page
+      .getByRole('dialog', { name: '層數', exact: true })
+      .getByRole('button', { name: '8', exact: true })
+      .tap()
     await page.getByRole('button', { name: '每層抽數', exact: true }).tap()
     await page.locator('dialog[open] .cabinet-picker-list button').last().tap()
+    await page.getByRole('button', { name: '確認生成模型', exact: true }).tap()
     await expect(page.locator('#cabinet-summary')).toHaveValue(/8 層/)
     await expect(page.locator('.cabinet-workspace')).toHaveAttribute('aria-busy', 'false', {
       timeout: 30000

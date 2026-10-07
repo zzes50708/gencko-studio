@@ -81,18 +81,20 @@ export function createPpMaterial(smoke: boolean, displayScale: number) {
 }
 
 // 壓克力保持清晰透射，與磨砂 PP 分開，避免 LED 被粗糙度模糊。
-export function createAcrylicMaterial(smoke: boolean, displayScale: number) {
+export function createAcrylicMaterial(smoke: boolean, displayScale: number, cutEdge = false) {
   return new MeshPhysicalMaterial({
-    color: smoke ? '#a5aaa8' : '#ffffff',
+    color: smoke ? '#a5aaa8' : cutEdge ? '#e0ebe8' : '#ffffff',
     metalness: 0,
-    roughness: 0.015,
-    transmission: 0.99,
+    roughness: cutEdge ? 0.09 : 0.055,
+    transmission: cutEdge ? 0.74 : 0.92,
     ior: 1.49,
     thickness: 0.3 * displayScale,
     attenuationColor: smoke ? '#919996' : '#ffffff',
-    attenuationDistance: 50 * displayScale,
-    clearcoat: 0.25,
-    clearcoatRoughness: 0.02,
+    attenuationDistance: 20 * displayScale,
+    clearcoat: 0.65,
+    clearcoatRoughness: 0.06,
+    envMapIntensity: 1.35,
+    specularIntensity: 1,
     depthWrite: true
   })
 }

@@ -182,7 +182,10 @@ export function normalizeCabinet(input: CabinetInput): CabinetInput {
     ledColor: ['warm', 'neutral', 'cool'].includes(input.ledColor) ? input.ledColor : 'warm',
     ledEnabled: input.ledEnabled !== false,
     ledRowEnabled: Array.from({ length: 8 }, (_, row) => input.ledRowEnabled?.[row] !== false),
-    storageHeight: Number(input.storageHeight) > 0 ? bounded(input.storageHeight, 10, 10, 80) : 0,
+    storageHeight:
+      Number(input.storageHeight) > 0
+        ? Math.round(bounded(input.storageHeight, 10, 10, 80) / 5) * 5
+        : 0,
     storageStyle:
       input.storageStyle === 'doors' || input.storageStyle === 'open'
         ? input.storageStyle

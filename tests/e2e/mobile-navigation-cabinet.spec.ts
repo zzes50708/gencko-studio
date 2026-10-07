@@ -56,6 +56,7 @@ test('手機 3D 選單重複觸控、完整顯示與背景鎖定', async ({ brow
   })
   const page = await context.newPage()
   await page.goto('/merch')
+  await page.getByRole('button', { name: '開啟 3D 客製模擬系統', exact: true }).tap()
   const rows = page.getByRole('button', { name: '層數', exact: true })
   for (const value of ['8', '4', '8']) {
     await rows.tap()
@@ -79,9 +80,11 @@ test('手機 3D 選單重複觸控、完整顯示與背景鎖定', async ({ brow
   expect(await page.evaluate(() => scrollY)).toBe(before)
   await dialog.getByRole('button', { name: '80 cm', exact: true }).tap()
   await expect(dialog).toBeHidden()
-  await expect.poll(() => page.evaluate(() => document.body.style.overflow)).not.toBe('hidden')
+  await expect.poll(() => page.evaluate(() => document.body.style.overflow)).toBe('hidden')
   await expect(page.getByRole('button', { name: '收納抽屜內高', exact: true })).toContainText(
     '80 cm'
   )
+  await page.getByRole('button', { name: '關閉模擬視窗', exact: true }).tap()
+  await expect.poll(() => page.evaluate(() => document.body.style.overflow)).not.toBe('hidden')
   await context.close()
 })

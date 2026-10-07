@@ -56,6 +56,7 @@ import {
   disposeCabinetWoodTextures
 } from '~/utils/cabinet/materials'
 import type { CabinetWoodTextures } from '~/utils/cabinet/materials'
+import { cabinetQualityProfile, createCabinetQualitySampler } from '~/utils/cabinet/renderQuality'
 
 // 桌面場景內的滾輪只交給模型控制，選項欄自行處理原生捲動。
 function isolateStageWheel(event: WheelEvent) {
@@ -64,7 +65,10 @@ function isolateStageWheel(event: WheelEvent) {
   event.stopPropagation()
 }
 
-const props = withDefaults(defineProps<{ modelValue?: string }>(), { modelValue: 'a4' })
+const props = withDefaults(defineProps<{ modelValue?: string; active?: boolean }>(), {
+  modelValue: 'a4',
+  active: true
+})
 const emit = defineEmits<{
   'update:modelValue': [value: CabinetTemplate]
   change: [value: CabinetConfiguration]
@@ -216,7 +220,34 @@ const mounted = ref(false),
   expanded = ref(false),
   panelOpen = ref(true),
   dimensionsVisible = ref(true)
-const render3d = computed(() => mounted.value && !failed.value)
+const mobileSetup = ref(true)
+const mobileGenerated = ref(false)
+const render3d = computed(
+  () =>
+    mounted.value && props.active && !failed.value && (!touchMode.value || mobileGenerated.value)
+)
+watch(
+  () => props.active,
+  (active) => {
+    if (!active && touchMode.value) {
+      mobileSetup.value = true
+      mobileGenerated.value = false
+    }
+  }
+)
+function confirmMobileConfiguration() {
+  cleanInput()
+  failed.value = false
+  mobileSetup.value = false
+  mobileGenerated.value = true
+  queueModelUpdate()
+}
+function editMobileConfiguration() {
+  mobileSetup.value = true
+  ++buildSerial
+  if (buildTimer) clearTimeout(buildTimer)
+  modelUpdating.value = false
+}
 onMounted(() => {
   mounted.value = true
   if (touchMode.value) {
@@ -241,6 +272,7 @@ watch(
     requestedTextures.add(finish)
     // 只載入目前貼皮；已載入的來源保留，切換回來不重複下載。
     const textures = await loadCabinetWoodTextures(finish)
+    if (!textures) requestedTextures.delete(finish)
     if (disposed) {
       disposeCabinetWoodTextures(textures)
     } else {
@@ -303,7 +335,7 @@ const rebuildModel = async () => {
 let buildSerial = 0
 let buildTimer: ReturnType<typeof setTimeout> | null = null
 function queueModelUpdate() {
-  if (!render3d.value) return
+  if (!render3d.value || (touchMode.value && mobileSetup.value)) return
   if (buildTimer) clearTimeout(buildTimer)
   ++buildSerial
   modelUpdating.value = true
@@ -327,8 +359,8 @@ watch(render3d, async () => {
     modelUpdating.value = false
     if (touchMode.value) {
       const previous = model.value
-      model.value = null
       await nextTick()
+      model.value = null
       previous?.dispose()
     }
   }
@@ -430,10 +462,13 @@ const lightRatio = computed(() => input.lightLevel / 100)
 const sceneBackdrop = computed(() => {
   // 背景與全場照明同步，LED 另由自己的開關控制。
   const brightness = Math.sqrt(lightRatio.value)
-  const center = Math.round(18 + 229 * brightness)
-  const edge = Math.round(12 + 217 * brightness)
+  const center = Math.round(220 + 35 * brightness)
+  const edge = Math.round(212 + 35 * brightness)
   return `radial-gradient(ellipse at 52% 42%, rgb(${center},${center},${center}) 0%, rgb(${edge},${edge},${edge}) 100%)`
 })
+const renderDpr = ref(1)
+const qualityActive = ref(false)
+const shadowSize = ref(1024)
 const Controller = defineComponent({
   setup() {
     const { camera, renderer, scene, invalidate, sizes } = useTres()
@@ -448,9 +483,75 @@ const Controller = defineComponent({
     const preparationTarget = new WebGLRenderTarget(1, 1)
     let preparing = true
     let preparationSerial = 0
+    const qualityProfile = () =>
+      cabinetQualityProfile({
+        touch: touchMode.value,
+        pixelRatio: window.devicePixelRatio || 1,
+        cores: navigator.hardwareConcurrency,
+        memory: (navigator as Navigator & { deviceMemory?: number }).deviceMemory,
+        width: sizes.width.value || window.innerWidth,
+        height: sizes.height.value || window.innerHeight
+      })
+    let profile = qualityProfile()
+    let sampler = createCabinetQualitySampler(profile)
+    let sharpeningTimer: ReturnType<typeof setTimeout> | null = null
+    let controlHeld = false
+    let lastQualityFrame = 0
+    const applyQuality = () => {
+      if (controllerDisposed) return
+      renderDpr.value = qualityActive.value ? sampler.ratio : profile.resting
+      if (renderer instanceof WebGLRenderer)
+        renderer.transmissionResolutionScale = qualityActive.value
+          ? touchMode.value
+            ? 0.55
+            : 0.75
+          : 1
+      invalidate()
+    }
+    const clearSharpening = () => {
+      if (sharpeningTimer) clearTimeout(sharpeningTimer)
+      sharpeningTimer = null
+    }
+    const visibilityChanged = () => {
+      if (document.hidden) {
+        moving = false
+        controlHeld = false
+        clearSharpening()
+        qualityActive.value = false
+      }
+      lastQualityFrame = 0
+      if (!document.hidden) applyQuality()
+    }
+    document.addEventListener('visibilitychange', visibilityChanged)
+    const beginQualityMotion = () => {
+      clearSharpening()
+      if (!qualityActive.value) {
+        qualityActive.value = true
+        sampler.reset()
+        lastQualityFrame = 0
+        applyQuality()
+      }
+    }
+    const scheduleSharpening = () => {
+      if (controlHeld || moving || sharpeningTimer || !qualityActive.value) return
+      sharpeningTimer = setTimeout(() => {
+        sharpeningTimer = null
+        if (controllerDisposed) return
+        qualityActive.value = false
+        lastQualityFrame = 0
+        applyQuality()
+      }, 200)
+    }
     // 編譯期間保留已繪製的畫面，避免首次 render 同步等待著色器。
     render((notifyFrameRendered) => {
-      if (preparing || controllerDisposed || !camera.value) return
+      if (
+        preparing ||
+        controllerDisposed ||
+        document.hidden ||
+        !camera.value ||
+        (touchMode.value && mobileSetup.value)
+      )
+        return
       renderer.render(scene.value, camera.value)
       notifyFrameRendered()
     })
@@ -465,18 +566,40 @@ const Controller = defineComponent({
           // 避免 renderer 釋放後仍持續查詢已失效的 WebGL 程式。
           // 分批編譯，避免一次建立整櫃所有程式而佔住主執行緒。
           const objects: Parameters<WebGLRenderer['compile']>[0][] = []
+          const seen = new Set<string>()
           scene.value.traverse((object) => {
             if (
               ['Mesh', 'InstancedMesh', 'Points', 'Line', 'LineSegments', 'Sprite'].includes(
                 object.type
               )
-            )
-              objects.push(object)
+            ) {
+              // 共用幾何與材質的抽屜只需預編譯一次，位置由繪製時的矩陣處理。
+              const drawable = object as typeof object & {
+                geometry?: { uuid: string }
+                material?: { uuid: string } | { uuid: string }[]
+                instanceColor?: { uuid: string }
+              }
+              const materials = Array.isArray(drawable.material)
+                ? drawable.material
+                : [drawable.material]
+              const key = [
+                object.type,
+                drawable.geometry?.uuid,
+                ...materials.map((material) => material?.uuid),
+                drawable.instanceColor?.uuid,
+                object.receiveShadow
+              ].join(':')
+              if (!seen.has(key)) {
+                seen.add(key)
+                objects.push(object)
+              }
+            }
           })
           for (const offscreen of [false, true]) {
             let batchStart = performance.now()
             for (const object of objects) {
-              if (controllerDisposed || serial !== preparationSerial) return
+              if (controllerDisposed || serial !== preparationSerial || build !== buildSerial)
+                return
               const previousTarget = renderer.getRenderTarget()
               const previousFace = renderer.getActiveCubeFace()
               const previousLevel = renderer.getActiveMipmapLevel()
@@ -501,6 +624,8 @@ const Controller = defineComponent({
               const check = () => {
                 if (
                   controllerDisposed ||
+                  serial !== preparationSerial ||
+                  build !== buildSerial ||
                   gl.isContextLost() ||
                   programs.every(
                     (program) =>
@@ -534,11 +659,20 @@ const Controller = defineComponent({
       { flush: 'sync' }
     )
     const fitMeasurements = (position: Vector3) => {
-      if (!touchMode.value || !camera.value || !model.value || !sizes.height.value) return
+      // 畫布初掛載時尺寸可能只有 1px，避免以錯誤比例把視角拉得過遠。
+      if (
+        !touchMode.value ||
+        !camera.value ||
+        !model.value ||
+        sizes.height.value < 100 ||
+        sizes.width.value < 100
+      )
+        return
       const preview = camera.value.clone() as PerspectiveCamera
       model.value.root.updateMatrixWorld(true)
       // 用標註的實際投影邊界留出內距，窄螢幕不裁切右側文字。
-      for (let attempt = 0; attempt < 3; attempt++) {
+      for (let attempt = 0; attempt < 12; attempt++) {
+        model.value.root.updateMatrixWorld(true)
         preview.position.copy(position)
         preview.lookAt(target)
         preview.updateMatrixWorld(true)
@@ -572,15 +706,17 @@ const Controller = defineComponent({
               extent = Math.max(extent, Math.abs(point.x), Math.abs(point.y))
             }
         }
-        if (!Number.isFinite(extent) || extent <= 0.94) break
+        if (!Number.isFinite(extent) || (extent >= 0.87 && extent <= 0.93)) break
         position
           .sub(target)
-          .multiplyScalar(extent / 0.94 + 0.02)
+          .multiplyScalar(Math.max(0.75, Math.min(1.5, Math.pow(extent / 0.9, 0.65))))
+          .clampLength(5.5, 60)
           .add(target)
       }
     }
     const frame = (type = view.value) => {
       if (type === 'drawer') {
+        beginQualityMotion()
         invalidate()
         return
       }
@@ -610,13 +746,16 @@ const Controller = defineComponent({
           .add(target)
       else if (type === 'perspective') destination.set(6.9, target.y + 4.3, 8.5)
       // 正面目標需落在 OrbitControls 的極角限制內，避免動畫與限制持續互相拉扯。
-      else destination.set(0, target.y + 0.3, 11.3)
+      else destination.set(0, target.y + 0.3, touchMode.value ? 5.5 : 11.3)
       if (type === 'front') fitMeasurements(destination)
       controls.value?.instance?.target.copy(target)
-      if (reducedMotion.value) {
+      if (reducedMotion.value || (touchMode.value && type === 'front')) {
         camera.value.position.copy(destination)
         controls.value?.instance?.update()
-      } else moving = true
+      } else {
+        moving = true
+        beginQualityMotion()
+      }
       invalidate()
     }
     const resize = () => {
@@ -631,7 +770,9 @@ const Controller = defineComponent({
         const panelWidth = panelOpen.value && !touchMode.value ? 318 : 0
         if (panelWidth) cam.setViewOffset(w, h, panelWidth / 2, 0, w, h)
         const distance = camera.value.position.distanceTo(target)
-        const fitDistance = Math.max(9, 3.4 / Math.tan((cam.fov * Math.PI) / 360) / (w / h))
+        const fitDistance = touchMode.value
+          ? 5.5
+          : Math.max(9, 3.4 / Math.tan((cam.fov * Math.PI) / 360) / (w / h))
         if (distance < fitDistance)
           camera.value.position.sub(target).setLength(fitDistance).add(target)
         cam.updateProjectionMatrix()
@@ -642,16 +783,53 @@ const Controller = defineComponent({
     }
     const stopMovement = () => {
       moving = false
+      controlHeld = true
+      beginQualityMotion()
+    }
+    const endMovement = () => {
+      controlHeld = false
+      scheduleSharpening()
+    }
+    const changeMovement = () => {
+      if (!qualityActive.value) return
+      clearSharpening()
+      scheduleSharpening()
+    }
+    const markShadowsDirty = () => {
+      if (renderer instanceof WebGLRenderer) renderer.shadowMap.needsUpdate = true
+    }
+    const improveTextureFiltering = () => {
+      if (!(renderer instanceof WebGLRenderer) || !model.value) return
+      const anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy())
+      model.value.root.traverse((object) => {
+        const material = (object as unknown as { material?: any }).material
+        for (const item of Array.isArray(material) ? material : [material]) {
+          for (const map of [item?.map, item?.normalMap, item?.roughnessMap]) {
+            if (map && map.anisotropy !== anisotropy) {
+              map.anisotropy = anisotropy
+              map.needsUpdate = true
+            }
+          }
+        }
+      })
     }
     onMounted(() => {
       camera.value?.layers.enableAll()
       controls.value?.instance?.addEventListener('start', stopMovement)
+      controls.value?.instance?.addEventListener('end', endMovement)
+      controls.value?.instance?.addEventListener('change', changeMovement)
       if (renderer instanceof WebGLRenderer) {
-        renderer.transmissionResolutionScale = touchMode.value ? 0.75 : 1
+        profile = qualityProfile()
+        sampler = createCabinetQualitySampler(profile)
+        shadowSize.value = profile.shadowSize
+        applyQuality()
+        improveTextureFiltering()
         renderer.shadowMap.type = PCFShadowMap
+        renderer.shadowMap.autoUpdate = false
+        markShadowsDirty()
         renderer.outputColorSpace = SRGBColorSpace
         renderer.toneMapping = ACESFilmicToneMapping
-        renderer.toneMappingExposure = 1
+        renderer.toneMappingExposure = 0.9
         renderer.setClearAlpha(0)
         const pmrem = new PMREMGenerator(renderer),
           room = new RoomEnvironment()
@@ -681,7 +859,7 @@ const Controller = defineComponent({
           }
         )
       }
-      scene.value.environmentIntensity = lightRatio.value * 0.9
+      scene.value.environmentIntensity = lightRatio.value * 0.65
       frame('front')
       resize()
       void nextTick().then(() => {
@@ -690,6 +868,8 @@ const Controller = defineComponent({
     })
     watch(command, () => frame(command.value.type))
     watch(model, () => {
+      improveTextureFiltering()
+      markShadowsDirty()
       // 換材質、設備或尺寸時保留使用者視角，只平移觀察中心。
       if (camera.value && model.value) {
         const nextTarget = new Vector3(...model.value.target)
@@ -721,9 +901,15 @@ const Controller = defineComponent({
         invalidate()
       }
     )
-    watch([() => sizes.width.value, () => sizes.height.value, panelOpen], resize)
+    watch([() => sizes.width.value, () => sizes.height.value, panelOpen], () => {
+      profile = qualityProfile()
+      sampler = createCabinetQualitySampler(profile)
+      applyQuality()
+      resize()
+    })
     watch([() => input.lighting, () => input.lightLevel], () => {
-      scene.value.environmentIntensity = lightRatio.value * 0.9
+      scene.value.environmentIntensity = lightRatio.value * 0.65
+      markShadowsDirty()
       invalidate()
     })
     watch(dimensionsVisible, (value) => {
@@ -731,20 +917,40 @@ const Controller = defineComponent({
       invalidate()
     })
     onBeforeRender(({ delta }) => {
-      if (model.value?.animateDrawers(delta)) invalidate()
+      if (document.hidden) return
+      if (model.value?.animateDrawers(delta)) {
+        beginQualityMotion()
+        markShadowsDirty()
+        invalidate()
+      } else scheduleSharpening()
+      if (qualityActive.value && !preparing) {
+        const now = performance.now()
+        if (lastQualityFrame) {
+          const ratio = sampler.sample(now - lastQualityFrame)
+          if (Math.abs(ratio - renderDpr.value) > 0.01) applyQuality()
+        }
+        lastQualityFrame = now
+      }
       const control = controls.value?.instance
       if (!moving || !camera.value) return
       camera.value.position.lerp(destination, 1 - Math.exp(-13 * Math.min(delta, 0.05)))
       control?.update()
-      if (camera.value.position.distanceToSquared(destination) < 0.00005) moving = false
-      else invalidate()
+      if (camera.value.position.distanceToSquared(destination) < 0.00005) {
+        moving = false
+        scheduleSharpening()
+      } else invalidate()
     })
     onBeforeUnmount(() => {
       controllerDisposed = true
+      document.removeEventListener('visibilitychange', visibilityChanged)
+      clearSharpening()
+      qualityActive.value = false
       ++preparationSerial
       preparationTarget.dispose()
       if (prepareModel === prepare) prepareModel = null
       controls.value?.instance?.removeEventListener('start', stopMovement)
+      controls.value?.instance?.removeEventListener('end', endMovement)
+      controls.value?.instance?.removeEventListener('change', changeMovement)
       scene.value.environment = null
       environment?.dispose()
     })
@@ -795,7 +1001,11 @@ defineExpose({ reset, configuration, download })
   <div
     ref="host"
     class="cabinet-workspace"
-    :class="{ 'is-expanded': expanded, 'mobile-3d-active': touchMode }"
+    :class="{
+      'is-expanded': expanded,
+      'mobile-3d-active': touchMode,
+      'is-configuring': touchMode && mobileSetup
+    }"
     :aria-busy="modelUpdating"
   >
     <div class="workspace-toolbar">
@@ -804,6 +1014,9 @@ defineExpose({ reset, configuration, download })
         <strong>木製爬櫃配置</strong>
       </div>
       <div class="toolbar-actions">
+        <button v-if="touchMode && !mobileSetup" type="button" @click="editMobileConfiguration">
+          調整配置
+        </button>
         <button
           v-if="!touchMode"
           type="button"
@@ -816,14 +1029,18 @@ defineExpose({ reset, configuration, download })
         <button v-if="!touchMode" type="button" @click="expanded = !expanded">
           {{ expanded ? '退出滿版' : '展開工作區' }}
         </button>
-        <button type="button" @click="copyExport">複製清單</button>
-        <button type="button" @click="download()">匯出清單</button>
+        <button v-if="!touchMode || !mobileSetup" type="button" @click="copyExport">
+          複製清單
+        </button>
+        <button v-if="!touchMode || !mobileSetup" type="button" @click="download()">
+          匯出清單
+        </button>
       </div>
     </div>
     <div
       ref="stage"
       class="workspace-stage"
-      :style="{ background: sceneBackdrop, '--sheet-height': sheetHeight + '%' }"
+      :style="{ background: sceneBackdrop, '--sheet-height': (touchMode ? 0 : sheetHeight) + '%' }"
       tabindex="0"
       :aria-label="touchMode ? '爬櫃配置示意' : '爬櫃3D場景，方向鍵旋轉、加減縮放、Home回正面'"
       :data-lenis-prevent-wheel="!touchMode ? '' : undefined"
@@ -842,7 +1059,7 @@ defineExpose({ reset, configuration, download })
           class="workspace-canvas"
           :alpha="true"
           :antialias="true"
-          :dpr="touchMode ? 1 : [1, 1.5]"
+          :dpr="renderDpr"
           :shadows="true"
           :tone-mapping="ACESFilmicToneMapping"
           render-mode="on-demand"
@@ -858,17 +1075,17 @@ defineExpose({ reset, configuration, download })
             :enable-damping="!reducedMotion && !touchMode"
             :damping-factor="0.16"
             :min-distance="5.5"
-            :max-distance="25"
+            :max-distance="touchMode ? 60 : 25"
             :max-polar-angle="1.55"
             :rotate-speed="0.65"
           />
-          <TresAmbientLight :intensity="lightRatio * 1.15" />
+          <TresAmbientLight :intensity="lightRatio * 0.65" />
           <TresDirectionalLight
             :position="lightPosition"
             :intensity="lightRatio * 2.2"
             :cast-shadow="true"
-            :shadow-mapSize-width="touchMode ? 512 : 1024"
-            :shadow-mapSize-height="touchMode ? 512 : 1024"
+            :shadow-mapSize-width="shadowSize"
+            :shadow-mapSize-height="shadowSize"
             :shadow-camera-left="-6"
             :shadow-camera-right="6"
             :shadow-camera-top="7"
@@ -883,7 +1100,7 @@ defineExpose({ reset, configuration, download })
         </TresCanvas>
       </div>
       <div
-        v-if="!render3d || !model || (!ready && !touchMode)"
+        v-if="(!render3d || !model || (!ready && !touchMode)) && (!touchMode || !mobileSetup)"
         class="workspace-fallback"
         :class="{ 'with-panel': panelOpen && !touchMode }"
       >
@@ -912,13 +1129,16 @@ defineExpose({ reset, configuration, download })
                 : '正在準備互動模型'
           }}
         </p>
+        <button v-if="failed" type="button" @click="confirmMobileConfiguration">
+          重新生成模型
+        </button>
       </div>
       <div v-if="modelUpdating" class="workspace-updating" role="status" aria-live="polite">
         <span class="workspace-spinner" aria-hidden="true" />
         <span>正在更新模型</span>
       </div>
       <aside
-        v-show="touchMode || panelOpen"
+        v-show="touchMode ? mobileSetup : panelOpen"
         id="cabinet-options"
         class="workspace-options"
         aria-label="爬櫃配置選項"
@@ -926,7 +1146,7 @@ defineExpose({ reset, configuration, download })
         @wheel.stop
       >
         <button
-          v-if="touchMode"
+          v-if="touchMode && !mobileSetup"
           class="sheet-handle"
           type="button"
           aria-label="上下拖曳調整選項面板高度"
@@ -1062,7 +1282,7 @@ defineExpose({ reset, configuration, download })
               @change="updateNumber('storageHeight', $event)"
             >
               <option
-                v-for="n in [0, ...Array.from({ length: 71 }, (_, i) => i + 10)]"
+                v-for="n in [0, ...Array.from({ length: 15 }, (_, i) => 10 + i * 5)]"
                 :key="n"
                 :value="n"
               >
@@ -1076,7 +1296,7 @@ defineExpose({ reset, configuration, download })
               :value="input.storageHeight"
               min="0"
               max="80"
-              step="1"
+              step="5"
               @change="updateNumber('storageHeight', $event)"
             />
           </label>
@@ -1234,7 +1454,14 @@ defineExpose({ reset, configuration, download })
           </div>
         </div>
       </div>
-      <label v-if="touchMode" class="mobile-brightness">
+      <div v-if="touchMode && mobileSetup" class="mobile-confirm">
+        <span>
+          櫃子：{{ configuration.dimensions.width }} × {{ configuration.dimensions.height }} ×
+          {{ configuration.dimensions.depth }} cm
+        </span>
+        <button type="button" @click="confirmMobileConfiguration">確認生成模型</button>
+      </div>
+      <label v-if="touchMode && !mobileSetup" class="mobile-brightness">
         <span>亮度</span>
         <input
           type="range"
@@ -1246,7 +1473,7 @@ defineExpose({ reset, configuration, download })
         />
         <span>{{ configuration.lightLevel }}%</span>
       </label>
-      <div v-if="touchMode" class="mobile-dimensions">
+      <div v-if="touchMode && !mobileSetup" class="mobile-dimensions">
         <span>
           盒子:{{ configuration.boxDimensions.width }}X{{ configuration.boxDimensions.length }}X{{
             configuration.boxDimensions.height
@@ -1683,6 +1910,15 @@ input[type='number'] {
 .workspace-fallback.with-panel {
   padding-left: 320px;
 }
+.workspace-fallback button {
+  pointer-events: auto;
+  min-height: 44px;
+  padding: 6px 16px;
+  border: 1px solid #bcb6ac;
+  background: white;
+  color: #29251f;
+  border-radius: 3px;
+}
 .workspace-fallback p {
   font-size: 0.8rem;
   color: #756d61;
@@ -1888,6 +2124,17 @@ input[type='number'] {
   }
 }
 @media (max-width: 767px), (pointer: coarse), (hover: none) {
+  .workspace-options .finish-options {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    margin-bottom: 0;
+  }
+  .workspace-options .finish-options button {
+    min-height: 44px;
+    padding: 4px;
+  }
+  .workspace-options .finish-options i {
+    height: 32px;
+  }
   .workspace-stage {
     display: block;
   }
@@ -1960,6 +2207,42 @@ input[type='number'] {
   }
   .workspace-footer {
     padding: 0.35rem 0.8rem;
+  }
+}
+@media (max-width: 767px), (pointer: coarse), (hover: none) {
+  .mobile-3d-active .workspace-render {
+    height: 100%;
+  }
+  .is-configuring .workspace-render {
+    visibility: hidden;
+    pointer-events: none;
+  }
+  .is-configuring .workspace-toolbar {
+    display: none;
+  }
+  .is-configuring .workspace-options {
+    height: 100%;
+    border-radius: 0;
+    padding: 10px 10px calc(100px + env(safe-area-inset-bottom));
+  }
+  .mobile-confirm {
+    position: absolute;
+    inset: auto 0 0;
+    z-index: 6;
+    display: grid;
+    gap: 5px;
+    padding: 8px 12px;
+    background: #faf9f6;
+    border-top: 1px solid #d7d3ca;
+    font-size: 12px;
+  }
+  .mobile-confirm button {
+    min-height: 44px;
+    background: var(--red, #cd3016);
+    border-color: var(--red, #cd3016);
+    color: white;
+    font-size: 14px;
+    font-weight: 700;
   }
 }
 </style>

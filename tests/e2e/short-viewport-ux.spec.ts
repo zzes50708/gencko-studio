@@ -5,6 +5,7 @@ test('手機橫向爬櫃所有選單完整呈現，不需捲動', async ({ page 
   test.setTimeout(60000)
   await page.setViewportSize({ width: 740, height: 320 })
   await page.goto('/merch')
+  await page.getByRole('button', { name: '開啟 3D 客製模擬系統', exact: true }).tap()
   await page.waitForFunction(
     () => !!(document.querySelector('.cabinet-select-trigger') as any)?.__vueParentComponent
   )
