@@ -36,6 +36,22 @@ export function projectTaiwanCoordinate(longitude: number, latitude: number): Ma
   return [(projectedX - 250) / 55, (projectedY - 300) / 55]
 }
 
+export function unprojectTaiwanCoordinate(x: number, z: number): MapPoint {
+  const radians = Math.PI / 180
+  const longitude = (x * 55 + 250 - 275) / 10000
+  const latitude = 2 * Math.atan(Math.exp((300 - (z * 55 + 300)) / 10000)) - Math.PI / 2
+  const rotation = -23.6 * radians
+  const a = Math.cos(longitude) * Math.cos(latitude)
+  const b = Math.sin(longitude) * Math.cos(latitude)
+  const c = Math.sin(latitude)
+  const originalX = a * Math.cos(rotation) + c * Math.sin(rotation)
+  const originalZ = c * Math.cos(rotation) - a * Math.sin(rotation)
+  return [
+    120.97 + Math.atan2(b, originalX) / radians,
+    Math.asin(Math.max(-1, Math.min(1, originalZ))) / radians
+  ]
+}
+
 export function preciseMapHospitals(hospitals: MapHospital[]) {
   return hospitals.filter(
     (hospital) =>

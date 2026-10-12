@@ -1,0 +1,9 @@
+建築資料：© OpenStreetMap contributors
+授權：Open Database License (ODbL)
+授權與署名說明：https://www.openstreetmap.org/copyright
+下載日期：2026-10-12
+來源：https://api.openstreetmap.org/api/0.6/map?bbox=121.562,25.031,121.566,25.035
+本原型保留閉合 building 輪廓，排除 building:part 細部分件，並簡化成統一材質量體。
+道路與綠地輪廓取自同一快照；道路展示寬度統一設定，非實測寬度。
+已記錄 height 直接採用；僅有 building:levels 時以每層 3m 估算；皆無則使用 12m 示意。
+資料為局部街區快照，非全台建築，也不是院所外觀或入口的驗證資料。

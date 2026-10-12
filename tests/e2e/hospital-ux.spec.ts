@@ -1,5 +1,10 @@
 import { test, expect } from '@playwright/test'
-test.use({ baseURL: process.env.UX_BASE_URL || 'http://[::1]:3000', reducedMotion: 'reduce' })
+test.use({
+  baseURL: process.env.UX_BASE_URL || 'http://[::1]:3000',
+  reducedMotion: 'reduce',
+  // 避免正式版 Service Worker 接管請求，確保斷線模擬能攔截真正的資料請求。
+  serviceWorkers: 'block'
+})
 test('手機清單優先、收藏篩選與返回保留搜尋', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 850 })
   await page.goto('/hospital')

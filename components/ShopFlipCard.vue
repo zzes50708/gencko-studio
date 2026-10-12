@@ -100,6 +100,28 @@ watch(
 )
 const birthYear = computed(() => String(props.item.Birthday || '').match(/\d{4}/)?.[0] || '')
 const previewGenes = computed(() => (props.item.Genes || []).slice(0, 2))
+const statusText = computed(
+  () =>
+    ({
+      ForSale: '販售中',
+      Sold: '已售出',
+      Reserved: '已保留',
+      Auction: '競標中',
+      SelfKeep: '自留'
+    })[props.item.Status] ||
+    props.item.Status ||
+    '未登錄'
+)
+const informationRows = computed(() => [
+  ['編號', props.item.ID],
+  ['物種', props.item.Species || '未登錄'],
+  ['狀態', statusText.value],
+  ['性別', genderText.value],
+  ['生日', birthdayText.value],
+  ['基因', geneText.value || '未登錄'],
+  ['照片更新', uploadedText.value || '未登錄'],
+  ...(props.item.Note ? [['備註', String(props.item.Note).trim()]] : [])
+])
 </script>
 <template>
   <article class="flip-card card slim-card">
@@ -138,6 +160,7 @@ const previewGenes = computed(() => (props.item.Genes || []).slice(0, 2))
         <div class="card-body slim-body">
           <span class="card-id">{{ item.ID }}</span>
           <h3 class="slim-title" :title="item.Morph">{{ item.Morph }}</h3>
+          <div class="desktop-front-price price slim-price">{{ priceText }}</div>
           <div v-if="showMobileMeta" class="mobile-card-meta">
             <span :title="genderText">
               {{ isIncubationTemperature ? mobileGenderText : genderText }}
@@ -150,6 +173,14 @@ const previewGenes = computed(() => (props.item.Genes || []).slice(0, 2))
             <span v-if="item.Genes.length > 2">+{{ item.Genes.length - 2 }}</span>
           </div>
         </div>
+      </div>
+      <div class="flip-face flip-back">
+        <dl class="flip-back-information" :aria-label="`${item.Morph} 的完整資訊`">
+          <div v-for="[label, value] in informationRows" :key="label" class="flip-back-row">
+            <dt>{{ label }}</dt>
+            <dd>{{ value }}</dd>
+          </div>
+        </dl>
       </div>
     </div>
     <div class="card-purchase-row">
@@ -230,8 +261,79 @@ const previewGenes = computed(() => (props.item.Genes || []).slice(0, 2))
 }
 .flip-inner {
   flex: 1;
-  transform: none !important;
+  transform: none;
   transition: none;
+}
+.flip-back,
+.desktop-front-price {
+  display: none;
+}
+@media (min-width: 768px) and (hover: hover) and (pointer: fine) {
+  .flip-card {
+    perspective: 1200px;
+  }
+  .flip-inner {
+    display: grid;
+    transform-style: preserve-3d;
+    transition: transform 320ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+  .flip-face {
+    grid-area: 1 / 1;
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+    min-width: 0;
+  }
+  .flip-card:hover .flip-inner,
+  .flip-card:focus-within .flip-inner {
+    transform: rotateY(180deg);
+    will-change: transform;
+  }
+  .flip-back {
+    display: block;
+    transform: rotateY(180deg);
+    background: var(--card-bg-solid);
+  }
+  .flip-front .card-id,
+  .flip-front .card-status,
+  .flip-front .mobile-card-meta,
+  .flip-front .card-genes,
+  .card-purchase-row > .slim-price-row {
+    display: none;
+  }
+  .desktop-front-price {
+    display: block;
+    margin-top: 6px;
+  }
+  .slim-title {
+    font-size: 15px !important;
+  }
+}
+.flip-back-information {
+  margin: 0;
+  padding: 12px;
+  display: grid;
+  gap: 7px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--txt);
+}
+.flip-back-row {
+  display: grid;
+  grid-template-columns: 4em minmax(0, 1fr);
+  gap: 6px;
+}
+.flip-back-row dt {
+  color: var(--txt-muted);
+}
+.flip-back-row dd {
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+@media (prefers-reduced-motion: reduce) {
+  .flip-inner {
+    transition: none;
+  }
 }
 .flip-face {
   height: 100%;

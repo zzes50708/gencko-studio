@@ -50,7 +50,7 @@ test('分享比較的移除更新網址，重新載入不復活', async ({ page 
   await expect(page.locator('.item-heading')).toHaveCount(1)
 })
 
-test('比較清單重新載入保留，桌面照片不因 hover 消失', async ({ page }) => {
+test('比較清單重新載入保留，桌面 hover 恢復翻卡', async ({ page }) => {
   await page.goto('/shop', { waitUntil: 'domcontentloaded' })
   await seed(page)
   await page
@@ -67,12 +67,14 @@ test('比較清單重新載入保留，桌面照片不因 hover 消失', async (
     page.locator('.flip-card').first().getByRole('button', { name: '移出比較', exact: true })
   ).toBeVisible()
   await page.locator('.flip-card').first().hover()
-  expect(
-    await page
-      .locator('.flip-card .flip-inner')
-      .first()
-      .evaluate((e) => getComputedStyle(e).transform)
-  ).toBe('none')
+  await expect
+    .poll(() =>
+      page
+        .locator('.flip-card .flip-inner')
+        .first()
+        .evaluate((e) => getComputedStyle(e).transform)
+    )
+    .toMatch(/matrix3d\(-1/)
 })
 
 test('手機篩選草稿、價格驗證、固定操作及返回隔離', async ({ browser, baseURL }) => {
@@ -151,18 +153,21 @@ test('窄手機價格完整、工具列緊湊，兩隻比較同屏', async ({ br
   const page = await context.newPage()
   await page.goto('/shop')
   await seed(page)
-  const price = page.locator('.flip-card .slim-price').first()
+  const price = page.locator('.flip-card .card-purchase-row .slim-price').first()
   const card = page.locator('.flip-card').first()
   await expect(card.locator('.mobile-card-details-body')).toBeHidden()
   const compactHeight = (await card.boundingBox())!.height
   const neighbor = page.locator('.flip-card').nth(1)
   const neighborHeight = (await neighbor.boundingBox())!.height
-  const neighborPriceY = (await neighbor.locator('.slim-price').boundingBox())!.y
+  const neighborPriceY = (await neighbor.locator('.card-purchase-row .slim-price').boundingBox())!.y
   await card.locator('summary').tap()
   await expect(card.locator('.mobile-card-details-body')).toContainText('UX-1')
   expect((await card.boundingBox())!.height).toBeGreaterThan(compactHeight)
   expect((await neighbor.boundingBox())!.height).toBeCloseTo(neighborHeight, 0)
-  expect((await neighbor.locator('.slim-price').boundingBox())!.y).toBeCloseTo(neighborPriceY, 0)
+  expect((await neighbor.locator('.card-purchase-row .slim-price').boundingBox())!.y).toBeCloseTo(
+    neighborPriceY,
+    0
+  )
   await card.locator('summary').tap()
   expect(await price.evaluate((e) => e.scrollWidth <= e.clientWidth)).toBe(true)
   expect(

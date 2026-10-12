@@ -75,10 +75,9 @@ const clearFilters = () => {
 const scrollBehavior = () =>
   window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth'
 const mobileMapUrl = computed(() => {
-  const hospital = focusedHospital.value
-  const query = hospital
-    ? `${hospital.name} ${hospital.address}`
-    : `${hospCity.value === 'all' ? '台灣' : hospCity.value} 特寵醫院`
+  const hospital = mobilePreviewHospital.value
+  if (!hospital) return ''
+  const query = `${hospital.name} ${hospital.address}`
   return `https://maps.google.com/maps?q=${encodeURIComponent(query)}&output=embed&hl=zh-TW`
 })
 const focusedHospital = ref(null)
@@ -130,6 +129,29 @@ const hospFiltered = computed(() => {
 })
 
 const hospWishlist = computed(() => store.hospWishlist)
+const mobilePreviewHospital = computed(
+  () =>
+    hospFiltered.value.find(
+      (hospital) => String(hospital.id) === String(focusedHospital.value?.id)
+    ) ||
+    hospFiltered.value[0] ||
+    null
+)
+watch(mobileMapUrl, () => {
+  mobileMapInteractive.value = false
+})
+watch(hospFiltered, (hospitals) => {
+  if (
+    focusedHospital.value &&
+    !hospitals.some((hospital) => hospital.id === focusedHospital.value.id)
+  ) {
+    focusedHospital.value = null
+  }
+})
+const selectMobilePreview = (event) => {
+  const hospital = hospFiltered.value.find((item) => String(item.id) === event.target.value)
+  if (hospital) focusHospital(hospital)
+}
 
 const changeCity = (val) => {
   hospCity.value = val
@@ -510,13 +532,13 @@ useHead({
           </label>
           <button type="button" @click="clearFilters">清除篩選</button>
           <button
-            v-if="isMobile"
+            v-if="isMobile && !mobileMapOpen"
             type="button"
             :aria-expanded="mobileMapOpen"
             aria-controls="hospital-mobile-map"
             @click="toggleMobileMap"
           >
-            {{ mobileMapOpen ? '收起地圖' : '查看地圖' }}
+            查看地圖
           </button>
         </div>
         <div class="hosp-count-row" aria-live="polite">
@@ -545,9 +567,10 @@ useHead({
     >
       <div v-if="isMobile" class="hosp-mobile-map">
         <div class="hosp-mobile-map-actions">
-          <span>{{ hospFiltered.length }} 間符合條件</span>
+          <strong>院所位置</strong>
           <button
             type="button"
+            v-if="mobilePreviewHospital"
             :aria-pressed="mobileMapInteractive"
             @click="mobileMapInteractive = !mobileMapInteractive"
           >
@@ -555,10 +578,24 @@ useHead({
           </button>
           <button type="button" @click="closeMobileMap">關閉地圖</button>
         </div>
-        <p>Google 地圖顯示搜尋位置；符合條件的院所請以本站清單為準。</p>
+        <label v-if="mobilePreviewHospital" class="hosp-map-picker">
+          <span>選擇預覽院所</span>
+          <select :value="String(mobilePreviewHospital.id)" @change="selectMobilePreview">
+            <option
+              v-for="hospital in hospFiltered"
+              :key="hospital.id"
+              :value="String(hospital.id)"
+            >
+              {{ hospital.name }}
+            </option>
+          </select>
+        </label>
+        <p v-if="mobilePreviewHospital">單院 Google 位置預覽，地址請以院所資料為準。</p>
+        <p v-else class="hosp-map-empty">沒有符合條件的院所，請調整上方篩選。</p>
         <iframe
+          v-if="mobilePreviewHospital"
           :src="mobileMapUrl"
-          title="院所 Google 地圖"
+          :title="`${mobilePreviewHospital.name} Google 地圖`"
           loading="lazy"
           :tabindex="mobileMapInteractive ? 0 : -1"
           :class="{ interactive: mobileMapInteractive }"
@@ -575,6 +612,7 @@ useHead({
         @select="changeCity"
         @select-hospital="focusHospital"
         @show-details="showHospitalDetails"
+        @clear-hospital="focusedHospital = null"
       />
     </div>
 
@@ -1597,6 +1635,33 @@ useHead({
   gap: 8px;
   margin-top: 10px;
 }
+.hosp-mobile-map-actions {
+  margin-top: 0;
+  gap: 6px;
+}
+.hosp-mobile-map-actions strong {
+  margin-right: auto;
+  font-size: 13px;
+}
+.hosp-map-picker {
+  display: grid;
+  gap: 4px;
+  margin-top: 8px;
+  font-size: 12px;
+}
+.hosp-map-picker select {
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
+  padding: 6px 10px;
+  border: 1px solid var(--bd);
+  background: var(--card-bg-solid);
+  color: var(--txt);
+  font: inherit;
+}
+.hosp-map-empty {
+  padding: 16px 0;
+}
 .hosp-filter-actions label {
   display: flex;
   align-items: center;
@@ -1616,7 +1681,7 @@ useHead({
 }
 .hosp-mobile-map iframe {
   width: 100%;
-  height: 270px;
+  height: clamp(220px, 60vw, 270px);
   border: 0;
   pointer-events: none;
 }
