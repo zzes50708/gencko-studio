@@ -120,12 +120,8 @@
       refreshStatus();
 
       retryBtn.addEventListener('click', function () {
-        // 若先前是被導向 offline.html，按下重試會回到原本想去的網址
-        if (document.referrer && document.referrer.indexOf(location.origin) === 0 && document.referrer !== location.href) {
-          location.href = document.referrer;
-        } else {
-          location.reload();
-        }
+        // 離線內容在原本網址顯示，重試同一頁，不跳回上一個頁面。
+        location.reload();
       });
     })();
   </script>

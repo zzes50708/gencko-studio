@@ -1,5 +1,10 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
 import { fileURLToPath } from 'node:url'
+import { readFileSync } from 'node:fs'
+import { createHash } from 'node:crypto'
+const offlineRevision = createHash('sha256')
+  .update(readFileSync(fileURLToPath(new URL('./public/offline.html', import.meta.url))))
+  .digest('hex')
 const gaId = process.env.NUXT_PUBLIC_GA_ID || 'G-93T0C2KMEZ'
 const enableGa =
   process.env.NODE_ENV === 'production' || process.env.NUXT_PUBLIC_ENABLE_GA === 'true'
@@ -134,10 +139,11 @@ export default defineNuxtConfig({
       ]
     },
     workbox: {
-      globPatterns: ['**/*.{js,css,html,png,svg,ico,webp}'],
-      // PWA 離線時導向 public/offline.html；含「重試」按鈕與線上偵測
-      navigateFallback: '/offline.html',
-      navigateFallbackDenylist: [/^\/api\//, /^\/sitemap\.xml/, /^\/feed\.xml/, /^\/robots\.txt/],
+      globPatterns: ['**/*.{js,css,png,svg,ico,webp}'],
+      additionalManifestEntries: [{ url: '/offline.html', revision: offlineRevision }],
+      // 線上導航直接取得正式頁面，只有網路失敗才使用已快取的離線頁。
+      navigateFallback: null,
+      importScripts: ['/sw-navigation.js'],
       cleanupOutdatedCaches: true,
       runtimeCaching: [
         {

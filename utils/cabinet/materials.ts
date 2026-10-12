@@ -8,6 +8,7 @@ import {
   Vector2
 } from 'three'
 import type { Texture } from 'three'
+import { CABINET_BOX_CONSTRUCTION } from './physicalProfiles'
 
 export const CABINET_MATERIAL_ASSETS = {
   color: '/cabinet/materials/concrete-v2-color.jpg',
@@ -69,7 +70,7 @@ export function createPpMaterial(smoke: boolean, displayScale: number) {
     roughness: 0.32,
     transmission: smoke ? 0.58 : 0.8,
     ior: 1.49,
-    thickness: 0.16 * displayScale,
+    thickness: CABINET_BOX_CONSTRUCTION.plastic.wallThickness * displayScale,
     attenuationColor: smoke ? '#929b95' : '#ffffff',
     attenuationDistance: 30 * displayScale,
     clearcoat: 0.06,
@@ -88,7 +89,7 @@ export function createAcrylicMaterial(smoke: boolean, displayScale: number, cutE
     roughness: cutEdge ? 0.09 : 0.055,
     transmission: cutEdge ? 0.74 : 0.92,
     ior: 1.49,
-    thickness: 0.3 * displayScale,
+    thickness: CABINET_BOX_CONSTRUCTION.acrylic.wallThickness * displayScale,
     attenuationColor: smoke ? '#919996' : '#ffffff',
     attenuationDistance: 20 * displayScale,
     clearcoat: 0.65,

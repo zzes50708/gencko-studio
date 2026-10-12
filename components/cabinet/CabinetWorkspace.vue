@@ -106,6 +106,37 @@ const input = reactive<CabinetInput>({
   lightLevel: 70,
   clearances: { horizontal: 0.6, vertical: 0.7, depth: 1, controlHeight: 8 }
 })
+const draftKey = 'gencko-cabinet-draft-v1'
+let draftTimer: ReturnType<typeof setTimeout> | null = null
+function saveDraft() {
+  if (draftTimer) clearTimeout(draftTimer)
+  draftTimer = null
+  try {
+    sessionStorage.setItem(draftKey, JSON.stringify(normalizeCabinet(input)))
+  } catch {
+    // 隱私模式或儲存空間不可用時，不阻斷模型操作。
+  }
+}
+onMounted(() => {
+  try {
+    const saved = JSON.parse(sessionStorage.getItem(draftKey) || 'null')
+    if (saved && Object.hasOwn(customerBoxes, saved.boxVariant)) {
+      Object.assign(input, normalizeCabinet({ ...input, ...saved }))
+    }
+  } catch {
+    // 舊版或損壞草稿使用原有預設值。
+  }
+})
+watch(
+  input,
+  () => {
+    if (draftTimer) clearTimeout(draftTimer)
+    draftTimer = setTimeout(saveDraft, 150)
+  },
+  { deep: true }
+)
+useEventListener('pagehide', saveDraft)
+onBeforeUnmount(saveDraft)
 const layout = computed(() => calculateCabinet(input))
 const configuration = computed(() => layout.value.configuration)
 const finishColor = computed(

@@ -46,6 +46,7 @@ import {
   createWhiteLaminateMaterial
 } from './materials'
 import type { CabinetWoodTextures } from './materials'
+import { CABINET_BOX_CONSTRUCTION } from './physicalProfiles'
 
 export interface CabinetModel {
   root: Group
@@ -64,6 +65,9 @@ export interface CabinetModel {
 }
 type Part = { position: [number, number, number]; size: [number, number, number]; parent?: Group }
 const LED_COLORS = { warm: '#ffcb83', neutral: '#fff0d6', cool: '#d7eaff' }
+let areaLightTexturesInitialized = false
+// 原型只留在 CPU，每份模型持有可自行釋放的複本，最多保留四種尺寸。
+const acrylicGeometryCache = new Map<string, BufferGeometry>()
 
 // 依外框與底框建構中空盒壁，保留底面獨立材質區域。
 function tubGeometry(
@@ -129,7 +133,7 @@ function tubGeometry(
 }
 
 // 圓角平面外緣：只連接四條環帶，中央完全開放，不建立封口面。
-function rimGeometry(width: number, length: number, lip = 0.6, thickness = 0.18) {
+function rimGeometry(width: number, length: number, lip: number, thickness: number) {
   const positions: number[] = []
   const indices: number[] = []
   const perimeter = 24
@@ -171,7 +175,15 @@ function rimGeometry(width: number, length: number, lip = 0.6, thickness = 0.18)
 }
 
 // 壓克力是四片直立厚板與白色底板的接合，不使用圓角塑膠盒殼。
-function acrylicTrayGeometry(width: number, height: number, length: number, wall = 0.3) {
+function acrylicTrayGeometry(
+  width: number,
+  height: number,
+  length: number,
+  wall: number = CABINET_BOX_CONSTRUCTION.acrylic.wallThickness
+) {
+  const cacheKey = [width, height, length, wall].join(':')
+  const cached = acrylicGeometryCache.get(cacheKey)
+  if (cached) return cached.clone()
   const plate = (span: number) => {
     const shape = new Shape()
     shape.moveTo(-span / 2, 0)
@@ -180,11 +192,20 @@ function acrylicTrayGeometry(width: number, height: number, length: number, wall
     shape.lineTo(-span / 2, height)
     shape.closePath()
     // 通風孔穿過完整板厚；沒有加上帶孔上蓋。
-    const count = Math.floor((span - 2) / 1.2)
-    for (const y of [height - 1, height - 1.8]) {
+    const profile = CABINET_BOX_CONSTRUCTION.acrylic
+    const count = Math.floor((span - 2) / profile.ventPitch)
+    for (const offset of profile.ventRowOffsets) {
+      const y = height - offset
       for (let i = 0; i < count; i++) {
         const hole = new Path()
-        hole.absarc((i - (count - 1) / 2) * 1.2, y, 0.15, 0, Math.PI * 2, true)
+        hole.absarc(
+          (i - (count - 1) / 2) * profile.ventPitch,
+          y,
+          profile.ventRadius,
+          0,
+          Math.PI * 2,
+          true
+        )
         shape.holes.push(hole)
       }
     }
@@ -217,7 +238,13 @@ function acrylicTrayGeometry(width: number, height: number, length: number, wall
   geometry.addGroup(0, sideCount, 0)
   geometry.addGroup(sideCount, bottom.attributes.position.count, 1)
   pieces.forEach((piece) => piece.dispose())
-  return geometry
+  if (acrylicGeometryCache.size >= 4) {
+    const oldest = acrylicGeometryCache.keys().next().value!
+    acrylicGeometryCache.get(oldest)!.dispose()
+    acrylicGeometryCache.delete(oldest)
+  }
+  acrylicGeometryCache.set(cacheKey, geometry)
+  return geometry.clone()
 }
 
 export function createCabinetModel(
@@ -255,7 +282,11 @@ export function createCabinetModel(
     geometries.push(geometry)
     return geometry
   }
-  RectAreaLightUniformsLib.init()
+  // 面光查表是全域共用資料；重建時重新 init 會替換貼圖並遺留舊 GPU 資源。
+  if (!areaLightTexturesInitialized) {
+    RectAreaLightUniformsLib.init()
+    areaLightTexturesInitialized = true
+  }
   // 面光源依實際層高限制貢獻，避免無陰影面光穿透下一層。
   // 固定光源槽位，調整層數只更新資料，不重新編譯整櫃材質。
   const ledCapacity = 8
@@ -482,10 +513,16 @@ export function createCabinetModel(
   }
   const acrylicBox = cfg.boxVariant.startsWith('acrylic-')
   // 未提供底框尺寸的塑膠盒以小幅內縮示意；不改動規劃用的外框尺寸。
-  const lip = acrylicBox ? 0 : 0.6
-  const bottomWidth = box.bottomWidth || (acrylicBox ? box.width : box.width - 2.8)
-  const bottomLength = box.bottomLength || (acrylicBox ? box.length : box.length - 3)
-  const rim = acrylicBox ? null : ownGeometry(rimGeometry(box.width, box.length, lip))
+  const physical = CABINET_BOX_CONSTRUCTION
+  const lip = acrylicBox ? 0 : physical.plastic.topRimWidth
+  const bottomWidth =
+    box.bottomWidth || (acrylicBox ? box.width : box.width - physical.plastic.bottomWidthReduction)
+  const bottomLength =
+    box.bottomLength ||
+    (acrylicBox ? box.length : box.length - physical.plastic.bottomLengthReduction)
+  const rim = acrylicBox
+    ? null
+    : ownGeometry(rimGeometry(box.width, box.length, lip, physical.plastic.topRimThickness))
   const tub = ownGeometry(
     acrylicBox
       ? acrylicTrayGeometry(box.width, box.height, box.length)
@@ -495,7 +532,7 @@ export function createCabinetModel(
           box.length - lip * 2,
           bottomWidth,
           bottomLength,
-          acrylicBox ? 0.3 : 0.16
+          acrylicBox ? physical.acrylic.wallThickness : physical.plastic.wallThickness
         )
   )
   const drawerDetailCache = new Map<Material, BufferGeometry>()
@@ -616,18 +653,20 @@ export function createCabinetModel(
         )
       }
       if (acrylicBox) {
+        const wall = physical.acrylic.wallThickness
+        const half = wall / 2
         // 四邊獨立厚邊框，避免用整片透明平面代替實體盒壁。
-        for (const y of [base + 0.15, base + box.height - 0.15]) {
+        for (const y of [base + 0.16 + half, base + box.height + 0.16 - half]) {
           for (const sign of [-1, 1]) {
             addDrawerPart(
               'edge',
-              [x + sign * (box.width / 2 - 0.15), y, front - box.length / 2],
-              [0.3, 0.3, box.length]
+              [x + sign * (box.width / 2 - half), y, front - box.length / 2],
+              [wall, wall, box.length]
             )
             addDrawerPart(
               'edge',
-              [x, y, front - box.length / 2 + sign * (box.length / 2 - 0.15)],
-              [box.width - 0.6, 0.3, 0.3]
+              [x, y, front - box.length / 2 + sign * (box.length / 2 - half)],
+              [box.width - wall * 2, wall, wall]
             )
           }
         }
@@ -637,11 +676,11 @@ export function createCabinetModel(
             addDrawerPart(
               'edge',
               [
-                x + sx * (box.width / 2 - 0.15),
+                x + sx * (box.width / 2 - half),
                 base + box.height / 2 + 0.16,
-                z + sz * (box.length / 2 - 0.15)
+                z + sz * (box.length / 2 - half)
               ],
-              [0.3, box.height, 0.3]
+              [wall, box.height, wall]
             )
           }
       }
