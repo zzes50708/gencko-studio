@@ -5,6 +5,7 @@ export type CountyPolygon = MapPoint[][]
 export type MapHospital = {
   id: string | number
   name?: string
+  phone?: string | null
   address?: string
   city: string
   district?: string | null

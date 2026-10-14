@@ -10,7 +10,7 @@ test.beforeEach(async ({ page }) => {
   })
 })
 
-test('一般滾輪閱讀頁面，修飾鍵滾輪以滑鼠位置縮放', async ({ page }) => {
+test('地圖內滾輪直接縮放，地圖外閱讀頁面，縮放保持滑鼠位置', async ({ page }) => {
   const stage = page.locator('.map-stage')
   await stage.scrollIntoViewIfNeeded()
   await expect(stage).toHaveAttribute('data-map-idle', 'true')
@@ -19,19 +19,27 @@ test('一般滾輪閱讀頁面，修飾鍵滾輪以滑鼠位置縮放', async ({
   await page.mouse.move(bounds.x + bounds.width / 2, bounds.y + bounds.height / 2)
   const scroll = await page.evaluate(() => window.scrollY)
   await page.mouse.wheel(0, 160)
+  await expect
+    .poll(async () => Number(await stage.getAttribute('data-map-zoom')))
+    .toBeLessThan(zoom)
+  expect(await page.evaluate(() => window.scrollY)).toBeCloseTo(scroll, 0)
+  await page.mouse.move(2, bounds.y + bounds.height / 2)
+  await page.mouse.wheel(0, 160)
   await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(scroll + 20)
-  expect(Number(await stage.getAttribute('data-map-zoom'))).toBeCloseTo(zoom, 3)
+  await page.locator('.map-result-preview button').first().click()
+  await expect
+    .poll(async () => Number(await stage.getAttribute('data-map-zoom')))
+    .toBeCloseTo(200, 1)
+  await expect(stage).toHaveAttribute('data-map-idle', 'true')
   await stage.scrollIntoViewIfNeeded()
   const marker = page.locator('.map-cluster.single').first()
   const name = await marker.getAttribute('aria-label')
   const before = (await marker.boundingBox())!
   await page.mouse.move(before.x + before.width / 2, before.y + before.height / 2)
-  await page.keyboard.down('Control')
   await page.mouse.wheel(0, -120)
-  await page.keyboard.up('Control')
   await expect
     .poll(async () => Number(await stage.getAttribute('data-map-zoom')))
-    .toBeGreaterThan(zoom * 1.1)
+    .toBeGreaterThan(220)
   await expect(stage).toHaveAttribute('data-map-idle', 'true')
   const after = (await page.getByRole('button', { name: name!, exact: true }).boundingBox())!
   expect(Math.hypot(after.x - before.x, after.y - before.y)).toBeLessThan(8)
@@ -74,7 +82,9 @@ test('輕微手震不平移，鍵盤可縮放，篩選不保留已排除院所',
   await page.mouse.move(bounds.x + bounds.width / 2 + 2, bounds.y + bounds.height / 2 + 2)
   expect(Number(await stage.getAttribute('data-map-frames'))).toBe(frames)
   await page.mouse.up()
-  await page.getByRole('combobox', { name: '地圖範圍', exact: true }).selectOption('all')
+  // 點到無院所縣市時會顯示精簡空狀態，透過常駐篩選控制恢復。
+  await page.getByRole('button', { name: '清除篩選', exact: true }).first().click()
+  await expect(stage).toHaveAttribute('data-map-ready', 'true', { timeout: 30000 })
   await expect(stage).toHaveAttribute('data-map-idle', 'true')
   await stage.locator('canvas').focus()
   await page.keyboard.press('+')
@@ -85,7 +95,9 @@ test('輕微手震不平移，鍵盤可縮放，篩選不保留已排除院所',
   await expect(stage).toHaveAttribute('data-map-idle', 'true')
   await page.locator('.map-result-preview button').first().click()
   await expect(page.locator('.map-hospital-detail')).toBeVisible()
-  await page.getByRole('searchbox').fill('不存在院所互動測試')
+  await page
+    .getByRole('searchbox', { name: '搜尋醫院名稱或地址', exact: true })
+    .fill('不存在院所互動測試')
   await expect(page.locator('.map-hospital-detail')).toHaveCount(0)
   await expect(page.locator('.map-cluster')).toHaveCount(0)
 })
@@ -177,4 +189,62 @@ test('拖曳離開畫面後放開仍可重新操作，縮放下限明確停用',
   await expect(page.getByRole('button', { name: '縮小地圖', exact: true })).toBeDisabled()
   await page.getByRole('button', { name: '放大地圖', exact: true }).click()
   await expect(page.getByRole('button', { name: '縮小地圖', exact: true })).toBeEnabled()
+})
+
+test('清單選取院所優先於尚未執行的滾輪縮放', async ({ page }) => {
+  const stage = page.locator('.map-stage')
+  await page.evaluate(() => {
+    const surface = document.querySelector('.map-stage')!
+    const rect = surface.getBoundingClientRect()
+    surface.dispatchEvent(
+      new WheelEvent('wheel', {
+        bubbles: true,
+        cancelable: true,
+        ctrlKey: true,
+        deltaY: -400,
+        clientX: rect.x + rect.width / 2,
+        clientY: rect.y + rect.height / 2
+      })
+    )
+    ;(document.querySelector('.hosp-header-toggle') as HTMLButtonElement).click()
+  })
+  await expect(stage).toHaveAttribute('data-map-idle', 'true')
+  await expect
+    .poll(async () => Number(await stage.getAttribute('data-map-zoom')))
+    .toBeCloseTo(200, 1)
+})
+
+test('遺失放開事件後，無按鍵的滑鼠移動會結束拖曳', async ({ page }) => {
+  const canvas = page.locator('.map-stage canvas')
+  const rect = (await canvas.boundingBox())!
+  await page.mouse.move(rect.x + 50, rect.y + 50)
+  await page.mouse.down()
+  await expect(canvas).toHaveCSS('cursor', 'grabbing')
+  await canvas.evaluate((element) => {
+    const rect = element.getBoundingClientRect()
+    element.dispatchEvent(
+      new PointerEvent('pointermove', {
+        bubbles: true,
+        pointerId: 1,
+        pointerType: 'mouse',
+        buttons: 0,
+        clientX: rect.x + 100,
+        clientY: rect.y + 80
+      })
+    )
+  })
+  await expect(canvas).toHaveCSS('cursor', 'grab')
+  await page.mouse.up()
+})
+
+test('單一院所標記直接顯示名稱', async ({ page }) => {
+  await page.locator('.map-result-preview button').first().click()
+  await expect
+    .poll(async () => Number(await page.locator('.map-stage').getAttribute('data-map-zoom')))
+    .toBeCloseTo(200, 1)
+  await expect(page.locator('.map-stage')).toHaveAttribute('data-map-idle', 'true')
+  const single = page.locator('.map-cluster.single').first()
+  await expect(single).toBeVisible()
+  const name = (await single.getAttribute('aria-label'))!.replace(/^查看 /, '')
+  await expect(single).toHaveText(name)
 })

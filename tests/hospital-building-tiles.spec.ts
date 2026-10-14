@@ -35,6 +35,13 @@ describe('全台建築圖磚', () => {
     expect(tiles.length).toBeGreaterThan(0)
     expect(tiles.length).toBeLessThanOrEqual(16)
     expect(tiles).toContainEqual(geographicTile(121.564, 25.033, 14))
-    expect(visibleBuildingTiles({ west: 115, east: 125, south: 18, north: 27 })).toEqual([])
+    const broad = visibleBuildingTiles(
+      { west: 115, east: 125, south: 18, north: 27 },
+      16,
+      [121.513, 25.002]
+    )
+    expect(broad).toHaveLength(16)
+    expect(broad.every((tile) => tile.z === 14)).toBe(true)
+    expect(broad[0]).toEqual(geographicTile(121.513, 25.002, 14))
   })
 })

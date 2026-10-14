@@ -45,7 +45,7 @@ import {
   type MapHospital
 } from '~/utils/hospitalMap'
 import { buildingMapHeight, type HospitalBuilding } from '~/utils/hospitalBuildings'
-import { clusterScreenHospitals } from '~/utils/hospitalMapClusters'
+import { clusterScreenHospitals, hospitalMarkerBounds } from '~/utils/hospitalMapClusters'
 import { HospitalTileLayer } from '~/utils/hospitalTileLayer'
 import type { TilePlace } from '~/utils/hospitalBuildingTiles'
 
@@ -61,6 +61,7 @@ const props = defineProps<{
   focusedHospital?: MapHospital | null
   focusSequence?: number
   interactionSurface?: HTMLElement | null
+  detailsBelow?: boolean
 }>()
 const emit = defineEmits([
   'select',
@@ -81,6 +82,7 @@ const camera = shallowRef<PerspectiveCamera>()
 const root = markRaw(new Group())
 let tileCount = 0
 let tilePlaces: TilePlace[] = []
+let buildingTilesEnabled = false
 let tileTimer: ReturnType<typeof setTimeout> | null = null
 const tileLayer = new HospitalTileLayer((status) => {
   tileCount = status.count
@@ -100,10 +102,10 @@ const tileLayer = new HospitalTileLayer((status) => {
 })
 root.add(tileLayer.root)
 function requestViewTiles() {
-  if (tileTimer) clearTimeout(tileTimer)
+  if (tileTimer) return
   tileTimer = setTimeout(() => {
     tileTimer = null
-    if (!camera.value || !props.active || disposed || !settled) return
+    if (!camera.value || !props.active || disposed) return
     const corners: [number, number][] = []
     for (const [x, y] of [
       [-1, -1],
@@ -125,8 +127,14 @@ function requestViewTiles() {
             north: Math.max(...corners.map((point) => point[1]))
           }
         : null
-    void tileLayer.update(bounds, viewCurrent.zoom >= 120)
-  }, 180)
+    if (viewCurrent.zoom >= 40) buildingTilesEnabled = true
+    else if (viewCurrent.zoom < 30) buildingTilesEnabled = false
+    void tileLayer.update(
+      bounds,
+      buildingTilesEnabled,
+      unprojectTaiwanCoordinate(viewCurrent.x, viewCurrent.z)
+    )
+  }, 240)
 }
 const proxies: Mesh[] = []
 const countyMeshes: { name: string; geometry: ExtrudeGeometry; anchor: Vector3 }[] = []
@@ -536,15 +544,22 @@ function setZoom(value: number) {
   wake()
 }
 const zoomCamera = new PerspectiveCamera()
+let cameraClearance = 0
+let cameraClearanceSettled = true
 function updateCameraPose(cam: PerspectiveCamera, view: typeof viewTarget) {
   const aspect = sizes.width.value / Math.max(1, sizes.height.value)
   const baseDistance = Math.max(17.8, 14 / Math.max(0.6, aspect)) / view.zoom
-  const localHeight = view.zoom >= 120 ? tileLayer.maximumHeight(view.x, view.z, baseDistance) : 0
-  const distance = Math.max(
-    baseDistance,
-    Math.max(0, localHeight - view.elevation) + baseDistance * 0.4
-  )
+  const localHeight = view.zoom >= 30 ? tileLayer.maximumHeight(view.x, view.z, baseDistance) : 0
+  const clearance = Math.max(0, localHeight - view.elevation) + baseDistance * 0.4
+  if (cam === camera.value) {
+    cameraClearance += (clearance - cameraClearance) * (props.reducedMotion ? 1 : 0.15)
+    cameraClearanceSettled = Math.abs(clearance - cameraClearance) < baseDistance * 0.001
+  }
+  const distance = Math.max(baseDistance, cam === camera.value ? cameraClearance : clearance)
   cam.aspect = aspect
+  // 依觀看距離調整近裁切面，避免街區的道路與地面深度精度不足而閃爍。
+  cam.near = Math.max(0.00001, baseDistance * 0.01)
+  cam.far = Math.max(40, distance * 4)
   cam.up.set(0, 0, -1)
   cam.updateProjectionMatrix()
   cam.position.set(
@@ -673,6 +688,11 @@ function onPointerDown(event: PointerEvent) {
 function onPointerMove(event: PointerEvent) {
   const old = pointers.get(event.pointerId)
   if (!old) return
+  if (event.pointerType === 'mouse' && !(event.buttons & 1)) {
+    onPointerCancel(event)
+    if (canvas?.hasPointerCapture(event.pointerId)) canvas.releasePointerCapture(event.pointerId)
+    return
+  }
   const dx = event.clientX - old.x
   const dy = event.clientY - old.y
   if (Math.hypot(event.clientX - old.startX, event.clientY - old.startY) > 5) old.moved = true
@@ -745,6 +765,7 @@ function onContextMenu(event: Event) {
   event.preventDefault()
 }
 function onKey(event: KeyboardEvent) {
+  if (event.ctrlKey || event.metaKey || event.altKey || event.isComposing) return
   if (!['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', '+', '=', '-', '0'].includes(event.key))
     return
   event.preventDefault()
@@ -806,7 +827,8 @@ const beforeHook = onBeforeRender(({ delta }) => {
     )
   })
   refreshHospitalMarkerBounds(markers)
-  emit('hospital-clusters', clusterScreenHospitals(hospitalPoints))
+  const clusters = clusterScreenHospitals(hospitalPoints, 70, true, sizes.width.value)
+  emit('hospital-clusters', clusters)
   const buildingLabels: {
     name: string
     x: number
@@ -817,7 +839,7 @@ const beforeHook = onBeforeRender(({ delta }) => {
     latitude?: number
     category?: string
   }[] = []
-  if (viewCurrent.zoom > 60) {
+  if (viewCurrent.zoom >= 40) {
     for (const item of (tileCount ? [] : [...buildingNames]).sort(
       (a, b) => Number(b.name === '台北101') - Number(a.name === '台北101')
     )) {
@@ -844,12 +866,19 @@ const beforeHook = onBeforeRender(({ delta }) => {
         y = ((-projected.y + 1) / 2) * sizes.height.value
       if (x < 95 || x > sizes.width.value - 95 || y < 50 || y > sizes.height.value - 55) continue
       if (x < 210 && y < 170) continue
-      if (props.focusedHospital && x > sizes.width.value - 380 && y < 260) continue
+      if (!props.detailsBelow && props.focusedHospital && x > sizes.width.value - 380 && y < 260)
+        continue
       // 院所標記優先保留點擊空間，避免一般地標蓋住醫院。
       if (
-        hospitalPoints.some(
-          (hospital) => Math.abs(hospital.x - x) < 95 && Math.abs(hospital.y - y) < 45
-        )
+        clusters.some((cluster) => {
+          const bounds = hospitalMarkerBounds(cluster, sizes.width.value)
+          return (
+            x + 95 > bounds.left &&
+            x - 95 < bounds.right &&
+            y + 24 > bounds.top &&
+            y - 24 < bounds.bottom
+          )
+        })
       )
         continue
       if (buildingLabels.some((label) => Math.abs(label.x - x) < 150 && Math.abs(label.y - y) < 45))
@@ -886,6 +915,7 @@ const beforeHook = onBeforeRender(({ delta }) => {
   }
   emit('labels', labels)
   settled =
+    cameraClearanceSettled &&
     Math.abs(viewTarget.azimuth - viewCurrent.azimuth) +
       Math.abs(viewTarget.polar - viewCurrent.polar) +
       Math.abs(viewTarget.zoom - viewCurrent.zoom) <
@@ -911,7 +941,7 @@ const afterHook = onRender(() => {
     frameMs: lastTimestamp ? Math.round(now - lastTimestamp) : 0,
     buildings:
       tileCount ||
-      (viewCurrent.zoom >= 120 &&
+      (viewCurrent.zoom >= 60 &&
       Math.abs(viewCurrent.x - projectTaiwanCoordinate(121.564, 25.033)[0]) < 0.035 &&
       Math.abs(viewCurrent.z - projectTaiwanCoordinate(121.564, 25.033)[1]) < 0.035
         ? buildingCount
@@ -919,10 +949,8 @@ const afterHook = onRender(() => {
     cameraType: camera.value?.type || ''
   })
   lastTimestamp = now
-  if (settled) {
-    requestViewTiles()
-    stop()
-  }
+  requestViewTiles()
+  if (settled) stop()
 })
 
 watch(() => [props.selected, props.summaries, props.hospitals, props.wishlist], updateData, {
@@ -958,7 +986,7 @@ onMounted(() => {
   canvas.tabIndex = 0
   canvas.setAttribute(
     'aria-label',
-    '立體特寵醫院地圖：垂直俯視，拖曳或方向鍵平移，Ctrl 或 Command 配合滾輪縮放，加減鍵縮放，0 重設'
+    '立體特寵醫院地圖：垂直俯視，拖曳或方向鍵平移，滾輪縮放，加減鍵縮放，0 重設'
   )
   canvas.style.touchAction = 'none'
   canvas.style.cursor = 'grab'

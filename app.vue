@@ -6,10 +6,12 @@ import { useMainStore } from '~/stores/useMainStore'
 import { getRouteTab } from '~/utils/route-tab'
 import { getWishlistInquiryLink } from '~/utils/animal-inquiry'
 import { useOnline } from '@vueuse/core'
+import { parseHospitalFavorites } from '~/utils/hospitalFavorites'
 // #U6：Lenis / gsap 改為動態 import（見 initGlobalLenis），把 ~528KB 移出每頁初始關鍵路徑，
 // 平滑捲動於 mount 後才啟用（漸進增強，不阻擋 LCP）。首頁（about）本就不啟用全域 Lenis。
 
 const store = useMainStore()
+const hospitalFavoriteStorageError = useState('hospital-favorite-storage-error', () => false)
 const route = useRoute()
 const router = useRouter()
 const pageKey = (pageRoute) => pageRoute.path
@@ -248,10 +250,10 @@ onMounted(() => {
   store.restoreCompare()
 
   try {
-    const savedHospWish = localStorage.getItem('gencko_hosp_wishlist')
-    if (savedHospWish) store.hospWishlist = JSON.parse(savedHospWish)
-  } catch (e) {
-    localStorage.removeItem('gencko_hosp_wishlist')
+    store.hospWishlist = parseHospitalFavorites(localStorage.getItem('gencko_hosp_wishlist'))
+  } catch {
+    // 儲存被拒絕時保留本次瀏覽的收藏，不再執行可能同樣被拒絕的刪除。
+    hospitalFavoriteStorageError.value = true
   }
 
   try {

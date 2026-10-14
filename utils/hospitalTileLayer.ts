@@ -43,7 +43,7 @@ export class HospitalTileLayer {
   >()
   private taskId = 0
   private generation = 0
-  private viewKey = ''
+  private viewKey: string | null = null
   private active = new Set<string>()
   private dead = false
   private roof = new MeshStandardMaterial({ color: '#eeeae1', roughness: 1 })
@@ -111,8 +111,17 @@ export class HospitalTileLayer {
       signal.removeEventListener('abort', abort)
     }
   }
-  async update(bounds: GeographicBounds | null, enabled: boolean) {
-    const tiles = enabled && bounds ? visibleBuildingTiles(bounds) : []
+  async update(bounds: GeographicBounds | null, enabled: boolean, focus?: [number, number]) {
+    const tiles = enabled && bounds ? visibleBuildingTiles(bounds, 16, focus) : []
+    // 相機避開高樓後視野可能超出下載上限；保留現有圖磚，避免建築與相機反覆切換。
+    if (enabled && bounds && !tiles.length) {
+      this.controller?.abort()
+      this.controller = null
+      this.generation++
+      this.viewKey = null
+      this.status(false)
+      return
+    }
     const key = tiles.map((tile) => `${tile.z}/${tile.x}/${tile.y}`).join('|')
     if (key === this.viewKey) return
     this.viewKey = key
@@ -120,15 +129,32 @@ export class HospitalTileLayer {
     const generation = ++this.generation
     this.controller = new AbortController()
     const signal = this.controller.signal
-    this.active = new Set(key ? key.split('|') : [])
-    this.cache.forEach((entry, id) => {
-      entry.group.visible = this.active.has(id)
-      if (entry.group.visible) entry.lastUsed = Date.now()
-    })
+    const requested = new Set(key ? key.split('|') : [])
+    const commit = (visible = requested) => {
+      this.active = visible
+      this.cache.forEach((entry, id) => {
+        entry.group.visible = this.active.has(id)
+        if (entry.group.visible) entry.lastUsed = Date.now()
+      })
+    }
     if (!tiles.length) {
+      commit()
       this.status(false)
       return
     }
+    // 立即顯示目前視野的快取，最多保留上一個視野的 16 張圖磚。
+    // 部分失敗或持續平移時，仍把可見資料及 GPU 快取限制在兩個視野內。
+    const fallback = [...this.active]
+      .filter((id) => !requested.has(id))
+      .sort((a, b) => (this.cache.get(b)?.lastUsed || 0) - (this.cache.get(a)?.lastUsed || 0))
+      .slice(0, 16)
+    this.active = new Set([...requested].filter((id) => this.cache.has(id)).concat(fallback))
+    this.cache.forEach((entry, id) => {
+      entry.group.visible = this.active.has(id)
+      if (requested.has(id)) entry.lastUsed = Date.now()
+    })
+    this.trim()
+    // 新視野載入完成前保留舊圖磚，避免縮放時出現空白。
     this.status(true)
     const queue = [...tiles]
     let failed = false
@@ -150,7 +176,10 @@ export class HospitalTileLayer {
             continue
           }
           this.cache.set(id, entry)
+          entry.group.visible = true
           this.root.add(entry.group)
+          this.active.add(id)
+          // 每張圖磚完成後立即顯示，同時保留舊區塊至新視野就緒。
           this.status(true)
           this.trim()
         } catch {
@@ -160,6 +189,13 @@ export class HospitalTileLayer {
     }
     await Promise.all([load(), load(), load()])
     if (generation === this.generation && !this.dead) {
+      if (!failed || [...requested].every((id) => this.cache.has(id))) commit()
+      else if (!this.active.size) {
+        // 首次載入沒有舊畫面時，先呈現成功的區塊，失敗區塊仍可重試。
+        commit(new Set([...requested].filter((id) => this.cache.has(id))))
+      }
+      // 部分下載失敗時保留原畫面；重試成功後才替換。
+      this.trim()
       // 保留失敗視野，避免狀態更新觸發無限下載；移動視野或按重試才重新請求。
       this.status(false, failed)
     }
@@ -306,7 +342,7 @@ export class HospitalTileLayer {
   }
   private trim() {
     for (const [id, entry] of [...this.cache].sort((a, b) => a[1].lastUsed - b[1].lastUsed)) {
-      if (this.cache.size <= 24) break
+      if (this.cache.size <= 32) break
       if (!this.active.has(id)) {
         this.release(entry)
         this.cache.delete(id)
@@ -337,12 +373,12 @@ export class HospitalTileLayer {
     return height
   }
   retry() {
-    this.viewKey = ''
+    this.viewKey = null
   }
   suspend() {
     this.controller?.abort()
     this.generation++
-    this.viewKey = ''
+    this.viewKey = null
     this.status(false)
   }
   dispose() {

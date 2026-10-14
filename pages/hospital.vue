@@ -5,6 +5,9 @@ import { useHead } from '#imports'
 import { useMainStore } from '~/stores/useMainStore'
 // HOSPITAL_REGIONS 仍從 js 讀（縣市區域分組是固定常數）；HOSPITAL_DATA 已搬到 Supabase
 import { HOSPITAL_REGIONS as hospitalRegions } from '~/utils/hospitals'
+import { hospitalPhone, hospitalPhoneE164 } from '~/utils/hospitalPhone'
+import { hospitalMatchesQuery } from '~/utils/hospitalSearch'
+import { preciseMapHospitals } from '~/utils/hospitalMap'
 
 const store = useMainStore()
 
@@ -41,7 +44,46 @@ const directoryContext = useState('hospital-directory-context', () => ({
 const hospCity = toRef(directoryContext.value, 'city')
 const hospDistrict = toRef(directoryContext.value, 'district')
 const hospQuery = toRef(directoryContext.value, 'query')
+const mapSearch = ref(null)
 const savedOnly = toRef(directoryContext.value, 'savedOnly')
+const mapFitSequence = ref(
+  hospQuery.value.trim() ||
+    hospCity.value !== 'all' ||
+    hospDistrict.value !== 'all' ||
+    savedOnly.value
+    ? 1
+    : 0
+)
+let mapFitTimer = null
+const cancelPendingMapFit = () => {
+  if (mapFitTimer !== null) clearTimeout(mapFitTimer)
+  mapFitTimer = null
+}
+watch(
+  [
+    hospQuery,
+    hospCity,
+    hospDistrict,
+    savedOnly,
+    () => (savedOnly.value ? store.hospWishlist.join(',') : '')
+  ],
+  (_filters, previous, onCleanup) => {
+    // 回到全台時由場景重設視角，避免延遲取景覆蓋全台視角。
+    if (
+      hospCity.value === 'all' &&
+      previous[1] !== 'all' &&
+      !hospQuery.value.trim() &&
+      hospDistrict.value === 'all' &&
+      !savedOnly.value
+    )
+      return
+    mapFitTimer = setTimeout(() => {
+      mapFitTimer = null
+      mapFitSequence.value++
+    }, 250)
+    onCleanup(cancelPendingMapFit)
+  }
+)
 const hospExpanded = ref(new Set(directoryContext.value.expanded))
 watch(hospExpanded, (value) => {
   directoryContext.value.expanded = [...value]
@@ -56,21 +98,43 @@ onMounted(() => {
 })
 const mobileMapOpen = ref(false)
 const mobileMapInteractive = ref(false)
-const toggleMobileMap = () => {
+const mobileMapToggle = ref(null)
+let mobileMapReturnFocus = null
+watch(isMobile, () => {
+  mobileMapInteractive.value = false
+})
+const toggleMobileMap = async () => {
+  mobileMapReturnFocus = null
   mobileMapOpen.value = !mobileMapOpen.value
   mobileMapInteractive.value = false
+  if (mobileMapOpen.value) {
+    await nextTick()
+    mapSection.value?.scrollIntoView({ behavior: scrollBehavior(), block: 'start' })
+    mapSection.value?.focus({ preventScroll: true })
+  }
 }
-const closeMobileMap = () => {
+const closeMobileMap = async () => {
   mobileMapOpen.value = false
   mobileMapInteractive.value = false
+  await nextTick()
+  const target = mobileMapReturnFocus?.isConnected ? mobileMapReturnFocus : mobileMapToggle.value
+  target?.focus({ preventScroll: target === mobileMapToggle.value })
+  mobileMapReturnFocus = null
 }
 const hospitalCards = ref([])
-const clearFilters = () => {
+const hospitalSearch = ref(null)
+const clearFilters = async () => {
   hospCity.value = 'all'
   hospDistrict.value = 'all'
   hospQuery.value = ''
   savedOnly.value = false
   focusedHospital.value = null
+  await nextTick()
+  hospitalSearch.value?.focus({ preventScroll: true })
+}
+const resetMapFilters = async () => {
+  await clearFilters()
+  mapSearch.value?.focus({ preventScroll: true })
 }
 const scrollBehavior = () =>
   window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth'
@@ -88,6 +152,7 @@ const toggleHospExpand = (id) => {
   if (hospExpanded.value.has(id)) {
     hospExpanded.value.delete(id)
   } else {
+    cancelPendingMapFit()
     hospExpanded.value.add(id)
     focusedHospital.value = HOSPITAL_DATA.value.find((h) => h.id === id) || null
     mapFocusSequence.value++
@@ -107,18 +172,16 @@ const hospDistricts = computed(() => {
   return Array.from(set).sort()
 })
 
+const favoriteStorageError = useState('hospital-favorite-storage-error', () => false)
+const hasHospitalLocation = (hospital) => preciseMapHospitals([hospital]).length > 0
 const hospFiltered = computed(() => {
-  const query = hospQuery.value.trim().toLocaleLowerCase('zh-TW')
   return HOSPITAL_DATA.value.filter((h) => {
     const cityMatch = hospCity.value === 'all' || h.city === hospCity.value
     const districtMatch = hospDistrict.value === 'all' || h.district === hospDistrict.value
-    const keywordMatch =
-      !query ||
-      [h.name, h.address, h.city, h.district].some((value) =>
-        String(value || '')
-          .toLocaleLowerCase('zh-TW')
-          .includes(query)
-      )
+    const keywordMatch = hospitalMatchesQuery(
+      [h.name, h.address, h.city, h.district],
+      hospQuery.value
+    )
     return (
       cityMatch &&
       districtMatch &&
@@ -160,6 +223,7 @@ const changeCity = (val) => {
 }
 
 const focusHospital = (hospital) => {
+  cancelPendingMapFit()
   focusedHospital.value = hospital
   mapFocusSequence.value++
   hospExpanded.value = new Set([hospital.id])
@@ -171,7 +235,8 @@ const showHospitalDetails = async (hospital) => {
   card?.scrollIntoView({ behavior: scrollBehavior(), block: 'center' })
   card?.querySelector('.hosp-header-toggle')?.focus({ preventScroll: true })
 }
-const showHospitalOnMap = async (hospital) => {
+const showHospitalOnMap = async (hospital, event) => {
+  mobileMapReturnFocus = event?.currentTarget || null
   focusHospital(hospital)
   mobileMapOpen.value = true
   mobileMapInteractive.value = false
@@ -190,7 +255,12 @@ const toggleHospWishlist = (id) => {
     store.hospWishlist.push(id)
   }
   if (import.meta.client) {
-    localStorage.setItem('gencko_hosp_wishlist', JSON.stringify(store.hospWishlist))
+    try {
+      localStorage.setItem('gencko_hosp_wishlist', JSON.stringify(store.hospWishlist))
+      favoriteStorageError.value = false
+    } catch {
+      favoriteStorageError.value = true
+    }
   }
 }
 
@@ -219,15 +289,6 @@ const hospPublisher = {
     'https://www.facebook.com/profile.php?id=61579393505049',
     'https://line.me/R/ti/p/@219abdzn'
   ]
-}
-
-// 國碼正規化：02-2599-3907 → +886225993907
-const toE164 = (phone) => {
-  if (!phone) return null
-  const digits = String(phone).replace(/[^\d]/g, '')
-  if (!digits) return null
-  if (digits.startsWith('0')) return '+886' + digits.slice(1)
-  return '+886' + digits
 }
 
 const hospRegionOf = (city) => {
@@ -348,7 +409,7 @@ const siteData = computed(() => {
     name: `${locationStr}特寵醫院清單`,
     numberOfItems: hospFiltered.value.length,
     itemListElement: hospFiltered.value.map((h, index) => {
-      const e164 = toE164(h.phone)
+      const e164 = hospitalPhoneE164(h.phone)
       const mapUrl = hospMapUrlOf(h)
       const region = hospRegionOf(h.city)
       return {
@@ -460,9 +521,15 @@ useHead({
       <aside class="hosp-filter-panel" aria-label="醫院篩選條件">
         <div class="hosp-alert-box">
           <span class="icon">i</span>
-          <div class="text-content">
-            <strong>收藏儲存在這台裝置</strong>
-            <span>清除瀏覽器資料或更換裝置後，收藏紀錄不會保留。</span>
+          <div class="text-content" role="status" aria-live="polite">
+            <strong>{{ favoriteStorageError ? '暫時無法儲存收藏' : '收藏儲存在這台裝置' }}</strong>
+            <span>
+              {{
+                favoriteStorageError
+                  ? '目前收藏僅保留於本次瀏覽；重新整理後可能不會保留。'
+                  : '清除瀏覽器資料或更換裝置後，收藏紀錄不會保留。'
+              }}
+            </span>
           </div>
         </div>
 
@@ -470,6 +537,7 @@ useHead({
           <span class="hosp-label">名稱或地址</span>
           <input
             v-model="hospQuery"
+            ref="hospitalSearch"
             type="search"
             class="hosp-search"
             aria-label="搜尋醫院名稱或地址"
@@ -533,6 +601,7 @@ useHead({
           <button type="button" @click="clearFilters">清除篩選</button>
           <button
             v-if="isMobile && !mobileMapOpen"
+            ref="mobileMapToggle"
             type="button"
             :aria-expanded="mobileMapOpen"
             aria-controls="hospital-mobile-map"
@@ -559,12 +628,38 @@ useHead({
     </div>
 
     <div
-      v-if="viewportReady && (!isMobile || mobileMapOpen)"
+      v-if="
+        viewportReady &&
+        (!isMobile || mobileMapOpen) &&
+        HOSPITAL_DATA.length &&
+        !hospitalsError &&
+        hospitalsStatus !== 'pending'
+      "
       ref="mapSection"
       tabindex="-1"
       class="hosp-map-section"
       id="hospital-mobile-map"
     >
+      <div v-if="!isMobile" class="hosp-map-search">
+        <input
+          ref="mapSearch"
+          v-model="hospQuery"
+          type="search"
+          aria-label="在地圖搜尋醫院"
+          placeholder="搜尋醫院、縣市或地址"
+        />
+        <button
+          type="button"
+          :disabled="!hospQuery && hospCity === 'all' && hospDistrict === 'all' && !savedOnly"
+          @click="resetMapFilters"
+        >
+          清除條件
+        </button>
+        <span role="status">
+          {{ hospFiltered.length }} 間符合條件{{ hospDistrict !== 'all' ? ` · ${hospDistrict}` : ''
+          }}{{ savedOnly ? ' · 僅收藏' : '' }}
+        </span>
+      </div>
       <div v-if="isMobile" class="hosp-mobile-map">
         <div class="hosp-mobile-map-actions">
           <strong>院所位置</strong>
@@ -602,21 +697,36 @@ useHead({
         ></iframe>
       </div>
       <LazyHospitalMap
-        v-else
+        v-else-if="hospFiltered.length"
         :hospitals="HOSPITAL_DATA"
         :wishlist="hospWishlist"
         :selected="hospCity"
         :visible-hospitals="hospFiltered"
+        :fit-sequence="mapFitSequence"
         :focused-hospital="focusedHospital"
         :focus-sequence="mapFocusSequence"
         @select="changeCity"
         @select-hospital="focusHospital"
         @show-details="showHospitalDetails"
         @clear-hospital="focusedHospital = null"
+        @toggle-favorite="toggleHospWishlist"
       />
+      <div v-else class="hosp-map-empty-state" role="status">
+        <span>沒有符合條件的院所，請調整篩選。</span>
+        <button type="button" @click="resetMapFilters">清除篩選</button>
+      </div>
     </div>
 
-    <div class="hosp-workspace">
+    <div
+      v-if="
+        isMobile ||
+        hospFiltered.length ||
+        hospitalsStatus === 'pending' ||
+        hospitalsError ||
+        !HOSPITAL_DATA.length
+      "
+      class="hosp-workspace"
+    >
       <section class="hosp-list-panel" aria-label="特寵醫院清單">
         <div class="hosp-list-heading">
           <span>DIRECTORY</span>
@@ -676,6 +786,7 @@ useHead({
                 type="button"
                 class="fav-btn hosp-fav-btn"
                 :class="{ active: hospWishlist.includes(h.id) }"
+                :aria-pressed="hospWishlist.includes(h.id)"
                 :aria-label="hospWishlist.includes(h.id) ? `取消收藏 ${h.name}` : `收藏 ${h.name}`"
                 @click="toggleHospWishlist(h.id)"
               >
@@ -684,10 +795,10 @@ useHead({
             </div>
 
             <div :id="`hosp-details-${h.id}`" v-show="isHospExpanded(h.id)" class="hosp-details">
-              <button type="button" class="hosp-map-focus" @click="showHospitalOnMap(h)">
+              <button type="button" class="hosp-map-focus" @click="showHospitalOnMap(h, $event)">
                 在地圖上定位 ↗
               </button>
-              <p v-if="h.latitude == null || h.longitude == null" class="hosp-location-note">
+              <p v-if="!hasHospitalLocation(h)" class="hosp-location-note">
                 此院所目前未顯示地圖定位點，請先致電確認地址與看診安排。
               </p>
               <a
@@ -713,10 +824,20 @@ useHead({
 
               <div class="hosp-detail-row">
                 <span class="hosp-phone-label">TEL</span>
-                <span class="hosp-phone">{{ h.phone }}</span>
+                <span class="hosp-phone">
+                  {{ hospitalPhone(h.phone).number || '尚未提供電話' }}
+                </span>
+                <span v-if="hospitalPhone(h.phone).extension" class="hosp-phone-extension">
+                  分機 {{ hospitalPhone(h.phone).extension }}
+                </span>
               </div>
 
-              <a :href="'tel:' + h.phone.replace(/[^\d]/g, '')" class="hosp-call-btn" @click.stop>
+              <a
+                v-if="hospitalPhone(h.phone).href"
+                :href="hospitalPhone(h.phone).href"
+                class="hosp-call-btn"
+                @click.stop
+              >
                 撥打電話
               </a>
             </div>
@@ -728,6 +849,27 @@ useHead({
 </template>
 
 <style scoped>
+.hosp-map-empty-state {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid var(--bd);
+  font-size: 14px;
+}
+.hosp-map-empty-state button {
+  min-height: 40px;
+  padding: 6px 12px;
+  border: 1px solid var(--bd);
+  background: var(--card-bg-solid);
+  color: var(--txt);
+  cursor: pointer;
+}
+.hosp-phone-extension {
+  font-size: 12px;
+  color: var(--txt-muted);
+}
 .hosp-map-section {
   scroll-margin-top: 110px;
 }
@@ -1702,5 +1844,26 @@ useHead({
   .hosp-map-section {
     scroll-margin-top: 12px;
   }
+}
+.hosp-map-search {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.hosp-map-search input,
+.hosp-map-search button {
+  min-height: 44px;
+  padding: 8px 10px;
+  border: 1px solid var(--bd);
+  background: var(--card-bg-solid);
+  color: var(--txt);
+  font: inherit;
+  min-width: 0;
+}
+.hosp-map-search span {
+  font-size: 12px;
+  color: var(--txt-muted);
 }
 </style>

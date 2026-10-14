@@ -3,6 +3,7 @@ import {
   computed,
   onErrorCaptured,
   onMounted,
+  nextTick,
   onUnmounted,
   ref,
   shallowRef,
@@ -10,7 +11,10 @@ import {
   watch
 } from 'vue'
 import { TresCanvas } from '@tresjs/core'
+import { useMediaQuery, useElementSize } from '@vueuse/core'
+import { hospitalMarkerAlignment } from '~/utils/hospitalMapClusters'
 import HospitalMapScene from './HospitalMapScene.vue'
+import { hospitalPhone } from '~/utils/hospitalPhone'
 import {
   MAP_COUNTIES,
   normalizeMapCity,
@@ -26,16 +30,22 @@ const props = defineProps<{
   focusedHospital?: MapHospital | null
   focusSequence?: number
   visibleHospitals?: MapHospital[]
+  fitSequence?: number
 }>()
 const emit = defineEmits<{
   select: [city: string]
   selectHospital: [hospital: MapHospital]
   showDetails: [hospital: MapHospital]
   clearHospital: []
+  toggleFavorite: [id: string | number]
 }>()
 const mountedOnce = ref(true)
 const visible = ref(true)
 const stage = ref<HTMLElement | null>(null)
+const { width: stageWidth } = useElementSize(stage)
+const detailsHost = ref<HTMLElement | null>(null)
+const placeDetails = ref<HTMLElement | null>(null)
+const narrowDetails = useMediaQuery('(min-width: 768px) and (max-width: 900px)')
 let visibilityObserver: IntersectionObserver | undefined
 const documentVisible = ref(true)
 const compact = ref(false)
@@ -47,8 +57,22 @@ const command = ref<{ action: string; sequence: number; delta?: number; x?: numb
   action: '',
   sequence: 0
 })
+let wheelFrame = 0
+let wheelDelta = 0
+let wheelX = 0
+let wheelY = 0
 const mapMode = ref<'3d' | 'google'>('3d')
+const addressFallback = ref(false)
+function setMapMode(mode: '3d' | 'google') {
+  addressFallback.value = false
+  mapMode.value = mode
+}
+function fallbackToAddress() {
+  if (mapMode.value === '3d') addressFallback.value = true
+  mapMode.value = 'google'
+}
 const googleInteractive = ref(false)
+const googleToggle = ref<HTMLButtonElement | null>(null)
 const metrics = ref({
   frames: 0,
   calls: 0,
@@ -73,13 +97,14 @@ const selectedPlace = ref<{
 function updateTileStatus(status: typeof tileStatus.value) {
   tileStatus.value = status
 }
-function choosePlace(label: {
+async function choosePlace(label: {
   name: string
   longitude?: number
   latitude?: number
   category?: string
 }) {
   if (label.longitude === undefined || label.latitude === undefined) return
+  sharedLocationHospitals.value = []
   selectedPlace.value = {
     name: label.name,
     longitude: label.longitude,
@@ -89,6 +114,8 @@ function choosePlace(label: {
   selectedHospital.value = null
   emit('clearHospital')
   control(`place:${label.longitude},${label.latitude}`)
+  await nextTick()
+  placeDetails.value?.querySelector<HTMLButtonElement>('button')?.focus({ preventScroll: true })
 }
 const placeNavigation = computed(() =>
   selectedPlace.value
@@ -97,7 +124,8 @@ const placeNavigation = computed(() =>
 )
 const hospitalClusters = shallowRef<{ x: number; y: number; ids: (string | number)[] }[]>([])
 const sharedLocationHospitals = ref<MapHospital[]>([])
-function openCluster(ids: (string | number)[]) {
+const sharedChooser = ref<HTMLElement | null>(null)
+async function openCluster(ids: (string | number)[]) {
   streetView.value = false
   sharedLocationHospitals.value = []
   if (ids.length === 1) {
@@ -112,19 +140,25 @@ function openCluster(ids: (string | number)[]) {
   const first = members[0]
   if (
     first &&
-    members.every(
-      (hospital) =>
-        Math.abs(hospital.latitude! - first.latitude!) < 0.00001 &&
-        Math.abs(hospital.longitude! - first.longitude!) < 0.00001
-    )
+    (metrics.value.zoom >= 1399 ||
+      members.every(
+        (hospital) =>
+          Math.abs(hospital.latitude! - first.latitude!) < 0.00001 &&
+          Math.abs(hospital.longitude! - first.longitude!) < 0.00001
+      ))
   ) {
     sharedLocationHospitals.value = members
+    await nextTick()
+    sharedChooser.value
+      ?.querySelector<HTMLButtonElement>('button:not([aria-label])')
+      ?.focus({ preventScroll: true })
     return
   }
   control(`cluster:${ids.join(',')}`)
 }
 function closeSharedLocation() {
   sharedLocationHospitals.value = []
+  stage.value?.querySelector('canvas')?.focus({ preventScroll: true })
 }
 function selectSharedHospital(id: string | number) {
   selectHospital(id)
@@ -172,6 +206,8 @@ const selectedHospital = ref<MapHospital | null>(null)
 const localFocusSequence = ref(0)
 const googleHospital = computed(() => selectedHospital.value || displayedHospitals.value[0] || null)
 function selectGoogleHospital(event: Event) {
+  // 在地址預覽內選院所代表保留目前底圖。
+  setMapMode('google')
   selectHospital((event.target as HTMLSelectElement).value)
 }
 const selectedCity = computed(() => normalizeMapCity(props.selected))
@@ -196,6 +232,7 @@ const googleNavigationUrl = computed(
 watch(
   () => [props.focusedHospital, props.focusSequence],
   () => {
+    cancelWheel()
     selectedHospital.value =
       displayedHospitals.value.find(
         (hospital) => String(hospital.id) === String(props.focusedHospital?.id)
@@ -206,7 +243,11 @@ watch(
       sharedLocationHospitals.value = []
     }
     if (selectedHospital.value && !preciseMapHospitals([selectedHospital.value]).length)
-      mapMode.value = 'google'
+      fallbackToAddress()
+    else if (selectedHospital.value && addressFallback.value) {
+      addressFallback.value = false
+      mapMode.value = '3d'
+    }
   },
   { immediate: true }
 )
@@ -222,6 +263,7 @@ watch(displayedHospitals, (hospitals) => {
 watch(
   () => props.selected,
   () => {
+    cancelWheel()
     streetView.value = false
     selectedPlace.value = null
     sharedLocationHospitals.value = []
@@ -237,6 +279,7 @@ let deviceQuery: MediaQueryList | undefined
 let motionQuery: MediaQueryList | undefined
 
 function select(city: string) {
+  cancelWheel()
   selectedPlace.value = null
   streetView.value = false
   selectedHospital.value = null
@@ -249,7 +292,7 @@ function selectHospital(id: string | number) {
   cancelWheel()
   selectedPlace.value = null
   streetView.value = false
-  const hospital = props.hospitals.find((item) => String(item.id) === String(id))
+  const hospital = displayedHospitals.value.find((item) => String(item.id) === String(id))
   if (!hospital) return
   selectedHospital.value = hospital
   emit('selectHospital', hospital)
@@ -265,32 +308,63 @@ function control(action: string) {
   }
   command.value = { action, sequence: command.value.sequence + 1 }
 }
+function relocateHospital() {
+  cancelWheel()
+  localFocusSequence.value++
+}
 function closeHospital() {
   selectedHospital.value = null
   emit('clearHospital')
 }
 function fitResults() {
-  if (!preciseHospitals.value.length) return
+  if (!displayedHospitals.value.length) return
+  cancelWheel()
   selectedPlace.value = null
   sharedLocationHospitals.value = []
+  streetView.value = false
   closeHospital()
-  if (preciseHospitals.value.length === 1) selectHospital(preciseHospitals.value[0]!.id)
-  else control(`fit:${preciseHospitals.value.map((hospital) => hospital.id).join(',')}`)
+  // 依全部搜尋結果判斷單一院所，避免忽略缺少座標的其他結果。
+  if (displayedHospitals.value.length === 1) {
+    selectHospital(displayedHospitals.value[0]!.id)
+    if (!preciseHospitals.value.length) fallbackToAddress()
+    return
+  }
+  if (!preciseHospitals.value.length) {
+    fallbackToAddress()
+    return
+  }
+  if (addressFallback.value) {
+    addressFallback.value = false
+    mapMode.value = '3d'
+  }
+  control(`fit:${preciseHospitals.value.map((hospital) => hospital.id).join(',')}`)
 }
-function dismissDetails(event?: KeyboardEvent) {
+watch([ready, () => props.fitSequence], () => {
+  if (props.fitSequence && (ready.value || !preciseHospitals.value.length)) fitResults()
+})
+const selectedPhone = computed(() => hospitalPhone(selectedHospital.value?.phone))
+
+async function dismissDetails(event?: KeyboardEvent) {
   if (event && event.key !== 'Escape') return
+  if (event && mapMode.value === 'google') {
+    event.preventDefault()
+    event.stopPropagation()
+    googleInteractive.value = false
+    await nextTick()
+    googleToggle.value?.focus({ preventScroll: true })
+    return
+  }
   if (!selectedPlace.value && !selectedHospital.value && !sharedLocationHospitals.value.length)
     return
   event?.preventDefault()
   selectedPlace.value = null
   sharedLocationHospitals.value = []
   closeHospital()
-  stage.value?.querySelector('canvas')?.focus({ preventScroll: true })
+  await nextTick()
+  stage.value
+    ?.querySelector<HTMLElement>('canvas, .map-fallback button')
+    ?.focus({ preventScroll: true })
 }
-let wheelFrame = 0
-let wheelDelta = 0
-let wheelX = 0
-let wheelY = 0
 function cancelWheel() {
   if (wheelFrame) cancelAnimationFrame(wheelFrame)
   wheelFrame = 0
@@ -307,8 +381,7 @@ function wheelControl(event: WheelEvent) {
     )
   )
     return
-  // 預設讓使用者繼續閱讀頁面，按住修飾鍵才縮放地圖。
-  if (!event.ctrlKey && !event.metaKey) return
+  // 滑鼠在地圖畫布與標記上時直接縮放；資訊區與結果清單保留原生捲動。
   event.preventDefault()
   event.stopPropagation()
   const delta = event.deltaY * (event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? 400 : 1)
@@ -338,11 +411,31 @@ function updateLabels(value: typeof labels.value) {
   triggerRef(labels)
 }
 function failure() {
+  cancelWheel()
   failed.value = true
   ready.value = false
   labels.value = []
+  buildingLabels.value = []
+  hospitalClusters.value = []
+  sharedLocationHospitals.value = []
+  selectedPlace.value = null
+  tileStatus.value = { loading: false, failed: false, count: 0, enabled: false }
 }
 function retry() {
+  metrics.value = {
+    frames: 0,
+    calls: 0,
+    triangles: 0,
+    idle: true,
+    buildings: 0,
+    geometries: 0,
+    cameraType: '',
+    zoom: 1
+  }
+  streetView.value = false
+  tilted.value = false
+  buildingLoading.value = false
+  buildingError.value = false
   generation.value++
   failed.value = false
   ready.value = false
@@ -387,35 +480,46 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <section class="hospital-map" aria-label="全台特寵醫院分布概覽">
+  <section
+    class="hospital-map"
+    aria-label="全台特寵醫院分布概覽"
+    @keydown="mapMode === 'google' && dismissDetails($event)"
+  >
     <div class="map-heading">
       <div>
         <span class="map-eyebrow">EXPLORE TAIWAN</span>
         <h2>探索院所與周邊街區</h2>
       </div>
       <div class="map-view-switch" aria-label="地圖底圖">
-        <button type="button" :aria-pressed="mapMode === '3d'" @click="mapMode = '3d'">
+        <button type="button" :aria-pressed="mapMode === '3d'" @click="setMapMode('3d')">
           3D 地圖
         </button>
-        <button type="button" :aria-pressed="mapMode === 'google'" @click="mapMode = 'google'">
+        <button type="button" :aria-pressed="mapMode === 'google'" @click="setMapMode('google')">
           Google 地圖
         </button>
       </div>
     </div>
+    <div class="map-region-bar">
+      <label>
+        <span>地圖範圍</span>
+        <select :value="selectedCity" aria-label="地圖範圍" @change="selectMapRegion">
+          <option value="all">全台院所</option>
+          <option v-for="county in MAP_COUNTIES" :key="county.name" :value="county.name">
+            {{ county.name }} · {{ summaries.get(county.name)?.count || 0 }} 間
+          </option>
+        </select>
+      </label>
+      <span>點群聚數量放大，點院名查看資料</span>
+    </div>
     <div v-if="mapMode === '3d'" class="map-building-tools">
       <button
         type="button"
-        :disabled="!ready || failed || !preciseHospitals.length"
+        :disabled="
+          !displayedHospitals.length || (preciseHospitals.length > 0 && (!ready || failed))
+        "
         @click="fitResults"
       >
         顯示篩選結果
-      </button>
-      <button
-        type="button"
-        :disabled="!ready || failed || buildingLoading"
-        @click="previewBuildings"
-      >
-        {{ buildingLoading ? '載入建築…' : '查看 101 街區量體' }}
       </button>
       <button
         type="button"
@@ -462,6 +566,7 @@ onUnmounted(() => {
       </label>
       <button
         type="button"
+        ref="googleToggle"
         :aria-pressed="googleInteractive"
         @click="googleInteractive = !googleInteractive"
       >
@@ -514,6 +619,7 @@ onUnmounted(() => {
           :reduced-motion="reducedMotion"
           :command="command"
           :interaction-surface="stage"
+          :details-below="narrowDetails"
           :focused-hospital="selectedHospital"
           :focus-sequence="localFocusSequence"
           @select="select"
@@ -537,6 +643,11 @@ onUnmounted(() => {
           class="map-cluster"
           :class="{
             single: cluster.ids.length === 1,
+            'align-left':
+              cluster.ids.length === 1 && hospitalMarkerAlignment(cluster.x, stageWidth) === 'left',
+            'align-right':
+              cluster.ids.length === 1 &&
+              hospitalMarkerAlignment(cluster.x, stageWidth) === 'right',
             saved: wishlist.some((id) => cluster.ids.map(String).includes(String(id))),
             chosen: cluster.ids.map(String).includes(String(selectedHospital?.id))
           }"
@@ -548,12 +659,21 @@ onUnmounted(() => {
           "
           @click="openCluster(cluster.ids)"
         >
-          {{ cluster.ids.length > 1 ? cluster.ids.length : '＋' }}
+          {{
+            cluster.ids.length > 1
+              ? cluster.ids.length
+              : hospitals.find((hospital) => String(hospital.id) === String(cluster.ids[0]))
+                  ?.name || '院所'
+          }}
         </button>
       </div>
-      <div v-if="mapMode === '3d' && sharedLocationHospitals.length" class="map-shared-location">
-        <strong>同位置院所</strong>
-        <button type="button" aria-label="關閉同位置院所" @click="closeSharedLocation">×</button>
+      <div
+        v-if="mapMode === '3d' && sharedLocationHospitals.length"
+        class="map-shared-location"
+        ref="sharedChooser"
+      >
+        <strong>此處院所</strong>
+        <button type="button" aria-label="關閉院所選單" @click="closeSharedLocation">×</button>
         <button
           v-for="hospital in sharedLocationHospitals"
           :key="hospital.id"
@@ -563,7 +683,7 @@ onUnmounted(() => {
           {{ hospital.name }}
         </button>
       </div>
-      <div v-if="mapMode === '3d'" class="map-building-labels">
+      <div v-if="mapMode === '3d' && ready && !failed" class="map-building-labels">
         <button
           v-for="label in buildingLabels"
           :key="`${label.name}/${label.longitude}/${label.latitude}`"
@@ -580,13 +700,13 @@ onUnmounted(() => {
           </span>
         </button>
       </div>
-      <aside v-if="mapMode === '3d' && selectedPlace" class="map-place-detail">
+      <aside v-if="mapMode === '3d' && selectedPlace" class="map-place-detail" ref="placeDetails">
         <button type="button" aria-label="關閉地標資訊" @click="dismissDetails()">×</button>
         <strong>{{ selectedPlace.name }}</strong>
         <small>一般地標 · OpenStreetMap</small>
         <a :href="placeNavigation" target="_blank" rel="noopener noreferrer">Google 導航 ↗</a>
       </aside>
-      <div v-if="mapMode === '3d'" class="map-tile-status" role="status">
+      <div v-if="mapMode === '3d' && ready && !failed" class="map-tile-status" role="status">
         <span v-if="tileStatus.loading">載入周邊建築與地標…</span>
         <template v-else-if="tileStatus.failed">
           <span>圖資暫時無法載入</span>
@@ -640,40 +760,56 @@ onUnmounted(() => {
       >
         <strong>院所預覽</strong>
         <span>{{ displayedHospitals.length }} 間符合條件</span>
-        <button
-          v-for="hospital in displayedHospitals.slice(0, 5)"
-          :key="hospital.id"
-          type="button"
-          @click="selectHospital(hospital.id)"
-        >
-          <b>{{ hospital.name }}</b>
-          <small>{{ hospital.city }} {{ hospital.district }}</small>
-        </button>
-        <small>完整名錄與聯絡方式見下方清單</small>
-      </aside>
-      <div
-        v-if="selectedHospital && mapMode === '3d'"
-        class="map-hospital-detail"
-        aria-live="polite"
-      >
-        <span>特寵院所</span>
-        <button
-          type="button"
-          class="map-detail-close"
-          aria-label="關閉院所資訊"
-          @click="dismissDetails()"
-        >
-          ×
-        </button>
-        <strong>{{ selectedHospital.name }}</strong>
-        <small>{{ selectedHospital.address }}</small>
-        <div class="map-detail-actions">
-          <button type="button" @click="localFocusSequence++">重新定位</button>
-          <button type="button" @click="emit('showDetails', selectedHospital)">院所資料</button>
-          <button type="button" @click="mapMode = 'google'">Google 地圖</button>
-          <a :href="googleNavigationUrl" target="_blank" rel="noopener noreferrer">導航 ↗</a>
+        <div class="map-preview-list">
+          <button
+            v-for="hospital in displayedHospitals"
+            :key="hospital.id"
+            type="button"
+            @click="selectHospital(hospital.id)"
+          >
+            <b>{{ hospital.name }}</b>
+            <small>{{ hospital.city }} {{ hospital.district }}</small>
+          </button>
         </div>
-      </div>
+        <small>點選院所即可定位並查看聯絡方式</small>
+      </aside>
+      <Teleport :to="detailsHost || 'body'" :disabled="!narrowDetails || !detailsHost">
+        <div
+          v-if="selectedHospital && mapMode === '3d'"
+          class="map-hospital-detail"
+          aria-live="polite"
+        >
+          <span>特寵院所</span>
+          <button
+            type="button"
+            class="map-detail-close"
+            aria-label="關閉院所資訊"
+            @click="dismissDetails()"
+          >
+            ×
+          </button>
+          <strong>{{ selectedHospital.name }}</strong>
+          <small>{{ selectedHospital.address }}</small>
+          <span class="map-contact-phone">
+            {{ selectedPhone.number || '尚未提供電話'
+            }}{{ selectedPhone.extension ? ` · 分機 ${selectedPhone.extension}` : '' }}
+          </span>
+          <div class="map-detail-actions">
+            <a v-if="selectedPhone.href" :href="selectedPhone.href">撥打電話</a>
+            <button
+              type="button"
+              :aria-pressed="wishlist.includes(selectedHospital.id)"
+              @click="emit('toggleFavorite', selectedHospital.id)"
+            >
+              {{ wishlist.includes(selectedHospital.id) ? '取消收藏' : '收藏院所' }}
+            </button>
+            <button type="button" @click="relocateHospital">重新定位</button>
+            <button type="button" @click="emit('showDetails', selectedHospital)">院所資料</button>
+            <button type="button" @click="setMapMode('google')">Google 地圖</button>
+            <a :href="googleNavigationUrl" target="_blank" rel="noopener noreferrer">導航 ↗</a>
+          </div>
+        </div>
+      </Teleport>
       <div v-if="ready && !failed && mapMode === '3d'" class="map-labels">
         <template v-for="label in labels" :key="label.name">
           <button
@@ -730,7 +866,7 @@ onUnmounted(() => {
       </div>
       <div v-if="failed && mapMode === '3d'" class="map-fallback" role="status">
         <strong>暫時無法顯示立體地圖</strong>
-        <p>仍可使用下方縣市按鈕查找醫院。</p>
+        <p>仍可使用下方縣市篩選或院所清單查找醫院。</p>
         <button type="button" @click="retry">重新載入地圖</button>
       </div>
       <div v-if="mapMode === '3d'" class="map-instructions">
@@ -738,7 +874,7 @@ onUnmounted(() => {
           {{
             compact
               ? '點選縣市聚焦 · 單指平移 · 雙指縮放'
-              : '北方朝上 · 拖曳平移 · Ctrl／⌘＋滾輪縮放'
+              : '北方朝上 · 拖曳平移 · 滑鼠在地圖內可滾輪縮放'
           }}
         </span>
         <span class="map-legend">
@@ -749,18 +885,7 @@ onUnmounted(() => {
         </span>
       </div>
     </div>
-    <div class="map-region-bar">
-      <label>
-        <span>地圖範圍</span>
-        <select :value="selectedCity" aria-label="地圖範圍" @change="selectMapRegion">
-          <option value="all">全台院所</option>
-          <option v-for="county in MAP_COUNTIES" :key="county.name" :value="county.name">
-            {{ county.name }} · {{ summaries.get(county.name)?.count || 0 }} 間
-          </option>
-        </select>
-      </label>
-      <span>點數量放大，點「＋」查看院所</span>
-    </div>
+    <div ref="detailsHost" class="map-details-host" @keydown="dismissDetails" />
     <div class="map-caption">
       <p>全台圖資隨視野載入，放大至街區顯示建築與地標；高度含估算值，未收錄的建物不會虛構補齊。</p>
       <p>院所可能搬遷，就診前請先致電確認；路線請使用 Google 地圖。</p>
@@ -883,7 +1008,7 @@ onUnmounted(() => {
 }
 @media (max-width: 1100px) {
   .map-result-preview {
-    display: none;
+    width: 200px;
   }
 }
 .map-region-bar {
@@ -930,9 +1055,21 @@ onUnmounted(() => {
   cursor: pointer;
 }
 .map-cluster.single {
-  width: 34px;
-  height: 34px;
-  font-size: 20px;
+  width: max-content;
+  max-width: 160px;
+  min-height: 36px;
+  height: auto;
+  padding: 5px 8px;
+  border-radius: 5px;
+  font-size: 11px;
+  line-height: 1.4;
+  white-space: normal;
+}
+.map-cluster.single.align-left {
+  transform: translate(0, -50%);
+}
+.map-cluster.single.align-right {
+  transform: translate(-100%, -50%);
 }
 .map-cluster.chosen {
   background: #293f35;
@@ -1185,6 +1322,12 @@ onUnmounted(() => {
   background: #ffffffef;
   color: #293e34;
   text-align: left;
+}
+.map-details-host .map-hospital-detail {
+  position: relative;
+  inset: auto;
+  width: 100%;
+  margin-top: 8px;
 }
 .map-hospital-detail > span {
   color: #a8432b;
@@ -1484,5 +1627,17 @@ a:focus-visible,
   .map-cities button:hover {
     border-color: var(--bd);
   }
+}
+.map-preview-list {
+  max-height: 240px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.map-preview-list button {
+  width: 100%;
+}
+.map-contact-phone {
+  font-size: 12px;
+  color: #344b40;
 }
 </style>
