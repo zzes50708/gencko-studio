@@ -49,6 +49,7 @@ test('桌面六欄、翻卡完整資訊與收藏操作', async ({ page }) => {
     .toMatch(/matrix3d\(-1/)
   await expect(card.locator('.flip-back-information')).toContainText('2026-03-14')
   await expect(card.locator('.flip-back-information')).toContainText('不保證性別')
+  await expect(card.locator('.flip-back-information')).toContainText('約25%公／75%母')
   await expect(card.locator('.flip-back-information')).toContainText(
     '土匪 · 橘化 · 日蝕 · 川普白化 · 黑夜'
   )
@@ -83,6 +84,7 @@ test('手機保留兩欄與基本資訊，不執行翻卡', async ({ page }) => 
   await expect(card.locator('.flip-back')).toBeHidden()
   await card.locator('.mobile-card-details summary').click()
   await expect(card.locator('.mobile-card-details-body')).toContainText('川普白化')
+  await expect(card.locator('.mobile-card-details-body')).toContainText('約25%公／75%母')
   expect(
     await card.locator('.flip-inner').evaluate((element) => getComputedStyle(element).transform)
   ).toBe('none')

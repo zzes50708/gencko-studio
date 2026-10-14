@@ -4,6 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { useHead } from '#imports'
 import { useMainStore } from '~/stores/useMainStore'
 import { getCleanUrl } from '~/utils/image'
+import { formatAnimalSex } from '~/utils/incubation-sex'
 import { sanitizeCompareIds } from '~/utils/shop-catalog'
 import { getAnimalInquiryLink } from '~/utils/animal-inquiry'
 import { auctionState } from '~/utils/auction-presentation'
@@ -241,18 +242,7 @@ const allGenes = computed(() => {
     .sort((a, b) => b.owners - a.owners)
 })
 
-const fmtSex = (i) => {
-  if (!i) return '-'
-  if (i.GenderType === '溫控') {
-    const t = +i.GenderValue
-    if (t >= 31) return `孵化溫度:${t}度（90% 公）`
-    if (t >= 30) return `孵化溫度:${t}度（75% 公）`
-    if (t >= 28) return `孵化溫度:${t}度（均等）`
-    if (t >= 27) return `孵化溫度:${t}度（75% 母）`
-    return `孵化溫度:${t}度（90% 母）`
-  }
-  return i.GenderType || '-'
-}
+const fmtSex = (i) => formatAnimalSex(i, { fallback: '-' })
 
 const fmtStatus = (i) => {
   if (!i) return '-'

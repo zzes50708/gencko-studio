@@ -5,6 +5,7 @@ import { useHead, useAsyncData, useSupabaseClient, useState } from '#imports'
 import { useMainStore } from '~/stores/useMainStore'
 import { GENES_DB } from '~/utils/genes-db'
 import { getCleanUrl } from '~/utils/image'
+import { formatAnimalSex } from '~/utils/incubation-sex'
 import ShopFlipCard from '~/components/ShopFlipCard.vue'
 import { useMediaQuery } from '@vueuse/core'
 import {
@@ -97,12 +98,7 @@ const itemListSchema = computed(() => {
     itemListElement: forSaleItems.map((item, idx) => {
       const productUrl = `https://www.genckobreeding.com/product/${item.ID}`
       const geneStr = (item.Genes || []).join('、')
-      const genderText =
-        item.GenderType === '溫控'
-          ? item.GenderValue
-            ? `孵化溫度:${item.GenderValue}度（不保證性別）`
-            : '孵化溫度（不保證性別）'
-          : item.GenderType || ''
+      const genderText = formatAnimalSex(item, { fallback: '' })
       return {
         '@type': 'ListItem',
         position: idx + 1,

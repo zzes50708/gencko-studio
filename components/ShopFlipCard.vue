@@ -2,6 +2,7 @@
 import { computed, ref, watch } from 'vue'
 import { useMainStore } from '~/stores/useMainStore'
 import { getCleanUrl } from '~/utils/image'
+import { formatAnimalSex } from '~/utils/incubation-sex'
 
 const store = useMainStore()
 
@@ -30,36 +31,9 @@ const normalizeSpace = (s) =>
     .replace(/\s+/g, ' ')
     .trim()
 
-const incubationProbability = (value) => {
-  const temperature = Number.parseFloat(String(value || ''))
-  if (!Number.isFinite(temperature)) return ''
-  if (temperature >= 31) return '90%公'
-  if (temperature >= 30) return '75%公'
-  if (temperature >= 28) return '公母均等'
-  if (temperature >= 27) return '75%母'
-  return '90%母'
-}
-
-const genderText = computed(() => {
-  const t = normalizeSpace(props.item?.GenderType || '')
-  if (!t) return '未登錄'
-  if (t === '溫控') {
-    const v = normalizeSpace(props.item?.GenderValue || '')
-    const probability = incubationProbability(v)
-    return v
-      ? `孵化溫度:${v}度${probability ? `（${probability}，不保證性別）` : '（不保證性別）'}`
-      : '孵化溫度（不保證性別）'
-  }
-  return t
-})
-
+const genderText = computed(() => formatAnimalSex(props.item))
 const isIncubationTemperature = computed(() => props.item?.GenderType === '溫控')
-const mobileGenderText = computed(() => {
-  if (!isIncubationTemperature.value) return genderText.value
-  const value = normalizeSpace(props.item?.GenderValue || '')
-  const probability = incubationProbability(value)
-  return value ? `孵化溫度:${value}度${probability ? `（${probability}）` : ''}` : '孵化溫度'
-})
+const mobileGenderText = computed(() => formatAnimalSex(props.item, { disclaimer: false }))
 
 const birthdayText = computed(() => {
   const b = normalizeSpace(props.item?.Birthday || '')

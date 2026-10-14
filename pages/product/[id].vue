@@ -4,6 +4,7 @@ import { useRoute } from 'vue-router'
 import { useHead, useAsyncData, useSupabaseClient } from '#imports'
 import { useMainStore } from '~/stores/useMainStore'
 import { getCleanUrl } from '~/utils/image'
+import { formatAnimalSex, getAnimalSexTone } from '~/utils/incubation-sex'
 import { getAnimalInquiryLink, getAnimalInquiryText } from '~/utils/animal-inquiry'
 import { auctionState } from '~/utils/auction-presentation'
 
@@ -346,25 +347,8 @@ useHead({
   script: computed(() => siteData.value.script)
 })
 
-const fmtSex = (i) => {
-  if (!i) return ''
-  if (i.GenderType === '溫控') {
-    let t = +i.GenderValue
-    if (t >= 31) return `孵化溫度:${t}度 (90%公)`
-    if (t >= 30) return `孵化溫度:${t}度 (75%公)`
-    if (t >= 28) return `孵化溫度:${t}度 (均)`
-    if (t >= 27) return `孵化溫度:${t}度 (75%母)`
-    return `孵化溫度:${t}度 (90%母)`
-  }
-  return i.GenderType
-}
-
-const getSexCls = (i) => {
-  if (!i) return ''
-  if (i.GenderType === '公' || (i.GenderType === '溫控' && +i.GenderValue >= 30)) return 'male'
-  if (i.GenderType === '母' || (i.GenderType === '溫控' && +i.GenderValue <= 27)) return 'female'
-  return 'mix'
-}
+const fmtSex = (i) => formatAnimalSex(i)
+const getSexCls = (i) => getAnimalSexTone(i)
 
 const matchedAuctionId = computed(() => {
   if (!currentProduct.value || currentProduct.value.Status !== 'Auction') return null
