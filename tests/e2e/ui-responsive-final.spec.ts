@@ -149,7 +149,7 @@ test('電子身分證列印排除網站外框，離頁不影響其他頁', async
       ;(window as any).__printed = true
     }
   })
-  await page.getByRole('button', { name: '儲存電子身分證為 PDF' }).click()
+  await page.getByRole('button', { name: '儲存個體證書為 PDF' }).click()
   expect(await page.evaluate(() => (window as any).__printed)).toBe(true)
   await page.emulateMedia({ media: 'print' })
   await expect(page.locator('.site-footer')).toBeHidden()

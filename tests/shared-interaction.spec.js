@@ -371,15 +371,14 @@ describe('Phase 1 共用互動元件 contract', () => {
     expect(breeders).toContain('grid-template-columns: repeat(3, minmax(0, 1fr)) !important')
   })
 
-  it('Product 詳情圖片使用 no-prefetch 身分證連結，操作按鈕明確避免送出', () => {
+  it('Product 詳情照片不再導向證書，操作按鈕明確避免送出', () => {
     expect(productDetail).toMatch(
       /\.from\('animals'\)[\s\S]*?\.eq\('id', productId\)[\s\S]*?\.maybeSingle\(\)/
     )
     expect(productDetail).toMatch(/const isHydrated = ref\(false\)/)
     expect(productDetail).toContain('v-if="isHydrated && pending"')
-    expect(productDetail).toMatch(
-      /<NuxtLink\s+no-prefetch\s+class="prod-img-link"[\s\S]*?:to="`\/identity\/\$\{productModules\.identity\.id\}`"[\s\S]*?aria-label=/
-    )
+    expect(productDetail).not.toContain(':to="`/identity/${productModules.identity.id}`"')
+    expect(productDetail).not.toContain('點擊圖片可查看專屬電子身分證')
     for (const className of ['btn-share', 'btn-promo', 'btn-close-promo']) {
       expect(productDetail).toMatch(
         new RegExp(`<button[\\s\\S]*?type="button"[\\s\\S]*?class="[^"\\n]*${className}`)
@@ -434,13 +433,13 @@ describe('Phase 1 共用互動元件 contract', () => {
     )
   })
 
-  it('Identity PDF action 具備明確 button type、44px 尺寸與 reduced-motion', () => {
-    expect(identity).toMatch(/<button[\s\S]*?type="button"[\s\S]*?class="act-btn primary"/)
-    expect(identity).toMatch(/\.act-btn\s*\{[\s\S]*?min-height:\s*var\(--control-min-height\)/)
-    expect(identity).toMatch(/\.act-btn:focus-visible\s*\{[\s\S]*?outline:/)
+  it('Identity PDF 操作保留原生按鈕、觸控尺寸與焦點', () => {
     expect(identity).toMatch(
-      /@media\s*\(prefers-reduced-motion:\s*reduce\)\s*\{[\s\S]*?\.loader[\s\S]*?animation:\s*none/
+      /<button[\s\S]*?type="button"[\s\S]*?class="act-btn"[\s\S]*?aria-label="儲存個體證書為 PDF"/
     )
+    expect(identity).toMatch(/\.act-btn\s*\{[\s\S]*?min-height:\s*44px/)
+    expect(identity).toContain('.act-btn:focus-visible')
+    expect(identity).toContain('window.print()')
   })
 
   it('Articles 列表篩選使用原生 button、狀態屬性與共用觸控尺寸', () => {

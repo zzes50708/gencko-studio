@@ -43,6 +43,12 @@ describe('B2 全站資訊架構', () => {
     expect(getNavigationGroup('/qs')).toBe('learn')
     expect(getNavigationGroup('/calculator')).toBe('tools')
     expect(getNavigationGroup('/about')).toBe('brand')
+    expect(getNavigationGroup('/certificates')).toBe('brand')
+    expect(getNavigationGroup('/identity/S-53518')).toBe('brand')
+    expect(DESKTOP_NAV_GROUPS.find((group) => group.key === 'brand').links).toContainEqual({
+      label: '個體證書',
+      to: '/certificates'
+    })
     expect(getNavigationGroup('/profile')).toBe('profile')
   })
 

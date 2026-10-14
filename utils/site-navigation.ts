@@ -48,6 +48,7 @@ const toolLinks: NavigationLink[] = [
 const brandLinks: NavigationLink[] = [
   { label: '選擇 Gencko', to: '/why-gencko' },
   { label: '購買流程', to: '/buying-guide' },
+  { label: '個體證書', to: '/certificates' },
   { label: '關於我們', to: '/about' }
 ]
 
@@ -124,8 +125,8 @@ export const getNavigationGroup = (path: string): NavigationGroupKey => {
   if (matchesRoute(cleanPath, '/profile')) return 'profile'
 
   if (
-    ['/shop', '/product', '/identity', '/compare', '/auction', '/breeders', '/merch'].some(
-      (route) => matchesRoute(cleanPath, route)
+    ['/shop', '/product', '/compare', '/auction', '/breeders', '/merch'].some((route) =>
+      matchesRoute(cleanPath, route)
     )
   ) {
     return 'explore'
@@ -144,8 +145,8 @@ export const getNavigationGroup = (path: string): NavigationGroupKey => {
   }
 
   if (
-    ['/why-gencko', '/buying-guide', '/about', '/stories'].some((route) =>
-      matchesRoute(cleanPath, route)
+    ['/why-gencko', '/buying-guide', '/certificates', '/identity', '/about', '/stories'].some(
+      (route) => matchesRoute(cleanPath, route)
     )
   ) {
     return 'brand'

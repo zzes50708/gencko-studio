@@ -28,6 +28,7 @@ export const getRouteTab = (path: string): RouteTab => {
       '/shop',
       '/product',
       '/identity',
+      '/certificates',
       '/buying-guide',
       '/why-gencko',
       '/stories'

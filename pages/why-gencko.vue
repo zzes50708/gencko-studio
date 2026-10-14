@@ -11,13 +11,13 @@ const trustRows = [
 ]
 
 // 連結地圖：四張卡整張可點，各對到一個真實頁面。
-// （身分證改連 /shop：/identity 是動態路由需 id，裸 /identity 不 match。）
+// 個體證書以 ID 搜尋，連向專用查詢頁。
 const overviewBlocks = [
   {
-    tag: '身分證',
-    title: '每隻都有身分證',
-    body: '性別、生日、品系，每隻都做成一張電子身分證，不怕忘記資料',
-    to: '/shop',
+    tag: '個體證書',
+    title: '每隻都有自己的紀錄',
+    body: '輸入個體 ID，查看品系、性別與生日，並保存專屬證書',
+    to: '/certificates',
     image: '/previews/identity-card.png',
     alt: 'Gencko 熱門個體電子身分證畫面'
   },

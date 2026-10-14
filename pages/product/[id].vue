@@ -649,13 +649,7 @@ const closePromo = () => promoModal.close()
             <div v-if="productModules.transaction.status === 'Sold'" class="sold-stamp">
               SOLD OUT
             </div>
-            <NuxtLink
-              no-prefetch
-              class="prod-img-link"
-              v-if="productModules.visuals.list.length && !photoFailed"
-              :to="`/identity/${productModules.identity.id}`"
-              :aria-label="`查看 ${productModules.identity.morph} 專屬電子身分證`"
-            >
+            <div class="prod-img-link" v-if="productModules.visuals.list.length && !photoFailed">
               <img
                 v-for="(img, idx) in productModules.visuals.list"
                 :key="idx"
@@ -667,14 +661,13 @@ const closePromo = () => promoModal.close()
                 loading="eager"
                 decoding="async"
               />
-            </NuxtLink>
+            </div>
             <div v-else class="product-photo-fallback">
               {{ photoFailed ? '照片載入失敗' : '尚無照片' }}
               <button v-if="photoFailed" type="button" @click="photoFailed = false">
                 重試照片
               </button>
             </div>
-            <div class="prod-hint">點擊圖片可查看專屬電子身分證</div>
           </div>
           <div class="prod-info-box">
             <div class="prod-header">
@@ -961,7 +954,7 @@ const closePromo = () => promoModal.close()
 }
 .prod-img-link {
   display: block;
-  cursor: zoom-in;
+  cursor: default;
 }
 .prod-img-link:focus-visible {
   outline: 3px solid var(--pri);

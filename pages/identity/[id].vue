@@ -112,21 +112,12 @@ const fmtSex = computed(() => {
   return i.GenderType || '未確認'
 })
 
-// 性別顏色標籤
-const sexClass = computed(() => {
-  if (!item.value) return ''
-  const g = item.value.GenderType
-  if (g === '公') return 't-male'
-  if (g === '母') return 't-female'
-  return 't-mix'
-})
-
 // 動態生成 SEO 與社群分享卡片 (Open Graph)
 const siteData = computed(() => {
   if (item.value) {
     const i = item.value
-    const title = `${i.Morph} - 專屬電子身分證`
-    const desc = `Gencko Studio 嚴選繁育個體。ID: ${i.ID}，性別: ${fmtSex.value}，出生日: ${i.Birthday || '未登錄'}。點擊查看完整身分證資訊。`
+    const title = `${i.Morph}｜個體血統證書`
+    const desc = `Gencko Studio 嚴選繁育個體。ID: ${i.ID}，性別: ${fmtSex.value}，出生日: ${i.Birthday || '未登錄'}。查看已建檔的個體資料。`
     const img =
       displayImg.value ||
       'https://wsrv.nl/?url=raw.githubusercontent.com%2Fzzes50708%2Fgencko-assets%2Fmain%2Fimg%2F11.png&w=1200&h=630&fit=contain&bg=e6e3e3&output=webp&q=85'
@@ -134,8 +125,8 @@ const siteData = computed(() => {
     return { title, desc, img, url }
   }
   return {
-    title: '專屬電子身分證',
-    desc: 'Gencko Studio 專屬電子身分證查詢系統',
+    title: '個體證書',
+    desc: 'Gencko Studio 個體證書查詢',
     img: 'https://wsrv.nl/?url=raw.githubusercontent.com%2Fzzes50708%2Fgencko-assets%2Fmain%2Fimg%2F11.png&w=1200&h=630&fit=contain&bg=e6e3e3&output=webp&q=85',
     url: `https://www.genckobreeding.com/identity/${identityId}`
   }
@@ -165,901 +156,621 @@ const triggerPrint = () => {
 </script>
 
 <template>
-  <div class="site-document-page id-page-container">
-    <div class="common-document-meta identity-document-meta" aria-label="身份文件說明">
-      <span>GENCKO IDENTITY RECORD</span>
-      <span>VERIFY / REVIEW / KEEP</span>
-    </div>
+  <div class="id-page-container">
     <div v-if="pending" class="status-msg" aria-busy="true">
-      <div class="loader" aria-hidden="true"></div>
-      <p role="status">正在取得電子身分證</p>
+      <p role="status">正在取得個體證書</p>
     </div>
     <div v-else-if="error" class="status-msg err">
-      <h1>無法顯示電子身分證</h1>
+      <h1>無法顯示個體證書</h1>
       <p role="alert">{{ error.message || '找不到此個體資料或已下架' }}</p>
       <button type="button" class="act-btn" @click="refresh()">重新載入</button>
-      <TheBackButton
-        fallback="/"
-        text="返回上一頁"
-        style="margin-top: 20px; justify-content: center"
-      />
+      <TheBackButton fallback="/certificates" text="返回搜尋" />
     </div>
-
     <div v-else-if="item" class="id-content-wrap">
-      <div class="identity-navigation">
-        <TheBackButton fallback="/" text="返回上一頁" />
-        <span>Gencko verified record</span>
-      </div>
-
+      <nav class="identity-navigation" aria-label="證書操作">
+        <NuxtLink to="/certificates" class="certificate-back">← 個體證書</NuxtLink>
+        <button type="button" class="act-btn" aria-label="儲存個體證書為 PDF" @click="triggerPrint">
+          儲存證書 PDF
+          <span aria-hidden="true">↗</span>
+        </button>
+      </nav>
       <article
-        class="identity-certificate"
+        class="identity-certificate id-card print-target"
         data-phase3-surface="identity"
         aria-labelledby="identity-title"
       >
-        <header class="identity-heading">
-          <div>
-            <p class="identity-eyebrow">繁育紀錄證明</p>
-            <h1 id="identity-title">個體 {{ item.ID }} 電子身分證</h1>
+        <header class="certificate-header">
+          <div class="certificate-brand">
+            <span>GENCKO</span>
+            <small>STUDIO</small>
           </div>
-          <span class="verified-mark">紀錄已建檔</span>
+          <div class="certificate-registration">
+            <span>INDIVIDUAL NO.</span>
+            <strong>{{ item.ID }}</strong>
+          </div>
         </header>
-
-        <div class="id-card print-target">
-          <div class="card-photo-box">
+        <div class="certificate-title">
+          <p>GENCKO STUDIO · INDIVIDUAL CERTIFICATE</p>
+          <h1 id="identity-title">血統證書</h1>
+          <span>Certificate of Lineage</span>
+        </div>
+        <div class="certificate-record-body">
+          <figure class="card-photo-box">
             <img
               v-if="identityImageSrc"
               ref="identityImageEl"
               :src="identityImageSrc"
-              :alt="`${item.Morph} 個體 ${item.ID} 電子身分證照片`"
+              :alt="`${item.Morph} 個體 ${item.ID} 照片`"
               loading="eager"
               fetchpriority="high"
               decoding="async"
               @error="handleImageError"
             />
             <div v-else class="no-img">暫無照片</div>
-          </div>
-
-          <div class="card-info-box">
-            <div class="card-header">
-              <div class="brand-sub">Digital Identity</div>
-              <div class="card-id">{{ item.ID }}</div>
-              <div class="brand-logo">Gencko Studio</div>
+            <figcaption>
+              <span>INDIVIDUAL PORTRAIT</span>
+              <span>{{ item.ID }}</span>
+            </figcaption>
+          </figure>
+          <section class="certificate-profile" aria-label="個體資料">
+            <div class="certificate-morph-heading">
+              <span>品系 / MORPH</span>
+              <h2 class="certificate-morph">{{ item.Morph || '尚未登錄品系' }}</h2>
             </div>
-
             <dl class="info-grid">
-              <div class="ig-row">
-                <dt>品系</dt>
-                <dd class="ig-val highlight">{{ item.Morph }}</dd>
+              <div>
+                <dt>
+                  物種
+                  <span>SPECIES</span>
+                </dt>
+                <dd>{{ item.Species || '未登錄' }}</dd>
               </div>
-              <div class="ig-row">
-                <dt>性別</dt>
-                <dd class="ig-val" :class="sexClass">{{ fmtSex }}</dd>
+              <div>
+                <dt>
+                  性別紀錄
+                  <span>SEX RECORD</span>
+                </dt>
+                <dd>{{ fmtSex }}</dd>
               </div>
-              <div class="ig-row">
-                <dt>出生日</dt>
-                <dd class="ig-val">{{ item.Birthday || '未登錄' }}</dd>
-              </div>
-              <div v-if="item.Species" class="ig-row">
-                <dt>物種</dt>
-                <dd class="ig-val">{{ item.Species }}</dd>
+              <div>
+                <dt>
+                  出生日
+                  <span>DATE OF BIRTH</span>
+                </dt>
+                <dd>{{ item.Birthday || '未登錄' }}</dd>
               </div>
             </dl>
-
-            <div class="card-footer">
-              <div class="cf-line"></div>
-              <div class="cf-txt">Verified & Bred by Gencko Studio</div>
-            </div>
+          </section>
+        </div>
+        <footer class="certificate-footer">
+          <div class="certificate-issuer">
+            <strong>GENCKO STUDIO</strong>
+            <span>個體紀錄存檔</span>
           </div>
-        </div>
-
-        <div class="identity-note">
-          <strong>電子紀錄</strong>
-          <span>此頁呈現目前建檔的個體資訊，可列印或另存為 PDF 留存。</span>
-        </div>
-
-        <div class="id-actions">
-          <button
-            type="button"
-            class="act-btn primary"
-            aria-label="儲存電子身分證為 PDF"
-            @click="triggerPrint"
-          >
-            <span aria-hidden="true">↓</span>
-            儲存電子身分證（PDF）
-          </button>
-        </div>
-        <p class="id-hint">瀏覽器將開啟列印面板，請選擇「另存為 PDF」。</p>
+          <p>
+            品系、性別與出生日
+            <br />
+            依目前建檔資料呈現。
+          </p>
+        </footer>
       </article>
+      <div class="id-actions">
+        <p class="id-hint">儲存時請在列印面板選擇「另存為 PDF」，使用 A4 直式。</p>
+      </div>
     </div>
   </div>
 </template>
-
 <style scoped>
-/*
-  [局部樣式修復] 
-  已將外圍 UI（狀態文字、載入動畫）全面變數化。
-  徹底移除所有 :global(body.day-mode) 的強制覆寫與重複的返回按鈕樣式。
-  （註：.id-card 本體保留絕對色碼，以確保實體電子身分證的視覺與列印一致性）
-*/
-
-/* 基本頁面設定 */
 .id-page-container {
-  min-height: 50vh;
-  background: transparent;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 5px;
-  font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
   width: 100%;
+  padding: 12px 0 28px;
 }
-
 .id-content-wrap {
-  width: 100%;
-  max-width: 800px;
+  max-width: 940px;
+  margin: 0 auto;
 }
-
-/* Status (已變數化) */
-.status-msg {
-  text-align: center;
-  font-size: 1.2rem;
-  color: var(--txt);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-}
-.loader {
-  width: 40px;
-  height: 40px;
-  border: 4px solid var(--bd);
-  border-top-color: var(--pri);
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-  margin: 0 auto 10px;
-}
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-/* Card Design (預設電腦版：橫向) - 保留實體卡片固定色彩設計 */
-.id-card {
-  background: #fff;
-  color: #1e293b;
-  width: 100%;
-  border-radius: 16px;
-  overflow: hidden;
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
-  display: flex;
-  flex-direction: row;
-  position: relative;
-  z-index: 10;
-}
-
-/* Photo Section */
-.card-photo-box {
-  flex: 1;
-  max-width: 50%;
-  background: #f8fafc;
-  position: relative;
-  min-height: 300px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  overflow: hidden;
-}
-.card-photo-box img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
-}
-.no-img {
-  color: #94a3b8;
-  font-weight: bold;
-}
-
-/* Info Section */
-.card-info-box {
-  flex: 1;
-  min-width: 0;
-  padding: 30px;
-  display: flex;
-  flex-direction: column;
-  background: #fff;
-}
-.card-header {
-  margin-bottom: 25px;
-  border-bottom: 2px solid #e2e8f0;
-  padding-bottom: 15px;
-}
-.brand-sub {
-  font-size: 0.8rem;
-  text-transform: uppercase;
-  letter-spacing: 2px;
-  color: #64748b;
-  font-weight: bold;
-}
-.card-id {
-  font-size: 2.2rem;
-  font-weight: 900;
-  margin: 5px 0;
-  color: #0f172a;
-  line-height: 1;
-}
-.brand-logo {
-  font-size: 0.9rem;
-  font-weight: bold;
-  color: #d84315;
-}
-.info-grid {
-  display: flex;
-  flex-direction: column;
-  gap: 15px;
-  flex: 1;
-}
-.ig-row {
-  display: flex;
-  flex-direction: column;
-}
-.ig-row label {
-  font-size: 0.75rem;
-  color: #94a3b8;
-  text-transform: uppercase;
-  font-weight: bold;
-  margin-bottom: 2px;
-}
-.ig-val {
-  font-size: 1.1rem;
-  font-weight: 600;
-  color: #334155;
-}
-.ig-val.highlight {
-  font-size: 1.25rem;
-  color: #0f172a;
-  font-weight: 800;
-  line-height: 1.2;
-}
-.t-male {
-  color: #2563eb;
-}
-.t-female {
-  color: #db2777;
-}
-.t-mix {
-  color: #8b5cf6;
-}
-.card-footer {
-  margin-top: 30px;
-}
-.cf-line {
-  height: 4px;
-  width: 40px;
-  background: #d84315;
-  margin-bottom: 10px;
-}
-.cf-txt {
-  font-size: 0.7rem;
-  color: #94a3b8;
-  font-style: italic;
-}
-
-.id-actions {
-  margin-top: 30px;
-  display: flex;
-  justify-content: center;
-  width: 100%;
-}
-.act-btn {
-  min-height: var(--control-min-height);
-  padding: 12px 28px;
-  border-radius: 30px;
-  border: none;
-  font-weight: bold;
-  font-size: 1rem;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
-  background: #d84315;
-  color: #fff;
-  transition: 0.2s;
-  max-width: 90%;
-}
-.act-btn:active {
-  transform: scale(0.95);
-}
-.act-btn:focus-visible {
-  outline: 3px solid var(--pri);
-  outline-offset: 2px;
-}
-
-/* 提示文字 (已變數化) */
-.id-hint {
-  font-size: 0.8rem;
-  color: var(--txt);
-  opacity: 0.6;
-  margin-top: 15px;
-  text-align: center;
-}
-
-/* 🌟 Mobile Responsive (強制並排，左圖右文) */
-@media (max-width: 768px) {
-  .id-page-container {
-    padding-top: 0;
-    padding-bottom: 15px;
-  }
-
-  .id-card {
-    flex-direction: row; /* 強制左右排列 */
-    max-width: 100%;
-    width: 100%;
-    border-radius: 12px;
-    align-items: stretch;
-  }
-
-  .card-photo-box {
-    width: 265px; /* 固定左側照片寬度 */
-    flex: none;
-    height: auto;
-    min-height: 180px;
-  }
-
-  .card-info-box {
-    padding: 12px;
-    flex: 1;
-    min-width: 0; /* 讓文字可以縮排截斷 */
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-  }
-
-  /* 縮減字體適應雙欄 */
-  .card-header {
-    margin-bottom: 10px;
-    padding-bottom: 8px;
-    border-bottom-width: 1px;
-  }
-  .brand-sub {
-    font-size: 0.55rem;
-  }
-  .card-id {
-    font-size: 1.25rem;
-    margin: 2px 0;
-  }
-  .brand-logo {
-    font-size: 0.7rem;
-  }
-
-  .info-grid {
-    gap: 8px;
-  }
-  .ig-row label {
-    font-size: 0.6rem;
-  }
-  .ig-val {
-    font-size: 0.85rem;
-  }
-  .ig-val.highlight {
-    font-size: 0.95rem;
-  }
-
-  .card-footer {
-    margin-top: 15px;
-  }
-  .cf-line {
-    margin-bottom: 6px;
-  }
-  .cf-txt {
-    font-size: 0.6rem;
-  }
-
-  .id-actions {
-    margin-top: 20px;
-  }
-  .act-btn {
-    padding: 10px 20px;
-    font-size: 0.9rem;
-  }
-  .id-hint {
-    font-size: 0.75rem;
-    margin-top: 8px;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .loader,
-  .act-btn {
-    animation: none !important;
-    transition: none !important;
-  }
-  .act-btn:active {
-    transform: none;
-  }
-}
-
-/* Phase 3 focused redesign：以檔案館式證明卡補強頁面層級。 */
-.id-page-container {
-  justify-content: flex-start;
-  padding: 1rem 1.25rem 5rem;
-  font-family: inherit;
-}
-
-.id-content-wrap {
-  max-width: 960px;
-}
-
 .identity-navigation {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 1rem;
-  margin-bottom: 1.25rem;
+  gap: 12px;
+  margin-bottom: 18px;
 }
-
-.identity-navigation > span {
+.certificate-back {
   color: var(--txt);
-  font-size: 0.7rem;
-  text-transform: uppercase;
-  opacity: 0.48;
-}
-
-.identity-certificate {
-  width: 100%;
-}
-
-.identity-heading {
-  display: flex;
-  align-items: end;
-  justify-content: space-between;
-  gap: 2rem;
-  padding: clamp(1.25rem, 4vw, 2.75rem) 0 1.5rem;
-}
-
-.identity-eyebrow {
-  margin: 0 0 0.6rem;
-  color: var(--pri);
-  font-size: 0.75rem;
-  font-weight: 800;
-}
-
-.identity-heading h1 {
-  margin: 0;
-  color: var(--txt);
-  font-size: clamp(2rem, 5vw, 4rem);
-  line-height: 1.03;
-  text-wrap: balance;
-}
-
-.verified-mark {
-  flex: none;
-  padding: 0.45rem 0.7rem;
-  border: 1px solid color-mix(in srgb, var(--pri) 38%, var(--bd));
-  border-radius: 0.5rem;
-  color: var(--pri);
-  font-size: 0.75rem;
-  font-weight: 800;
-}
-
-.id-card {
-  min-height: 25rem;
-  border: 1px solid #d9d4cf;
-  border-radius: 1.25rem;
-  box-shadow: 0 24px 60px rgba(43, 34, 28, 0.2);
-}
-
-.card-photo-box {
-  min-height: 25rem;
-}
-
-.card-info-box {
-  padding: clamp(1.5rem, 4vw, 3rem);
-}
-
-.card-id {
-  margin: 0.3rem 0;
-  color: #0f172a;
-  font-size: clamp(1.8rem, 4vw, 2.8rem);
-  font-weight: 900;
-  line-height: 1;
-  font-variant-numeric: tabular-nums;
-}
-
-.info-grid {
-  margin: 0;
-}
-
-.ig-row dt {
-  margin-bottom: 0.2rem;
-  color: #7a8799;
-  font-size: 0.7rem;
-  font-weight: 800;
-  text-transform: uppercase;
-}
-
-.ig-row dd {
-  margin: 0;
-}
-
-.identity-note {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  gap: 1rem;
-  margin-top: 1rem;
-  padding: 1rem 1.25rem;
-  border-left: 3px solid var(--pri);
-  background: var(--card-bg);
-  color: var(--txt);
-}
-
-.identity-note strong {
-  font-size: 0.82rem;
-}
-
-.identity-note span {
-  font-size: 0.82rem;
-  line-height: 1.55;
-  opacity: 0.65;
-}
-
-.id-actions {
-  margin-top: 1.5rem;
-}
-
-.act-btn {
-  gap: 0.5rem;
-  box-shadow: 0 8px 20px rgba(216, 67, 21, 0.22);
-  transition:
-    transform 180ms ease-out,
-    box-shadow 180ms ease-out;
-}
-
-@media (hover: hover) and (pointer: fine) {
-  .act-btn:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 12px 24px rgba(216, 67, 21, 0.3);
-  }
-}
-
-@media (max-width: 620px) {
-  .id-page-container {
-    padding: 0.5rem 0.75rem 4rem;
-  }
-
-  .identity-navigation > span {
-    display: none;
-  }
-
-  .identity-heading {
-    align-items: flex-start;
-    flex-direction: column;
-    gap: 1rem;
-    padding-top: 0.75rem;
-  }
-
-  .identity-heading h1 {
-    font-size: clamp(2rem, 10vw, 3rem);
-  }
-
-  .id-card {
-    min-height: 0;
-    flex-direction: column;
-    border-radius: 1rem;
-  }
-
-  .card-photo-box {
-    width: 100%;
-    max-width: none;
-    min-height: 0;
-    aspect-ratio: 1 / 1;
-  }
-
-  .card-info-box {
-    width: 100%;
-    padding: 1.25rem;
-  }
-
-  .card-header {
-    margin-bottom: 1.25rem;
-    padding-bottom: 1rem;
-  }
-
-  .brand-sub,
-  .brand-logo,
-  .cf-txt {
-    font-size: 0.7rem;
-  }
-
-  .card-id {
-    margin: 0.3rem 0;
-    font-size: 2rem;
-  }
-
-  .info-grid {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 1rem;
-  }
-
-  .ig-row dt {
-    font-size: 0.65rem;
-  }
-
-  .ig-val,
-  .ig-val.highlight {
-    overflow-wrap: anywhere;
-    font-size: 0.95rem;
-  }
-
-  .card-footer {
-    margin-top: 1.5rem;
-  }
-
-  .identity-note {
-    grid-template-columns: 1fr;
-    gap: 0.35rem;
-  }
-
-  .act-btn {
-    width: 100%;
-    max-width: none;
-  }
-}
-
-.identity-heading h1 {
-  font-family: 'Noto Serif TC', serif;
-  letter-spacing: -0.04em;
-}
-
-.id-card {
-  border-radius: 0;
-  box-shadow: none;
-}
-
-.identity-note,
-.act-btn {
-  border-radius: 2px;
-}
-
-.identity-navigation,
-.identity-certificate,
-.identity-note {
-  border-radius: 0;
-  box-shadow: none;
-}
-
-.identity-navigation,
-.identity-certificate {
-  border-width: 1px 0;
-  background-image: none;
-}
-
-.info-grid {
-  gap: 0;
-  border-top: 1px solid var(--bd);
-  border-left: 1px solid var(--bd);
-}
-
-.info-grid > * {
-  border-width: 0 1px 1px 0;
-  border-radius: 0;
-}
-
-@media print {
-  .common-document-meta,
-  .identity-navigation,
-  .identity-heading,
-  .identity-note,
-  .id-actions,
-  .id-hint {
-    display: none !important;
-  }
-
-  .id-page-container {
-    padding: 0;
-  }
-
-  .id-card {
-    box-shadow: none;
-    break-inside: avoid;
-  }
-}
-/* 電子證書保留文件邊界與列印版面，只統一螢幕閱讀介面。 */
-@media screen {
-  .id-page-container {
-    padding-top: 8px;
-    padding-bottom: 28px;
-  }
-  .identity-certificate {
-    border-radius: 0;
-    box-shadow: none;
-    padding-top: 18px;
-  }
-  .identity-heading {
-    gap: 16px;
-    margin-bottom: 18px;
-  }
-  .identity-heading h1 {
-    font-family: var(--font-heading-zh);
-    font-size: clamp(1.7rem, 3.5vw, 2.6rem);
-    line-height: 1.4;
-  }
-  .identity-note {
-    border-radius: 0;
-    background: transparent;
-    border-inline: 0;
-    padding-block: 14px;
-  }
-  .act-btn {
-    min-height: 44px;
-    border-radius: 2px;
-    box-shadow: none;
-  }
-  .id-hint {
-    margin-bottom: 0;
-  }
-}
-/* 螢幕版縮減照片與操作距離，列印仍使用原證書版面。 */
-@media screen {
-  .identity-navigation {
-    margin-bottom: 6px;
-  }
-  .identity-certificate {
-    padding-top: 0;
-  }
-  .identity-heading {
-    margin-bottom: 8px;
-    padding-bottom: 8px;
-  }
-  .card-photo-box {
-    min-height: 0;
-  }
-  .card-photo-box img {
-    position: absolute;
-    inset: 0;
-    object-fit: contain;
-  }
-  .card-info-box {
-    padding: 20px;
-  }
-  .ig-val {
-    overflow-wrap: anywhere;
-  }
-  .identity-note {
-    margin-top: 8px;
-    padding: 8px 0;
-  }
-  .id-actions {
-    margin-top: 8px;
-  }
-  .status-msg {
-    gap: 12px;
-  }
-}
-@media screen and (max-width: 620px) {
-  .card-photo-box {
-    height: clamp(180px, 28svh, 240px);
-    aspect-ratio: auto;
-  }
-  .card-info-box {
-    padding: 12px;
-  }
-  .card-header {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 6px 12px;
-    margin-bottom: 8px;
-    padding-bottom: 8px;
-  }
-  .brand-sub {
-    display: none;
-  }
-  .card-id {
-    font-size: 1.25rem;
-    margin: 0;
-  }
-  .info-grid {
-    border: 0;
-    gap: 8px 12px;
-  }
-  .card-footer {
-    margin-top: 10px;
-  }
-  .cf-line {
-    display: none;
-  }
-  .identity-heading {
-    gap: 6px;
-  }
-  .verified-mark {
-    padding: 3px 6px;
-  }
-  .identity-note {
-    grid-template-columns: auto minmax(0, 1fr);
-    gap: 8px;
-  }
-}
-/* 本頁返回與次要操作使用同一按鈕形式。 */
-:deep(.app-back-btn),
-.btn-app {
-  border-radius: 2px;
+  font-size: 14px;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
   min-height: 44px;
-  box-shadow: none;
+}
+.act-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  min-height: 44px;
+  padding: 10px 16px;
+  border: 1px solid var(--bd);
+  color: var(--txt);
+  background: var(--card-bg-solid);
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+}
+.act-btn:focus-visible,
+.certificate-back:focus-visible {
+  outline: 2px solid var(--pri);
+  outline-offset: 4px;
+}
+.identity-certificate {
+  --paper: #cbd1d6;
+  --ink: #24282b;
+  --muted: #424950;
+  --metal: #584629;
+  --rule: #b5aca0;
+  --letter-foil: linear-gradient(
+    178deg,
+    #5c431d 0%,
+    #987337 22%,
+    #c3a466 39%,
+    #e0c68f 43%,
+    #987237 49%,
+    #6e5027 70%,
+    #a47f42 100%
+  );
+  --foil: linear-gradient(
+    101deg,
+    #94743d 0%,
+    #b99654 16%,
+    #d1b77c 21%,
+    #a78545 27%,
+    #af8d4e 58%,
+    #e1ca94 63%,
+    #b49355 70%,
+    #94743d 100%
+  );
+  position: relative;
+  isolation: isolate;
+  color: var(--ink);
+  background-color: var(--paper);
+  background-image:
+    radial-gradient(ellipse 72% 42% at 30% 12%, rgb(255 255 255 / 78%), transparent 76%),
+    radial-gradient(ellipse 54% 38% at 92% 68%, rgb(255 255 255 / 48%), transparent 78%),
+    radial-gradient(ellipse 78% 54% at 0% 83%, rgb(80 95 110 / 17%), transparent 80%),
+    linear-gradient(110deg, #c8cfd5 0%, #e9edef 37%, #d1d8de 67%, #bcc5ce 100%);
+  padding: 48px 50px 38px;
+  border: 1px solid #c0c5ca;
+  min-height: 1040px;
+  display: flex;
+  flex-direction: column;
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 70%),
+    0 1px 0 #b9bec3,
+    0 3px 5px rgb(28 35 43 / 9%),
+    0 9px 18px -10px rgb(28 35 43 / 22%);
   font-family: var(--font-body-zh);
 }
-:deep(.app-back-btn) {
-  border: 1px solid var(--txt);
+/* 寬柔反光呈現銀色珠光紙的光澤，細顆粒保留紙面觸感，兩者皆為靜態。 */
+.identity-certificate::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: url('/textures/certificate-paper.svg') repeat;
+  opacity: 0.52;
+  mix-blend-mode: soft-light;
+  pointer-events: none;
+  z-index: -1;
+}
+/* 金箔框線以局部高光與壓痕呈現，不使用閃動或動態光暈。 */
+.identity-certificate::before {
+  content: '';
+  position: absolute;
+  inset: 14px;
+  border: 1px solid transparent;
+  border-image: var(--foil) 1;
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 85%),
+    0 1px 1px rgb(87 66 29 / 14%);
+  pointer-events: none;
+}
+.certificate-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 18px;
+  padding-bottom: 24px;
+  border-bottom: 1px solid var(--rule);
+  border-image: var(--foil) 1;
+}
+.certificate-brand {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  color: var(--metal);
+}
+.certificate-brand > span {
+  font:
+    600 27px Baskerville,
+    Palatino,
+    Georgia,
+    serif;
+  letter-spacing: 0.12em;
+}
+.certificate-brand small {
+  font-size: 10px;
+  letter-spacing: 0.26em;
+}
+/* 燙金字保留金箔反光，上緣暗痕與下緣紙面亮邊呈現淺壓印。 */
+@supports ((background-clip: text) or (-webkit-background-clip: text)) {
+  .certificate-brand > span,
+  .certificate-title > span,
+  .certificate-issuer strong {
+    background: var(--letter-foil);
+    background-clip: text;
+    -webkit-background-clip: text;
+    color: transparent;
+    text-shadow:
+      0 -0.55px 0.35px rgb(63 42 14 / 24%),
+      0 0.8px 0.35px rgb(255 255 255 / 74%);
+  }
+}
+.certificate-registration {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+  min-width: 0;
+}
+.certificate-registration > span {
+  font-size: 9px;
+  letter-spacing: 0.18em;
+  color: var(--muted);
+}
+.certificate-registration strong {
+  font:
+    21px Georgia,
+    serif;
+  letter-spacing: 0.05em;
+  color: var(--metal);
+  overflow-wrap: anywhere;
+}
+.certificate-title {
+  padding: 48px 0 38px;
+  text-align: center;
+}
+.certificate-title p {
+  margin: 0 0 17px;
+  font-size: 9px;
+  letter-spacing: 0.25em;
+  color: var(--muted);
+}
+.certificate-title > span {
+  display: block;
+  margin-top: 16px;
+  font:
+    italic 23px Georgia,
+    serif;
+  color: var(--metal);
+}
+.certificate-record-body {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  gap: 36px;
+  align-items: start;
+  padding: 32px 0;
+  border-block: 1px solid var(--rule);
+  border-image: var(--foil) 1;
+}
+.card-photo-box {
+  margin: 0;
+  min-width: 0;
+  background: rgb(255 255 255 / 40%);
+  padding: 7px;
+  border: 1px solid #ac9872;
+  border-image: var(--foil) 1;
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 90%),
+    0 3px 8px rgb(42 47 53 / 8%);
+}
+.card-photo-box img,
+.no-img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: contain;
+  background: #d5d8dc;
+}
+.no-img {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted);
+  font-size: 14px;
+}
+.card-photo-box figcaption {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 5px 5px;
+  color: var(--muted);
+  font-size: 8px;
+  letter-spacing: 0.16em;
+}
+.certificate-profile {
+  padding: 3px 0 0;
+  min-width: 0;
+}
+.certificate-morph-heading > span {
+  color: var(--metal);
+  font-size: 10px;
+  letter-spacing: 0.18em;
+}
+.certificate-morph {
+  margin: 15px 0 26px;
+  font: 500 clamp(25px, 3vw, 34px)/1.5 var(--font-heading-zh);
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+.info-grid {
+  display: grid;
+  gap: 20px;
+  margin: 0;
+}
+.info-grid > div {
+  min-width: 0;
+  padding-top: 15px;
+  border-top: 1px solid var(--rule);
+}
+.info-grid dt {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: baseline;
+  font-size: 12px;
+  color: var(--muted);
+}
+.info-grid dt span {
+  font-size: 8px;
+  letter-spacing: 0.12em;
+}
+.info-grid dd {
+  margin: 10px 0 0;
+  font-size: 16px;
+  line-height: 1.5;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+.certificate-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 24px;
+  margin-top: auto;
+  padding-top: 42px;
+  text-align: left;
+}
+.certificate-issuer {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.certificate-issuer strong {
+  font:
+    600 19px Baskerville,
+    Palatino,
+    Georgia,
+    serif;
+  color: var(--metal);
+  letter-spacing: 0.1em;
+}
+.certificate-issuer > span {
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  color: var(--muted);
+}
+.certificate-footer p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.9;
+  text-align: right;
+}
+.id-hint {
+  margin: 14px 0 0;
+  color: var(--txt-muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+.status-msg {
+  padding: 28px 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  color: var(--txt);
+  text-align: center;
+}
+.status-msg p {
+  margin: 0;
 }
 @media screen and (max-width: 767px) {
-  /* 短狀態不撐高半個畫面，主要與返回操作在同列。 */
   .id-page-container {
+    padding-top: 0;
+  }
+  .identity-navigation {
+    margin-bottom: 12px;
+  }
+  .identity-certificate {
+    padding: 30px 24px 26px;
     min-height: 0;
-    justify-content: flex-start;
-    padding-bottom: 12px;
+    outline-offset: -8px;
   }
+  .identity-certificate::before {
+    inset: 9px;
+  }
+  .certificate-header {
+    padding-bottom: 18px;
+    gap: 12px;
+  }
+  .certificate-brand > span {
+    font-size: 21px;
+  }
+  .certificate-brand small {
+    font-size: 8px;
+  }
+  .certificate-registration > span {
+    font-size: 7px;
+    letter-spacing: 0.06em;
+  }
+  .certificate-registration strong {
+    font-size: 17px;
+  }
+  .certificate-title {
+    padding: 30px 0;
+  }
+  .certificate-title p {
+    font-size: 8px;
+    letter-spacing: 0.1em;
+  }
+  .certificate-title > span {
+    font-size: 20px;
+    margin-top: 12px;
+  }
+  .certificate-record-body {
+    grid-template-columns: 1fr;
+    gap: 26px;
+    padding: 24px 0;
+  }
+  .certificate-profile {
+    padding: 0;
+  }
+  .certificate-morph {
+    font-size: 26px;
+    margin: 12px 0 22px;
+  }
+  .info-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 18px;
+  }
+  .info-grid > div:last-child {
+    grid-column: 1/-1;
+  }
+  .info-grid dt {
+    flex-direction: column;
+    gap: 4px;
+  }
+  .info-grid dd {
+    font-size: 15px;
+    margin-top: 7px;
+  }
+  .certificate-footer {
+    gap: 18px;
+    padding-top: 26px;
+    align-items: flex-start;
+  }
+  .certificate-issuer strong {
+    font-size: 13px;
+    letter-spacing: 0.05em;
+  }
+  .certificate-footer p {
+    font-size: 10px;
+  }
+}
+@media print {
+  .identity-navigation,
+  .id-actions,
   .status-msg {
-    gap: 8px;
-    padding-block: 12px;
+    display: none !important;
+  }
+  .id-page-container {
+    padding: 0;
+    transform: none !important;
+    animation: none !important;
+  }
+  .id-content-wrap {
     width: 100%;
+    max-width: none;
   }
-  .status-msg h1 {
-    margin: 0;
+  .identity-certificate {
+    min-height: 260mm;
+    padding: 12mm;
+    box-shadow: none;
+    break-inside: avoid;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
   }
-  .status-msg p {
-    margin: 0;
-    font-size: 14px;
-    line-height: 1.5;
+  .certificate-header {
+    padding-bottom: 6mm;
   }
-  .status-msg.err {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    align-items: start;
+  .certificate-title {
+    padding: 10mm 0;
   }
-  .status-msg.err h1,
-  .status-msg.err p {
-    grid-column: 1 / -1;
+  .certificate-record-body {
+    gap: 7mm;
+    padding: 8mm 0;
   }
-  .status-msg.err p {
-    margin-bottom: 4px;
+  .certificate-morph {
+    font-size: 26px;
   }
-  .status-msg.err .act-btn {
-    width: 100%;
-    padding-inline: 6px;
-    margin: 0;
-    font-size: 14px;
-  }
-  .status-msg.err :deep(.nav-action-row) {
-    width: 100%;
-    margin: 0 !important;
-  }
-  .status-msg.err :deep(.app-back-btn) {
-    width: 100%;
-    justify-content: center;
-    padding-inline: 6px;
-    font-size: 14px;
+  .certificate-footer {
+    padding-top: 8mm;
   }
 }
 </style>
-
 <style>
-/* 證書列印僅保留文件，不包含全站導覽與浮動操作。 */
+body.identity-print-page #main-content #identity-title {
+  font-family: var(--font-heading-zh) !important;
+  font-size: clamp(36px, 4.5vw, 52px) !important;
+  font-weight: 600 !important;
+  line-height: 1.3 !important;
+  letter-spacing: 0.2em !important;
+  margin: 0 !important;
+  color: #24282b;
+  text-shadow: 0 0.8px 0.4px rgb(255 255 255 / 75%);
+}
+@supports ((background-clip: text) or (-webkit-background-clip: text)) {
+  body.identity-print-page #main-content #identity-title {
+    background: var(--letter-foil);
+    background-clip: text;
+    -webkit-background-clip: text;
+    color: transparent;
+    text-shadow:
+      0 -0.75px 0.45px rgb(55 36 12 / 28%),
+      0 0.9px 0.45px rgb(255 255 255 / 82%);
+  }
+}
+body.identity-print-page .floating-inquire-btn {
+  display: none;
+}
+@page gencko-certificate {
+  size: A4 portrait;
+  margin: 12mm;
+}
 @media print {
   body.identity-print-page .cont > :not(main),
   body.identity-print-page .skip-to-content,
   body.identity-print-page #nuxt-devtools-container {
     display: none !important;
   }
+  html:has(body.identity-print-page) {
+    padding: 0 !important;
+    min-height: 0 !important;
+  }
+  body.identity-print-page {
+    page: gencko-certificate;
+    min-height: 0 !important;
+  }
   body.identity-print-page,
   body.identity-print-page .cont,
   body.identity-print-page #main-content {
-    margin: 0;
-    padding: 0;
-    background: #fff;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #fff !important;
     color: #111;
+  }
+  body.identity-print-page #main-content #identity-title {
+    font-size: 38px !important;
   }
 }
 </style>
