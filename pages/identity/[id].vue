@@ -3,6 +3,7 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { useHead, useAsyncData, useSupabaseClient } from '#imports'
 import { getCleanUrl } from '~/utils/image'
+import { formatAnimalSex } from '~/utils/incubation-sex'
 
 const route = useRoute()
 const supabase = useSupabaseClient()
@@ -103,14 +104,9 @@ onMounted(() => {
 })
 
 // 性別格式化
-const fmtSex = computed(() => {
-  if (!item.value) return ''
-  const i = item.value
-  if (i.GenderType === '溫控') {
-    return `孵化溫度:${i.GenderValue || '?'}度`
-  }
-  return i.GenderType || '未確認'
-})
+const fmtSex = computed(() =>
+  formatAnimalSex(item.value, { disclaimer: false, fallback: '未確認', detail: false })
+)
 
 // 動態生成 SEO 與社群分享卡片 (Open Graph)
 const siteData = computed(() => {

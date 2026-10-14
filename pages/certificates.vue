@@ -39,7 +39,7 @@ const openCertificate = async () => {
           v-model="certificateId"
           type="search"
           maxlength="64"
-          placeholder="輸入個體 ID，例如 S-53518"
+          placeholder="輸入個體 ID"
           autocomplete="off"
           autocapitalize="characters"
           :spellcheck="false"

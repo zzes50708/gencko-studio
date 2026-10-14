@@ -143,7 +143,7 @@ const siteData = computed(() => {
     const sexSym = p.GenderType === '公' ? '♂' : p.GenderType === '母' ? '♀' : ''
     const title = `${p.Morph} ${sexSym}`.trim()
     const geneStr = (p.Genes || []).join('、')
-    const desc = `${p.Morph}（${p.GenderType || '性別未定'}）${geneStr ? ' 基因：' + geneStr + '。' : ''}${p.Birthday ? p.Birthday + ' 出生。' : ''}售價 NT$${p.ListingPrice}。Gencko Breeding Studio 專業繁育，100% 健康保證、基因正確、運輸賠償。`
+    const desc = `${p.Morph}（${formatAnimalSex(p, { fallback: '性別未定' })}）${geneStr ? ' 基因：' + geneStr + '。' : ''}${p.Birthday ? p.Birthday + ' 出生。' : ''}售價 NT$${p.ListingPrice}。Gencko Breeding Studio 專業繁育，100% 健康保證、基因正確、運輸賠償。`
     const img = getCleanUrl(p.ImageURL)
     const url = `https://www.genckobreeding.com/product/${p.ID}`
     const identityUrl = `https://www.genckobreeding.com/identity/${p.ID}`
@@ -155,7 +155,7 @@ const siteData = computed(() => {
       addProp.push({
         '@type': 'PropertyValue',
         name: '性別',
-        value: p.GenderType === '溫控' ? `孵化溫度:${p.GenderValue || '?'}度` : p.GenderType
+        value: formatAnimalSex(p)
       })
     if (p.Birthday) addProp.push({ '@type': 'PropertyValue', name: '孵化日', value: p.Birthday })
     if (p.Species) addProp.push({ '@type': 'PropertyValue', name: '物種', value: p.Species })
@@ -547,11 +547,7 @@ const generatePromo = async () => {
     ctx.font = 'bold 75px sans-serif'
     ctx.fillText(productModules.value.identity.morph.substring(0, 16), 50, 930)
     ctx.font = 'bold 45px sans-serif'
-    const rawGender = productModules.value.identity.gender
-    const genderVal =
-      rawGender === '溫控'
-        ? `孵化溫度:${productModules.value.identity.genderValue || '?'}度`
-        : rawGender
+    const genderVal = formatAnimalSex(currentProduct.value, { disclaimer: false, detail: false })
     if (genderVal && genderVal !== '未定') {
       ctx.fillText(`性別：${genderVal}`, 50, 1010)
     }

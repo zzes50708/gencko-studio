@@ -1,4 +1,5 @@
 <script setup>
+import { formatAnimalSex } from '~/utils/incubation-sex'
 import { computed, onMounted, ref } from 'vue'
 import { useHead, useAsyncData, useSupabaseClient } from '#imports'
 import { useMainStore } from '~/stores/useMainStore'
@@ -110,12 +111,12 @@ const breedersListLd = computed(() => {
           '@type': 'Thing',
           '@id': `${breedersUrl}#breeder-${a.ID}`,
           name: a.Morph,
-          description: `${a.Species} ${a.Morph}${a.GenderType ? '（' + a.GenderType + '）' : ''}${geneStr ? '，基因：' + geneStr : ''}`,
+          description: `${a.Species} ${a.Morph}${a.GenderType ? '（' + formatAnimalSex(a) + '）' : ''}${geneStr ? '，基因：' + geneStr : ''}`,
           ...(a.ImageURL ? { image: getCleanUrl(a.ImageURL) } : {}),
           additionalProperty: [
             { '@type': 'PropertyValue', name: '物種', value: a.Species },
             ...(a.GenderType
-              ? [{ '@type': 'PropertyValue', name: '性別', value: a.GenderType }]
+              ? [{ '@type': 'PropertyValue', name: '性別', value: formatAnimalSex(a) }]
               : []),
             ...(geneStr ? [{ '@type': 'PropertyValue', name: '基因組合', value: geneStr }] : []),
             ...(a.Birthday ? [{ '@type': 'PropertyValue', name: '出生日', value: a.Birthday }] : [])

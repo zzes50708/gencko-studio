@@ -21,22 +21,41 @@ export function getIncubationEstimate(species, value) {
   return { label: '比例未提供', tone: 'mix' }
 }
 
-export function formatAnimalSex(item, { disclaimer = true, fallback = '未登錄' } = {}) {
+export const isIncubationRecord = (item) =>
+  ['溫控', '孵化溫度', '公溫', '母溫'].includes(String(item?.GenderType ?? '').trim())
+
+export function formatAnimalSex(
+  item,
+  { disclaimer = true, fallback = '未登錄', detail = true } = {}
+) {
   const type = String(item?.GenderType ?? '').trim()
-  if (type !== '溫控') return type || fallback
+  if (!isIncubationRecord(item)) return type || fallback
   const raw = String(item?.GenderValue ?? '')
     .normalize('NFKC')
     .trim()
-  const estimate = getIncubationEstimate(item?.Species, raw).label
+  const result = getIncubationEstimate(item?.Species, raw)
+  const estimate = result.label
+  const category =
+    !estimate || estimate === '比例未提供'
+      ? ''
+      : result.tone === 'male'
+        ? '公溫'
+        : result.tone === 'female'
+          ? '母溫'
+          : '公母各半'
   const temperature = raw ? `孵化溫度:${raw.replace(/\s*(?:°?C|℃|度)$/i, '')}度` : '孵化溫度未登錄'
-  const notes = [estimate, disclaimer ? '不保證性別' : ''].filter(Boolean)
+  const notes = [
+    category,
+    detail ? (estimate === '公母各約50%' ? '各約50%' : estimate) : '',
+    disclaimer ? '不保證性別' : ''
+  ].filter(Boolean)
   return `${temperature}${notes.length ? `（${notes.join('，')}）` : ''}`
 }
 
 export function getAnimalSexTone(item) {
   if (item?.GenderType === '公') return 'male'
   if (item?.GenderType === '母') return 'female'
-  return item?.GenderType === '溫控'
+  return isIncubationRecord(item)
     ? getIncubationEstimate(item.Species, item.GenderValue).tone
     : 'mix'
 }

@@ -2,7 +2,7 @@
 import { computed, ref, watch } from 'vue'
 import { useMainStore } from '~/stores/useMainStore'
 import { getCleanUrl } from '~/utils/image'
-import { formatAnimalSex } from '~/utils/incubation-sex'
+import { formatAnimalSex, isIncubationRecord } from '~/utils/incubation-sex'
 
 const store = useMainStore()
 
@@ -32,7 +32,7 @@ const normalizeSpace = (s) =>
     .trim()
 
 const genderText = computed(() => formatAnimalSex(props.item))
-const isIncubationTemperature = computed(() => props.item?.GenderType === '溫控')
+const isIncubationTemperature = computed(() => isIncubationRecord(props.item))
 const mobileGenderText = computed(() => formatAnimalSex(props.item, { disclaimer: false }))
 
 const birthdayText = computed(() => {
