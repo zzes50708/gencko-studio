@@ -68,3 +68,26 @@ describe('新手推薦標籤同步', () => {
     ).toEqual(['ok'])
   })
 })
+
+describe('確認性別與孵化溫度分組', () => {
+  const kinds = ['公', '母', '公溫', '母溫', '孵化溫度', '溫控', '', 'Male', 'Female']
+  const items = kinds.map((GenderType, n) => ({
+    ID: String(n),
+    Species: '豹紋守宮',
+    Status: 'ForSale',
+    GenderType
+  }))
+  const select = (filters) =>
+    filterShopItems(items, {
+      species: '豹紋守宮',
+      filters: { ...createShopFilters(), ...filters }
+    }).map((i) => i.GenderType)
+  it('只選確認公時，不混入公溫或其他未確認個體', () =>
+    expect(select({ sexF: false, sexU: false })).toEqual(['公', 'Male']))
+  it('只選確認母時，不混入母溫或其他未確認個體', () =>
+    expect(select({ sexM: false, sexU: false })).toEqual(['母', 'Female']))
+  it('未確認組包含所有孵化溫度格式與缺值', () =>
+    expect(select({ sexM: false, sexF: false })).toEqual(['公溫', '母溫', '孵化溫度', '溫控', '']))
+  it('三組全不選時不顯示個體', () =>
+    expect(select({ sexM: false, sexF: false, sexU: false })).toEqual([]))
+})

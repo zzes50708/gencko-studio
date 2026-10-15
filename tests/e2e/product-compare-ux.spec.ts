@@ -125,13 +125,14 @@ test('同品系但不同ID不誤連競標', async ({ page }) => {
 })
 
 for (const [species, temperature, expected, tone] of [
-  ['豹紋守宮', '30.5', '約70～75%公／25%母', 'male'],
-  ['肥尾守宮', '32', '多為高溫母，不建議', 'female']
+  ['豹紋守宮', '30.5', '公溫', 'male'],
+  ['肥尾守宮', '32', '母溫', 'female']
 ]) {
   test(`${species} ${temperature}度使用正確溫控比例與色彩`, async ({ page }) => {
     await fixtures(page, { animal: { species, gender_type: '溫控', gender_value: temperature } })
     await openProduct(page)
     await expect(page.locator('.sex-val')).toContainText(expected)
+    await expect(page.locator('.sex-val')).not.toContainText('%')
     await expect(page.locator('.sex-val')).toContainText('不保證性別')
     await expect(page.locator('.sex-val')).toHaveClass(new RegExp(tone))
   })

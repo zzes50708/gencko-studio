@@ -33,7 +33,7 @@ describe('物種孵化溫度表', () => {
   })
   it('手機可將不保證性別分行，但完整資料保留提示', () => {
     const item = { Species: '肥尾守宮', GenderType: '溫控', GenderValue: '３２°C' }
-    expect(formatAnimalSex(item)).toBe('孵化溫度:32度（母溫，多為高溫母，不建議，不保證性別）')
+    expect(formatAnimalSex(item)).toBe('孵化溫度:32度（母溫，不保證性別）')
     expect(formatAnimalSex(item, { disclaimer: false })).not.toContain('不保證性別')
     expect(getAnimalSexTone(item)).toBe('female')
     expect(formatAnimalSex({ GenderType: '公', GenderValue: 27 })).toBe('公')
@@ -49,4 +49,12 @@ it('前台使用公溫母溫，舊資料名稱不外露', () => {
   expect(formatAnimalSex({ Species: '豹紋守宮', GenderType: '溫控', GenderValue: 27.5 })).toContain(
     '母溫'
   )
+})
+
+it('顧客只看到公母溫，不顯示百分比或比例表提示', () => {
+  for (const t of [24, 27.5, 28, 30.5, 31, 34]) {
+    const text = formatAnimalSex({ Species: '豹紋守宮', GenderType: '孵化溫度', GenderValue: t })
+    expect(text).not.toMatch(/%|比例|參考表/)
+  }
+  expect(formatAnimalSex({ GenderType: '母溫' })).toContain('母溫')
 })

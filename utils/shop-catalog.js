@@ -5,6 +5,7 @@ export const createShopFilters = () => ({
   maxP: '',
   sexM: true,
   sexF: true,
+  sexU: true,
   years: [],
   genes: [],
   beginner: false
@@ -62,8 +63,11 @@ export function filterShopItems(
       if (filters.minP !== '' && price < Number(filters.minP)) return false
       if (filters.maxP !== '' && price > Number(filters.maxP)) return false
       const sex = String(item.GenderType || '')
-      if (!filters.sexM && (sex.includes('Male') || sex.includes('公'))) return false
-      if (!filters.sexF && (sex.includes('Female') || sex.includes('母'))) return false
+      const confirmedMale = /^(公|male|m)$/i.test(sex.trim())
+      const confirmedFemale = /^(母|female|f)$/i.test(sex.trim())
+      if (confirmedMale && filters.sexM === false) return false
+      if (confirmedFemale && filters.sexF === false) return false
+      if (!confirmedMale && !confirmedFemale && filters.sexU === false) return false
       const year = String(item.Birthday || '').match(/\d{4}/)?.[0] || ''
       if (filters.years.length && !filters.years.includes(year)) return false
       // 新手推薦以後台標籤為準，缺陷與待觀察優先排除。

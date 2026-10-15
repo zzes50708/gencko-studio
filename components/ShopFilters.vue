@@ -131,7 +131,7 @@ const categoryHelp = {
             :checked="modelValue.sexM"
             @change="update('sexM', $event.target.checked)"
           />
-          公
+          已確認公
         </label>
         <label>
           <input
@@ -139,10 +139,18 @@ const categoryHelp = {
             :checked="modelValue.sexF"
             @change="update('sexF', $event.target.checked)"
           />
-          母
+          已確認母
         </label>
       </div>
-      <p class="hint">未確認性別的個體仍會顯示。</p>
+      <label class="choice-row">
+        <input
+          type="checkbox"
+          :checked="modelValue.sexU !== false"
+          @change="update('sexU', $event.target.checked)"
+        />
+        孵化溫度／未確認
+      </label>
+      <p class="hint">公溫、母溫與公母各半都屬於未確認性別。</p>
     </fieldset>
     <fieldset v-if="years.length">
       <legend>出生年份</legend>

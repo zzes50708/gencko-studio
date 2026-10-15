@@ -57,6 +57,7 @@ const fil = ref({
   maxP: '',
   sexM: true,
   sexF: true,
+  sexU: true,
   years: [],
   genes: [],
   beginner: false
@@ -262,8 +263,9 @@ const selectedConditions = computed(() => {
   if (filters.sold) add('sold', '包含已售出')
   if (filters.minP !== '') add('minP', `最低 $${filters.minP}`)
   if (filters.maxP !== '') add('maxP', `最高 $${filters.maxP}`)
-  if (!filters.sexM) add('sexM', '不含公')
-  if (!filters.sexF) add('sexF', '不含母')
+  if (!filters.sexM) add('sexM', '不含已確認公')
+  if (!filters.sexF) add('sexF', '不含已確認母')
+  if (!filters.sexU) add('sexU', '不含未確認性別')
   if (filters.beginner) add('beginner', '新手推薦')
   filters.years.forEach((year) => add('years', `${year} 年`, year))
   filters.genes.forEach((gene) => add('genes', gene, gene))
@@ -339,7 +341,7 @@ onMounted(() => {
   kw.value = typeof q.kw === 'string' ? q.kw : ''
   searchText.value = kw.value
   const filters = createShopFilters()
-  for (const key of ['stock', 'sold', 'sexM', 'sexF', 'beginner'])
+  for (const key of ['stock', 'sold', 'sexM', 'sexF', 'sexU', 'beginner'])
     if (q[key] !== undefined) filters[key] = q[key] === 'true'
   for (const key of ['minP', 'maxP']) if (typeof q[key] === 'string') filters[key] = q[key]
   for (const key of ['years', 'genes'])
@@ -362,7 +364,7 @@ watch(
     if (sp.value !== '豹紋守宮') query.sp = sp.value
     if (kw.value) query.kw = kw.value
     const defaults = createShopFilters()
-    for (const key of ['stock', 'sold', 'sexM', 'sexF', 'beginner'])
+    for (const key of ['stock', 'sold', 'sexM', 'sexF', 'sexU', 'beginner'])
       if (fil.value[key] !== defaults[key]) query[key] = String(fil.value[key])
     for (const key of ['minP', 'maxP'])
       if (fil.value[key] !== '') query[key] = String(fil.value[key])
@@ -548,8 +550,8 @@ onBeforeUnmount(() => clearTimeout(searchTimer))
               store.compareList.length >= 3 && !store.compareList.includes(item.ID)
             "
             :has-auction="store.auctionList.some((auction) => auction.animal_id === item.ID)"
-            :show-mobile-meta="true"
-            :show-mobile-genes="true"
+            :show-mobile-meta="false"
+            :show-mobile-genes="false"
             :show-interactive-grid="false"
             :on-toggle-wishlist="toggleWishlist"
             :on-toggle-compare="store.toggleCompare"

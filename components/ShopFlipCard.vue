@@ -201,13 +201,7 @@ const informationRows = computed(() => [
     <details class="mobile-card-details">
       <summary :aria-label="`查看 ${item.Morph} 的基本資訊`">基本資訊</summary>
       <div class="mobile-card-details-body">
-        <span>編號：{{ item.ID }}</span>
-        <span>
-          {{ isIncubationTemperature ? mobileGenderText : genderText }}
-          <template v-if="isIncubationTemperature">，不保證性別</template>
-        </span>
-        <span v-if="birthYear">{{ birthYear }} 年出生</span>
-        <span v-if="geneText">{{ geneText }}</span>
+        <span v-for="[label, value] in informationRows" :key="label">{{ label }}：{{ value }}</span>
       </div>
     </details>
   </article>
