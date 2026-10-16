@@ -1,5 +1,21 @@
 <script setup lang="ts">
 import { useHead } from '#imports'
+import { reactive, ref, onMounted } from 'vue'
+const guideImageErrors = reactive({ hero: false, leopard: false, fatTail: false })
+const heroImage = ref<HTMLImageElement | null>(null)
+const leopardImage = ref<HTMLImageElement | null>(null)
+const fatTailImage = ref<HTMLImageElement | null>(null)
+// SSR 圖片可能在事件掛載前失敗，掛載時補查已完成但無像素的圖片。
+onMounted(() => {
+  for (const [key, image] of [
+    ['hero', heroImage.value],
+    ['leopard', leopardImage.value],
+    ['fatTail', fatTailImage.value]
+  ] as const) {
+    if (image?.complete && image.naturalWidth === 0) guideImageErrors[key] = true
+  }
+})
+
 import { getWebPage, getBreadcrumb, getPublisher, GECKO_TAXONS } from '~/utils/seo-schemas'
 import { absUrl, DEFAULT_OG_IMAGE } from '~/utils/site-constants'
 
@@ -138,15 +154,18 @@ useHead({
       lead="兩種常見寵物守宮的差異，先正確認識，再決定是否適合開始飼養。"
     >
       <figure class="hero-visual">
-        <NuxtImg
+        <img
+          v-if="!guideImageErrors.hero"
+          ref="heroImage"
+          @error="guideImageErrors.hero = true"
           src="/images/guide/hero-gecko.webp"
           alt="橘色豹紋守宮近照"
           width="640"
           height="360"
-          sizes="sm:100vw md:50vw lg:520px"
           loading="eager"
           fetchpriority="high"
         />
+        <div v-else class="guide-image-unavailable is-hero" role="status">照片暫時無法載入</div>
       </figure>
     </PageHero>
 
@@ -198,26 +217,32 @@ useHead({
       <h2 class="sec-title">豹紋守宮 vs 肥尾守宮</h2>
       <div class="species-portraits">
         <div class="species-portrait">
-          <NuxtImg
+          <img
+            v-if="!guideImageErrors.leopard"
+            ref="leopardImage"
+            @error="guideImageErrors.leopard = true"
             src="/images/guide/leopard-gecko.webp"
             alt="豹紋守宮外觀"
             width="1200"
             height="1200"
-            sizes="sm:50vw md:36vw lg:390px"
             loading="lazy"
           />
+          <div v-else class="guide-image-unavailable" role="status">照片暫時無法載入</div>
           <strong>豹紋守宮</strong>
           <i lang="la">Eublepharis macularius</i>
         </div>
         <div class="species-portrait">
-          <NuxtImg
+          <img
+            v-if="!guideImageErrors.fatTail"
+            ref="fatTailImage"
+            @error="guideImageErrors.fatTail = true"
             src="/images/guide/fat-tailed-gecko.webp"
             alt="肥尾守宮外觀"
             width="1200"
             height="1200"
-            sizes="sm:50vw md:36vw lg:390px"
             loading="lazy"
           />
+          <div v-else class="guide-image-unavailable" role="status">照片暫時無法載入</div>
           <strong>肥尾守宮</strong>
           <i lang="la">Hemitheconyx caudicinctus</i>
         </div>
@@ -979,5 +1004,17 @@ useHead({
   .cmp-species dl > div {
     padding: 7px 0;
   }
+}
+.guide-image-unavailable {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  aspect-ratio: 1;
+  background: var(--card-bg-solid);
+  color: var(--txt-muted);
+  font-size: 13px;
+}
+.guide-image-unavailable.is-hero {
+  aspect-ratio: 16/9;
 }
 </style>

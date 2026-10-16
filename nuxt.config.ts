@@ -314,7 +314,7 @@ export default defineNuxtConfig({
         {
           name: 'keywords',
           content:
-            '豹紋守宮,守宮,基因計算機,守宮品系,守宮飼養,新手飼養,Eublepharis macularius,Gencko,捷客工作室,守宮繁育,守宮選購,特寵醫院'
+            '豹紋守宮,守宮,基因計算機,守宮品系,守宮飼養,新手飼養,Eublepharis macularius,Gencko,守宮繁育,守宮選購,特寵醫院'
         },
         { property: 'og:type', content: 'website' },
         { property: 'og:site_name', content: 'Gencko Studio' },
@@ -376,7 +376,7 @@ export default defineNuxtConfig({
             '@context': 'https://schema.org',
             '@type': 'Organization',
             name: 'Gencko Breeding Studio',
-            alternateName: ['Gencko Studio', '捷客工作室'],
+            alternateName: ['Gencko Studio'],
             url: 'https://www.genckobreeding.com',
             logo: 'https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/11.png',
             description:

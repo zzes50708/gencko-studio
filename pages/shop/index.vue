@@ -73,7 +73,7 @@ const shopImg =
 const shopSeller = {
   '@type': 'Organization',
   name: 'Gencko Breeding Studio',
-  alternateName: ['Gencko Studio', '捷客工作室'],
+  alternateName: ['Gencko Studio'],
   url: 'https://www.genckobreeding.com',
   logo: 'https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/11.png',
   sameAs: [
@@ -116,7 +116,7 @@ const itemListSchema = computed(() => {
           brand: {
             '@type': 'Brand',
             name: 'Gencko Breeding Studio',
-            alternateName: ['Gencko Studio', '捷客工作室']
+            alternateName: ['Gencko Studio']
           },
           additionalProperty: [
             ...(geneStr ? [{ '@type': 'PropertyValue', name: '基因組合', value: geneStr }] : []),

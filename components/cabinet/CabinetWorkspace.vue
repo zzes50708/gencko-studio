@@ -530,13 +530,18 @@ const Controller = defineComponent({
     let lastQualityFrame = 0
     const applyQuality = () => {
       if (controllerDisposed) return
-      renderDpr.value = qualityActive.value ? sampler.ratio : profile.resting
-      if (renderer instanceof WebGLRenderer)
+      const nextDpr = qualityActive.value ? sampler.ratio : profile.resting
+      if (renderer instanceof WebGLRenderer) {
+        // 尺寸變更會清空畫布，必須在目前這幀繪製前同步套用。
+        // 若只更新 Tres 的 dpr prop，Vue 會在繪製後才縮放畫布，造成短暫空白。
+        if (renderer.getPixelRatio() !== nextDpr) renderer.setPixelRatio(nextDpr)
         renderer.transmissionResolutionScale = qualityActive.value
           ? touchMode.value
             ? 0.55
             : 0.75
           : 1
+      }
+      renderDpr.value = nextDpr
       invalidate()
     }
     const clearSharpening = () => {
@@ -1391,10 +1396,11 @@ defineExpose({ reset, configuration, download })
           <button
             type="button"
             role="switch"
-            :aria-checked="input.ledEnabled !== false"
+            :aria-checked="configuration.ledLayers > 0 && input.ledEnabled !== false"
+            :disabled="configuration.ledLayers === 0"
             @click="input.ledEnabled = !input.ledEnabled"
           >
-            LED {{ input.ledEnabled ? '開啟' : '關閉' }}
+            LED {{ configuration.ledLayers === 0 ? '未加裝' : input.ledEnabled ? '開啟' : '關閉' }}
           </button>
           <label>
             LED 照明層數
@@ -1414,13 +1420,21 @@ defineExpose({ reset, configuration, download })
               :key="item.id"
               type="button"
               :aria-pressed="input.ledColor === item.id"
-              :disabled="!input.ledEnabled"
+              :disabled="configuration.ledLayers === 0 || !input.ledEnabled"
               @click="input.ledColor = item.id"
             >
               {{ item.label }}
             </button>
           </div>
-          <p class="field-note">請點擊模型中的開關以控制LED燈</p>
+          <p class="field-note">
+            {{
+              configuration.ledLayers === 0
+                ? '選擇照明層數後，可設定 LED 色溫。'
+                : mobileSetup
+                  ? '確認生成模型後，可點擊模型中的開關控制 LED。'
+                  : '可點擊模型中的開關控制 LED。'
+            }}
+          </p>
         </fieldset>
       </aside>
       <div v-if="render3d && !failed && !touchMode" class="workspace-view-stack">
@@ -1506,14 +1520,12 @@ defineExpose({ reset, configuration, download })
       </label>
       <div v-if="touchMode && !mobileSetup" class="mobile-dimensions">
         <span>
-          盒子:{{ configuration.boxDimensions.width }}X{{ configuration.boxDimensions.length }}X{{
-            configuration.boxDimensions.height
-          }}cm
+          盒體（長×寬×高）：{{ configuration.boxDimensions.length }} ×
+          {{ configuration.boxDimensions.width }} × {{ configuration.boxDimensions.height }}cm
         </span>
         <span>
-          櫃子:{{ configuration.dimensions.width }}X{{ configuration.dimensions.height }}X{{
-            configuration.dimensions.depth
-          }}cm
+          櫃體（寬×高×深）：{{ configuration.dimensions.width }} ×
+          {{ configuration.dimensions.height }} × {{ configuration.dimensions.depth }}cm
         </span>
       </div>
       <div v-if="!touchMode" class="workspace-box-size" aria-live="polite">

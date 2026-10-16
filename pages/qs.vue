@@ -14,7 +14,7 @@ const qsImg =
 const qsPublisher = {
   '@type': 'Organization',
   name: 'Gencko Breeding Studio',
-  alternateName: ['Gencko Studio', '捷客工作室'],
+  alternateName: ['Gencko Studio'],
   url: 'https://www.genckobreeding.com',
   logo: {
     '@type': 'ImageObject',
@@ -574,7 +574,6 @@ onBeforeUnmount(() => {
       <div class="qs-quiz-toolbar">
         <div class="qs-quiz-head">
           <NuxtLink no-prefetch to="/start-here" class="qs-toolbar-back">← 返回</NuxtLink>
-          <strong>飼養前自我評估</strong>
         </div>
         <div class="qs-progress-area">
           <div class="qs-progress-labels">
@@ -1723,7 +1722,7 @@ onBeforeUnmount(() => {
 .qs-container {
   --qs-sticky-top: calc(64px + env(safe-area-inset-top, 0px));
   --qs-toolbar-shift: 0px;
-  --qs-toolbar-height: 92px;
+  --qs-toolbar-height: 56px;
   width: min(100%, 1000px);
   max-width: 1000px;
   margin-inline: auto;
@@ -1736,7 +1735,7 @@ onBeforeUnmount(() => {
 }
 
 .qs-container--quiz {
-  padding-top: calc(var(--qs-toolbar-height) + 18px);
+  padding-top: 10px;
 }
 
 .qs-quiz-toolbar {
@@ -1746,8 +1745,12 @@ onBeforeUnmount(() => {
   z-index: 900;
   width: 100%;
   min-height: var(--qs-toolbar-height);
-  padding: 7px 20px 9px;
-  padding-inline: 0 !important;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  column-gap: 12px;
+  padding: 6px 20px;
+  padding-inline: var(--site-content-gutter, 16px) !important;
   border-bottom: 1px solid var(--bd-solid);
   background: var(--card-bg-solid);
   transform: translateY(var(--qs-toolbar-shift));
@@ -1760,7 +1763,7 @@ onBeforeUnmount(() => {
 }
 
 .qs-quiz-head {
-  margin-inline: var(--site-content-gutter, 16px);
+  margin-inline: 0;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -1780,7 +1783,7 @@ onBeforeUnmount(() => {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 38px;
+  min-height: 44px;
   padding: 0 13px;
   border: 1px solid var(--txt);
   color: var(--txt);
@@ -1803,7 +1806,7 @@ onBeforeUnmount(() => {
   border: 0;
 }
 .qs-quiz-toolbar .qs-progress-labels {
-  margin-inline: var(--site-content-gutter, 16px);
+  margin-inline: 0;
 }
 
 .qs-progress-labels {
@@ -2109,18 +2112,18 @@ onBeforeUnmount(() => {
 
 @media (max-width: 767px) {
   .qs-container {
-    --qs-toolbar-height: 88px;
+    --qs-toolbar-height: 56px;
     width: 100%;
     padding: 8px 16px 24px;
   }
 
   .qs-container--quiz {
-    padding-top: calc(var(--qs-toolbar-height) + 12px);
+    padding-top: 8px;
   }
 
   .qs-quiz-toolbar {
     width: 100%;
-    padding: 5px 16px 8px;
+    padding: 6px 16px;
   }
 
   .qs-quiz-head {

@@ -167,13 +167,13 @@ const webPageLd = computed(() => {
       author: {
         '@type': 'Organization',
         name: 'Gencko Breeding Studio',
-        alternateName: ['Gencko Studio', '捷客工作室'],
+        alternateName: ['Gencko Studio'],
         url: 'https://www.genckobreeding.com'
       },
       publisher: {
         '@type': 'Organization',
         name: 'Gencko Breeding Studio',
-        alternateName: ['Gencko Studio', '捷客工作室'],
+        alternateName: ['Gencko Studio'],
         url: 'https://www.genckobreeding.com',
         logo: {
           '@type': 'ImageObject',

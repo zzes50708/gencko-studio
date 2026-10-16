@@ -180,14 +180,14 @@ const siteData = computed(() => {
           worksFor: {
             '@type': 'Organization',
             name: 'Gencko Breeding Studio',
-            alternateName: ['Gencko Studio', '捷客工作室']
+            alternateName: ['Gencko Studio']
           }
         }
       ],
       publisher: {
         '@type': 'Organization',
         name: 'Gencko Breeding Studio',
-        alternateName: ['Gencko Studio', '捷客工作室'],
+        alternateName: ['Gencko Studio'],
         url: 'https://www.genckobreeding.com',
         logo: {
           '@type': 'ImageObject',
@@ -369,6 +369,8 @@ const relatedArticles = computed(() => {
     .sort((a, b) => b._score - a._score || (b.ImageURL ? 1 : 0) - (a.ImageURL ? 1 : 0))
   return scored.slice(0, 4)
 })
+
+useContentResponse(readingArticle, pending, articleError)
 </script>
 
 <template>

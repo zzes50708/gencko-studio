@@ -231,12 +231,7 @@ const getMapLink = (h) => {
             title="LINE 登入"
             aria-label="LINE 登入"
           >
-            <img
-              src="https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/line.png"
-              alt="LINE"
-              loading="lazy"
-              decoding="async"
-            />
+            <span class="line-wordmark" aria-hidden="true">LINE</span>
           </button>
           <button
             type="button"
@@ -846,10 +841,11 @@ const getMapLink = (h) => {
 .btn-quick.line {
   background: #06c755;
 }
-.btn-quick.line img {
-  width: 18px;
-  height: 18px;
-  object-fit: contain;
+.line-wordmark {
+  color: #fff;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: -0.04em;
 }
 .btn-quick.google {
   background: var(--card-bg);

@@ -196,7 +196,7 @@ const formatPrice = (value) => {
 const auctionPublisher = {
   '@type': 'Organization',
   name: 'Gencko Breeding Studio',
-  alternateName: ['Gencko Studio', '捷客工作室'],
+  alternateName: ['Gencko Studio'],
   url: 'https://www.genckobreeding.com',
   logo: 'https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/11.png',
   sameAs: [
@@ -875,12 +875,6 @@ const closePromo = () => promoModal.close()
               <div class="login-prompt">
                 <p>為遏止惡意棄標，請先登入</p>
                 <button type="button" @click="store.loginWithLine" class="btn-login-line">
-                  <img
-                    src="https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/line.png"
-                    alt="LINE"
-                    loading="lazy"
-                    decoding="async"
-                  />
                   LINE 登入
                 </button>
                 <button type="button" @click="store.loginWithGoogle" class="btn-login-google">

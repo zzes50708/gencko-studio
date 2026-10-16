@@ -114,3 +114,25 @@ test('未確認性別可獨立排除，網址重載與重置保持一致', async
   await expect(page.locator('.flip-card')).toHaveCount(12)
   await expect(page).not.toHaveURL(/sexU=/)
 })
+
+for (const width of [320, 390]) {
+  test(`${width}px 商品可讀與44px觸控區不擠壓價格`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 844 })
+    await seed(page)
+    const card = page.locator('.flip-card').first()
+    for (const name of ['收藏', '加入比較']) {
+      const bounds = await card.getByRole('button', { name, exact: true }).boundingBox()
+      expect(bounds!.width).toBeGreaterThanOrEqual(44)
+      expect(bounds!.height).toBeGreaterThanOrEqual(44)
+    }
+    expect((await card.locator('summary').boundingBox())!.height).toBeGreaterThanOrEqual(44)
+    await card.locator('summary').click()
+    expect(
+      await card
+        .locator('.mobile-card-details-body')
+        .evaluate((e) => parseFloat(getComputedStyle(e).fontSize))
+    ).toBeGreaterThanOrEqual(13)
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+    await page.screenshot({ path: `output/fullsite-shop-fixed-${width}.png` })
+  })
+}

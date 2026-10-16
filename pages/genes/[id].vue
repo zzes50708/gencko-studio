@@ -4,6 +4,7 @@ import { useRoute } from 'vue-router'
 import { useHead, useAsyncData, useSupabaseClient } from '#imports'
 import { useMainStore } from '~/stores/useMainStore'
 import { getCleanUrl } from '~/utils/image'
+import { sourceSegments } from '~/utils/source-links'
 
 definePageMeta({ key: (route) => route.fullPath })
 
@@ -140,13 +141,13 @@ const siteData = computed(() => {
       author: {
         '@type': 'Organization',
         name: 'Gencko Breeding Studio',
-        alternateName: ['Gencko Studio', '捷客工作室'],
+        alternateName: ['Gencko Studio'],
         url: 'https://www.genckobreeding.com'
       },
       publisher: {
         '@type': 'Organization',
         name: 'Gencko Breeding Studio',
-        alternateName: ['Gencko Studio', '捷客工作室'],
+        alternateName: ['Gencko Studio'],
         url: 'https://www.genckobreeding.com',
         logo: {
           '@type': 'ImageObject',
@@ -234,8 +235,8 @@ const siteData = computed(() => {
   }
 
   return {
-    title: '找不到此基因',
-    desc: '資料庫中找不到該基因條目',
+    title: geneError.value ? '基因資料暫時無法載入' : '找不到此基因',
+    desc: geneError.value ? '請稍後重試，或返回基因圖鑑。' : '資料庫中找不到該基因條目',
     img: 'https://wsrv.nl/?url=raw.githubusercontent.com%2Fzzes50708%2Fgencko-assets%2Fmain%2Fimg%2F11.png&w=1200&h=630&fit=contain&bg=e6e3e3&output=webp&q=85',
     url: `https://www.genckobreeding.com/genes/${encodeURIComponent(geneName)}`,
     type: 'website',
@@ -262,6 +263,8 @@ useHead({
   link: [{ rel: 'canonical', href: computed(() => siteData.value.url) }],
   script: computed(() => siteData.value.script)
 })
+
+useContentResponse(viewingGene, pending, geneError)
 </script>
 
 <template>
@@ -350,7 +353,18 @@ useHead({
               <p class="detail-txt">{{ viewingGene.Detail }}</p>
             </div>
 
-            <div class="source-text">資料來源：{{ viewingGene.Source || '尚待資料庫補充' }}</div>
+            <div class="source-text">
+              資料來源：
+              <template
+                v-for="(part, index) in sourceSegments(viewingGene.Source || '尚待資料庫補充')"
+                :key="index"
+              >
+                <a v-if="part.href" :href="part.href" target="_blank" rel="noopener noreferrer">
+                  {{ part.text }}
+                </a>
+                <span v-else>{{ part.text }}</span>
+              </template>
+            </div>
           </div>
         </div>
       </div>

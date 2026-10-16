@@ -178,7 +178,7 @@ const siteData = computed(() => {
       brand: {
         '@type': 'Brand',
         name: 'Gencko Breeding Studio',
-        alternateName: ['Gencko Studio', '捷客工作室']
+        alternateName: ['Gencko Studio']
       },
       manufacturer: {
         '@type': 'Organization',
@@ -201,7 +201,7 @@ const siteData = computed(() => {
         seller: {
           '@type': 'Organization',
           name: 'Gencko Breeding Studio',
-          alternateName: ['Gencko Studio', '捷客工作室'],
+          alternateName: ['Gencko Studio'],
           url: 'https://www.genckobreeding.com',
           logo: 'https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/11.png'
         },
@@ -281,8 +281,8 @@ const siteData = computed(() => {
   }
 
   return {
-    title: '找不到此商品',
-    desc: '該商品可能已下架或不存在。',
+    title: productError.value ? '個體資料暫時無法載入' : '找不到此商品',
+    desc: productError.value ? '請稍後重試，或返回選購列表。' : '該商品可能已下架或不存在。',
     img: 'https://wsrv.nl/?url=raw.githubusercontent.com%2Fzzes50708%2Fgencko-assets%2Fmain%2Fimg%2F11.png&w=1200&h=630&fit=contain&bg=e6e3e3&output=webp&q=85',
     url: `https://www.genckobreeding.com/product/${productId}`,
     script: []
@@ -568,6 +568,8 @@ const generatePromo = async () => {
 }
 
 const closePromo = () => promoModal.close()
+
+useContentResponse(currentProduct, pending, productError)
 </script>
 
 <template>

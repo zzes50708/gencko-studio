@@ -11,7 +11,7 @@
 // 基本識別
 export const SITE_URL = 'https://www.genckobreeding.com'
 export const SITE_NAME = 'Gencko Breeding Studio'
-export const SITE_ALT_NAMES = ['Gencko Studio', '捷客工作室']
+export const SITE_ALT_NAMES = ['Gencko Studio']
 export const SITE_DESCRIPTION =
   'Gencko Breeding Studio 台灣豹紋守宮專業繁育工作室，提供特殊基因品系個體選購、基因計算機、新手飼養教學、健康評估、特寵醫院查詢與線上競標。從基因到飼養的一站式服務。'
 export const SITE_FOUNDER = 'Gino'

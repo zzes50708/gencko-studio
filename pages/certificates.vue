@@ -5,7 +5,7 @@ const certificateId = ref('')
 const searchError = ref('')
 const navigating = ref(false)
 useHead({
-  title: '個體證書｜Gencko Studio',
+  title: '個體證書',
   meta: [{ name: 'description', content: '以個體 ID 查詢 Gencko Studio 的個體血統紀錄證書。' }],
   link: [{ rel: 'canonical', href: 'https://www.genckobreeding.com/certificates' }]
 })

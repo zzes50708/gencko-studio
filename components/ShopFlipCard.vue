@@ -468,12 +468,13 @@ const informationRows = computed(() => [
   }
   .card-purchase-row {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     gap: 2px;
     padding: 0 6px 2px;
   }
   .card-purchase-row > .slim-price-row {
-    flex: 1;
+    flex: 1 0 auto;
     margin: 0;
     padding: 0 !important;
   }
@@ -482,10 +483,11 @@ const informationRows = computed(() => [
     flex-wrap: nowrap;
     gap: 2px;
     flex-shrink: 0;
+    margin-left: auto;
   }
   .card-purchase-row .card-action-btn {
-    width: 32px;
-    min-width: 32px;
+    width: 44px;
+    min-width: 44px;
     padding: 0;
     border: 0;
   }
@@ -504,7 +506,7 @@ const informationRows = computed(() => [
     margin: 0 8px;
   }
   .mobile-card-details summary {
-    min-height: 32px;
+    min-height: 44px;
     padding: 6px 0;
     cursor: pointer;
     font-size: 11px;
@@ -517,7 +519,8 @@ const informationRows = computed(() => [
     display: grid;
     gap: 4px;
     padding: 2px 0 8px;
-    font-size: 11px;
+    font-size: 13px;
+    line-height: 1.65;
     overflow-wrap: anywhere;
     color: var(--txt-muted);
   }

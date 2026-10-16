@@ -47,7 +47,7 @@ const auctionImg =
 const auctionSeller = {
   '@type': 'Organization',
   name: 'Gencko Breeding Studio',
-  alternateName: ['Gencko Studio', '捷客工作室'],
+  alternateName: ['Gencko Studio'],
   url: 'https://www.genckobreeding.com',
   logo: 'https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/11.png',
   sameAs: [
