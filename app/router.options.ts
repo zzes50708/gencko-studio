@@ -56,7 +56,14 @@ export default <RouterConfig>{
         let top = 0
 
         if (to.hash) {
-          const el = document.querySelector(to.hash)
+          // OAuth 回傳內容不是 CSS 選擇器；僅以元素 ID 尋找合法頁內錨點。
+          let anchorId = to.hash.slice(1)
+          try {
+            anchorId = decodeURIComponent(anchorId)
+          } catch {
+            /* 保留原始 ID */
+          }
+          const el = document.getElementById(anchorId)
           if (el) top = el.getBoundingClientRect().top + (window.scrollY || 0)
         } else if (savedPosition) {
           top = savedPosition.top

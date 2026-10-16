@@ -3,6 +3,7 @@ import { ref, computed, watch } from 'vue'
 import { sanitizeCompareIds } from '~/utils/shop-catalog'
 import { useSupabaseClient } from '#imports'
 import { useRouter } from 'vue-router'
+import { memberFromSupabaseUser } from '~/utils/member-auth'
 import { withRetry } from '~/utils/supabase-retry'
 
 export const useMainStore = defineStore('main', () => {
@@ -451,81 +452,35 @@ export const useMainStore = defineStore('main', () => {
 
   async function checkAuthStatus() {
     if (!import.meta.client) return
-    const { data } = await supabase.auth.getSession()
-    if (data.session?.user) {
-      currentUser.value = {
-        type: 'google',
-        email: data.session.user.email,
-        name: data.session.user.email.split('@')[0]
-      }
-      return
-    }
-    if (window.liff && window.liff.isLoggedIn()) {
-      const profile = await window.liff.getProfile()
-      const idToken = window.liff.getDecodedIDToken()
-      const emailOrId = idToken && idToken.email ? idToken.email : profile.userId
-      currentUser.value = {
-        type: 'line',
-        name: profile.displayName,
-        email: emailOrId,
-        picture: profile.pictureUrl
-      }
-      // 持久化 LINE 登入，讓登入狀態跨頁面重新載入仍保留（修：登入後顯示未登入）
-      try {
-        localStorage.setItem('gencko_line_user', JSON.stringify(currentUser.value))
-      } catch (e) {}
-    } else if (window.liff && currentUser.value?.type === 'line') {
-      // LIFF 已載入但實際未登入（session 過期），清掉先前還原的假登入狀態
-      currentUser.value = null
-      try {
-        localStorage.removeItem('gencko_line_user')
-      } catch (e) {}
-    }
+    const { data, error } = await supabase.auth.getSession()
+    if (error) return
+    currentUser.value = memberFromSupabaseUser(data.session?.user)
   }
 
-  // 從 localStorage 還原上次的 LINE 登入使用者（即時顯示，再由 initLiff 重新驗證）
+  // 舊版 LIFF 個人資料不是網站認可的登入憑證；不再從 localStorage 還原成已驗證會員。
   function restoreLineUser() {
     if (!import.meta.client) return false
     try {
-      const raw = localStorage.getItem('gencko_line_user')
-      if (raw) {
-        currentUser.value = JSON.parse(raw)
-        return true
-      }
-    } catch (e) {}
+      localStorage.removeItem('gencko_line_user')
+    } catch {}
     return false
   }
 
   if (import.meta.client) {
     supabase.auth.onAuthStateChange((_, session) => {
-      if (session?.user) {
-        currentUser.value = {
-          type: 'google',
-          email: session.user.email,
-          name: session.user.email.split('@')[0]
-        }
-      } else if (currentUser.value?.type === 'google') {
-        currentUser.value = null
-      }
+      currentUser.value = memberFromSupabaseUser(session?.user)
     })
   }
 
   const loginWithLine = async () => {
-    // SDK 延遲載入：點按鈕時才下載 sdk.js，避免進站時就拖累首屏
-    if (!isLiffInitialized.value) {
-      const ok = await initLiff()
-      if (!ok) {
-        // 載入失敗（LIFF SDK 載入失敗、init 失敗，或非 www.genckobreeding.com 網域）。
-        // 不再跳轉到 LINE 加好友頁（會誤導成加好友），改提示使用者。
-        alert(
-          'LINE 登入暫時無法使用。請確認您是透過 https://www.genckobreeding.com 造訪，或稍後再試。'
-        )
-        return
-      }
-    }
-    if (window.liff && !window.liff.isLoggedIn()) {
-      localStorage.setItem('gencko_line_redirect', window.location.href)
-      window.liff.login({ redirectUri: window.location.href })
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'custom:line',
+        options: { redirectTo: window.location.href }
+      })
+      if (error) throw error
+    } catch {
+      alert('LINE 登入暫時無法完成，請稍後重試。')
     }
   }
 
@@ -543,8 +498,8 @@ export const useMainStore = defineStore('main', () => {
   }
 
   const logout = async () => {
-    if (currentUser.value?.type === 'line' && window.liff) window.liff.logout()
-    else await supabase.auth.signOut()
+    await supabase.auth.signOut()
+    if (window.liff?.isLoggedIn()) window.liff.logout()
     currentUser.value = null
     try {
       localStorage.removeItem('gencko_line_user')

@@ -18,7 +18,9 @@ test('手機四分類完整顯示、訪客提示與跨頁保留', async ({ page 
       expect(box.x + box.width).toBeLessThanOrEqual(width)
     }
     await tabs.last().click()
-    await expect(page.getByText('使用 Google 登入查看競標紀錄', { exact: true })).toBeVisible()
+    await expect(
+      page.getByText('使用 Google 或 LINE 登入查看競標紀錄', { exact: true })
+    ).toBeVisible()
   }
   await page.screenshot({ path: 'output/ux-node12-profile.png' })
 })
@@ -96,7 +98,9 @@ test('競標紀錄失敗不冒充空資料，重試與LINE狀態正確', async (
     ).__vue_app__.config.globalProperties.$pinia._s.get('main')
     s.currentUser = { type: 'line', name: '隔離LINE測試' }
   })
-  await expect(page.getByText('使用 Google 登入查看競標紀錄', { exact: true })).toBeVisible()
+  await expect(
+    page.getByText('使用 Google 或 LINE 登入查看競標紀錄', { exact: true })
+  ).toBeVisible()
 })
 
 test('收藏卡取消不誤開詳情，圖片失敗仍可操作', async ({ page }) => {

@@ -1,7 +1,7 @@
 <script setup>
-import { computed, ref, onMounted, onUnmounted, watch } from 'vue'
+import { computed, ref, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { useRoute } from 'vue-router'
-import { useHead, useAsyncData, useSupabaseClient } from '#imports'
+import { useHead, useAsyncData, useSupabaseClient, useState, setResponseStatus } from '#imports'
 import { useMainStore } from '~/stores/useMainStore'
 import { getCleanUrl } from '~/utils/image'
 import {
@@ -10,6 +10,20 @@ import {
   hasBuyNowPrice,
   readAuctionBids
 } from '~/utils/auction-presentation'
+import {
+  MAX_BID_AMOUNT,
+  validBidAmount,
+  validBidReceipt,
+  auctionBidIncrement
+} from '~/utils/auction-bid-contract'
+import {
+  auctionPhotos,
+  auctionShareDetails,
+  sampleAuctionClock,
+  auctionClockNow
+} from '~/utils/auction-detail'
+import { isAuctionMember, memberOwnerKeys } from '~/utils/member-auth'
+import { loadPromoImage } from '~/utils/auction-promo'
 import { getLineMessageLink } from '~/utils/animal-inquiry'
 
 definePageMeta({ key: (route) => route.fullPath })
@@ -43,36 +57,178 @@ const {
   return data
 })
 
+// SSR 直接讀取最高一筆公開出價，分享預覽不依賴瀏覽器再補讀。
+const { data: initialBid, error: initialBidError } = await useAsyncData(
+  `auction-highest-${auctionId}`,
+  async () => {
+    if (!currentAuction.value) return []
+    const { data, error } = await supabase
+      .from('auction_bids')
+      .select('id, auction_id, user_name, amount, bid_time')
+      .eq('auction_id', auctionId)
+      .order('amount', { ascending: false })
+      .limit(1)
+    if (error) throw error
+    return data || []
+  }
+)
+if (import.meta.server)
+  setResponseStatus(auctionLoadError.value ? 503 : currentAuction.value ? 200 : 404)
+const photos = computed(() => auctionPhotos(currentAuction.value?.images))
+const photoIndex = ref(0)
+const photoEl = ref(null)
+const photoRetry = ref(0)
+const selectedPhoto = computed(() => photos.value[photoIndex.value] || '')
+const photoUrl = computed(() =>
+  selectedPhoto.value.startsWith('/') ? selectedPhoto.value : getCleanUrl(selectedPhoto.value)
+)
+const checkPhoto = () => {
+  const image = photoEl.value
+  if (image?.complete && !image.naturalWidth) photoFailed.value = true
+}
+const selectPhoto = async (index) => {
+  photoIndex.value = index
+  photoFailed.value = false
+  await nextTick()
+  checkPhoto()
+}
+const retryPhoto = async () => {
+  photoFailed.value = false
+  photoRetry.value++
+  await nextTick()
+  checkPhoto()
+}
+const photoTouch = ref(null)
+const photoTouchStart = (event) => {
+  if (event.touches.length !== 1) {
+    photoTouch.value = null
+    return
+  }
+  photoTouch.value = { x: event.touches[0].clientX, y: event.touches[0].clientY }
+}
+let photoSwipeUntil = 0
+const photoTouchEnd = (event) => {
+  const start = photoTouch.value
+  photoTouch.value = null
+  if (!start || !event.changedTouches[0] || photos.value.length < 2) return
+  const dx = event.changedTouches[0].clientX - start.x
+  const dy = event.changedTouches[0].clientY - start.y
+  if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.5) {
+    photoSwipeUntil = performance.now() + 500
+    void selectPhoto(
+      (photoIndex.value + (dx < 0 ? 1 : -1) + photos.value.length) % photos.value.length
+    )
+  }
+}
+const openPhoto = () => {
+  if (!selectedPhoto.value || photoFailed.value || performance.now() < photoSwipeUntil) return
+  store.openLightbox({ ImageURL: selectedPhoto.value, Morph: currentAuction.value.morph })
+}
+watch(
+  () => JSON.stringify(photos.value),
+  () => {
+    photoIndex.value = 0
+    photoFailed.value = false
+    void nextTick(checkPhoto)
+  }
+)
 const realBids = ref([])
 const photoFailed = ref(false)
 let bidsRefreshTimer = null
+let auctionChannel = null
 
 const isPlacingBid = ref(false)
+const bidsReady = ref(false)
 
 const currentBids = computed(() => {
   return [...realBids.value].sort((a, b) => b.amount - a.amount)
 })
 
 const highestBidAmount = computed(() => {
-  if (currentBids.value.length === 0) return currentAuction.value?.start_price || 0
+  if (currentBids.value.length === 0)
+    return (
+      (!bidsReady.value ? initialBid.value?.[0]?.amount : null) ??
+      currentAuction.value?.start_price ??
+      0
+    )
   return currentBids.value[0].amount
 })
 
+const bidIncrement = computed(() => auctionBidIncrement(currentAuction.value?.min_increment))
 const minNextBid = computed(() => {
   if (!currentAuction.value) return 0
   return highestBidAmount.value === 0 && currentAuction.value.start_price === 0
-    ? currentAuction.value.min_increment
-    : highestBidAmount.value + currentAuction.value.min_increment
+    ? bidIncrement.value
+    : highestBidAmount.value + bidIncrement.value
 })
 
 const myBidAmount = ref(0)
+const bidAmountTouched = ref(false)
+const needsLogin = ref(false)
+const pendingBid = ref(null)
+const bidNotice = ref('')
+const requestStorageKey = () =>
+  `auction-bid-request:${auctionId}:${encodeURIComponent(pendingBid.value?.owner || memberOwnerKeys(store.currentUser)[0] || '')}`
+const persistPendingBid = () => {
+  try {
+    if (pendingBid.value)
+      sessionStorage.setItem(requestStorageKey(), JSON.stringify(pendingBid.value))
+    else sessionStorage.removeItem(requestStorageKey())
+  } catch {
+    /* 儲存空間受限時仍可在目前頁面安全重試。 */
+  }
+}
+const clearPendingBid = () => {
+  try {
+    sessionStorage.removeItem(requestStorageKey())
+  } catch {
+    /* 不影響本頁狀態清理。 */
+  }
+  pendingBid.value = null
+}
+const restorePendingBid = () => {
+  if (!import.meta.client || pendingBid.value || !isAuctionMember(store.currentUser)) return
+  try {
+    const saved = memberOwnerKeys(store.currentUser)
+      .map((owner) => {
+        try {
+          return JSON.parse(
+            sessionStorage.getItem(
+              `auction-bid-request:${auctionId}:${encodeURIComponent(owner)}`
+            ) || 'null'
+          )
+        } catch {
+          return null
+        }
+      })
+      .find((record) => record?.auctionId === auctionId)
+    if (
+      memberOwnerKeys(store.currentUser).includes(saved?.owner) &&
+      saved?.auctionId === auctionId &&
+      validBidAmount(saved.amount) &&
+      typeof saved.requestId === 'string'
+    ) {
+      pendingBid.value = saved
+      bidNotice.value = '上一筆出價結果待確認，請重試同一筆出價。'
+    }
+  } catch {
+    /* 忽略無效的本機暫存。 */
+  }
+}
+watch(
+  () => memberOwnerKeys(store.currentUser).join('|'),
+  () => {
+    needsLogin.value = false
+    restorePendingBid()
+  }
+)
 const isBidsExpanded = ref(false)
 const customNickname = ref('')
 
 watch(
   minNextBid,
   (newVal) => {
-    if (myBidAmount.value < newVal) {
+    if (!bidAmountTouched.value && !pendingBid.value) {
       myBidAmount.value = newVal
     }
   },
@@ -81,13 +237,22 @@ watch(
 
 const bidsLoading = ref(false)
 const bidsError = ref('')
-const bidsReady = ref(false)
 const metadataError = ref('')
 let bidsController = null
 let metadataBusy = false
+let metadataController = null
+let readRevision = 0
+const invalidateReads = () => {
+  readRevision++
+  bidsController?.abort()
+  metadataController?.abort()
+  bidsLoading.value = false
+  metadataBusy = false
+}
 let disposed = false
 const loadBids = async (id = auctionId) => {
-  if (bidsLoading.value) return
+  if (bidsLoading.value || isPlacingBid.value || disposed) return
+  const revision = readRevision
   bidsLoading.value = true
   const controller = new AbortController()
   bidsController = controller
@@ -98,38 +263,43 @@ const loadBids = async (id = auctionId) => {
       'id, auction_id, user_name, amount, bid_time',
       controller.signal
     )
-    if (disposed || controller.signal.aborted) return
+    if (disposed || controller.signal.aborted || revision !== readRevision) return
     realBids.value = rows
     bidsReady.value = true
     bidsError.value = ''
   } catch {
-    if (!controller.signal.aborted)
+    if (!disposed && !controller.signal.aborted && revision === readRevision)
       bidsError.value = '出價紀錄無法更新，請重試；目前顯示的資料可能不是最新。'
   } finally {
-    bidsLoading.value = false
+    if (bidsController === controller) bidsLoading.value = false
   }
 }
 const refreshMetadata = async () => {
-  if (metadataBusy || disposed) return
+  if (metadataBusy || disposed || isPlacingBid.value) return
+  const revision = readRevision
+  const controller = new AbortController()
+  metadataController = controller
   metadataBusy = true
   try {
     const { data, error } = await supabase
       .from('auctions')
       .select('*')
       .eq('id', auctionId)
+      .abortSignal(controller.signal)
       .maybeSingle()
     if (error) throw error
-    if (disposed) return
+    if (disposed || controller.signal.aborted || revision !== readRevision) return
     currentAuction.value = data
     metadataError.value = ''
   } catch {
-    if (!disposed) metadataError.value = '場次資料無法更新，請重試。'
+    if (!disposed && !controller.signal.aborted && revision === readRevision)
+      metadataError.value = '場次資料無法更新，請重試。'
   } finally {
-    metadataBusy = false
+    if (metadataController === controller) metadataBusy = false
   }
 }
 const refreshAuction = async () => {
-  await Promise.all([loadBids(), refreshMetadata()])
+  await Promise.all([loadBids(), refreshMetadata(), syncClock()])
 }
 const resumeRefresh = () => {
   if (!document.hidden) void refreshAuction()
@@ -137,31 +307,81 @@ const resumeRefresh = () => {
 watch(
   () => store.auctionList.find((a) => a.id === auctionId),
   (item, old) => {
-    if (item) currentAuction.value = { ...item }
-    else if (old && import.meta.client) void refreshMetadata()
+    if ((item || old) && import.meta.client) void refreshMetadata()
   },
   { deep: true }
 )
 
-const now = ref(new Date().getTime())
+const serverEpoch = useState(`auction-time-${auctionId}`, () =>
+  import.meta.server ? Date.now() : null
+)
+let clockAnchor = {
+  epoch: serverEpoch.value || 0,
+  monotonic: import.meta.client ? performance.now() : 0
+}
+const now = ref(clockAnchor.epoch)
+const clockReady = ref(serverEpoch.value !== null)
+let clockBusy = false
+const syncClock = async () => {
+  if (clockBusy || disposed) return
+  clockBusy = true
+  const sentAt = performance.now()
+  try {
+    const result = await $fetch('/api/server-time', { retry: 0, timeout: 4000, cache: 'no-store' })
+    if (disposed) return
+    const anchor = sampleAuctionClock(result.serverTime, sentAt, performance.now())
+    if (anchor) {
+      clockAnchor = anchor
+      now.value = anchor.epoch
+      clockReady.value = true
+    }
+  } catch {
+    /* 使用最近一次伺服器時間繼續推進，下次恢復連線時重試。 */
+  } finally {
+    clockBusy = false
+  }
+}
 let timer = null
 
 onMounted(() => {
   if (import.meta.client) {
+    restorePendingBid()
+    checkPhoto()
     void refreshAuction()
+    // 即時通知只觸發重新讀取公開資料，不能直接把事件中的舊快照覆寫到畫面。
+    auctionChannel = supabase
+      .channel(`auction-detail-${auctionId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'auction_bids',
+          filter: `auction_id=eq.${auctionId}`
+        },
+        resumeRefresh
+      )
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'auctions', filter: `id=eq.${auctionId}` },
+        resumeRefresh
+      )
+      .subscribe()
     bidsRefreshTimer = setInterval(resumeRefresh, 15000)
     document.addEventListener('visibilitychange', resumeRefresh)
     window.addEventListener('online', resumeRefresh)
     timer = setInterval(() => {
-      now.value = new Date().getTime()
+      now.value = auctionClockNow(clockAnchor, performance.now())
     }, 1000)
   }
 })
 
 onUnmounted(() => {
   disposed = true
-  bidsController?.abort()
+  invalidateReads()
+  promoController?.abort()
   if (import.meta.client) {
+    if (auctionChannel) void supabase.removeChannel(auctionChannel)
     document.removeEventListener('visibilitychange', resumeRefresh)
     window.removeEventListener('online', resumeRefresh)
   }
@@ -179,7 +399,8 @@ const isEndingSoon = (item) => {
   return diff > 0 && diff <= 180000
 }
 
-const getCountdownText = (item) => auctionCountdown(item, now.value)
+const getCountdownText = (item) =>
+  clockReady.value ? auctionCountdown(item, now.value) : '時間同步中'
 
 const formatTime = (isoString) => {
   if (!isoString) return ''
@@ -210,22 +431,25 @@ const auctionPublisher = {
 const siteData = computed(() => {
   if (currentAuction.value) {
     const a = currentAuction.value
-    const status = getAuctionStatus(a)
-    const isEnded = status.status === 'ended'
+    const summary = auctionShareDetails(a, {
+      known: bidsReady.value || !initialBidError.value,
+      highest: bidsReady.value
+        ? (currentBids.value[0]?.amount ?? null)
+        : (initialBid.value?.[0]?.amount ?? null),
+      now: now.value
+    })
+    const isEnded = summary.status === 'ended'
     const sexSym = a.gender === '公' ? '♂' : a.gender === '母' ? '♀' : ''
     const baseTitle = `${a.morph}${sexSym ? ' ' + sexSym : ''}`
-    const title = isEnded
-      ? `${baseTitle}（已結標）`
-      : `限時競標：${baseTitle}｜目前最高 NT$${highestBidAmount.value}`
-    const desc = isEnded
-      ? `${baseTitle} 競標已結束。${a.note ? a.note.substring(0, 60) : ''} Gencko Breeding Studio 守宮競標場。`
-      : `${baseTitle} 線上競標進行中，目前最高出價 NT$${highestBidAmount.value}，起標 NT$${a.start_price || 0}、最小加價 NT$${a.min_increment}${a.buy_now_price ? `、直購價 NT$${a.buy_now_price}` : ''}。${a.note ? a.note.substring(0, 50) : ''}`
-    const img =
-      a.images && a.images.length
-        ? getCleanUrl(a.images[0])
-        : 'https://wsrv.nl/?url=raw.githubusercontent.com%2Fzzes50708%2Fgencko-assets%2Fmain%2Fimg%2F11.png&w=1200&h=630&fit=contain&bg=e6e3e3&output=webp&q=85'
+    const title = summary.title
+    const desc = summary.desc
+    const img = photos.value.length
+      ? getCleanUrl(photos.value[0])
+      : 'https://wsrv.nl/?url=raw.githubusercontent.com%2Fzzes50708%2Fgencko-assets%2Fmain%2Fimg%2F11.png&w=1200&h=630&fit=contain&bg=e6e3e3&output=webp&q=85'
     const url = `https://www.genckobreeding.com/auction/${a.id}`
-    const endIso = a.end_time ? new Date(a.end_time).toISOString() : null
+    const endIso = Number.isFinite(Date.parse(a.end_time))
+      ? new Date(a.end_time).toISOString()
+      : null
 
     // Product + Offer schema
     const product = {
@@ -254,22 +478,25 @@ const siteData = computed(() => {
         '@id': `${url}#offer`,
         url: url,
         priceCurrency: 'TWD',
-        price: highestBidAmount.value || a.start_price || 0,
+        ...(summary.currentPrice !== null ? { price: summary.currentPrice } : {}),
         ...(endIso ? { priceValidUntil: endIso.split('T')[0] } : {}),
-        availability: isEnded
-          ? 'https://schema.org/SoldOut'
-          : 'https://schema.org/LimitedAvailability',
+        availability:
+          summary.status === 'active'
+            ? 'https://schema.org/LimitedAvailability'
+            : summary.status === 'ended'
+              ? 'https://schema.org/SoldOut'
+              : 'https://schema.org/OutOfStock',
         itemCondition: 'https://schema.org/NewCondition',
         businessFunction: 'http://purl.org/goodrelations/v1#Sell',
         areaServed: { '@type': 'Country', name: 'Taiwan' },
         seller: auctionPublisher,
-        ...(a.buy_now_price
+        ...(a.buy_now_price && summary.currentPrice !== null
           ? {
               priceSpecification: [
                 {
                   '@type': 'PriceSpecification',
                   name: '目前出價',
-                  price: highestBidAmount.value || a.start_price || 0,
+                  price: summary.currentPrice,
                   priceCurrency: 'TWD',
                   ...(endIso ? { validThrough: endIso } : {})
                 },
@@ -324,12 +551,13 @@ const siteData = computed(() => {
     }
 
     return {
+      ...summary,
       title,
       desc,
       img,
       url,
       isEnded,
-      currentPrice: highestBidAmount.value,
+      currentPrice: summary.currentPrice,
       buyNowPrice: a.buy_now_price || null,
       endIso,
       script: [
@@ -339,12 +567,11 @@ const siteData = computed(() => {
     }
   }
   return {
-    title: '找不到此競標商品',
-    desc: '該商品可能已下架或不存在。',
+    ...auctionShareDetails(null, { error: !!auctionLoadError.value }),
     img: 'https://wsrv.nl/?url=raw.githubusercontent.com%2Fzzes50708%2Fgencko-assets%2Fmain%2Fimg%2F11.png&w=1200&h=630&fit=contain&bg=e6e3e3&output=webp&q=85',
     url: `https://www.genckobreeding.com/auction/${auctionId}`,
     isEnded: false,
-    currentPrice: 0,
+    currentPrice: null,
     buyNowPrice: null,
     endIso: null,
     script: []
@@ -359,7 +586,7 @@ useHead({
     {
       name: 'robots',
       content: computed(() =>
-        siteData.value.isEnded ? 'noindex, follow' : 'index, follow, max-image-preview:large'
+        siteData.value.indexable ? 'index, follow, max-image-preview:large' : 'noindex, follow'
       )
     },
     // Open Graph
@@ -371,12 +598,12 @@ useHead({
     { property: 'og:type', content: 'product' },
     {
       property: 'product:price:amount',
-      content: computed(() => String(siteData.value.currentPrice || ''))
+      content: computed(() => String(siteData.value.currentPrice ?? ''))
     },
     { property: 'product:price:currency', content: 'TWD' },
     {
       property: 'product:availability',
-      content: computed(() => (siteData.value.isEnded ? 'out of stock' : 'in stock'))
+      content: computed(() => siteData.value.availability)
     },
     { property: 'product:condition', content: 'new' },
     { property: 'product:brand', content: 'Gencko Breeding Studio' },
@@ -385,22 +612,24 @@ useHead({
     { name: 'twitter:title', content: computed(() => siteData.value.title) },
     { name: 'twitter:description', content: computed(() => siteData.value.desc) },
     { name: 'twitter:image', content: computed(() => siteData.value.img) },
-    { name: 'twitter:label1', content: '目前出價' },
+    { name: 'twitter:label1', content: computed(() => siteData.value.priceLabel) },
     {
       name: 'twitter:data1',
       content: computed(() =>
-        siteData.value.currentPrice ? `NT$ ${siteData.value.currentPrice}` : '尚無出價'
+        siteData.value.currentPrice !== null ? `NT$ ${siteData.value.currentPrice}` : '資料更新中'
       )
     },
     {
       name: 'twitter:label2',
-      content: computed(() => (siteData.value.isEnded ? '狀態' : '結標時間'))
+      content: computed(() => (siteData.value.status === 'active' ? '結標時間' : '狀態'))
     },
     {
       name: 'twitter:data2',
       content: computed(() =>
-        siteData.value.isEnded
-          ? '已結標'
+        siteData.value.status !== 'active'
+          ? currentAuction.value
+            ? getAuctionStatus(currentAuction.value).text
+            : '資料待確認'
           : siteData.value.endIso
             ? new Date(siteData.value.endIso).toLocaleString('zh-TW', { hour12: false })
             : ''
@@ -412,55 +641,86 @@ useHead({
 })
 
 const placeBid = async () => {
-  if (isPlacingBid.value || !bidsReady.value || bidsError.value || metadataError.value) return
-  if (!store.currentUser) {
-    alert('請先點擊按鈕登入後，再進行出價！')
+  if (isPlacingBid.value || disposed) return
+  if (!isAuctionMember(store.currentUser) || needsLogin.value) {
+    alert('請先使用 Google 或 LINE 登入後再出價。')
     return
   }
-
-  if (store.currentUser?.type !== 'google') {
-    alert('目前出價需使用 Google 登入；LINE 登入尚待完成伺服器身份驗證。')
+  const owner = memberOwnerKeys(store.currentUser)[0]
+  if (pendingBid.value && !memberOwnerKeys(store.currentUser).includes(pendingBid.value.owner)) {
+    alert('請使用原出價帳號登入，確認上一筆出價結果。')
     return
   }
-
-  if (!currentAuction.value || getAuctionStatus(currentAuction.value).status !== 'active') {
-    alert('此競標已結束，無法再出價。')
-    return
-  }
-
-  const amount = Number(myBidAmount.value)
-  if (!Number.isInteger(amount) || amount < minNextBid.value) {
-    alert(`出價金額必須大於等於 ${minNextBid.value}`)
-    return
-  }
-
-  isPlacingBid.value = true
-
-  try {
-    const result = await $fetch(
-      `/api/auctions/${encodeURIComponent(currentAuction.value.id)}/bid`,
-      {
-        method: 'POST',
-        body: { amount, nickname: customNickname.value }
-      }
+  if (!pendingBid.value) {
+    if (!bidsReady.value || bidsError.value || metadataError.value) return
+    if (!clockReady.value) {
+      alert('正在同步競標時間，請稍候再試。')
+      return
+    }
+    if (!currentAuction.value || getAuctionStatus(currentAuction.value).status !== 'active') {
+      alert('此競標已結束，無法再出價。')
+      return
+    }
+    const amount = Number(myBidAmount.value)
+    if (!validBidAmount(amount)) {
+      alert('請輸入有效的正整數金額。')
+      return
+    }
+    if (amount < minNextBid.value) {
+      alert(`目前最低出價為 ${formatPrice(minNextBid.value)}，請自行調整金額。`)
+      return
+    }
+    const nickname = customNickname.value.trim()
+    if ([...nickname].length > 15) {
+      alert('暱稱不可超過 15 個字。')
+      return
+    }
+    if (
+      !confirm(
+        `確認出價 ${formatPrice(amount)}？\n${currentAuction.value.morph}（${auctionId}）\n送出後無法自行撤回。`
+      )
     )
-
-    if (result?.bid && !realBids.value.some((bid) => bid.id === result.bid.id)) {
-      realBids.value.push(result.bid)
-    }
-    if (result?.auction?.end_time) {
-      currentAuction.value = { ...currentAuction.value, end_time: result.auction.end_time }
-    }
-
-    alert(result?.extended ? '因在結標前三分鐘內出價，結標時間已自動延長 3 分鐘！' : '出價成功！')
-
+      return
+    pendingBid.value = { requestId: crypto.randomUUID(), auctionId, amount, nickname, owner }
+    persistPendingBid()
+  }
+  const intent = { ...pendingBid.value }
+  bidAmountTouched.value = true
+  isPlacingBid.value = true
+  bidNotice.value = ''
+  invalidateReads()
+  try {
+    const result = await $fetch(`/api/auctions/${encodeURIComponent(auctionId)}/bid`, {
+      method: 'POST',
+      retry: 0,
+      timeout: 15000,
+      body: { amount: intent.amount, nickname: intent.nickname, requestId: intent.requestId }
+    })
+    if (!validBidReceipt(result, auctionId, intent.amount)) throw new Error('回執不完整')
+    if (disposed) return
+    if (!realBids.value.some((bid) => bid.id === result.bid.id)) realBids.value.push(result.bid)
+    currentAuction.value = { ...currentAuction.value, end_time: result.auction.end_time }
+    clearPendingBid()
     isBidsExpanded.value = true
-    myBidAmount.value = amount + currentAuction.value.min_increment
+    bidNotice.value = `已確認出價 ${formatPrice(intent.amount)}。`
+    alert(result.extended ? '出價成功！結標時間已自動延長 3 分鐘。' : '出價成功！')
   } catch (err) {
-    alert(err?.data?.message || err?.data?.statusMessage || '出價失敗，請稍後再試！')
-    console.error('出價失敗:', err)
+    if (disposed) return
+    const detail = err?.data?.data
+    const status = err?.statusCode || err?.response?.status
+    // 明確拒絕才解除待確認；連線中斷可能已成立，必須保留原請求編號。
+    if (detail?.outcome === 'rejected' || detail?.outcome === 'not_submitted' || status === 401) {
+      clearPendingBid()
+      if (status === 401) needsLogin.value = true
+      bidNotice.value = err?.data?.message || '此筆出價未成立，請確認最新資料。'
+    } else {
+      bidNotice.value = `出價 ${formatPrice(intent.amount)} 的結果待確認，請重試同一筆出價；不會重複成立。`
+    }
+    alert(bidNotice.value)
   } finally {
+    invalidateReads()
     isPlacingBid.value = false
+    if (!disposed) void refreshAuction()
   }
 }
 
@@ -515,6 +775,7 @@ const shareLink = async () => {
 // 🌟 方案二：生成正方形 IG 宣傳圖卡 (Canvas 升級版)
 const generatedImage = ref(null)
 const isGenerating = ref(false)
+let promoController = null
 const promoPagePath = route.path
 const promoTriggerEl = ref(null)
 const promoModal = useHistoryModal('auction-promo')
@@ -523,6 +784,8 @@ const promoDialogEl = promoModal.dialog
 const generatePromo = async () => {
   if (!currentAuction.value || isGenerating.value || route.path !== promoPagePath) return
   isGenerating.value = true
+  const controller = new AbortController()
+  promoController = controller
 
   try {
     const canvas = document.createElement('canvas')
@@ -530,46 +793,35 @@ const generatePromo = async () => {
     canvas.height = 1080
     const ctx = canvas.getContext('2d')
 
-    const img = new Image()
-    img.crossOrigin = 'Anonymous'
-    const targetUrl =
-      currentAuction.value.images && currentAuction.value.images.length > 0
-        ? getCleanUrl(currentAuction.value.images[0])
-        : 'https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/placeholder.jpg'
-
-    img.src = targetUrl
-
-    await new Promise((resolve, reject) => {
-      img.onload = resolve
-      img.onerror = reject
-    })
-    if (route.path !== promoPagePath) return
-
+    if (!ctx) throw new Error('此瀏覽器無法產生圖片，請改用分享連結。')
+    const targetUrl = photoUrl.value
+    const img = targetUrl ? await loadPromoImage(targetUrl, { signal: controller.signal }) : null
+    if (disposed || route.path !== promoPagePath || controller.signal.aborted) return
     const imgAreaHeight = 820
-
-    // 背景高斯模糊
-    ctx.filter = 'blur(40px)'
-    const bgScale = Math.max(1080 / img.width, imgAreaHeight / img.height)
-    const bgW = img.width * bgScale
-    const bgH = img.height * bgScale
-    ctx.drawImage(img, (1080 - bgW) / 2, (imgAreaHeight - bgH) / 2, bgW, bgH)
-
-    ctx.filter = 'none'
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.4)'
-    ctx.fillRect(0, 0, 1080, imgAreaHeight)
-
-    // 完整呈現主圖
-    const scale = Math.min(1080 / img.width, imgAreaHeight / img.height)
-    const w = img.width * scale
-    const h = img.height * scale
-    const x = (1080 - w) / 2
-    const y = (imgAreaHeight - h) / 2
-
-    ctx.shadowColor = 'rgba(0, 0, 0, 0.5)'
-    ctx.shadowBlur = 20
-    ctx.shadowOffsetY = 10
-    ctx.drawImage(img, x, y, w, h)
-    ctx.shadowColor = 'transparent'
+    if (img) {
+      ctx.filter = 'blur(40px)'
+      const bgScale = Math.max(1080 / img.width, imgAreaHeight / img.height)
+      const bgW = img.width * bgScale
+      const bgH = img.height * bgScale
+      ctx.drawImage(img, (1080 - bgW) / 2, (imgAreaHeight - bgH) / 2, bgW, bgH)
+      ctx.filter = 'none'
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.4)'
+      ctx.fillRect(0, 0, 1080, imgAreaHeight)
+      const scale = Math.min(1080 / img.width, imgAreaHeight / img.height)
+      const w = img.width * scale
+      const h = img.height * scale
+      ctx.drawImage(img, (1080 - w) / 2, (imgAreaHeight - h) / 2, w, h)
+    } else {
+      ctx.fillStyle = '#f4f1eb'
+      ctx.fillRect(0, 0, 1080, imgAreaHeight)
+      ctx.textAlign = 'center'
+      ctx.fillStyle = '#27251f'
+      ctx.font = '900 110px Arial, sans-serif'
+      ctx.fillText('GENCKO', 540, 380)
+      ctx.fillStyle = '#77736b'
+      ctx.font = '32px sans-serif'
+      ctx.fillText('照片尚未提供', 540, 470)
+    }
 
     // 底部資訊背景
     ctx.fillStyle = '#FF4500'
@@ -584,8 +836,7 @@ const generatePromo = async () => {
 
     // 不顯示價格，顯示狀態與性別
     ctx.font = 'bold 45px sans-serif'
-    const statusTxt =
-      getAuctionStatus(currentAuction.value).status === 'active' ? '🔥 競標中' : '🚫 已結標'
+    const statusTxt = getAuctionStatus(currentAuction.value).text
     const genderTxt =
       currentAuction.value.gender && currentAuction.value.gender !== '未定'
         ? `(${currentAuction.value.gender})`
@@ -602,9 +853,12 @@ const generatePromo = async () => {
     generatedImage.value = canvas.toDataURL('image/jpeg', 0.9)
     promoModal.open()
   } catch (err) {
-    if (route.path !== promoPagePath) return
-    console.error('圖卡生成失敗', err)
-    alert('圖片生成失敗，可能是因為網路跨域限制。')
+    if (disposed || route.path !== promoPagePath || err?.name === 'AbortError') return
+    alert(
+      err?.name === 'SecurityError'
+        ? '圖片無法匯出，請改用分享連結。'
+        : err?.message || '圖卡生成失敗，請稍後重試。'
+    )
   } finally {
     isGenerating.value = false
   }
@@ -641,38 +895,83 @@ const closePromo = () => promoModal.close()
     </div>
     <div v-else-if="currentAuction" class="detail-layout">
       <div class="left-col">
-        <button
-          type="button"
-          v-if="!photoFailed"
-          class="main-img"
-          aria-label="放大競標商品圖片"
-          @click="
-            store.openLightbox(
-              currentAuction.images && currentAuction.images.length
-                ? { ImageURL: currentAuction.images[0] }
-                : {
-                    ImageURL:
-                      'https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/placeholder.jpg'
-                  }
-            )
-          "
+        <div
+          class="auction-gallery"
+          @touchstart.passive="photoTouchStart"
+          @touchend.passive="photoTouchEnd"
+          @touchcancel="photoTouch = null"
         >
-          <img
-            :src="
-              currentAuction.images && currentAuction.images.length
-                ? getCleanUrl(currentAuction.images[0])
-                : 'https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/placeholder.jpg'
-            "
-            :alt="currentAuction.morph"
-            @error="photoFailed = true"
-            loading="eager"
-            decoding="async"
-          />
-          <div class="zoom-hint">點擊放大圖片</div>
-        </button>
-        <div v-else class="auction-photo-error" role="status">
-          照片載入失敗
-          <button type="button" @click="photoFailed = false">重新載入照片</button>
+          <button
+            type="button"
+            v-if="selectedPhoto && !photoFailed"
+            class="main-img"
+            aria-label="放大競標商品圖片"
+            @click="openPhoto"
+            @keydown.right.prevent="selectPhoto((photoIndex + 1) % photos.length)"
+            @keydown.left.prevent="selectPhoto((photoIndex - 1 + photos.length) % photos.length)"
+          >
+            <img
+              ref="photoEl"
+              :key="`${selectedPhoto}:${photoRetry}`"
+              :src="photoUrl"
+              :alt="`${currentAuction.morph}，照片 ${photoIndex + 1}`"
+              @error="photoFailed = true"
+              loading="eager"
+              decoding="async"
+            />
+            <div class="zoom-hint">點擊放大圖片</div>
+          </button>
+          <div v-else class="auction-photo-error" role="status">
+            <span>{{ selectedPhoto ? '照片載入失敗' : '照片尚未提供' }}</span>
+            <button
+              v-if="selectedPhoto"
+              type="button"
+              class="btn-app btn-app--ghost btn-app--sm"
+              @click="retryPhoto"
+            >
+              重新載入照片
+            </button>
+          </div>
+          <div
+            v-if="photos.length > 1"
+            class="auction-photo-controls"
+            role="group"
+            aria-label="競標照片切換"
+          >
+            <button
+              v-for="(_, index) in photos"
+              :key="index"
+              type="button"
+              class="btn-app btn-app--ghost btn-app--sm photo-number"
+              :aria-label="`查看第 ${index + 1} 張照片`"
+              :aria-pressed="photoIndex === index"
+              @click="selectPhoto(index)"
+            >
+              {{ index + 1 }}
+            </button>
+            <button
+              type="button"
+              class="btn-app btn-app--ghost btn-app--sm photo-arrow"
+              aria-label="上一張照片"
+              @click="selectPhoto((photoIndex - 1 + photos.length) % photos.length)"
+            >
+              ←
+            </button>
+            <button
+              type="button"
+              class="btn-app btn-app--ghost btn-app--sm photo-arrow"
+              aria-label="下一張照片"
+              @click="selectPhoto((photoIndex + 1) % photos.length)"
+            >
+              →
+            </button>
+          </div>
+          <span v-if="photos.length > 1" class="photo-page-count" aria-hidden="true">
+            {{ photoIndex + 1 }} / {{ photos.length }}
+          </span>
+          <span v-if="photos.length > 1" class="sr-only" aria-live="polite">
+            目前顯示第 {{ photoIndex + 1 }} 張，共 {{ photos.length }} 張
+          </span>
         </div>
         <div class="bid-history">
           <div class="history-header">
@@ -782,13 +1081,15 @@ const closePromo = () => promoModal.close()
         </p>
         <div class="price-dashboard">
           <div class="price-row">
-            <span class="p-lbl">最高出價：</span>
+            <span class="p-lbl">
+              {{ bidsReady && !currentBids.length ? '起標價：' : '最高出價：' }}
+            </span>
             <span class="highest-price">
-              {{ bidsReady ? formatPrice(highestBidAmount) : '等待出價資料' }}
+              {{ bidsReady || !initialBidError ? formatPrice(highestBidAmount) : '等待出價資料' }}
             </span>
           </div>
           <div class="price-row sub">
-            <span>最低增額：{{ formatPrice(currentAuction.min_increment) }}</span>
+            <span>最低增額：{{ formatPrice(bidIncrement) }}</span>
             <span v-if="hasBuyNowPrice(currentAuction)">
               直購價：{{ formatPrice(currentAuction.buy_now_price) }}
             </span>
@@ -815,8 +1116,12 @@ const closePromo = () => promoModal.close()
         </ClientOnly>
 
         <ClientOnly>
-          <div class="action-box" v-if="getAuctionStatus(currentAuction).status === 'active'">
-            <template v-if="store.currentUser">
+          <p v-if="bidNotice" role="status" class="bid-hint">{{ bidNotice }}</p>
+          <div
+            class="action-box"
+            v-if="getAuctionStatus(currentAuction).status === 'active' || pendingBid"
+          >
+            <template v-if="isAuctionMember(store.currentUser) && !needsLogin">
               <div class="user-info-box">
                 <span v-if="store.currentUser.type === 'line'" class="u-name">
                   LINE：{{ store.currentUser.name }}
@@ -836,7 +1141,6 @@ const closePromo = () => promoModal.close()
                   v-model="customNickname"
                   placeholder="自訂顯示暱稱 (未填則遮蔽本名)"
                   class="nick-input"
-                  maxlength="15"
                   aria-label="自訂顯示暱稱"
                 />
               </div>
@@ -845,8 +1149,11 @@ const closePromo = () => promoModal.close()
                 <input
                   type="number"
                   v-model="myBidAmount"
+                  @input="bidAmountTouched = true"
+                  :disabled="isPlacingBid || !!pendingBid"
+                  :max="MAX_BID_AMOUNT"
                   :min="minNextBid"
-                  :step="currentAuction.min_increment"
+                  :step="bidIncrement"
                   aria-label="出價金額"
                 />
               </div>
@@ -855,9 +1162,11 @@ const closePromo = () => promoModal.close()
                   type="button"
                   class="btn-app btn-app--primary btn-app--md btn-bid"
                   @click="placeBid"
-                  :disabled="isPlacingBid || !bidsReady || !!bidsError || !!metadataError"
+                  :disabled="
+                    isPlacingBid || (!pendingBid && (!bidsReady || !!bidsError || !!metadataError))
+                  "
                 >
-                  {{ isPlacingBid ? '處理中...' : '確認出價' }}
+                  {{ isPlacingBid ? '處理中...' : pendingBid ? '重試同一筆出價' : '確認出價' }}
                 </button>
                 <button
                   type="button"
@@ -873,7 +1182,7 @@ const closePromo = () => promoModal.close()
 
             <template v-else>
               <div class="login-prompt">
-                <p>為遏止惡意棄標，請先登入</p>
+                <p>使用 Google 或 LINE 登入即可出價</p>
                 <button type="button" @click="store.loginWithLine" class="btn-login-line">
                   LINE 登入
                 </button>
@@ -1675,8 +1984,9 @@ const closePromo = () => promoModal.close()
     margin-bottom: 10px;
   }
   .nick-input {
+    min-height: 44px;
     padding: 8px 12px;
-    font-size: 0.9rem;
+    font-size: 16px;
   }
   .input-group {
     margin-bottom: 10px;
@@ -2458,6 +2768,80 @@ dialog.promo-modal-overlay::backdrop {
   }
   .bid-history {
     padding-top: 10px;
+  }
+}
+.auction-photo-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 6px 0 12px;
+}
+.auction-gallery {
+  position: relative;
+  min-width: 0;
+}
+.auction-photo-controls .photo-arrow {
+  display: none;
+}
+.photo-page-count {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  padding: 2px 6px;
+  background: rgba(0, 0, 0, 0.72);
+  color: white;
+  font-size: 12px;
+  pointer-events: none;
+}
+.auction-photo-controls button {
+  min-width: 44px;
+  min-height: 44px;
+}
+.auction-photo-controls button[aria-pressed='true'] {
+  color: var(--pri);
+  border-color: var(--pri);
+}
+.auction-gallery .auction-photo-error {
+  aspect-ratio: 4 / 3;
+  gap: 8px;
+  padding: 12px;
+  align-content: center;
+}
+.auction-gallery .main-img {
+  margin-bottom: 8px;
+}
+.auction-gallery .btn-app {
+  min-height: 44px;
+}
+@media (max-width: 768px) {
+  .auction-gallery {
+    grid-column: 1 / 2;
+    grid-row: 1 / 3;
+  }
+  .auction-gallery .auction-photo-error {
+    min-height: 0;
+    width: 100%;
+    aspect-ratio: 1;
+    box-sizing: border-box;
+    font-size: 0.78rem;
+    text-align: center;
+  }
+  .auction-gallery .auction-photo-error .btn-app {
+    max-width: 100%;
+    padding-inline: 3px;
+    white-space: normal;
+    font-size: 12px;
+  }
+  .auction-photo-controls .photo-number {
+    display: none;
+  }
+  .auction-photo-controls .photo-arrow {
+    display: inline-flex;
+    flex: 1;
+    padding-inline: 4px;
+  }
+  .auction-photo-controls {
+    margin-bottom: 0;
   }
 }
 </style>

@@ -3,6 +3,7 @@ import { ref, computed, watch, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
 import { useHead, useSupabaseClient } from '#imports'
 import { useMainStore } from '~/stores/useMainStore'
+import { isAuctionMember } from '~/utils/member-auth'
 import { getCleanUrl } from '~/utils/image'
 
 const store = useMainStore()
@@ -45,7 +46,7 @@ watch(
     myBids.value = []
     bidsError.value = ''
     isLoadingBids.value = false
-    if (user?.type === 'google') {
+    if (isAuctionMember(user)) {
       void fetchMyBids(requestId)
     }
   },
@@ -156,7 +157,7 @@ const toggleHospWishlist = (id) => {
 }
 
 const retryMyBids = () => {
-  if (store.currentUser?.type === 'google') void fetchMyBids(++bidRequestId)
+  if (isAuctionMember(store.currentUser)) void fetchMyBids(++bidRequestId)
 }
 
 const getAuctionStatus = (endTime) => {
@@ -568,14 +569,19 @@ const getMapLink = (h) => {
       <!-- Tab 4: 競標紀錄 (雲端 - 需登入) -->
       <div v-show="activeTab === 'bids'">
         <!-- 🌟 將登入區塊移至此，保護雲端資料 -->
-        <div v-if="store.currentUser?.type !== 'google'" class="login-prompt-box">
+        <div v-if="!isAuctionMember(store.currentUser)" class="login-prompt-box">
           <div class="empty-icon">🔐</div>
-          <h3 style="margin-bottom: 10px; color: var(--txt)">使用 Google 登入查看競標紀錄</h3>
+          <h3 style="margin-bottom: 10px; color: var(--txt)">
+            使用 Google 或 LINE 登入查看競標紀錄
+          </h3>
           <p style="color: #888; font-size: 0.9rem; margin-bottom: 25px">
             查看參與過的拍賣與出價進度。
           </p>
 
           <div class="login-buttons">
+            <button type="button" @click="store.loginWithLine" class="btn-login line">
+              LINE 登入
+            </button>
             <button type="button" @click="store.loginWithGoogle" class="btn-login google">
               <svg
                 width="20"

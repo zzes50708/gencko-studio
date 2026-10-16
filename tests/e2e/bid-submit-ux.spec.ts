@@ -40,9 +40,12 @@ test('競標送出不重複，失敗後可以重新出價', async ({ page }) => 
   await page.route('**/api/auctions/UX-SUBMIT/bid', async (r) => {
     requests++
     await gate
-    await r.fulfill({ status: 400, json: { message: '測試送出失敗' } })
+    await r.fulfill({
+      status: 400,
+      json: { message: '測試送出失敗', data: { outcome: 'rejected' } }
+    })
   })
-  page.on('dialog', (d) => d.dismiss())
+  page.on('dialog', (d) => (d.type() === 'confirm' ? d.accept() : d.dismiss()))
   await page.getByLabel('出價金額', { exact: true }).fill('2000')
   await page.evaluate(() => {
     let c = (document.querySelector('.btn-bid') as any).__vueParentComponent

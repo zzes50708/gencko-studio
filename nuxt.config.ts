@@ -147,6 +147,12 @@ export default defineNuxtConfig({
       cleanupOutdatedCaches: true,
       runtimeCaching: [
         {
+          // 競標不可用舊快取冒充最新價格或狀態，必須先於一般資料快取比對。
+          urlPattern:
+            /^https:\/\/sfndneptcwhblvrxykcy\.supabase\.co\/rest\/v1\/(?:auctions|auction_bids)(?:[/?]|$)/i,
+          handler: 'NetworkOnly'
+        },
+        {
           urlPattern: /^https:\/\/cdn\.jsdelivr\.net\/.*/i,
           handler: 'CacheFirst',
           options: {

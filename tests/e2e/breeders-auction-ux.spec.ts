@@ -83,6 +83,7 @@ test('種群手機兩欄、搜尋編號、失敗重試且不新增放大', async
 })
 
 test('競標錯誤不冒充空狀態；詳情同步延長與結標、缺價隱藏直購', async ({ page }) => {
+  let serverAuction = { ...auction }
   await page.route('**/rest/v1/auction_bids**', (r) =>
     r.fulfill({
       json: [
@@ -91,7 +92,7 @@ test('競標錯誤不冒充空狀態；詳情同步延長與結標、缺價隱�
     })
   )
   await page.route('**/rest/v1/auctions**', (r) =>
-    r.fulfill({ json: r.request().url().includes('id=eq.') ? auction : [auction] })
+    r.fulfill({ json: r.request().url().includes('id=eq.') ? serverAuction : [serverAuction] })
   )
   await page.goto('/auction')
   await seedAuction(page)
@@ -107,6 +108,7 @@ test('競標錯誤不冒充空狀態；詳情同步延長與結標、缺價隱�
   await page.locator('.auction-card').click()
   await expect(page.locator('.btn-bid')).toBeEnabled()
   await expect(page.locator('.btn-buy-now')).toHaveCount(0)
+  serverAuction = { ...serverAuction, end_time: '2031-01-01T00:00:00Z' }
   await page.evaluate(() => {
     const s = (window as any).uxStore
     s.auctionList = [{ ...s.auctionList[0], end_time: '2031-01-01T00:00:00Z' }]
@@ -120,6 +122,7 @@ test('競標錯誤不冒充空狀態；詳情同步延長與結標、缺價隱�
       })
     )
     .toBe('2031-01-01T00:00:00Z')
+  serverAuction = { ...serverAuction, status: 'ended' }
   await page.evaluate(() => {
     const s = (window as any).uxStore
     s.auctionList = [{ ...s.auctionList[0], status: 'ended' }]

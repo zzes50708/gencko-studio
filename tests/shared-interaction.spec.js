@@ -281,7 +281,6 @@ describe('Phase 1 共用互動元件 contract', () => {
       'btn-logout',
       'btn-bid',
       'btn-buy-now',
-      'btn-login-line',
       'btn-login-google',
       'btn-close-promo'
     ]) {
@@ -310,18 +309,18 @@ describe('Phase 1 共用互動元件 contract', () => {
   })
 
   it('Auction 出價改由 server 驗證身份與商業規則，前端不直接寫入資料表', () => {
-    expect(auctionDetail).toContain("store.currentUser?.type !== 'google'")
+    expect(auctionDetail).toContain('!isAuctionMember(store.currentUser)')
     expect(auctionDetail).toMatch(
-      /await \$fetch\(\s*`\/api\/auctions\/\$\{encodeURIComponent\(currentAuction\.value\.id\)\}\/bid`/
+      /await \$fetch\(\s*`\/api\/auctions\/\$\{encodeURIComponent\(auctionId\)\}\/bid`/
     )
     expect(auctionDetail).toContain('getAuctionStatus(currentAuction.value).status !==')
-    expect(auctionDetail).toContain('Number.isInteger')
+    expect(auctionDetail).toContain('validBidAmount(amount)')
     expect(auctionDetail).not.toMatch(/\.from\('auction_bids'\)\.insert/)
     expect(auctionDetail).not.toMatch(/\.from\('blacklist'\)\.select/)
     expect(auctionDetail).not.toMatch(/\.from\('auctions'\)\s*\.update/)
     expect(auctionBidApi).toContain('serverSupabaseClient')
     expect(auctionBidApi).toContain('supabase.auth.getUser()')
-    expect(auctionBidApi).toContain("supabase.rpc('place_auction_bid'")
+    expect(auctionBidApi).toContain("supabase.rpc('submit_auction_bid'")
   })
 
   it('Auction migration 啟用公開讀取 RLS，並將出價寫入鎖在 authenticated RPC', () => {

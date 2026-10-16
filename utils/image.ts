@@ -12,6 +12,9 @@ export const getCleanUrl = (url?: string | null, width = 800): string => {
 
   let target = String(url).trim()
 
+  // 站內圖片由原站直接提供，外部壓縮服務無法解析相對路徑。
+  if (/^\/(?!\/)/.test(target)) return target
+
   // 如果已經被 wsrv.nl 處理過，則直接回傳（避免雙重包裝）
   if (target.includes('wsrv.nl')) return target
 
