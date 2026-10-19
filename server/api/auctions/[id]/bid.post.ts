@@ -1,6 +1,6 @@
 import { createError, getRouterParam, readBody } from 'h3'
 import { serverSupabaseClient } from '#supabase/server'
-import { hasAuctionProvider } from '~/utils/member-auth.js'
+import { hasAuctionProvider } from '~/utils/member-auth'
 import { randomUUID } from 'node:crypto'
 import { validBidAmount, validBidReceipt } from '~/utils/auction-bid-contract.js'
 
@@ -12,7 +12,8 @@ const safeRpcMessages = new Set([
   '此競標不存在或已結束',
   '出價必須至少為目前最低出價',
   '您的帳號已被限制出價功能。若有疑問請聯絡官方管理員。',
-  '出價請求內容不一致，請重新整理後再試'
+  '出價請求內容不一致，請重新整理後再試',
+  '請先完成官方 LINE 聯絡驗證後再出價'
 ])
 
 export default defineEventHandler(async (event) => {

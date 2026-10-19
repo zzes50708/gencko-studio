@@ -211,6 +211,8 @@ onMounted(() => {
   store.initTheme()
   store.loadDataFromAPI()
   store.loadAuctions()
+  // Supabase 登入還原獨立於舊 LIFF SDK，直接開啟管理頁或重新整理也要恢復會員。
+  void store.checkAuthStatus()
   // 先還原上次 LINE 登入（即時顯示已登入狀態，修：登入後跨頁顯示未登入）
   const hadLineSession = store.restoreLineUser()
   // LINE SDK 載入時機：OAuth callback 流程中，或先前已 LINE 登入（重新驗證 session）。

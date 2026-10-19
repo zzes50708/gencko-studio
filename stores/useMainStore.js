@@ -1,4 +1,5 @@
 import { defineStore } from 'pinia'
+import { isAuctionListed, auctionState } from '~/utils/auction-presentation'
 import { ref, computed, watch } from 'vue'
 import { sanitizeCompareIds } from '~/utils/shop-catalog'
 import { useSupabaseClient } from '#imports'
@@ -28,6 +29,11 @@ export const useMainStore = defineStore('main', () => {
   const marqueeList = ref([])
   const hotList = ref([])
   const auctionList = ref([])
+  const recentAuctionList = ref([])
+  const setAuctionLists = (rows) => {
+    recentAuctionList.value = (rows || []).filter((a) => isAuctionListed(a))
+    auctionList.value = recentAuctionList.value.filter((a) => auctionState(a).status === 'active')
+  }
   // 展場模式設定（來自 Supabase site_settings 單列表；表不存在時保持 null＝非展場）
   const siteSettings = ref(null)
 
@@ -308,13 +314,13 @@ export const useMainStore = defineStore('main', () => {
     auctionLoading.value = true
     auctionError.value = null
     try {
-      const now = new Date().toISOString()
+      const now = new Date(Date.now() - 48 * 3600000).toISOString()
       const { data: auctionsData, error } = await withRetry(
         () =>
           supabase
             .from('auctions')
             .select('*')
-            .eq('status', 'active')
+            .in('status', ['active', 'ended'])
             .gt('end_time', now)
             .order('end_time', { ascending: true }),
         { label: 'auctions' }
@@ -332,7 +338,7 @@ export const useMainStore = defineStore('main', () => {
         }
       }
 
-      auctionList.value = auctionsData
+      setAuctionLists(auctionsData)
 
       if (import.meta.client && !isAuctionSubscribed.value) {
         supabase
@@ -342,22 +348,10 @@ export const useMainStore = defineStore('main', () => {
             { event: 'UPDATE', schema: 'public', table: 'auctions' },
             (payload) => {
               const updatedAuction = payload.new
-              const idx = auctionList.value.findIndex((a) => a.id === updatedAuction.id)
-              const isValid =
-                updatedAuction.status === 'active' &&
-                updatedAuction.end_time > new Date().toISOString()
-              if (idx !== -1) {
-                if (isValid) {
-                  // 更新現有場次資料
-                  auctionList.value[idx] = { ...auctionList.value[idx], ...updatedAuction }
-                } else {
-                  // 場次已結束或停用，從列表移除
-                  auctionList.value.splice(idx, 1)
-                }
-              } else if (isValid) {
-                // 原本不在列表（如剛啟用的場次），加入尾端
-                auctionList.value.push(updatedAuction)
-              }
+              setAuctionLists([
+                ...recentAuctionList.value.filter((a) => a.id !== updatedAuction.id),
+                updatedAuction
+              ])
             }
           )
           .on(
@@ -365,11 +359,10 @@ export const useMainStore = defineStore('main', () => {
             { event: 'INSERT', schema: 'public', table: 'auctions' },
             (payload) => {
               const newAuction = payload.new
-              const isValid =
-                newAuction.status === 'active' && newAuction.end_time > new Date().toISOString()
-              if (isValid) {
-                auctionList.value.unshift(newAuction)
-              }
+              setAuctionLists([
+                ...recentAuctionList.value.filter((a) => a.id !== newAuction.id),
+                newAuction
+              ])
             }
           )
           .subscribe()
@@ -475,7 +468,7 @@ export const useMainStore = defineStore('main', () => {
   const loginWithLine = async () => {
     try {
       const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'custom:line',
+        provider: 'custom:line-oauth',
         options: { redirectTo: window.location.href }
       })
       if (error) throw error
@@ -618,6 +611,7 @@ export const useMainStore = defineStore('main', () => {
     marqueeList,
     hotList,
     auctionList,
+    recentAuctionList,
     siteSettings,
     isExhibitionMode,
     exhibitionNote,

@@ -53,6 +53,10 @@ inspector_port = 8083
 [functions.end-auction]
 verify_jwt = false
 
+# Webhook 驗證 LINE HMAC；排程入口另驗證專用秘密。
+[functions.auction-workflow]
+verify_jwt = false
+
 # 農業部合法獸醫診療機構母表；函式內另以 HOSPITAL_SYNC_SECRET 驗證。
 [functions.sync-veterinary-registry]
 verify_jwt = false

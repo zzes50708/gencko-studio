@@ -7,6 +7,12 @@ export function auctionState(item, now = Date.now()) {
   if (item.status !== 'active') return { status: 'closed', text: '暫停競標', class: 'badge-ended' }
   return { status: 'active', text: '競標中', class: 'badge-active' }
 }
+export function isAuctionListed(item, now = Date.now()) {
+  const end = Date.parse(item?.end_time)
+  return (
+    ['active', 'ended'].includes(item?.status) && Number.isFinite(end) && now < end + 48 * 3600000
+  )
+}
 export const hasBuyNowPrice = (item) =>
   item?.buy_now_price !== null &&
   item?.buy_now_price !== '' &&

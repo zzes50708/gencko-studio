@@ -8,7 +8,8 @@ import {
   auctionCountdown,
   hasBuyNowPrice,
   summarizeAuctionBids,
-  readAuctionBids
+  readAuctionBids,
+  isAuctionListed
 } from '~/utils/auction-presentation'
 
 const store = useMainStore()
@@ -226,7 +227,20 @@ useHead({
 })
 
 const loading = computed(() => store.auctionLoading)
-const displayAuctions = computed(() => store.auctionList || [])
+const displayAuctions = computed(() =>
+  (store.recentAuctionList || store.auctionList || [])
+    .filter((a) => isAuctionListed(a, now.value))
+    .sort((a, b) => {
+      const aActive = auctionState(a, now.value).status === 'active'
+      const bActive = auctionState(b, now.value).status === 'active'
+      return (
+        Number(bActive) - Number(aActive) ||
+        (aActive
+          ? Date.parse(a.end_time) - Date.parse(b.end_time)
+          : Date.parse(b.end_time) - Date.parse(a.end_time))
+      )
+    })
+)
 
 const now = ref(new Date().getTime())
 let timer = null
@@ -337,11 +351,11 @@ const formatPrice = (value, fallback) => {
           <p class="auction-eyebrow">LIVE AUCTIONS</p>
           <h1 class="auction-mobile-heading"><span>線上競標</span></h1>
         </div>
-        <p class="auction-mobile-desc">限時競標，結標前 3 分鐘出價自動延長。</p>
+        <p class="auction-mobile-desc">結標前 3 分鐘出價自動延長；結標場次保留 48 小時。</p>
       </header>
 
       <section class="auction-catalog-stage" aria-labelledby="auction-live-catalog-title">
-        <h2 id="auction-live-catalog-title" class="sr-only">目前可參與的競標</h2>
+        <h2 id="auction-live-catalog-title" class="sr-only">競標場次與結標結果</h2>
         <p v-if="store.auctionError" role="alert" class="auction-read-error">
           {{ store.auctionError }}
           <button type="button" @click="refreshAuctions">重試</button>
@@ -408,11 +422,29 @@ const formatPrice = (value, fallback) => {
               </p>
               <div class="price-info">
                 <div class="price-col">
-                  <span class="price-label">起標價</span>
-                  <strong class="price-val">{{ formatPrice(item.start_price, '尚未設定') }}</strong>
+                  <span class="price-label">
+                    {{ getAuctionStatus(item).status === 'ended' ? '結標最高價' : '起標價' }}
+                  </span>
+                  <strong class="price-val">
+                    {{
+                      getAuctionStatus(item).status === 'ended'
+                        ? !summaryReady || summaryError
+                          ? '結果待確認'
+                          : bidSummaries[item.id]?.count
+                            ? formatPrice(bidSummaries[item.id].highest, '—')
+                            : '無人出價'
+                        : formatPrice(item.start_price, '尚未設定')
+                    }}
+                  </strong>
                 </div>
-                <div v-if="hasBuyNowPrice(item)" class="price-divider"></div>
-                <div v-if="hasBuyNowPrice(item)" class="price-col">
+                <div
+                  v-if="hasBuyNowPrice(item) && getAuctionStatus(item).status === 'active'"
+                  class="price-divider"
+                ></div>
+                <div
+                  v-if="hasBuyNowPrice(item) && getAuctionStatus(item).status === 'active'"
+                  class="price-col"
+                >
                   <span class="price-label">直購價</span>
                   <strong class="price-val">
                     {{ formatPrice(item.buy_now_price, '未提供直購') }}
@@ -433,12 +465,30 @@ const formatPrice = (value, fallback) => {
               <ClientOnly>
                 <div
                   class="countdown"
-                  role="timer"
-                  aria-label="競標剩餘時間"
+                  :role="getAuctionStatus(item).status === 'active' ? 'timer' : 'status'"
+                  :aria-label="
+                    getAuctionStatus(item).status === 'active' ? '競標剩餘時間' : '場次保留期限'
+                  "
                   :class="{ 'ending-soon': isEndingSoon(item) }"
                 >
-                  <span>剩餘</span>
-                  <strong>{{ getCountdownText(item) }}</strong>
+                  <span>{{ getAuctionStatus(item).status === 'ended' ? '保留至' : '剩餘' }}</span>
+                  <strong>
+                    {{
+                      getAuctionStatus(item).status === 'ended'
+                        ? new Date(Date.parse(item.end_time) + 48 * 3600000).toLocaleString(
+                            'zh-TW',
+                            {
+                              timeZone: 'Asia/Taipei',
+                              month: '2-digit',
+                              day: '2-digit',
+                              hour: '2-digit',
+                              minute: '2-digit',
+                              hour12: false
+                            }
+                          )
+                        : getCountdownText(item)
+                    }}
+                  </strong>
                 </div>
                 <template #fallback>
                   <div class="countdown" role="timer" aria-label="競標剩餘時間">

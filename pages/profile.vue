@@ -221,6 +221,14 @@ const getMapLink = (h) => {
       </div>
 
       <div class="header-actions">
+        <NuxtLink
+          v-if="store.currentUser?.auctionAdmin"
+          to="/auction-management"
+          no-prefetch
+          class="btn-logout"
+        >
+          競標管理
+        </NuxtLink>
         <button v-if="store.currentUser" type="button" @click="store.logout" class="btn-logout">
           登出
         </button>
@@ -568,6 +576,11 @@ const getMapLink = (h) => {
 
       <!-- Tab 4: 競標紀錄 (雲端 - 需登入) -->
       <div v-show="activeTab === 'bids'">
+        <AuctionMyOutcomes
+          v-if="activeTab === 'bids' && isAuctionMember(store.currentUser)"
+          :member-id="store.currentUser.id"
+          :key="store.currentUser.id"
+        />
         <!-- 🌟 將登入區塊移至此，保護雲端資料 -->
         <div v-if="!isAuctionMember(store.currentUser)" class="login-prompt-box">
           <div class="empty-icon">🔐</div>

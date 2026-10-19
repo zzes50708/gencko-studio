@@ -45,3 +45,32 @@ it('僅有舊 LIFF／localStorage 個人資料不算競標驗證，不能誤認�
     'test@example.invalid'
   ])
 })
+
+it('LINE OAuth2 會員保留自己的穩定身分且不要求 email', () => {
+  const user = {
+    id: 'LINE-OAUTH-UUID',
+    email: null,
+    app_metadata: { provider: 'custom:line-oauth' },
+    user_metadata: { name: '測試者' }
+  }
+  expect(hasAuctionProvider(user)).toBe(true)
+  expect(memberFromSupabaseUser(user)).toMatchObject({
+    type: 'line',
+    id: 'LINE-OAUTH-UUID',
+    authSource: 'supabase'
+  })
+})
+
+it('管理入口只讀取 app_metadata，不接受使用者自己填的管理員欄位', () => {
+  expect(
+    memberFromSupabaseUser({ id: 'A', app_metadata: { provider: 'google', auction_admin: true } })
+      .auctionAdmin
+  ).toBe(true)
+  expect(
+    memberFromSupabaseUser({
+      id: 'B',
+      app_metadata: { provider: 'google' },
+      user_metadata: { auction_admin: true }
+    }).auctionAdmin
+  ).toBe(false)
+})

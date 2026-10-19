@@ -3,8 +3,19 @@ import {
   auctionState,
   hasBuyNowPrice,
   readAuctionBids,
-  summarizeAuctionBids
+  summarizeAuctionBids,
+  isAuctionListed
 } from '../utils/auction-presentation'
+
+it('結標場次保留 48 小時，邊界到期隱藏；暫停或時間錯誤不展示', () => {
+  const end = '2026-10-16T10:00:00Z'
+  const item = { status: 'ended', end_time: end }
+  expect(isAuctionListed(item, Date.parse(end) + 48 * 3600000 - 1)).toBe(true)
+  expect(isAuctionListed(item, Date.parse(end) + 48 * 3600000)).toBe(false)
+  expect(isAuctionListed({ ...item, status: 'active' }, Date.parse(end) + 3600000)).toBe(true)
+  expect(isAuctionListed({ ...item, status: 'paused' }, Date.parse(end))).toBe(false)
+  expect(isAuctionListed({ ...item, end_time: '錯誤' }, Date.now())).toBe(false)
+})
 
 it('關閉狀態及缺少時間不能參與競標，缺價不顯示直購', () => {
   const item = { status: 'active', end_time: '2030-01-01', buy_now_price: null }

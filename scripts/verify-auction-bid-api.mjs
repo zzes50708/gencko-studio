@@ -94,7 +94,7 @@ try {
               test.authError || test.noUser
                 ? null
                 : test.line
-                  ? { ...user, email: null, app_metadata: { provider: 'custom:line', providers: ['custom:line'] } }
+                  ? { ...user, email: null, app_metadata: { provider: 'custom:line-oauth', providers: ['custom:line-oauth'] } }
                   : test.spoofLine
                     ? { ...user, app_metadata: { provider: 'email' }, user_metadata: { provider: 'custom:line' } }
                 : test.nonGoogle

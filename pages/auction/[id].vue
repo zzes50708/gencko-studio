@@ -25,6 +25,7 @@ import {
 import { isAuctionMember, memberOwnerKeys } from '~/utils/member-auth'
 import { loadPromoImage } from '~/utils/auction-promo'
 import { getLineMessageLink } from '~/utils/animal-inquiry'
+import { getAuctionContactText } from '~/utils/auction-contact'
 
 definePageMeta({ key: (route) => route.fullPath })
 
@@ -32,6 +33,13 @@ const route = useRoute()
 const store = useMainStore()
 const supabase = useSupabaseClient()
 const auctionId = route.params.id
+const lineContactVerified = ref(false)
+watch(
+  () => store.currentUser?.id,
+  () => {
+    lineContactVerified.value = false
+  }
+)
 
 //[SEO] 為了在伺服器端渲染 (SSR) 期間就能拿到該商品資料以產生正確的 Meta
 const {
@@ -647,6 +655,10 @@ const placeBid = async () => {
     return
   }
   const owner = memberOwnerKeys(store.currentUser)[0]
+  if (!pendingBid.value && currentAuction.value?.workflow_enabled && !lineContactVerified.value) {
+    bidNotice.value = '請先完成官方 LINE 聯絡驗證後再出價'
+    return
+  }
   if (pendingBid.value && !memberOwnerKeys(store.currentUser).includes(pendingBid.value.owner)) {
     alert('請使用原出價帳號登入，確認上一筆出價結果。')
     return
@@ -1136,6 +1148,27 @@ const closePromo = () => promoModal.close()
                 </button>
               </div>
               <div class="nick-input-wrap">
+                <AuctionLineContact
+                  v-if="currentAuction.workflow_enabled"
+                  :auction-id="auctionId"
+                  :member-id="store.currentUser.id"
+                  @verified="lineContactVerified = $event"
+                />
+                <p v-else-if="store.currentUser.type === 'line'" class="bid-hint">
+                  首次競標請先加官方 LINE 並傳訊息，方便得標後聯繫。
+                  <a
+                    :href="
+                      getLineMessageLink(
+                        'https://line.me/R/ti/p/@219abdzn',
+                        getAuctionContactText(auctionId, store.currentUser.id)
+                      )
+                    "
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    建立 LINE 聯絡
+                  </a>
+                </p>
                 <input
                   type="text"
                   v-model="customNickname"
@@ -1163,7 +1196,12 @@ const closePromo = () => promoModal.close()
                   class="btn-app btn-app--primary btn-app--md btn-bid"
                   @click="placeBid"
                   :disabled="
-                    isPlacingBid || (!pendingBid && (!bidsReady || !!bidsError || !!metadataError))
+                    isPlacingBid ||
+                    (!pendingBid &&
+                      (!bidsReady ||
+                        !!bidsError ||
+                        !!metadataError ||
+                        (currentAuction.workflow_enabled && !lineContactVerified)))
                   "
                 >
                   {{ isPlacingBid ? '處理中...' : pendingBid ? '重試同一筆出價' : '確認出價' }}
@@ -1178,6 +1216,10 @@ const closePromo = () => promoModal.close()
                 </button>
               </div>
               <div class="bid-hint">您的出價必須 ≥ {{ formatPrice(minNextBid) }}</div>
+              <p v-if="currentAuction.workflow_enabled" class="bid-hint">
+                得標後請在本頁複製訊息至官方 LINE 領標，並於結標後 24
+                小時內付款；逾期會限制網站出價。
+              </p>
             </template>
 
             <template v-else>
@@ -1223,7 +1265,31 @@ const closePromo = () => promoModal.close()
                 }}
               </span>
             </template>
+            <div
+              v-if="
+                !isAuctionMember(store.currentUser) &&
+                getAuctionStatus(currentAuction).status === 'ended'
+              "
+              class="login-prompt"
+            >
+              <p>得標者請使用出價時的帳號登入，複製確認訊息至官方 LINE 領標。</p>
+              <button type="button" class="btn-login-line" @click="store.loginWithLine">
+                LINE 登入
+              </button>
+              <button type="button" class="btn-login-google" @click="store.loginWithGoogle">
+                Google 登入
+              </button>
+            </div>
           </div>
+          <AuctionWinnerClaim
+            v-if="
+              getAuctionStatus(currentAuction).status === 'ended' &&
+              isAuctionMember(store.currentUser)
+            "
+            :auction-id="auctionId"
+            :member-id="store.currentUser.id"
+            :key="store.currentUser.id"
+          />
         </ClientOnly>
 
         <div class="info-section">
