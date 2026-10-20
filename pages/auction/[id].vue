@@ -4,6 +4,7 @@ import { useRoute } from 'vue-router'
 import { useHead, useAsyncData, useSupabaseClient, useState, setResponseStatus } from '#imports'
 import { useMainStore } from '~/stores/useMainStore'
 import { getCleanUrl } from '~/utils/image'
+import { serializeJsonLd } from '~/utils/structured-data'
 import {
   auctionState,
   auctionCountdown,
@@ -14,7 +15,9 @@ import {
   MAX_BID_AMOUNT,
   validBidAmount,
   validBidReceipt,
-  auctionBidIncrement
+  restoreBidIntent,
+  auctionBidIncrement,
+  auctionMinimumBid
 } from '~/utils/auction-bid-contract'
 import {
   auctionPhotos,
@@ -165,9 +168,12 @@ const highestBidAmount = computed(() => {
 const bidIncrement = computed(() => auctionBidIncrement(currentAuction.value?.min_increment))
 const minNextBid = computed(() => {
   if (!currentAuction.value) return 0
-  return highestBidAmount.value === 0 && currentAuction.value.start_price === 0
-    ? bidIncrement.value
-    : highestBidAmount.value + bidIncrement.value
+  const hasBids = currentBids.value.length > 0 || (!bidsReady.value && initialBid.value?.length > 0)
+  return auctionMinimumBid(
+    currentAuction.value.start_price,
+    hasBids ? highestBidAmount.value : null,
+    bidIncrement.value
+  )
 })
 
 const myBidAmount = ref(0)
@@ -186,13 +192,19 @@ const persistPendingBid = () => {
     /* 儲存空間受限時仍可在目前頁面安全重試。 */
   }
 }
-const clearPendingBid = () => {
+const clearPendingBid = (
+  intent = pendingBid.value,
+  owners = memberOwnerKeys(store.currentUser)
+) => {
   try {
-    sessionStorage.removeItem(requestStorageKey())
+    // 同一會員可能有舊版 email 與新版會員編號暫存，確認後必須一起清除。
+    const aliases = owners.includes(intent?.owner) ? owners : []
+    for (const owner of new Set([intent?.owner, ...aliases].filter(Boolean)))
+      sessionStorage.removeItem(`auction-bid-request:${auctionId}:${encodeURIComponent(owner)}`)
   } catch {
     /* 不影響本頁狀態清理。 */
   }
-  pendingBid.value = null
+  if (pendingBid.value?.requestId === intent?.requestId) pendingBid.value = null
 }
 const restorePendingBid = () => {
   if (!import.meta.client || pendingBid.value || !isAuctionMember(store.currentUser)) return
@@ -200,23 +212,21 @@ const restorePendingBid = () => {
     const saved = memberOwnerKeys(store.currentUser)
       .map((owner) => {
         try {
-          return JSON.parse(
-            sessionStorage.getItem(
-              `auction-bid-request:${auctionId}:${encodeURIComponent(owner)}`
-            ) || 'null'
+          return restoreBidIntent(
+            sessionStorage.getItem(`auction-bid-request:${auctionId}:${encodeURIComponent(owner)}`),
+            auctionId,
+            memberOwnerKeys(store.currentUser)
           )
         } catch {
           return null
         }
       })
-      .find((record) => record?.auctionId === auctionId)
-    if (
-      memberOwnerKeys(store.currentUser).includes(saved?.owner) &&
-      saved?.auctionId === auctionId &&
-      validBidAmount(saved.amount) &&
-      typeof saved.requestId === 'string'
-    ) {
+      .find(Boolean)
+    if (saved) {
       pendingBid.value = saved
+      myBidAmount.value = saved.amount
+      bidAmountTouched.value = true
+      customNickname.value = saved.nickname
       bidNotice.value = '上一筆出價結果待確認，請重試同一筆出價。'
     }
   } catch {
@@ -224,9 +234,17 @@ const restorePendingBid = () => {
   }
 }
 watch(
-  () => memberOwnerKeys(store.currentUser).join('|'),
+  () => [store.currentUser, memberOwnerKeys(store.currentUser).join('|')],
   () => {
     needsLogin.value = false
+    if (pendingBid.value && !memberOwnerKeys(store.currentUser).includes(pendingBid.value.owner)) {
+      // 保留原帳號的待確認暫存，但不可顯示在另一個帳號上。
+      pendingBid.value = null
+      bidNotice.value = ''
+      bidAmountTouched.value = false
+      myBidAmount.value = minNextBid.value
+      customNickname.value = ''
+    }
     restorePendingBid()
   }
 )
@@ -258,8 +276,15 @@ const invalidateReads = () => {
   metadataBusy = false
 }
 let disposed = false
+let bidsRefreshPending = false
+let metadataRefreshPending = false
 const loadBids = async (id = auctionId) => {
-  if (bidsLoading.value || isPlacingBid.value || disposed) return
+  if (disposed) return
+  if (bidsLoading.value || isPlacingBid.value) {
+    bidsRefreshPending = true
+    return
+  }
+  bidsRefreshPending = false
   const revision = readRevision
   bidsLoading.value = true
   const controller = new AbortController()
@@ -279,11 +304,20 @@ const loadBids = async (id = auctionId) => {
     if (!disposed && !controller.signal.aborted && revision === readRevision)
       bidsError.value = '出價紀錄無法更新，請重試；目前顯示的資料可能不是最新。'
   } finally {
-    if (bidsController === controller) bidsLoading.value = false
+    if (bidsController === controller) {
+      bidsLoading.value = false
+      // 讀取期間收到的新事件合併補讀，不等待下一輪定時更新。
+      if (bidsRefreshPending && !disposed && !isPlacingBid.value) void loadBids(id)
+    }
   }
 }
 const refreshMetadata = async () => {
-  if (metadataBusy || disposed || isPlacingBid.value) return
+  if (disposed) return
+  if (metadataBusy || isPlacingBid.value) {
+    metadataRefreshPending = true
+    return
+  }
+  metadataRefreshPending = false
   const revision = readRevision
   const controller = new AbortController()
   metadataController = controller
@@ -303,7 +337,10 @@ const refreshMetadata = async () => {
     if (!disposed && !controller.signal.aborted && revision === readRevision)
       metadataError.value = '場次資料無法更新，請重試。'
   } finally {
-    if (metadataController === controller) metadataBusy = false
+    if (metadataController === controller) {
+      metadataBusy = false
+      if (metadataRefreshPending && !disposed && !isPlacingBid.value) void refreshMetadata()
+    }
   }
 }
 const refreshAuction = async () => {
@@ -374,7 +411,9 @@ onMounted(() => {
         { event: 'UPDATE', schema: 'public', table: 'auctions', filter: `id=eq.${auctionId}` },
         resumeRefresh
       )
-      .subscribe()
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') resumeRefresh()
+      })
     bidsRefreshTimer = setInterval(resumeRefresh, 15000)
     document.addEventListener('visibilitychange', resumeRefresh)
     window.addEventListener('online', resumeRefresh)
@@ -403,6 +442,7 @@ const getAuctionStatus = (item) => auctionState(item, now.value)
 
 const isEndingSoon = (item) => {
   if (!item) return false
+  if (getAuctionStatus(item).status !== 'active') return false
   const diff = new Date(item.end_time).getTime() - now.value
   return diff > 0 && diff <= 180000
 }
@@ -569,8 +609,8 @@ const siteData = computed(() => {
       buyNowPrice: a.buy_now_price || null,
       endIso,
       script: [
-        { type: 'application/ld+json', innerHTML: JSON.stringify(webPageLd) },
-        { type: 'application/ld+json', innerHTML: JSON.stringify(breadcrumb) }
+        { type: 'application/ld+json', innerHTML: serializeJsonLd(webPageLd) },
+        { type: 'application/ld+json', innerHTML: serializeJsonLd(breadcrumb) }
       ]
     }
   }
@@ -663,6 +703,7 @@ const placeBid = async () => {
     alert('請使用原出價帳號登入，確認上一筆出價結果。')
     return
   }
+  const retrying = !!pendingBid.value
   if (!pendingBid.value) {
     if (!bidsReady.value || bidsError.value || metadataError.value) return
     if (!clockReady.value) {
@@ -697,6 +738,7 @@ const placeBid = async () => {
     persistPendingBid()
   }
   const intent = { ...pendingBid.value }
+  const intentOwners = memberOwnerKeys(store.currentUser)
   bidAmountTouched.value = true
   isPlacingBid.value = true
   bidNotice.value = ''
@@ -709,20 +751,23 @@ const placeBid = async () => {
       body: { amount: intent.amount, nickname: intent.nickname, requestId: intent.requestId }
     })
     if (!validBidReceipt(result, auctionId, intent.amount)) throw new Error('回執不完整')
-    if (disposed) return
+    clearPendingBid(intent, intentOwners)
+    if (disposed || !memberOwnerKeys(store.currentUser).includes(intent.owner)) return
     if (!realBids.value.some((bid) => bid.id === result.bid.id)) realBids.value.push(result.bid)
     currentAuction.value = { ...currentAuction.value, end_time: result.auction.end_time }
-    clearPendingBid()
     isBidsExpanded.value = true
     bidNotice.value = `已確認出價 ${formatPrice(intent.amount)}。`
     alert(result.extended ? '出價成功！結標時間已自動延長 3 分鐘。' : '出價成功！')
   } catch (err) {
-    if (disposed) return
     const detail = err?.data?.data
     const status = err?.statusCode || err?.response?.status
     // 明確拒絕才解除待確認；連線中斷可能已成立，必須保留原請求編號。
-    if (detail?.outcome === 'rejected' || detail?.outcome === 'not_submitted' || status === 401) {
-      clearPendingBid()
+    const rejected =
+      detail?.outcome === 'rejected' ||
+      (detail?.outcome === 'not_submitted' && !retrying && status !== 401)
+    if (rejected) clearPendingBid(intent, intentOwners)
+    if (disposed || !memberOwnerKeys(store.currentUser).includes(intent.owner)) return
+    if (rejected || status === 401) {
       if (status === 401) needsLogin.value = true
       bidNotice.value = err?.data?.message || '此筆出價未成立，請確認最新資料。'
     } else {
@@ -736,21 +781,29 @@ const placeBid = async () => {
   }
 }
 
+const mayInquireBuyNow = computed(
+  () =>
+    hasBuyNowPrice(currentAuction.value) &&
+    getAuctionStatus(currentAuction.value).status === 'active' &&
+    bidsReady.value &&
+    !bidsError.value &&
+    !metadataError.value &&
+    !pendingBid.value &&
+    !isPlacingBid.value &&
+    (currentBids.value.length === 0 ||
+      highestBidAmount.value < Number(currentAuction.value.buy_now_price))
+)
 const buyNow = () => {
-  if (
-    !hasBuyNowPrice(currentAuction.value) ||
-    getAuctionStatus(currentAuction.value).status !== 'active'
-  )
-    return
+  if (!mayInquireBuyNow.value) return
   if (
     confirm(
-      `確定要以直購價 $${currentAuction.value.buy_now_price} 直接購買嗎？\n點選「確定」將為您開啟官方 LINE。`
+      `前往官方 LINE 詢問直購（${formatPrice(currentAuction.value.buy_now_price)}）？\n此操作不會保留個體或結束競標，請以工作室確認為準。`
     )
   ) {
     window.open(
       getLineMessageLink(
         'https://line.me/R/ti/p/@219abdzn',
-        `Hi Gencko，我想直購競標個體 ${currentAuction.value.morph}\n編號：${currentAuction.value.id}\n直購價：${formatPrice(currentAuction.value.buy_now_price)}\nhttps://www.genckobreeding.com/auction/${encodeURIComponent(currentAuction.value.id)}`
+        `Hi Gencko，我想詢問直購競標個體 ${currentAuction.value.morph}\n編號：${currentAuction.value.id}\n頁面直購價：${formatPrice(currentAuction.value.buy_now_price)}\n請協助確認是否仍可直購。\nhttps://www.genckobreeding.com/auction/${encodeURIComponent(currentAuction.value.id)}`
       ),
       '_blank'
     )
@@ -1210,11 +1263,22 @@ const closePromo = () => promoModal.close()
                   type="button"
                   v-if="hasBuyNowPrice(currentAuction)"
                   class="btn-app btn-app--secondary btn-app--md btn-buy-now"
+                  :disabled="!mayInquireBuyNow"
                   @click="buyNow"
                 >
-                  直購（{{ formatPrice(currentAuction.buy_now_price) }}）
+                  詢問直購（{{ formatPrice(currentAuction.buy_now_price) }}）
                 </button>
               </div>
+              <p
+                v-if="
+                  hasBuyNowPrice(currentAuction) &&
+                  currentBids.length &&
+                  highestBidAmount >= Number(currentAuction.buy_now_price)
+                "
+                class="bid-hint"
+              >
+                目前出價已達直購價，請依競標出價。
+              </p>
               <div class="bid-hint">您的出價必須 ≥ {{ formatPrice(minNextBid) }}</div>
               <p v-if="currentAuction.workflow_enabled" class="bid-hint">
                 得標後請在本頁複製訊息至官方 LINE 領標，並於結標後 24

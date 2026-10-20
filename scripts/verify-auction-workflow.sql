@@ -9,7 +9,7 @@ begin
  begin
   if exists(select 1 from private.auction_enrollments where auction_id not in ('TEST-AUCTION-20261016-01','TEST-AUCTION-CORE-ROLLBACK'))
   then raise exception '測試隔離失敗，不執行結算'; end if;
-  update private.auction_workflow_settings set processing_enabled=true,notifications_enabled=true,fulfillment_mode='line_push';
+  update private.auction_workflow_settings set processing_enabled=true,auto_enroll_new=false,notifications_enabled=true,fulfillment_mode='line_push';
   insert into public.auctions(id,title,morph,status,start_price,min_increment,end_time,note) values('TEST-AUCTION-CORE-ROLLBACK','回滾測試','回滾測試','active',100,100,clock_timestamp()+interval '1 hour','僅供回滾測試');
   update private.auction_line_contacts set followed=false where user_id in(uid,admin_id);
   perform set_config('request.jwt.claims',jsonb_build_object('sub',admin_id,'role','authenticated')::text,true);
@@ -26,6 +26,12 @@ begin
   results:=results||jsonb_build_object('correct_line_bound',(r->>'linked')::boolean);
   r:=private.record_auction_line_event('audit-good',line_id,'message',clock_timestamp(),code,'測試LINE');
   results:=results||jsonb_build_object('webhook_replay_ignored',(r->>'duplicate')::boolean);
+  receipt:=public.submit_auction_bid('5fe84669-0d2d-400d-9946-000000000008','TEST-AUCTION-CORE-ROLLBACK',100,'起標價測試');
+  results:=results||jsonb_build_object('opening_bid_accepts_start_price',(receipt#>>'{bid,amount}')::integer=100);
+  denied:=false;
+  begin perform public.submit_auction_bid('5fe84669-0d2d-400d-9946-000000000009','TEST-AUCTION-CORE-ROLLBACK',150,'後續仍須加價');
+  exception when invalid_parameter_value then denied:=true; end;
+  results:=results||jsonb_build_object('later_bid_still_requires_increment',denied);
   update public.auctions set end_time=clock_timestamp()+interval '10 minutes' where id='TEST-AUCTION-CORE-ROLLBACK';
   receipt:=public.submit_auction_bid('5fe84669-0d2d-400d-9946-000000000002','TEST-AUCTION-CORE-ROLLBACK',baseline+100,'流程測試');
   replay:=public.submit_auction_bid('5fe84669-0d2d-400d-9946-000000000002','TEST-AUCTION-CORE-ROLLBACK',baseline+100,'流程測試');
@@ -95,6 +101,9 @@ begin
  exception when sqlstate 'PZ999' then null;
  end;
  perform set_config('gencko.workflow_audit',results::text,true);
+ if exists(select 1 from jsonb_each(results) where value is distinct from 'true'::jsonb) then
+  raise exception '競標回歸檢查失敗：%',results;
+ end if;
 end $audit$;
 select current_setting('gencko.workflow_audit')::jsonb as audit,
 (select count(*) from public.auction_bids where auction_id='TEST-AUCTION-CORE-ROLLBACK') as persistent_test_bids,

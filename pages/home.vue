@@ -6,6 +6,7 @@ import { useMainStore } from '~/stores/useMainStore'
 import { getCleanUrl } from '~/utils/image'
 import heroGeckoUrl from '~/assets/NDBE.jpg'
 import HotPicksMarquee from '~/components/home/HotPicksMarquee.vue'
+import { auctionState } from '~/utils/auction-presentation'
 
 const store = useMainStore()
 
@@ -65,8 +66,7 @@ const hotRows = computed(() => {
 
 const hasActiveAuction = computed(() => {
   if (!auctionList.value || auctionList.value.length === 0) return false
-  const now = new Date().getTime()
-  return auctionList.value.some((a) => new Date(a.end_time).getTime() > now)
+  return auctionList.value.some((a) => auctionState(a, store.auctionNow()).status === 'active')
 })
 
 const fmtDate = (d) => {

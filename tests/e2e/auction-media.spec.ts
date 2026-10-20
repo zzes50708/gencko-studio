@@ -186,13 +186,7 @@ test('真正不存在的競標回404且禁止索引', async ({ request }) => {
   expect(await response.text()).toMatch(/name="robots"[^>]*noindex/)
 })
 
-test('SSR直接輸出最高400，不需執行JavaScript補正', async ({ request }) => {
-  const response = await request.get('/auction/TEST-AUCTION-20261016-01')
-  expect(response.status()).toBe(200)
-  const html = await response.text()
-  expect(html).toMatch(/<title>[^<]*目前最高 NT\$400/)
-  expect(html).toMatch(/property="product:price:amount"[^>]*content="400"/)
-})
+// SSR 價格改由 scripts/verify-auction-ssr.mjs 以獨立 API 驗證，避免依賴真實場次的變動狀態。
 
 test('手機橫滑換圖、垂直滑動不換圖且不誤開燈箱', async ({ browser, baseURL }) => {
   const context = await browser.newContext({

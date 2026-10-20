@@ -9,7 +9,15 @@ export function hasAuctionProvider(user: any) {
 
 export function memberFromSupabaseUser(user: any) {
   if (!user?.id) return null
-  const provider = user.app_metadata?.provider
+  const primary = user.app_metadata?.provider
+  const providers = Array.isArray(user.app_metadata?.providers) ? user.app_metadata.providers : []
+  // 舊 email 帳號後來綁定 Google／LINE 時，主要 provider 可能仍為 email。
+  // 與伺服器相同，只採用受信任的 app_metadata 供應商清單。
+  const provider = ['google', 'custom:line', 'custom:line-oauth'].includes(primary)
+    ? primary
+    : providers.includes('google')
+      ? 'google'
+      : providers.find((value: string) => ['custom:line', 'custom:line-oauth'].includes(value))
   const type = ['custom:line', 'custom:line-oauth'].includes(provider)
     ? 'line'
     : provider === 'google'

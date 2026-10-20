@@ -7,9 +7,11 @@ import { validBidAmount, validBidReceipt } from '~/utils/auction-bid-contract.js
 const safeRpcMessages = new Set([
   '請先使用 Google 登入後再出價',
   '請先使用 Google 或 LINE 登入後再出價',
+  '競標出價需使用 Google 或 LINE 帳號登入',
   '出價金額無效',
   '暱稱不可超過 15 個字',
   '此競標不存在或已結束',
+  '此競標尚未開標',
   '出價必須至少為目前最低出價',
   '您的帳號已被限制出價功能。若有疑問請聯絡官方管理員。',
   '出價請求內容不一致，請重新整理後再試',

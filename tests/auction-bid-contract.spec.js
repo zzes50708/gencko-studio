@@ -1,5 +1,47 @@
 import { expect, it } from 'vitest'
-import { validBidAmount, validBidReceipt, auctionBidIncrement } from '../utils/auction-bid-contract'
+import {
+  validBidAmount,
+  validBidReceipt,
+  restoreBidIntent,
+  auctionBidIncrement,
+  auctionMinimumBid
+} from '../utils/auction-bid-contract'
+
+it('出價暫存逐筆驗證後才恢復，不帶入別人、錯場次、毀損請求及額外欄位', () => {
+  const intent = {
+    owner: 'MEMBER',
+    auctionId: 'A',
+    amount: 700,
+    requestId: 'abcdef00-0000-4000-8000-000000000001',
+    nickname: '原出價'
+  }
+  expect(restoreBidIntent(JSON.stringify({ ...intent, extra: '不傳送' }), 'A', ['MEMBER'])).toEqual(
+    intent
+  )
+  const invalid = JSON.stringify({ ...intent, amount: '700' })
+  expect(
+    [invalid, JSON.stringify(intent)]
+      .map((raw) => restoreBidIntent(raw, 'A', ['MEMBER']))
+      .find(Boolean)
+  ).toEqual(intent)
+  expect(restoreBidIntent(JSON.stringify(intent), 'B', ['MEMBER'])).toBeNull()
+  expect(restoreBidIntent(JSON.stringify(intent), 'A', ['OTHER'])).toBeNull()
+  expect(restoreBidIntent('{', 'A', ['MEMBER'])).toBeNull()
+  expect(
+    restoreBidIntent(
+      JSON.stringify({ ...intent, requestId: intent.requestId.toUpperCase() }),
+      'A',
+      ['MEMBER']
+    )
+  ).toEqual(intent)
+})
+
+it('第一筆可按起標價出價，已有出價才加上最低增額', () => {
+  expect(auctionMinimumBid(100, null, 100)).toBe(100)
+  expect(auctionMinimumBid(100, 100, 100)).toBe(200)
+  expect(auctionMinimumBid(0, null, 100)).toBe(100)
+  expect(auctionMinimumBid(500, null, 1000)).toBe(500)
+})
 
 it('空值與零加價幅度與資料庫規則一致', () => {
   expect(auctionBidIncrement(null)).toBe(100)

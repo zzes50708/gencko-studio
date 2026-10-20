@@ -45,16 +45,25 @@ Deno.serve(async req => {
         // 只接受一對一官方帳號事件，群組訊息不參與競標身分綁定。
         if (event.source?.type !== 'user' || !/^U[0-9a-f]{32}$/i.test(event.source?.userId || '')) continue
         if (!['follow','unfollow','message'].includes(event.type)) continue
+        if (!event.webhookEventId || !Number.isFinite(event.timestamp) || !Number.isFinite(new Date(event.timestamp).getTime())) continue
         const code = event.message?.type === 'text' ? parseLinkCode(event.message.text || '') || parseWinnerClaimCode(event.message.text || '') : null
         let name: string | null = null
         if (code && env.channelId) {
+         try {
           const accessToken = await lineAccessToken(env.channelId,env.secret)
           const profile = await fetch(`https://api.line.me/v2/bot/profile/${event.source.userId}`,{
             headers:{authorization:`Bearer ${accessToken}`},signal:AbortSignal.timeout(8000)
           })
-          if (profile.ok) name = (await profile.json()).displayName || null
+          if (profile.ok) {
+            const displayName = (await profile.json()).displayName
+            if (typeof displayName === 'string') name = displayName
+          }
+          if (profile.status === 401) tokenCache = null
+         } catch {
+          // 暱稱僅作管理顯示；身分仍由簽章、事件來源與資料庫驗證碼核對。
+          // 第三方暱稱查詢失敗不應讓客人的領標訊息遺失。
+         }
         }
-        if (!event.webhookEventId || !Number.isFinite(event.timestamp)) continue
         const {error} = await client.rpc('record_auction_line_event',{
           p_event_id:event.webhookEventId,p_line_id:event.source.userId,p_kind:event.type,
           p_at:new Date(event.timestamp).toISOString(),p_code:code,p_name:name

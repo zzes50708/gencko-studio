@@ -74,3 +74,27 @@ it('管理入口只讀取 app_metadata，不接受使用者自己填的管理員
     }).auctionAdmin
   ).toBe(false)
 })
+
+it('原本 email 帳號後來綁定 Google 或 LINE，前端與伺服器使用同一驗證供應商清單', () => {
+  for (const [provider, type] of [
+    ['google', 'google'],
+    ['custom:line-oauth', 'line'],
+    ['custom:line', 'line']
+  ]) {
+    const user = {
+      id: 'LINKED',
+      app_metadata: { provider: 'email', providers: ['email', provider] }
+    }
+    expect(hasAuctionProvider(user)).toBe(true)
+    const member = memberFromSupabaseUser(user)
+    expect(member.type).toBe(type)
+    expect(isAuctionMember(member)).toBe(true)
+  }
+  const spoofed = {
+    id: 'OTHER',
+    app_metadata: { provider: 'email' },
+    user_metadata: { providers: ['google'] }
+  }
+  expect(hasAuctionProvider(spoofed)).toBe(false)
+  expect(isAuctionMember(memberFromSupabaseUser(spoofed))).toBe(false)
+})

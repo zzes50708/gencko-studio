@@ -22,6 +22,7 @@ async function copy() {
   }
 }
 let revision = 0
+let checkRevision = 0
 let timer
 let mounted = false
 const link = computed(() =>
@@ -33,12 +34,13 @@ function stop() {
   clearTimeout(timer)
 }
 async function check() {
-  const request = revision
+  const owner = revision
+  const request = ++checkRevision
   try {
     const { data, error } = await supabase.rpc('get_auction_contact_status', {
       p_auction_id: props.auctionId
     })
-    if (request !== revision) return
+    if (owner !== revision || request !== checkRevision) return
     if (error) throw error
     state.value = data
     emit(
@@ -51,7 +53,7 @@ async function check() {
       challenge.value = null
     }
   } catch {
-    if (request !== revision) return
+    if (owner !== revision || request !== checkRevision) return
     emit('verified', false)
     message.value = '暫時無法確認 LINE 聯絡狀態，請重新確認。'
   }

@@ -442,6 +442,220 @@ test('競標出價故障回歸：同步、斷線重試、登入及輸入', async
         await t.context.close()
       }
     })
+    await run('切換帳號清除舊出價畫面，原帳號仍可恢復待確認請求', async () => {
+      const t = await create()
+      try {
+        t.state.postHandler = (r) => r.abort('failed')
+        await t.page.getByLabel('自訂顯示暱稱', { exact: true }).fill('甲方暱稱')
+        await t.page.locator('.btn-bid').click()
+        await settle(t)
+        await t.page.evaluate(() => {
+          document
+            .querySelector('#__nuxt')
+            .__vue_app__.config.globalProperties.$pinia._s.get('main').currentUser = {
+            type: 'google',
+            id: 'OTHER',
+            email: 'other@example.invalid'
+          }
+        })
+        await t.page.getByRole('button', { name: '確認出價', exact: true }).waitFor()
+        assert.equal(await t.page.getByLabel('自訂顯示暱稱', { exact: true }).inputValue(), '')
+        await t.page.evaluate(() => {
+          document
+            .querySelector('#__nuxt')
+            .__vue_app__.config.globalProperties.$pinia._s.get('main').currentUser = {
+            type: 'google',
+            email: 'auction-audit@example.invalid'
+          }
+        })
+        await t.page.getByRole('button', { name: '重試同一筆出價', exact: true }).waitFor()
+        assert.equal(
+          await t.page.getByLabel('自訂顯示暱稱', { exact: true }).inputValue(),
+          '甲方暱稱'
+        )
+        assert.equal(t.state.posts, 1)
+        return { pass: true }
+      } finally {
+        await t.context.close()
+      }
+    })
+    await run('重試登入過期保留原請求，同帳號重新登入後可確認原出價', async () => {
+      const t = await create()
+      try {
+        const requests = []
+        t.state.postHandler = (r) => {
+          requests.push(r.request().postDataJSON())
+          if (requests.length === 1) {
+            t.state.bids.push({ id: 'BEFORE-401', auction_id: id, amount: 500 })
+            return r.abort('failed')
+          }
+          if (requests.length === 2)
+            return r.fulfill({
+              status: 401,
+              json: { message: '重新登入', data: { outcome: 'not_submitted' } }
+            })
+          return r.fulfill({ json: receipt(t) })
+        }
+        await t.page.locator('.btn-bid').click()
+        await settle(t)
+        await t.page.getByRole('button', { name: '重試同一筆出價', exact: true }).click()
+        await t.page.getByRole('button', { name: 'Google 登入', exact: true }).waitFor()
+        assert.equal(
+          await t.page.evaluate(
+            () =>
+              Object.keys(sessionStorage).filter((k) => k.startsWith('auction-bid-request:')).length
+          ),
+          1
+        )
+        await t.page.evaluate(() => {
+          document
+            .querySelector('#__nuxt')
+            .__vue_app__.config.globalProperties.$pinia._s.get('main').currentUser = {
+            type: 'google',
+            email: 'auction-audit@example.invalid'
+          }
+        })
+        await t.page.getByRole('button', { name: '重試同一筆出價', exact: true }).click()
+        await settle(t)
+        assert.deepEqual(requests[1], requests[0])
+        assert.deepEqual(requests[2], requests[0])
+        assert.equal(t.state.bids.length, 2)
+        return { pass: true }
+      } finally {
+        await t.context.close()
+      }
+    })
+    await run('恢復請求顯示原金額與暱稱，完成後清除會員及email兩份舊暫存', async () => {
+      const t = await create()
+      try {
+        await t.page.evaluate((id) => {
+          const owner = 'auction-audit@example.invalid'
+          const pending = {
+            owner,
+            auctionId: id,
+            amount: 700,
+            nickname: '原出價暱稱',
+            requestId: '40000000-0000-4000-8000-000000000001'
+          }
+          for (const key of [owner, 'MEMBER-OLD'])
+            sessionStorage.setItem(
+              `auction-bid-request:${id}:${encodeURIComponent(key)}`,
+              JSON.stringify(key === 'MEMBER-OLD' ? { ...pending, amount: '毀損金額' } : pending)
+            )
+          document
+            .querySelector('#__nuxt')
+            .__vue_app__.config.globalProperties.$pinia._s.get('main').currentUser = {
+            id: 'MEMBER-OLD',
+            type: 'google',
+            email: owner
+          }
+        }, id)
+        await t.page.getByRole('button', { name: '重試同一筆出價', exact: true }).waitFor()
+        assert.equal(await t.page.getByLabel('出價金額', { exact: true }).inputValue(), '700')
+        assert.equal(
+          await t.page.getByLabel('自訂顯示暱稱', { exact: true }).inputValue(),
+          '原出價暱稱'
+        )
+        t.state.postHandler = (r) => {
+          assert.equal(r.request().postDataJSON().amount, 700)
+          t.state.bids.push({ id: 'LEGACY', auction_id: id, amount: 700 })
+          return r.fulfill({ json: receipt(t) })
+        }
+        await t.page.getByRole('button', { name: '重試同一筆出價', exact: true }).click()
+        await settle(t)
+        assert.equal(
+          await t.page.evaluate(
+            () =>
+              Object.keys(sessionStorage).filter((k) => k.startsWith('auction-bid-request:')).length
+          ),
+          0
+        )
+        return { pass: true }
+      } finally {
+        await t.context.close()
+      }
+    })
+    await run('前帳號延遲回執不清掉新帳號的待確認請求或彈出成功通知', async () => {
+      const t = await create()
+      try {
+        const gate = deferred()
+        t.state.postHandler = async (r) => {
+          await gate.promise
+          t.state.bids.push({ id: 'PREVIOUS-OWNER', auction_id: id, amount: 500 })
+          return r.fulfill({ json: receipt(t) })
+        }
+        await t.page.locator('.btn-bid').click()
+        while (t.state.posts === 0) await wait(10)
+        await t.page.evaluate((id) => {
+          const pending = {
+            owner: 'OTHER',
+            auctionId: id,
+            amount: 800,
+            nickname: '乙方',
+            requestId: '40000000-0000-4000-8000-000000000002'
+          }
+          sessionStorage.setItem(`auction-bid-request:${id}:OTHER`, JSON.stringify(pending))
+          document
+            .querySelector('#__nuxt')
+            .__vue_app__.config.globalProperties.$pinia._s.get('main').currentUser = {
+            id: 'OTHER',
+            type: 'google',
+            email: 'other@example.invalid'
+          }
+        }, id)
+        gate.release()
+        await t.page.getByRole('button', { name: '重試同一筆出價', exact: true }).waitFor()
+        await settle(t)
+        assert.equal(await t.page.getByLabel('出價金額', { exact: true }).inputValue(), '800')
+        assert.equal(await t.page.getByLabel('自訂顯示暱稱', { exact: true }).inputValue(), '乙方')
+        assert.equal(
+          await t.page.evaluate(
+            () =>
+              Object.keys(sessionStorage).filter((k) => k.startsWith('auction-bid-request:')).length
+          ),
+          1
+        )
+        assert.ok(!t.state.alerts.some((x) => x.includes('出價成功')))
+        return { pass: true }
+      } finally {
+        await t.context.close()
+      }
+    })
+    await run('直購僅開啟詢問，不建立出價；最高出價已達直購價後停用入口', async () => {
+      const t = await create()
+      try {
+        t.state.auction.buy_now_price = 600
+        await t.vm('refresh')
+        await t.page.evaluate(() => window.auditRefresh)
+        await t.page.evaluate(() => {
+          window.auditOpenedLinks = []
+          window.open = (url) => {
+            window.auditOpenedLinks.push(url)
+            return null
+          }
+        })
+        let confirmation = ''
+        t.page.on('dialog', (d) => {
+          if (d.type() === 'confirm') confirmation = d.message()
+        })
+        const button = t.page.getByRole('button', { name: '詢問直購（NT$ 600）', exact: true })
+        await button.click()
+        assert.ok(confirmation.includes('不會保留個體或結束競標'))
+        assert.equal(t.state.posts, 0)
+        const links = await t.page.evaluate(() => window.auditOpenedLinks)
+        assert.equal(links.length, 1)
+        assert.ok(decodeURIComponent(links[0]).includes('請協助確認是否仍可直購'))
+        t.state.bids.push({ id: 'OTHER-HIGHER', auction_id: id, amount: 600 })
+        await t.vm('refresh')
+        await t.page.evaluate(() => window.auditRefresh)
+        assert.equal(await button.isDisabled(), true)
+        await t.page.getByText('目前出價已達直購價，請依競標出價。', { exact: true }).waitFor()
+        assert.equal(t.state.auction.status, 'active')
+        return { pass: true }
+      } finally {
+        await t.context.close()
+      }
+    })
     await run('手機表單不超出畫面且暱稱可觸控輸入', async () => {
       const t = await create()
       try {

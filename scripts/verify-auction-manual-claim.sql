@@ -6,7 +6,7 @@ begin
  select user_id into strict other_uid from auth.identities where provider='custom:line-oauth' and provider_id=line_id;
  begin
   if exists(select 1 from private.auction_enrollments where auction_id not in ('TEST-AUCTION-20261016-01','TEST-AUCTION-MANUAL-ROLLBACK')) then raise exception '測試隔離失敗'; end if;
-  update private.auction_workflow_settings set processing_enabled=true;
+  update private.auction_workflow_settings set processing_enabled=true,auto_enroll_new=false;
   insert into public.auctions(id,title,morph,status,start_price,min_increment,end_time,note) values('TEST-AUCTION-MANUAL-ROLLBACK','回滾測試','回滾測試','active',100,100,end_at,'僅供回滾測試');
   insert into private.auction_enrollments(auction_id) values('TEST-AUCTION-MANUAL-ROLLBACK');
   insert into public.auction_bids(auction_id,user_id,user_name,amount,phone) values('TEST-AUCTION-MANUAL-ROLLBACK',uid,'測試得標',700,uid::text);
@@ -49,10 +49,26 @@ begin
   checks:=checks||jsonb_build_object('late_payment_can_be_reconciled',exists(select 1 from private.auction_outcomes where auction_id='TEST-AUCTION-MANUAL-ROLLBACK' and state='paid'));
   checks:=checks||jsonb_build_object('paid_auction_restriction_released',not exists(select 1 from private.auction_bid_restrictions where auction_id='TEST-AUCTION-MANUAL-ROLLBACK' and active));
   checks:=checks||jsonb_build_object('other_auction_restriction_preserved',exists(select 1 from private.auction_bid_restrictions where auction_id='TEST-AUCTION-CLAIM-SECOND' and active));
+  denied:=false;
+  begin perform public.admin_auction_action('TEST-AUCTION-MANUAL-ROLLBACK','unblock','測試已付款不可解封其他場'); exception when invalid_parameter_value then denied:=true; end;
+  checks:=checks||jsonb_build_object('paid_outcome_cannot_unblock',denied);
+  update private.auction_outcomes set state='abandoned' where auction_id in ('TEST-AUCTION-MANUAL-ROLLBACK','TEST-AUCTION-CLAIM-SECOND');
+  update private.auction_bid_restrictions set active=true where auction_id in ('TEST-AUCTION-MANUAL-ROLLBACK','TEST-AUCTION-CLAIM-SECOND');
+  perform public.admin_auction_action('TEST-AUCTION-MANUAL-ROLLBACK','unblock','測試只解除本場限制');
+  checks:=checks||jsonb_build_object('unblock_releases_selected_auction',not exists(select 1 from private.auction_bid_restrictions where auction_id='TEST-AUCTION-MANUAL-ROLLBACK' and active));
+  checks:=checks||jsonb_build_object('unblock_preserves_other_auction',exists(select 1 from private.auction_bid_restrictions where auction_id='TEST-AUCTION-CLAIM-SECOND' and active));
+  checks:=checks||jsonb_build_object('other_default_still_blocks_bids',private.auction_is_restricted(uid,line_id));
+  r:=public.admin_auction_workflow('TEST-AUCTION-MANUAL-ROLLBACK');
+  checks:=checks||jsonb_build_object('admin_distinguishes_released_auction_from_other_ban',coalesce(r->'outcome'->>'auction_restricted'='false' and r->'outcome'->>'restricted'='true',false));
+  perform public.admin_auction_action('TEST-AUCTION-CLAIM-SECOND','unblock','測試解除第二場限制');
+  checks:=checks||jsonb_build_object('all_resolved_allows_bidding',not private.auction_is_restricted(uid,line_id));
   raise exception using errcode='PZ999',message='完整回滾領標測試';
  exception when sqlstate 'PZ999' then null;
  end;
  perform set_config('gencko.manual_claim_audit',checks::text,true);
+ if exists(select 1 from jsonb_each(checks) where value is distinct from 'true'::jsonb) then
+  raise exception '領標回歸檢查失敗：%',checks;
+ end if;
 end $audit$;
 select current_setting('gencko.manual_claim_audit')::jsonb as checks,
 exists(select 1 from public.auctions where id='TEST-AUCTION-MANUAL-ROLLBACK') as leaked_test_fixture;

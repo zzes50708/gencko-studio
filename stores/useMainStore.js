@@ -1,8 +1,9 @@
 import { defineStore } from 'pinia'
-import { isAuctionListed, auctionState } from '~/utils/auction-presentation'
+import { isAuctionListed, auctionState, readAuctionCatalog } from '~/utils/auction-presentation'
 import { ref, computed, watch } from 'vue'
 import { sanitizeCompareIds } from '~/utils/shop-catalog'
-import { useSupabaseClient } from '#imports'
+import { useSupabaseClient, useState } from '#imports'
+import { sampleAuctionClock, auctionClockNow } from '~/utils/auction-detail'
 import { useRouter } from 'vue-router'
 import { memberFromSupabaseUser } from '~/utils/member-auth'
 import { withRetry } from '~/utils/supabase-retry'
@@ -10,6 +11,28 @@ import { withRetry } from '~/utils/supabase-retry'
 export const useMainStore = defineStore('main', () => {
   const supabase = useSupabaseClient()
   const router = useRouter()
+  const initialAuctionEpoch = useState('auction-global-epoch', () => Date.now())
+  let auctionClockAnchor = {
+    epoch: initialAuctionEpoch.value,
+    monotonic: import.meta.client ? performance.now() : 0
+  }
+  const auctionNow = () =>
+    import.meta.client ? auctionClockNow(auctionClockAnchor, performance.now()) : Date.now()
+  async function syncAuctionClock() {
+    if (!import.meta.client) return
+    const sentAt = performance.now()
+    try {
+      const result = await $fetch('/api/server-time', {
+        retry: 0,
+        timeout: 4000,
+        cache: 'no-store'
+      })
+      const sample = sampleAuctionClock(result.serverTime, sentAt, performance.now())
+      if (sample) auctionClockAnchor = sample
+    } catch {
+      // 無法連線時沿用最近一次伺服器時間，避免退回裝置時鐘。
+    }
+  }
 
   // --- 核心狀態 ---
   const loading = ref(false)
@@ -31,8 +54,11 @@ export const useMainStore = defineStore('main', () => {
   const auctionList = ref([])
   const recentAuctionList = ref([])
   const setAuctionLists = (rows) => {
-    recentAuctionList.value = (rows || []).filter((a) => isAuctionListed(a))
-    auctionList.value = recentAuctionList.value.filter((a) => auctionState(a).status === 'active')
+    const now = auctionNow()
+    recentAuctionList.value = (rows || []).filter((a) => isAuctionListed(a, now))
+    auctionList.value = recentAuctionList.value.filter((a) =>
+      ['active', 'scheduled'].includes(auctionState(a, now).status)
+    )
   }
   // 展場模式設定（來自 Supabase site_settings 單列表；表不存在時保持 null＝非展場）
   const siteSettings = ref(null)
@@ -309,20 +335,32 @@ export const useMainStore = defineStore('main', () => {
 
   const auctionLoading = ref(false)
   const auctionError = ref(null)
-  async function loadAuctions() {
-    if (auctionLoading.value) return
+  let auctionReadTask = null
+  let auctionReadPending = false
+  function requestAuctionRefresh() {
+    auctionReadPending = true
+    void loadAuctions()
+  }
+  function loadAuctions() {
+    // 共用同一讀取工作，讓列表能等到全站初始化的讀取完成再查價格。
+    if (auctionReadTask) return auctionReadTask
+    auctionReadTask = (async () => {
+      do {
+        auctionReadPending = false
+        await readAuctions()
+      } while (auctionReadPending)
+    })().finally(() => {
+      auctionReadTask = null
+    })
+    return auctionReadTask
+  }
+  async function readAuctions() {
     auctionLoading.value = true
     auctionError.value = null
     try {
-      const now = new Date(Date.now() - 48 * 3600000).toISOString()
+      await syncAuctionClock()
       const { data: auctionsData, error } = await withRetry(
-        () =>
-          supabase
-            .from('auctions')
-            .select('*')
-            .in('status', ['active', 'ended'])
-            .gt('end_time', now)
-            .order('end_time', { ascending: true }),
+        async () => ({ data: await readAuctionCatalog(supabase, auctionNow()), error: null }),
         { label: 'auctions' }
       )
 
@@ -346,26 +384,22 @@ export const useMainStore = defineStore('main', () => {
           .on(
             'postgres_changes',
             { event: 'UPDATE', schema: 'public', table: 'auctions' },
-            (payload) => {
-              const updatedAuction = payload.new
-              setAuctionLists([
-                ...recentAuctionList.value.filter((a) => a.id !== updatedAuction.id),
-                updatedAuction
-              ])
-            }
+            requestAuctionRefresh
           )
           .on(
             'postgres_changes',
             { event: 'INSERT', schema: 'public', table: 'auctions' },
-            (payload) => {
-              const newAuction = payload.new
-              setAuctionLists([
-                ...recentAuctionList.value.filter((a) => a.id !== newAuction.id),
-                newAuction
-              ])
-            }
+            requestAuctionRefresh
           )
-          .subscribe()
+          .on(
+            'postgres_changes',
+            { event: 'DELETE', schema: 'public', table: 'auctions' },
+            requestAuctionRefresh
+          )
+          .subscribe((status) => {
+            // 訂閱成功或重連時補查斷線期間可能漏掉的異動。
+            if (status === 'SUBSCRIBED') requestAuctionRefresh()
+          })
 
         isAuctionSubscribed.value = true
       }
@@ -641,6 +675,7 @@ export const useMainStore = defineStore('main', () => {
     loadDataFromAPI,
     ensureInventoryLoaded,
     loadAuctions,
+    auctionNow,
     auctionLoading,
     auctionError,
     initLiff,

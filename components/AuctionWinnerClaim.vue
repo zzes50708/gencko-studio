@@ -4,7 +4,8 @@ import { getLineMessageLink } from '~/utils/animal-inquiry'
 const props = defineProps({
   auctionId: { type: String, required: true },
   memberId: { type: String, required: true },
-  initialOutcome: { type: Object, default: null }
+  initialOutcome: { type: Object, default: null },
+  disabled: { type: Boolean, default: false }
 })
 const supabase = useSupabaseClient()
 const outcome = ref(props.initialOutcome)
@@ -12,7 +13,11 @@ const text = ref('')
 const message = ref('')
 const busy = ref(false)
 const loading = ref(false)
+const canClaim = computed(
+  () => outcome.value && !['cancelled', 'no_bids'].includes(outcome.value.state)
+)
 let revision = 0
+let loadRevision = 0
 const lineLink = computed(() => getLineMessageLink('https://line.me/R/ti/p/@219abdzn', text.value))
 const deadline = computed(() =>
   outcome.value?.payment_due_at
@@ -23,23 +28,28 @@ const deadline = computed(() =>
     : '待工作室確認'
 )
 async function load() {
-  const request = revision
+  const owner = revision
+  const request = ++loadRevision
   loading.value = true
+  outcome.value = null
+  text.value = ''
+  message.value = ''
   try {
     const { data, error } = await supabase.rpc('my_auction_outcome', {
       p_auction_id: props.auctionId
     })
-    if (request !== revision) return
+    if (owner !== revision || request !== loadRevision) return
     if (error) throw error
     outcome.value = data
   } catch {
-    if (request === revision) message.value = '暫時無法確認得標結果，請重試。'
+    if (owner === revision && request === loadRevision)
+      message.value = '暫時無法確認得標結果，請重試。'
   } finally {
-    if (request === revision) loading.value = false
+    if (owner === revision && request === loadRevision) loading.value = false
   }
 }
 async function copyClaim() {
-  if (busy.value) return
+  if (props.disabled || busy.value || loading.value || !canClaim.value) return
   const request = revision
   busy.value = true
   message.value = ''
@@ -68,7 +78,14 @@ async function copyClaim() {
 watch(
   () => props.initialOutcome,
   (value) => {
-    if (value) outcome.value = value
+    // 更新結算結果時，同時撤下舊訊息並讓先前的非同步請求失效。
+    revision++
+    outcome.value = value
+    text.value = ''
+    message.value = ''
+    busy.value = false
+    loading.value = false
+    if (!value) void load()
   }
 )
 watch(
@@ -79,6 +96,7 @@ watch(
     text.value = ''
     message.value = ''
     busy.value = false
+    loading.value = false
     if (!props.initialOutcome) void load()
   }
 )
@@ -95,10 +113,27 @@ onBeforeUnmount(() => {
   <section class="winner-claim" aria-label="得標領標">
     <template v-if="outcome">
       <h3>本場得標確認</h3>
-      <p>成交金額 NT$ {{ outcome.amount?.toLocaleString('zh-TW') }} · 付款期限 {{ deadline }}</p>
-      <p>複製訊息後，請自行貼到 Gencko 官方 LINE（@219abdzn）領標；收到款項後由工作室核帳。</p>
-      <p v-if="outcome.claimed_at">已收到 LINE 領標訊息。</p>
-      <button type="button" class="btn-app btn-app--primary" :disabled="busy" @click="copyClaim">
+      <template v-if="canClaim">
+        <p>成交金額 NT$ {{ outcome.amount?.toLocaleString('zh-TW') }}</p>
+        <p v-if="outcome.state === 'paid'">
+          工作室已確認付款，請勿重複付款。可透過官方 LINE 確認交付。
+        </p>
+        <p v-else-if="outcome.state === 'abandoned'">
+          本場已標記棄標，請先聯絡工作室確認處理方式。
+        </p>
+        <p v-else>付款期限 {{ deadline }}</p>
+        <p>複製訊息後，請自行貼到 Gencko 官方 LINE（@219abdzn）領標；收到款項後由工作室核帳。</p>
+        <p v-if="outcome.claimed_at">已收到 LINE 領標訊息。</p>
+      </template>
+      <p v-else-if="outcome.state === 'cancelled'">本場已取消，不需付款；如有疑問請聯絡工作室。</p>
+      <p v-else>本場無得標紀錄，不需付款。</p>
+      <button
+        v-if="canClaim"
+        type="button"
+        class="btn-app btn-app--primary"
+        :disabled="props.disabled || busy || loading"
+        @click="copyClaim"
+      >
         {{ busy ? '產生中…' : '複製得標確認訊息' }}
       </button>
       <template v-if="text">
@@ -118,7 +153,12 @@ onBeforeUnmount(() => {
     <p v-else-if="loading">正在確認本帳號的得標結果…</p>
     <p v-else>此帳號沒有可領標紀錄，或結果仍在確認中；請使用出價時的帳號登入。</p>
     <p role="status">{{ message }}</p>
-    <button type="button" class="btn-app btn-app--ghost" :disabled="loading || busy" @click="load">
+    <button
+      type="button"
+      class="btn-app btn-app--ghost"
+      :disabled="props.disabled || loading || busy"
+      @click="load"
+    >
       重新確認得標結果
     </button>
   </section>

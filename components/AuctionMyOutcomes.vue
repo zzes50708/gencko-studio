@@ -8,7 +8,12 @@ const loading = ref(false)
 const busy = ref(false)
 const abandoning = ref('')
 let revision = 0
+let loadRevision = 0
 let mounted = false
+let refreshTimer
+function resumeRefresh() {
+  if (!document.hidden && !loading.value && !busy.value && !abandoning.value) void load(true)
+}
 const labels = {
   pending_contact: '等待建立 LINE 聯絡',
   awaiting_notice: '等待得標通知',
@@ -22,25 +27,36 @@ const time = (value) =>
   value
     ? new Date(value).toLocaleString('zh-TW', { timeZone: 'Asia/Taipei', hour12: false })
     : '尚未開始'
-async function load() {
-  const request = revision
+async function load(quiet = false) {
+  quiet = quiet === true
+  const owner = revision
+  const request = ++loadRevision
   loading.value = true
+  message.value = ''
   try {
     const { data, error } = await supabase.rpc('my_auction_outcomes')
-    if (request !== revision) return
+    if (owner !== revision || request !== loadRevision) return false
     if (error) throw error
-    rows.value = data || []
+    if (!Array.isArray(data)) throw Error('得標紀錄回應不完整')
+    // 背景查詢內容未變時沿用原物件，避免清除客人剛複製的領標訊息。
+    const previous = new Map(rows.value.map((row) => [row.auction_id, row]))
+    rows.value = data.map((row) => {
+      const old = previous.get(row.auction_id)
+      return quiet && old && JSON.stringify(old) === JSON.stringify(row) ? old : row
+    })
+    return true
   } catch {
-    if (request === revision) {
+    if (owner === revision && request === loadRevision) {
       rows.value = []
       message.value = '得標紀錄暫時無法載入，請重試。'
     }
+    return false
   } finally {
-    if (request === revision) loading.value = false
+    if (owner === revision && request === loadRevision) loading.value = false
   }
 }
 async function act(id, action) {
-  if (busy.value) return
+  if (busy.value || loading.value) return
   const request = revision
   busy.value = true
   message.value = ''
@@ -49,11 +65,15 @@ async function act(id, action) {
     if (request !== revision) return
     if (error) throw error
     abandoning.value = ''
-    message.value =
+    const successMessage =
       action === 'report_auction_payment'
         ? '已送出付款回報，等待工作室核帳。'
         : '已確認棄標，網站出價功能將被限制，LINE 聯絡不受影響。'
-    await load()
+    const refreshed = await load()
+    if (request !== revision) return
+    message.value = refreshed
+      ? successMessage
+      : '操作已送出，但未能重新確認最新紀錄。請重新載入，不要重複操作。'
   } catch {
     if (request === revision) message.value = '未能確認操作結果，請重新載入紀錄；勿重複付款。'
   } finally {
@@ -74,8 +94,14 @@ watch(
 onMounted(() => {
   mounted = true
   void load()
+  refreshTimer = setInterval(resumeRefresh, 15000)
+  document.addEventListener('visibilitychange', resumeRefresh)
+  window.addEventListener('online', resumeRefresh)
 })
 onBeforeUnmount(() => {
+  clearInterval(refreshTimer)
+  document.removeEventListener('visibilitychange', resumeRefresh)
+  window.removeEventListener('online', resumeRefresh)
   revision++
   rows.value = []
 })
@@ -97,18 +123,21 @@ onBeforeUnmount(() => {
         :auction-id="row.auction_id"
         :member-id="memberId"
         :initial-outcome="row"
+        :disabled="loading || busy"
       />
-      <p v-if="row.notification_status === 'failed'">
+      <p v-if="row.notification_status === 'failed' && !['paid', 'cancelled'].includes(row.state)">
         通知未成功，付款期限尚未開始。請聯絡官方 LINE 確認。
       </p>
-      <p v-if="row.payment_due_at">付款期限：{{ time(row.payment_due_at) }}</p>
+      <p v-if="row.payment_due_at && !['paid', 'cancelled'].includes(row.state)">
+        付款期限：{{ time(row.payment_due_at) }}
+      </p>
       <p v-if="row.state === 'payment_review'">工作室核帳期間不會因原期限到期自動限制出價。</p>
       <template v-if="row.state === 'awaiting_payment' && row.notification_status !== 'manual'">
         <p>請透過官方 LINE 確認付款方式；實際完成付款後再回報。</p>
         <button
           type="button"
           class="btn-app btn-app--primary"
-          :disabled="busy"
+          :disabled="busy || loading"
           @click="act(row.auction_id, 'report_auction_payment')"
         >
           我已付款，送出核帳
@@ -139,7 +168,7 @@ onBeforeUnmount(() => {
           v-if="abandoning !== row.auction_id"
           type="button"
           class="btn-app btn-app--ghost"
-          :disabled="busy"
+          :disabled="busy || loading"
           @click="abandoning = row.auction_id"
         >
           申請棄標
@@ -149,12 +178,17 @@ onBeforeUnmount(() => {
           <button
             type="button"
             class="btn-app btn-app--secondary"
-            :disabled="busy"
+            :disabled="busy || loading"
             @click="act(row.auction_id, 'abandon_auction')"
           >
             確認棄標並限制出價
           </button>
-          <button type="button" class="btn-app btn-app--ghost" @click="abandoning = ''">
+          <button
+            type="button"
+            class="btn-app btn-app--ghost"
+            :disabled="busy || loading"
+            @click="abandoning = ''"
+          >
             取消
           </button>
         </div>

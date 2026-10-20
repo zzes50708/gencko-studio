@@ -49,9 +49,9 @@ enabled = true
 policy = "oneshot"
 inspector_port = 8083
 
-# 既有 edge function：競標結束時自動結算
+# 舊入口已停用，僅保留拒絕回應；正式結標由 auction-workflow 處理。
 [functions.end-auction]
-verify_jwt = false
+verify_jwt = true
 
 # Webhook 驗證 LINE HMAC；排程入口另驗證專用秘密。
 [functions.auction-workflow]

@@ -81,7 +81,10 @@ const cases = [
   { name: '無效請求編號', body: { amount: 500, requestId: 'invalid' } },
   { name: '回執金額不符', body: { amount: 500 }, wrongReceipt: true },
   { name: 'LINE 無 email 會員', body: { amount: 500 }, line: true },
-  { name: '偽造 LINE 個人資料', body: { amount: 500 }, spoofLine: true }
+  { name: '偽造 LINE 個人資料', body: { amount: 500 }, spoofLine: true },
+  { name: '資料庫拒絕不支援登入方式', body: { amount: 500 }, rpcError: {
+    code: '42501', message: '競標出價需使用 Google 或 LINE 帳號登入'
+  } }
 ]
 try {
   for (const test of cases) {
@@ -137,14 +140,15 @@ try {
       rpcCalls: calls
     })
   }
-  const expected = [503, 503, 400, 400, 400, 503, 503, 200, 401, 403, 400, 400, 503, 200, 403]
+  const expected = [503, 503, 400, 400, 400, 503, 503, 200, 401, 403, 400, 400, 503, 200, 403, 400]
   for (let i = 0; i < out.length; i++) {
     if (JSON.stringify(out[i].response).includes('AUDIT_INTERNAL_DETAIL_NOT_FOR_CUSTOMER'))
       throw Error('內部錯誤外洩')
     if (out[i].status !== expected[i]) throw Error(out[i].name + ': ' + out[i].status)
     if ([2, 3, 4, 8, 9, 11, 14].includes(i) && out[i].rpcCalls.length) throw Error('無效金額進入RPC')
   }
-  console.log('競標 API 十五項故障回歸通過')
+  if (out[15].response?.data?.outcome !== 'rejected') throw Error('登入方式拒絕被誤判為出價待確認')
+  console.log('競標 API 十六項故障回歸通過')
 } finally {
   await new Promise((r) => server.close(r))
 }

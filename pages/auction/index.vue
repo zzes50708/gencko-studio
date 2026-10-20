@@ -3,12 +3,14 @@ import { computed, ref, onMounted, onUnmounted, watch } from 'vue'
 import { useHead, useAsyncData, useSupabaseClient } from '#imports'
 import { useMainStore } from '~/stores/useMainStore'
 import { getCleanUrl } from '~/utils/image'
+import { serializeJsonLd } from '~/utils/structured-data'
 import {
   auctionState,
   auctionCountdown,
   hasBuyNowPrice,
   summarizeAuctionBids,
   readAuctionBids,
+  readAuctionCatalog,
   isAuctionListed
 } from '~/utils/auction-presentation'
 
@@ -18,10 +20,11 @@ const supabase = useSupabaseClient()
 // SSR：抓取進行中的競標（給 schema 用）
 const { data: ssrAuctions } = await useAsyncData('auction-list-seo-v1', async () => {
   try {
-    const { data, error } = await supabase
-      .from('auctions')
-      .select('id, morph, gender, start_price, buy_now_price, end_time, images, note, status')
-    if (error || !data) return []
+    const data = await readAuctionCatalog(
+      supabase,
+      Date.now(),
+      'id, morph, gender, start_price, buy_now_price, start_time, end_time, images, note, status'
+    )
     // 過濾掉已結束的（schema 只放進行中以維持品質）
     const nowMs = Date.now()
     return data
@@ -144,7 +147,7 @@ const auctionFaqLd = {
       name: '什麼是「直購價」？',
       acceptedAnswer: {
         '@type': 'Answer',
-        text: '直購價（Buy Now）讓你以固定金額直接購買，不需參與競標。多數場次同時提供起標價與直購價，可依預算與心儀程度選擇。'
+        text: '提供直購價的場次可前往官方 LINE 詢問。點擊詢問不會保留個體或結束競標，是否可直購須由工作室確認；目前出價已達直購價時，請依競標出價。'
       }
     },
     {
@@ -221,8 +224,8 @@ useHead({
   ],
   link: [{ rel: 'canonical', href: auctionUrl }],
   script: computed(() => [
-    { type: 'application/ld+json', innerHTML: JSON.stringify(auctionWebPageLd.value) },
-    { type: 'application/ld+json', innerHTML: JSON.stringify(auctionBreadcrumbLd) }
+    { type: 'application/ld+json', innerHTML: serializeJsonLd(auctionWebPageLd.value) },
+    { type: 'application/ld+json', innerHTML: serializeJsonLd(auctionBreadcrumbLd) }
   ])
 })
 
@@ -242,12 +245,14 @@ const displayAuctions = computed(() =>
     })
 )
 
-const now = ref(new Date().getTime())
+const now = ref(store.auctionNow())
 let timer = null
 let refreshTimer = null
 let summaryController = null
 let disposed = false
 let refreshing = false
+let refreshPending = false
+let auctionListChannel = null
 const bidSummaries = ref({})
 const summaryError = ref(false)
 const summaryReady = ref(false)
@@ -276,12 +281,20 @@ const loadSummary = async () => {
   }
 }
 const refreshAuctions = async () => {
-  if (disposed || refreshing) return
+  if (disposed) return
+  if (refreshing) {
+    refreshPending = true
+    return
+  }
   refreshing = true
   try {
-    await store.loadAuctions()
-    // 切頁後不再延續舊頁的摘要更新。
-    if (!disposed) await loadSummary()
+    do {
+      refreshPending = false
+      await store.loadAuctions()
+      now.value = store.auctionNow()
+      // 切頁後不再延續舊頁的摘要更新。
+      if (!disposed) await loadSummary()
+    } while (refreshPending && !disposed)
   } finally {
     refreshing = false
   }
@@ -299,10 +312,22 @@ watch(
 
 onMounted(() => {
   void refreshAuctions()
+  auctionListChannel = supabase
+    .channel('auction-list-live')
+    .on(
+      'postgres_changes',
+      { event: 'INSERT', schema: 'public', table: 'auction_bids' },
+      resumeRefresh
+    )
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'auctions' }, resumeRefresh)
+    .subscribe((status) => {
+      if (status === 'SUBSCRIBED') resumeRefresh()
+    })
   refreshTimer = setInterval(resumeRefresh, 15000)
   document.addEventListener('visibilitychange', resumeRefresh)
+  window.addEventListener('online', resumeRefresh)
   timer = setInterval(() => {
-    now.value = new Date().getTime()
+    now.value = store.auctionNow()
   }, 1000)
 })
 
@@ -318,12 +343,15 @@ onUnmounted(() => {
   clearInterval(refreshTimer)
   summaryController?.abort()
   document.removeEventListener('visibilitychange', resumeRefresh)
+  window.removeEventListener('online', resumeRefresh)
+  if (auctionListChannel) void supabase.removeChannel(auctionListChannel)
 })
 
 const getAuctionStatus = (item) => auctionState(item, now.value)
 
 const isEndingSoon = (item) => {
   if (!item) return false
+  if (getAuctionStatus(item).status !== 'active') return false
   const diff = new Date(item.end_time).getTime() - now.value
   return diff > 0 && diff <= 180000 // 3 分鐘內
 }
@@ -465,13 +493,25 @@ const formatPrice = (value, fallback) => {
               <ClientOnly>
                 <div
                   class="countdown"
-                  :role="getAuctionStatus(item).status === 'active' ? 'timer' : 'status'"
+                  :role="getAuctionStatus(item).status === 'ended' ? 'status' : 'timer'"
                   :aria-label="
-                    getAuctionStatus(item).status === 'active' ? '競標剩餘時間' : '場次保留期限'
+                    getAuctionStatus(item).status === 'scheduled'
+                      ? '距離開標時間'
+                      : getAuctionStatus(item).status === 'active'
+                        ? '競標剩餘時間'
+                        : '場次保留期限'
                   "
                   :class="{ 'ending-soon': isEndingSoon(item) }"
                 >
-                  <span>{{ getAuctionStatus(item).status === 'ended' ? '保留至' : '剩餘' }}</span>
+                  <span>
+                    {{
+                      getAuctionStatus(item).status === 'ended'
+                        ? '保留至'
+                        : getAuctionStatus(item).status === 'scheduled'
+                          ? '即將開標'
+                          : '剩餘'
+                    }}
+                  </span>
                   <strong>
                     {{
                       getAuctionStatus(item).status === 'ended'
