@@ -70,6 +70,16 @@ async function load(quiet = false) {
     })
     if (owner !== revision || request !== loadRevision) return false
     if (error) throw error
+    if (
+      !result ||
+      typeof result.enabled !== 'boolean' ||
+      !Object.hasOwn(result, 'outcome') ||
+      (result.outcome !== null &&
+        (typeof result.outcome !== 'object' ||
+          Array.isArray(result.outcome) ||
+          typeof result.outcome.state !== 'string'))
+    )
+      throw Error('管理資料回應不完整')
     data.value = result
     return true
   } catch {

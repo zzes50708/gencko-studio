@@ -1,6 +1,8 @@
 <script setup>
 import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
 import { getLineMessageLink } from '~/utils/animal-inquiry'
+import { isAuctionOutcome } from '~/utils/auction-outcomes'
+import { useMainStore } from '~/stores/useMainStore'
 const props = defineProps({
   auctionId: { type: String, required: true },
   memberId: { type: String, required: true },
@@ -8,6 +10,7 @@ const props = defineProps({
   disabled: { type: Boolean, default: false }
 })
 const supabase = useSupabaseClient()
+const store = useMainStore()
 const outcome = ref(props.initialOutcome)
 const text = ref('')
 const message = ref('')
@@ -18,6 +21,22 @@ const canClaim = computed(
 )
 let revision = 0
 let loadRevision = 0
+let expiryTimer
+let expiresAt = 0
+function clearClaim() {
+  clearTimeout(expiryTimer)
+  expiresAt = 0
+  text.value = ''
+}
+function checkClaimExpiry() {
+  clearTimeout(expiryTimer)
+  if (!text.value || !expiresAt) return
+  const remaining = expiresAt - store.auctionNow()
+  if (remaining <= 0) {
+    clearClaim()
+    message.value = '領標驗證碼已過期，請重新產生訊息後傳送。'
+  } else expiryTimer = setTimeout(checkClaimExpiry, Math.min(remaining, 2147483647))
+}
 const lineLink = computed(() => getLineMessageLink('https://line.me/R/ti/p/@219abdzn', text.value))
 const deadline = computed(() =>
   outcome.value?.payment_due_at
@@ -32,7 +51,7 @@ async function load() {
   const request = ++loadRevision
   loading.value = true
   outcome.value = null
-  text.value = ''
+  clearClaim()
   message.value = ''
   try {
     const { data, error } = await supabase.rpc('my_auction_outcome', {
@@ -40,6 +59,7 @@ async function load() {
     })
     if (owner !== revision || request !== loadRevision) return
     if (error) throw error
+    if (data !== null && !isAuctionOutcome(data, props.auctionId)) throw Error('得標回應不完整')
     outcome.value = data
   } catch {
     if (owner === revision && request === loadRevision)
@@ -58,17 +78,30 @@ async function copyClaim() {
       p_auction_id: props.auctionId
     })
     if (request !== revision) return
-    if (error || !data?.message) throw Error()
+    if (
+      error ||
+      typeof data?.message !== 'string' ||
+      !data.message.trim() ||
+      typeof data.expires_at !== 'string' ||
+      !Number.isFinite(Date.parse(data.expires_at)) ||
+      Date.parse(data.expires_at) <= store.auctionNow() ||
+      data.amount !== outcome.value?.amount
+    )
+      throw Error('領標回應不完整或已過期')
     text.value = data.message
+    expiresAt = Date.parse(data.expires_at)
+    checkClaimExpiry()
     try {
       await navigator.clipboard.writeText(text.value)
-      if (request === revision) message.value = '已複製，請貼到官方 LINE 並傳送，完成領標。'
+      if (request === revision && text.value === data.message)
+        message.value = '已複製，請貼到官方 LINE 並傳送，完成領標。'
     } catch {
-      if (request === revision) message.value = '請選取下方完整訊息複製，貼到官方 LINE 並傳送。'
+      if (request === revision && text.value === data.message)
+        message.value = '請選取下方完整訊息複製，貼到官方 LINE 並傳送。'
     }
   } catch {
     if (request === revision) {
-      text.value = ''
+      clearClaim()
       message.value = '未能產生領標訊息，請確認使用出價時的帳號登入，再重新確認結果。'
     }
   } finally {
@@ -81,7 +114,7 @@ watch(
     // 更新結算結果時，同時撤下舊訊息並讓先前的非同步請求失效。
     revision++
     outcome.value = value
-    text.value = ''
+    clearClaim()
     message.value = ''
     busy.value = false
     loading.value = false
@@ -93,7 +126,7 @@ watch(
   () => {
     revision++
     outcome.value = props.initialOutcome
-    text.value = ''
+    clearClaim()
     message.value = ''
     busy.value = false
     loading.value = false
@@ -101,11 +134,15 @@ watch(
   }
 )
 onMounted(() => {
+  document.addEventListener('visibilitychange', checkClaimExpiry)
+  window.addEventListener('online', checkClaimExpiry)
   if (!props.initialOutcome) void load()
 })
 onBeforeUnmount(() => {
   revision++
-  text.value = ''
+  clearClaim()
+  document.removeEventListener('visibilitychange', checkClaimExpiry)
+  window.removeEventListener('online', checkClaimExpiry)
   outcome.value = null
 })
 </script>

@@ -1,5 +1,6 @@
 <script setup>
 import { ref, watch, onBeforeUnmount, onMounted } from 'vue'
+import { isAuctionOutcome } from '~/utils/auction-outcomes'
 const props = defineProps({ memberId: { type: String, required: true } })
 const supabase = useSupabaseClient()
 const rows = ref([])
@@ -37,7 +38,8 @@ async function load(quiet = false) {
     const { data, error } = await supabase.rpc('my_auction_outcomes')
     if (owner !== revision || request !== loadRevision) return false
     if (error) throw error
-    if (!Array.isArray(data)) throw Error('得標紀錄回應不完整')
+    if (!Array.isArray(data) || data.some((row) => !isAuctionOutcome(row)))
+      throw Error('得標紀錄回應不完整')
     // 背景查詢內容未變時沿用原物件，避免清除客人剛複製的領標訊息。
     const previous = new Map(rows.value.map((row) => [row.auction_id, row]))
     rows.value = data.map((row) => {

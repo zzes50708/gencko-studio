@@ -129,8 +129,9 @@ async function loadAuctions() {
         .range(offset, offset + 499)
       if (request !== listRevision) return
       if (error) throw error
-      result.push(...(data || []))
-      if (!data || data.length < 500) break
+      if (!Array.isArray(data)) throw Error('場次列表回應不完整')
+      result.push(...data)
+      if (data.length < 500) break
     }
     auctions.value = result
     if (selectedAuction.value) {

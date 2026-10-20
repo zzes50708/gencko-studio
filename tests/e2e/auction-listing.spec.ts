@@ -74,6 +74,26 @@ async function setup(page: any, mode = 'success') {
 
 test('管理員可直接選個體立即上架，表單可在手機操作且搜尋Enter不誤上架', async ({ page }) => {
   const requests = await setup(page)
+  await expect(page.getByLabel('起標價（元）', { exact: true })).toHaveValue('200')
+  await expect(page.getByLabel('起標價（元）', { exact: true })).toHaveAttribute('step', '100')
+  await expect(page.getByLabel('開標方式', { exact: true })).toHaveValue('scheduled')
+  await expect(page.getByLabel('開標時間（台灣）', { exact: true })).toHaveValue(/T10:00$/)
+  await expect(page.getByLabel('結標時間（台灣）', { exact: true })).toHaveValue(/T22:00$/)
+  await page.getByLabel('起標價（元）', { exact: true }).press('ArrowUp')
+  await expect(page.getByLabel('起標價（元）', { exact: true })).toHaveValue('300')
+  await page.getByLabel('起標價（元）', { exact: true }).press('ArrowDown')
+  await expect(page.getByLabel('起標價（元）', { exact: true })).toHaveValue('200')
+  await expect(page.getByLabel('餌料', { exact: true })).toHaveValue('冷凍蟋蟀/杜比亞')
+  await expect(page.getByLabel('餵食頻率', { exact: true }).locator('option')).toHaveText([
+    '1-2天/次',
+    '3-4天/次',
+    '一週一次'
+  ])
+  await expect(
+    page.getByText('運送／面交：黑貓 +180 元；三重面交免運', { exact: true })
+  ).toBeVisible()
+  await page.getByLabel('開標方式', { exact: true }).selectOption('now')
+  await page.getByLabel('餵食頻率', { exact: true }).selectOption('3-4天/次')
   await page.getByLabel('個體 ID 或品系', { exact: true }).fill('TEST-NEW')
   await page.getByLabel('個體 ID 或品系', { exact: true }).press('Enter')
   expect(requests).toHaveLength(0)
@@ -93,6 +113,9 @@ test('管理員可直接選個體立即上架，表單可在手機操作且搜�
   expect(requests).toHaveLength(1)
   expect(requests[0].p_start_time).toBeNull()
   expect(requests[0].p_animal_id).toBe('TEST-NEW')
+  expect(requests[0].p_diet).toBe('冷凍蟋蟀/杜比亞')
+  expect(requests[0].p_feeding_freq).toBe('3-4天/次')
+  expect(requests[0].p_shipping_info).toBe('黑貓 +180 元；三重面交免運')
 })
 
 test('預約採台灣時間，拒絕結標早於開標，成功後顯示尚未開標', async ({ page }) => {
@@ -143,6 +166,56 @@ test('上架回執遺失後重新整理，仍沿用原請求且不重建場次',
   ).toBeNull()
 })
 
+test('個體另有未完成得標交易時，清除已拒絕的請求並讓管理員重新選取', async ({ page }) => {
+  await setup(page)
+  let calls = 0
+  await page.route('**/rest/v1/rpc/admin_create_auction', (r) => {
+    calls++
+    return r.fulfill({
+      status: 400,
+      json: { code: '22023', message: '此個體尚有未結束場次或待處理交易，請先處理原場次' }
+    })
+  })
+  await page.getByRole('button', { name: '確認上架', exact: true }).click()
+  await expect(
+    page.getByText('此個體尚有未結束場次或待處理交易，請先處理原場次', { exact: true })
+  ).toBeVisible()
+  await expect(page.getByLabel('起標價（元）', { exact: true })).toBeEnabled()
+  await expect(page.getByRole('button', { name: '重試同一筆上架', exact: true })).toHaveCount(0)
+  expect(
+    await page.evaluate(() => sessionStorage.getItem('auction-listing-pending:ADMIN-LISTING'))
+  ).toBeNull()
+  expect(calls).toBe(1)
+})
+
+test('個體搜尋異常不得冒充沒有庫存，重試可恢復；清單滿額提示縮小搜尋', async ({ page }) => {
+  await setup(page)
+  for (const payload of [null, {}, [null], [{ id: 'BROKEN' }]]) {
+    await page.route('**/rest/v1/rpc/admin_auction_candidates', (r) => r.fulfill({ json: payload }))
+    await page.getByRole('button', { name: '搜尋個體', exact: true }).click()
+    await expect(
+      page.getByText('個體搜尋失敗，請確認管理權限後重試。', { exact: true })
+    ).toBeVisible()
+    await expect(
+      page.getByText('找不到可上架個體，請換個 ID 或確認個體狀態。', { exact: true })
+    ).toHaveCount(0)
+  }
+  await page.route('**/rest/v1/rpc/admin_auction_candidates', (r) => r.fulfill({ json: [] }))
+  await page.getByRole('button', { name: '搜尋個體', exact: true }).click()
+  await expect(
+    page.getByText('找不到可上架個體，請換個 ID 或確認個體狀態。', { exact: true })
+  ).toBeVisible()
+  await page.route('**/rest/v1/rpc/admin_auction_candidates', (r) =>
+    r.fulfill({
+      json: Array.from({ length: 30 }, (_, i) => ({ id: `TEST-${i}`, morph: '測試品系' }))
+    })
+  )
+  await page.getByRole('button', { name: '搜尋個體', exact: true }).click()
+  await expect(
+    page.getByText('目前顯示前 30 隻，請輸入更完整的 ID 或品系縮小搜尋。', { exact: true })
+  ).toBeVisible()
+})
+
 test('預約詳情開標前不顯示出價入口，到時自動開放', async ({ page }) => {
   const now = Date.now()
   await page.clock.install({ time: now })
@@ -164,7 +237,7 @@ test('預約詳情開標前不顯示出價入口，到時自動開放', async ({
   await page.routeWebSocket('**/realtime/v1/websocket**', () => {})
   await page.goto(`/auction/${auction.id}`)
   await expect(page.locator('.timer-value')).toContainText('開標倒數')
-  await expect(page.getByRole('button', { name: 'Google 登入', exact: true })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'LINE 登入', exact: true })).toHaveCount(0)
   await page.clock.runFor(11000)
-  await expect(page.getByRole('button', { name: 'Google 登入', exact: true })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'LINE 登入', exact: true })).toBeVisible()
 })

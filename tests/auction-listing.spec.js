@@ -3,9 +3,25 @@ import {
   taipeiDateTime,
   parseTaipeiDateTime,
   listingError,
-  restoreListingIntent
+  restoreListingIntent,
+  nextAuctionSchedule
 } from '../utils/auction-listing.js'
 const now = Date.parse('2026-10-19T08:00:00Z')
+it('預設下週一台灣10點開標、同週六22點結標，跨週及跨年正確', () => {
+  for (const value of ['2026-10-19T01:00:00Z', '2026-10-20T00:00:00Z', '2026-10-25T15:59:00Z'])
+    expect(nextAuctionSchedule(Date.parse(value))).toEqual({
+      startTime: '2026-10-26T10:00',
+      endTime: '2026-10-31T22:00'
+    })
+  expect(nextAuctionSchedule(Date.parse('2026-10-25T16:00:00Z'))).toEqual({
+    startTime: '2026-11-02T10:00',
+    endTime: '2026-11-07T22:00'
+  })
+  expect(nextAuctionSchedule(Date.parse('2026-12-31T00:00:00Z'))).toEqual({
+    startTime: '2027-01-04T10:00',
+    endTime: '2027-01-09T22:00'
+  })
+})
 const form = {
   animalId: 'TEST',
   startPrice: 0,

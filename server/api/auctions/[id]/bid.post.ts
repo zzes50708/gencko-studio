@@ -5,6 +5,8 @@ import { randomUUID } from 'node:crypto'
 import { validBidAmount, validBidReceipt } from '~/utils/auction-bid-contract.js'
 
 const safeRpcMessages = new Set([
+  '請先使用 LINE 登入後再出價',
+  '競標出價僅限 LINE 帳號登入',
   '請先使用 Google 登入後再出價',
   '請先使用 Google 或 LINE 登入後再出價',
   '競標出價需使用 Google 或 LINE 帳號登入',
@@ -43,14 +45,14 @@ export default defineEventHandler(async (event) => {
   if (authError || !user) {
     throw createError({
       statusCode: 401,
-      message: '請先使用 Google 或 LINE 登入後再出價',
+      message: '請先使用 LINE 登入後再出價',
       data: { outcome: 'not_submitted' }
     })
   }
   if (!hasAuctionProvider(user)) {
     throw createError({
       statusCode: 403,
-      message: '競標出價需使用 Google 或 LINE 帳號登入',
+      message: '競標出價僅限 LINE 帳號登入',
       data: { outcome: 'not_submitted' }
     })
   }

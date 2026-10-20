@@ -5,7 +5,10 @@ import {
   listingError,
   parseTaipeiDateTime,
   taipeiDateTime,
-  restoreListingIntent
+  restoreListingIntent,
+  nextAuctionSchedule,
+  AUCTION_SHIPPING,
+  AUCTION_FEEDING_OPTIONS
 } from '~/utils/auction-listing'
 import { getCleanUrl } from '~/utils/image'
 const props = defineProps({ ownerId: { type: String, required: true } })
@@ -19,18 +22,20 @@ const heading = ref(null)
 const message = ref('')
 const busy = ref(false)
 const searching = ref(false)
+const searchFailed = ref(false)
 const intent = ref(null)
+const defaultSchedule = nextAuctionSchedule(store.auctionNow())
 const form = reactive({
   animalId: '',
-  startPrice: 0,
+  startPrice: 200,
   increment: 100,
-  mode: 'now',
-  startTime: '',
-  endTime: taipeiDateTime(store.auctionNow() + 48 * 3600000),
+  mode: 'scheduled',
+  startTime: defaultSchedule.startTime,
+  endTime: defaultSchedule.endTime,
   note: '',
-  shipping: '',
-  diet: '',
-  frequency: '',
+  shipping: AUCTION_SHIPPING,
+  diet: '冷凍蟋蟀/杜比亞',
+  frequency: AUCTION_FEEDING_OPTIONS[0],
   tongs: '是'
 })
 let alive = true
@@ -48,6 +53,7 @@ async function searchAnimals() {
   if (intent.value || busy.value) return
   const request = ++searchRevision
   searching.value = true
+  searchFailed.value = false
   message.value = ''
   try {
     const { data, error } = await supabase.rpc('admin_auction_candidates', {
@@ -55,10 +61,22 @@ async function searchAnimals() {
     })
     if (!alive || request !== searchRevision) return
     if (error) throw error
-    candidates.value = data || []
+    if (
+      !Array.isArray(data) ||
+      data.some(
+        (animal) =>
+          !animal ||
+          typeof animal.id !== 'string' ||
+          !animal.id.trim() ||
+          (typeof animal.morph !== 'string' && animal.morph !== null)
+      )
+    )
+      throw Error('個體搜尋回應不完整')
+    candidates.value = data
   } catch {
     if (alive && request === searchRevision) {
       candidates.value = []
+      searchFailed.value = true
       message.value = '個體搜尋失敗，請確認管理權限後重試。'
     }
   } finally {
@@ -86,7 +104,7 @@ async function publish() {
       p_start_time: form.mode === 'scheduled' ? parseTaipeiDateTime(form.startTime) : null,
       p_end_time: parseTaipeiDateTime(form.endTime),
       p_note: form.note.trim(),
-      p_shipping_info: form.shipping.trim(),
+      p_shipping_info: AUCTION_SHIPPING,
       p_diet: form.diet.trim(),
       p_feeding_freq: form.frequency.trim(),
       p_tongs_fed: form.tongs
@@ -104,6 +122,7 @@ async function publish() {
         '場次說明文字過長',
         '此個體目前不能上架競標，請重新選取',
         '此個體已有尚未結束的場次',
+        '此個體尚有未結束場次或待處理交易，請先處理原場次',
         '請先在個體資料補齊品系',
         '此個體尚無有效照片，請先補齊照片'
       ])
@@ -184,7 +203,12 @@ onBeforeUnmount(() => {
           <button type="button" :disabled="searching" @click="searchAnimals">搜尋個體</button>
         </div>
         <p v-if="searching" role="status">搜尋中…</p>
-        <p v-else-if="!candidates.length">找不到可上架個體，請換個 ID 或確認個體狀態。</p>
+        <p v-else-if="!searchFailed && !candidates.length">
+          找不到可上架個體，請換個 ID 或確認個體狀態。
+        </p>
+        <p v-else-if="!searchFailed && candidates.length === 30">
+          目前顯示前 30 隻，請輸入更完整的 ID 或品系縮小搜尋。
+        </p>
         <div class="candidate-list">
           <button
             v-for="animal in candidates"
@@ -220,7 +244,7 @@ onBeforeUnmount(() => {
               v-model.number="form.startPrice"
               type="number"
               min="0"
-              step="1"
+              step="100"
               inputmode="numeric"
             />
           </label>
@@ -229,8 +253,8 @@ onBeforeUnmount(() => {
             <input
               v-model.number="form.increment"
               type="number"
-              min="1"
-              step="1"
+              min="100"
+              step="100"
               inputmode="numeric"
             />
           </label>
@@ -250,7 +274,10 @@ onBeforeUnmount(() => {
             <input v-model="form.endTime" type="datetime-local" />
           </label>
         </div>
-        <p>預約場次會先公開顯示倒數，時間到才可出價；結標前 3 分鐘有效出價會延長 3 分鐘。</p>
+        <p>
+          預設下週一 10:00 開標、同週六 22:00 結標（台灣時間），特殊情況可調整。結標前 3
+          分鐘有效出價會延長 3 分鐘。
+        </p>
       </fieldset>
       <fieldset :disabled="busy || !!intent">
         <legend>3. 飼養與領標資訊</legend>
@@ -269,15 +296,20 @@ onBeforeUnmount(() => {
           </label>
           <label>
             餵食頻率
-            <input v-model="form.frequency" maxlength="100" />
-          </label>
-          <label>
-            運送／面交說明
-            <input v-model="form.shipping" maxlength="500" />
+            <select v-model="form.frequency" aria-label="餵食頻率">
+              <option
+                v-for="frequency in AUCTION_FEEDING_OPTIONS"
+                :key="frequency"
+                :value="frequency"
+              >
+                {{ frequency }}
+              </option>
+            </select>
           </label>
         </div>
+        <p>運送／面交：{{ form.shipping }}</p>
         <label>
-          場次注意事項
+          個體注意事項
           <textarea v-model="form.note" maxlength="3000" rows="3" />
         </label>
       </fieldset>

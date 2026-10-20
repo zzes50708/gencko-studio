@@ -27,12 +27,19 @@ test('第一筆出價預填起標價，與最低金額提示一致', async ({ pa
       document.querySelector('#__nuxt') as any
     ).__vue_app__.config.globalProperties.$pinia._s.get('main')
     await store.checkAuthStatus()
-    store.currentUser = { id: 'TEST-MEMBER', type: 'google', email: 'test@example.invalid' }
+    store.currentUser = {
+      id: 'TEST-MEMBER',
+      type: 'line',
+      authSource: 'supabase',
+      email: 'test@example.invalid'
+    }
   })
   const input = page.getByRole('spinbutton', { name: '出價金額', exact: true })
   await expect(input).toHaveAttribute('min', '100')
   await expect(input).toHaveValue('100')
-  await expect(page.locator('.bid-hint')).toContainText('NT$ 100')
+  await expect(page.locator('.bid-hint').filter({ hasText: '您的出價必須' })).toContainText(
+    'NT$ 100'
+  )
 })
 
 for (const skew of [2, -2]) {

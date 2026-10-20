@@ -108,7 +108,12 @@ test('競標出價故障回歸：同步、斷線重試、登入及輸入', async
       const g = document.querySelector('#__nuxt').__vue_app__.config.globalProperties
       const s = g.$pinia._s.get('main')
       s.auctionList = [a]
-      s.currentUser = { type: 'google', email: 'auction-audit@example.invalid' }
+      s.currentUser = {
+        type: 'line',
+        authSource: 'supabase',
+        id: 'auction-audit@example.invalid',
+        email: 'auction-audit@example.invalid'
+      }
       await g.$router.push('/auction/' + a.id)
     }, state.auction)
     await page.locator('.highest-price').filter({ hasText: '400' }).waitFor()
@@ -116,7 +121,9 @@ test('競標出價故障回歸：同步、斷線重試、登入及輸入', async
       document
         .querySelector('#__nuxt')
         .__vue_app__.config.globalProperties.$pinia._s.get('main').currentUser = {
-        type: 'google',
+        type: 'line',
+        authSource: 'supabase',
+        id: 'auction-audit@example.invalid',
         email: 'auction-audit@example.invalid'
       }
     })
@@ -142,7 +149,7 @@ test('競標出價故障回歸：同步、斷線重試、登入及輸入', async
       price: await page.locator('.highest-price').innerText(),
       input: await page.getByLabel('出價金額', { exact: true }).inputValue(),
       bidButton: await page.locator('.btn-bid').innerText(),
-      loginButtons: await page.getByRole('button', { name: 'Google 登入', exact: true }).count(),
+      loginButtons: await page.getByRole('button', { name: 'LINE 登入', exact: true }).count(),
       posts: state.posts,
       alerts: [...state.alerts],
       vm: await vm('read')
@@ -280,7 +287,7 @@ test('競標出價故障回歸：同步、斷線重試、登入及輸入', async
             json: { message: '請重新登入', data: { outcome: 'not_submitted' } }
           })
         await t.page.locator('.btn-bid').click()
-        await t.page.getByRole('button', { name: 'Google 登入', exact: true }).waitFor()
+        await t.page.getByRole('button', { name: 'LINE 登入', exact: true }).waitFor()
         assert.equal(t.state.posts, 1)
         return { pass: true }
       } finally {
@@ -412,7 +419,7 @@ test('競標出價故障回歸：同步、斷線重試、登入及輸入', async
         await t.page.locator('.btn-bid').click()
         await settle(t)
         await t.page.reload({ waitUntil: 'domcontentloaded' })
-        await t.page.getByRole('button', { name: 'Google 登入', exact: true }).waitFor()
+        await t.page.getByRole('button', { name: 'LINE 登入', exact: true }).waitFor()
         await t.page.waitForFunction(
           () =>
             !!document
@@ -423,7 +430,9 @@ test('競標出價故障回歸：同步、斷線重試、登入及輸入', async
           document
             .querySelector('#__nuxt')
             .__vue_app__.config.globalProperties.$pinia._s.get('main').currentUser = {
-            type: 'google',
+            type: 'line',
+            authSource: 'supabase',
+            id: 'auction-audit@example.invalid',
             email: 'auction-audit@example.invalid'
           }
         })
@@ -453,7 +462,8 @@ test('競標出價故障回歸：同步、斷線重試、登入及輸入', async
           document
             .querySelector('#__nuxt')
             .__vue_app__.config.globalProperties.$pinia._s.get('main').currentUser = {
-            type: 'google',
+            type: 'line',
+            authSource: 'supabase',
             id: 'OTHER',
             email: 'other@example.invalid'
           }
@@ -464,7 +474,9 @@ test('競標出價故障回歸：同步、斷線重試、登入及輸入', async
           document
             .querySelector('#__nuxt')
             .__vue_app__.config.globalProperties.$pinia._s.get('main').currentUser = {
-            type: 'google',
+            type: 'line',
+            authSource: 'supabase',
+            id: 'auction-audit@example.invalid',
             email: 'auction-audit@example.invalid'
           }
         })
@@ -499,7 +511,7 @@ test('競標出價故障回歸：同步、斷線重試、登入及輸入', async
         await t.page.locator('.btn-bid').click()
         await settle(t)
         await t.page.getByRole('button', { name: '重試同一筆出價', exact: true }).click()
-        await t.page.getByRole('button', { name: 'Google 登入', exact: true }).waitFor()
+        await t.page.getByRole('button', { name: 'LINE 登入', exact: true }).waitFor()
         assert.equal(
           await t.page.evaluate(
             () =>
@@ -511,7 +523,9 @@ test('競標出價故障回歸：同步、斷線重試、登入及輸入', async
           document
             .querySelector('#__nuxt')
             .__vue_app__.config.globalProperties.$pinia._s.get('main').currentUser = {
-            type: 'google',
+            type: 'line',
+            authSource: 'supabase',
+            id: 'auction-audit@example.invalid',
             email: 'auction-audit@example.invalid'
           }
         })
@@ -546,7 +560,8 @@ test('競標出價故障回歸：同步、斷線重試、登入及輸入', async
             .querySelector('#__nuxt')
             .__vue_app__.config.globalProperties.$pinia._s.get('main').currentUser = {
             id: 'MEMBER-OLD',
-            type: 'google',
+            type: 'line',
+            authSource: 'supabase',
             email: owner
           }
         }, id)
@@ -599,7 +614,8 @@ test('競標出價故障回歸：同步、斷線重試、登入及輸入', async
             .querySelector('#__nuxt')
             .__vue_app__.config.globalProperties.$pinia._s.get('main').currentUser = {
             id: 'OTHER',
-            type: 'google',
+            type: 'line',
+            authSource: 'supabase',
             email: 'other@example.invalid'
           }
         }, id)

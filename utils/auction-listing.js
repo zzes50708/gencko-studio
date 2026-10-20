@@ -1,5 +1,16 @@
 import { MAX_BID_AMOUNT } from './auction-bid-contract.js'
 
+export const AUCTION_SHIPPING = '黑貓 +180 元；三重面交免運'
+export const AUCTION_FEEDING_OPTIONS = ['1-2天/次', '3-4天/次', '一週一次']
+export function nextAuctionSchedule(now) {
+  const local = new Date(now + 8 * 3600000)
+  const days = (8 - local.getUTCDay()) % 7 || 7
+  local.setUTCDate(local.getUTCDate() + days)
+  const startTime = local.toISOString().slice(0, 10) + 'T10:00'
+  local.setUTCDate(local.getUTCDate() + 5)
+  return { startTime, endTime: local.toISOString().slice(0, 10) + 'T22:00' }
+}
+
 export function taipeiDateTime(epoch) {
   return new Intl.DateTimeFormat('sv-SE', {
     timeZone: 'Asia/Taipei',

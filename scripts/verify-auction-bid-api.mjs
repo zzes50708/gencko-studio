@@ -40,7 +40,7 @@ const out = []
 const user = {
   id: 'isolated-test-principal',
   email: 'auction-audit@example.invalid',
-  app_metadata: { provider: 'google', providers: ['google'] }
+  app_metadata: { provider: 'custom:line-oauth', providers: ['custom:line-oauth'] }
 }
 const cases = [
   {
@@ -73,6 +73,7 @@ const cases = [
   { name: '正常成功回應', body: { amount: 500 } },
   { name: '缺少登入使用者', body: { amount: 500 }, noUser: true },
   { name: '不支援的登入供應商', body: { amount: 500 }, nonGoogle: true },
+  { name: '僅Google登入不能出價', body: { amount: 500 }, googleOnly: true },
   {
     name: '下一口加價造成溢位',
     body: { amount: 2147483647 },
@@ -100,6 +101,8 @@ try {
                   ? { ...user, email: null, app_metadata: { provider: 'custom:line-oauth', providers: ['custom:line-oauth'] } }
                   : test.spoofLine
                     ? { ...user, app_metadata: { provider: 'email' }, user_metadata: { provider: 'custom:line' } }
+                : test.googleOnly
+                  ? { ...user, app_metadata: { provider: 'google', providers: ['google'] } }
                 : test.nonGoogle
                   ? { ...user, app_metadata: { provider: 'email', providers: ['email'] } }
                   : user
@@ -140,15 +143,15 @@ try {
       rpcCalls: calls
     })
   }
-  const expected = [503, 503, 400, 400, 400, 503, 503, 200, 401, 403, 400, 400, 503, 200, 403, 400]
+  const expected = [503, 503, 400, 400, 400, 503, 503, 200, 401, 403, 403, 400, 400, 503, 200, 403, 400]
   for (let i = 0; i < out.length; i++) {
     if (JSON.stringify(out[i].response).includes('AUDIT_INTERNAL_DETAIL_NOT_FOR_CUSTOMER'))
       throw Error('內部錯誤外洩')
     if (out[i].status !== expected[i]) throw Error(out[i].name + ': ' + out[i].status)
-    if ([2, 3, 4, 8, 9, 11, 14].includes(i) && out[i].rpcCalls.length) throw Error('無效金額進入RPC')
+    if ([2, 3, 4, 8, 9, 10, 12, 15].includes(i) && out[i].rpcCalls.length) throw Error('無效登入或金額進入RPC')
   }
-  if (out[15].response?.data?.outcome !== 'rejected') throw Error('登入方式拒絕被誤判為出價待確認')
-  console.log('競標 API 十六項故障回歸通過')
+  if (out[16].response?.data?.outcome !== 'rejected') throw Error('登入方式拒絕被誤判為出價待確認')
+  console.log('競標 API 十七項故障回歸通過')
 } finally {
   await new Promise((r) => server.close(r))
 }

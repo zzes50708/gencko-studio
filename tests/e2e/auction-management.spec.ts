@@ -387,16 +387,61 @@ test('一般 Google 與 LINE 會員不顯示管理場次及查詢操作', async 
 
 test('場次列表失敗可重試，空列表不誤顯示為載入失敗', async ({ page }) => {
   let fail = true
+  let nullResponse = false
   await page.route('**/rest/v1/auctions?**', (route) =>
-    route.fulfill(fail ? { status: 400, json: { message: '測試暫時失敗' } } : { json: [] })
+    route.fulfill(
+      fail ? { status: 400, json: { message: '測試暫時失敗' } } : { json: nullResponse ? null : [] }
+    )
   )
   await page.goto('/auction-management')
   await expect(page.getByRole('button', { name: 'Google 管理員登入' })).toBeVisible()
   await member(page, 'ADMIN')
   await expect(page.getByRole('button', { name: '重新載入場次' })).toBeVisible()
   fail = false
+  nullResponse = true
+  await page.getByRole('button', { name: '重新載入場次' }).click()
+  await expect(page.getByText('場次列表暫時無法載入，請重試。', { exact: true })).toBeVisible()
+  await expect(page.getByText('目前沒有競標場次。', { exact: true })).toHaveCount(0)
+  nullResponse = false
   await page.getByRole('button', { name: '重新載入場次' }).click()
   await expect(page.getByText('目前沒有競標場次。', { exact: true })).toBeVisible()
+})
+
+test('得標管理的空白或不完整回應顯示錯誤，正常空結果仍顯示尚未結算', async ({ page }) => {
+  let workflow: any = null
+  await page.route('**/rest/v1/auctions?**', (r) =>
+    r.fulfill({
+      json: [
+        {
+          id: 'TEST-WORKFLOW-SHAPE',
+          morph: '管理回應格式測試',
+          status: 'ended',
+          end_time: '2020-01-01T00:00:00Z'
+        }
+      ]
+    })
+  )
+  await page.route('**/rest/v1/rpc/get_auction_bidder_contacts**', (r) => r.fulfill({ json: [] }))
+  await page.route('**/rest/v1/rpc/admin_auction_workflow', (r) => r.fulfill({ json: workflow }))
+  await page.goto('/auction-management')
+  await member(page, 'ADMIN')
+  await page.getByRole('button', { name: /管理回應格式測試/ }).click()
+  const panel = page.getByRole('region', { name: '得標付款與出價限制管理' })
+  await expect(panel).toContainText('無法讀取管理資料，請確認管理權限後重試。')
+  for (const invalid of [
+    { enabled: true },
+    { enabled: true, outcome: [] },
+    { enabled: 'true', outcome: null }
+  ]) {
+    workflow = invalid
+    await page.getByRole('button', { name: '重新載入得標狀態', exact: true }).click()
+    await expect(panel).toContainText('無法讀取管理資料，請確認管理權限後重試。')
+    await expect(panel).not.toContainText('尚未結算')
+  }
+  workflow = { enabled: true, outcome: null }
+  await page.getByRole('button', { name: '重新載入得標狀態', exact: true }).click()
+  await expect(panel).toContainText('尚未結算，截止後才會建立得標紀錄。')
+  await expect(panel).not.toContainText('無法讀取管理資料')
 })
 
 test('核帳已送出但狀態重讀失敗時不宣稱已查核，重試成功清除錯誤', async ({ page }) => {

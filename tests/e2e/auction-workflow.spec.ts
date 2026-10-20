@@ -1,52 +1,37 @@
 import { test, expect } from '@playwright/test'
 
-test('新流程出價前必須驗證 LINE 聯絡；傳送綁定碼後可重新確認', async ({ page }) => {
-  let ready = false
-  let challengeCalls = 0
-  let holdStatus = false
-  let releaseOldStatus: (() => void) | null = null
-  await page.route('**/rest/v1/rpc/get_auction_contact_status', (r) =>
-    holdStatus
-      ? new Promise<void>((resolve) => {
-          releaseOldStatus = resolve
-        }).then(() =>
-          r.fulfill({ json: { required: true, ready: false, linked: false, restricted: false } })
-        )
-      : r.fulfill({ json: { required: true, ready, linked: ready, restricted: false } })
-  )
-  await page.route('**/rest/v1/rpc/create_auction_line_link', (r) => {
-    challengeCalls++
-    return r.fulfill({
-      json: { code: 'a'.repeat(36), expires_at: new Date(Date.now() + 900000).toISOString() }
+for (const offsetDays of [0, 2, -2]) {
+  test(`新流程 LINE 綁定與延遲回應驗證（裝置日期偏移 ${offsetDays} 天）`, async ({ page }) => {
+    const serverTime = Date.now()
+    await page.clock.install({ time: serverTime + offsetDays * 86400000 })
+    await page.route('**/api/server-time', (r) => r.fulfill({ json: { serverTime } }))
+    let ready = false
+    let challengeCalls = 0
+    let holdStatus = false
+    let releaseOldStatus: (() => void) | null = null
+    let statusOverride: any = undefined
+    await page.route('**/rest/v1/rpc/get_auction_contact_status', (r) =>
+      statusOverride !== undefined
+        ? r.fulfill({ json: statusOverride })
+        : holdStatus
+          ? new Promise<void>((resolve) => {
+              releaseOldStatus = resolve
+            }).then(() =>
+              r.fulfill({
+                json: { required: true, ready: false, linked: false, restricted: false }
+              })
+            )
+          : r.fulfill({ json: { required: true, ready, linked: ready, restricted: false } })
+    )
+    await page.route('**/rest/v1/rpc/create_auction_line_link', (r) => {
+      challengeCalls++
+      return r.fulfill({
+        json: { code: 'a'.repeat(36), expires_at: new Date(Date.now() + 900000).toISOString() }
+      })
     })
-  })
-  await page.route('**/rest/v1/auction_bids?**', (r) => r.fulfill({ json: [] }))
-  await page.route('**/rest/v1/auctions?**', (r) => {
-    const a = {
-      id: 'TEST-AUCTION-20261016-01',
-      morph: '測試',
-      status: 'active',
-      start_price: 100,
-      min_increment: 100,
-      end_time: new Date(Date.now() + 86400000).toISOString(),
-      workflow_enabled: true,
-      images: []
-    }
-    return r.fulfill({ json: new URL(r.request().url()).searchParams.has('id') ? a : [a] })
-  })
-  await page.goto('/stories')
-  await page.waitForFunction(
-    () =>
-      !!(
-        document.querySelector('#__nuxt') as any
-      )?.__vue_app__?.config.globalProperties.$pinia?._s.get('main')
-  )
-  await page.evaluate(async () => {
-    const g = (document.querySelector('#__nuxt') as any).__vue_app__.config.globalProperties
-    const store = g.$pinia._s.get('main')
-    store.currentUser = { id: 'TEST-MEMBER', type: 'google', email: 'test@example.invalid' }
-    store.auctionList = [
-      {
+    await page.route('**/rest/v1/auction_bids?**', (r) => r.fulfill({ json: [] }))
+    await page.route('**/rest/v1/auctions?**', (r) => {
+      const a = {
         id: 'TEST-AUCTION-20261016-01',
         morph: '測試',
         status: 'active',
@@ -56,63 +41,116 @@ test('新流程出價前必須驗證 LINE 聯絡；傳送綁定碼後可重新�
         workflow_enabled: true,
         images: []
       }
-    ]
-    await g.$router.push('/auction/TEST-AUCTION-20261016-01')
-  })
-  await expect(page.getByRole('heading', { name: '測試', exact: true })).toBeVisible()
-  await page.evaluate(() => {
-    ;(document.querySelector('#__nuxt') as any).__vue_app__.config.globalProperties.$pinia._s.get(
-      'main'
-    ).currentUser = { id: 'TEST-MEMBER', type: 'google', email: 'test@example.invalid' }
-  })
-  await expect(page.getByRole('button', { name: '確認出價', exact: true })).toBeDisabled()
-  await page.getByRole('button', { name: '建立 LINE 聯絡', exact: true }).click()
-  const link = page.getByRole('link', { name: '前往 LINE 傳送綁定訊息', exact: true })
-  await expect(link).toHaveAttribute(
-    'href',
-    new RegExp(encodeURIComponent('競標綁定 ' + 'a'.repeat(36)))
-  )
-  expect(challengeCalls).toBe(1)
-  await expect(page.getByRole('textbox', { name: 'LINE 綁定訊息', exact: true })).toHaveValue(
-    '競標綁定 ' + 'a'.repeat(36)
-  )
-  await expect(page.getByRole('button', { name: '複製綁定訊息', exact: true })).toBeVisible()
-  holdStatus = true
-  await page.getByRole('button', { name: '我已傳送，重新確認', exact: true }).click()
-  await expect.poll(() => !!releaseOldStatus).toBe(true)
-  holdStatus = false
-  ready = true
-  await page
-    .getByRole('button', { name: '我已傳送，重新確認', exact: true })
-    .click({ timeout: 1500 })
-    .catch(async (error) => {
-      // 自動輪詢可能已先完成驗證並移除按鈕，此時以實際成功狀態判定。
-      if (!(await page.getByText('官方 LINE 聯絡已驗證', { exact: false }).isVisible())) throw error
+      return r.fulfill({ json: new URL(r.request().url()).searchParams.has('id') ? a : [a] })
     })
-  await expect(page.getByText('官方 LINE 聯絡已驗證', { exact: false })).toBeVisible()
-  await expect(page.getByRole('button', { name: '確認出價', exact: true })).toBeEnabled()
-  const oldResponse = page.waitForResponse((r) =>
-    r.url().includes('/rpc/get_auction_contact_status')
-  )
-  releaseOldStatus!()
-  await oldResponse
-  await page.evaluate(
-    () =>
-      new Promise<void>((resolve) =>
-        requestAnimationFrame(() => requestAnimationFrame(() => resolve()))
-      )
-  )
-  await expect(page.getByText('官方 LINE 聯絡已驗證', { exact: false })).toBeVisible()
-  await expect(page.getByRole('button', { name: '確認出價', exact: true })).toBeEnabled()
-})
+    await page.goto('/stories')
+    await page.waitForFunction(
+      () =>
+        !!(
+          document.querySelector('#__nuxt') as any
+        )?.__vue_app__?.config.globalProperties.$pinia?._s.get('main')
+    )
+    await page.evaluate(async () => {
+      const g = (document.querySelector('#__nuxt') as any).__vue_app__.config.globalProperties
+      const store = g.$pinia._s.get('main')
+      store.currentUser = {
+        id: 'TEST-MEMBER',
+        type: 'line',
+        authSource: 'supabase',
+        email: 'test@example.invalid'
+      }
+      store.auctionList = [
+        {
+          id: 'TEST-AUCTION-20261016-01',
+          morph: '測試',
+          status: 'active',
+          start_price: 100,
+          min_increment: 100,
+          end_time: new Date(Date.now() + 86400000).toISOString(),
+          workflow_enabled: true,
+          images: []
+        }
+      ]
+      await g.$router.push('/auction/TEST-AUCTION-20261016-01')
+    })
+    await expect(page.getByRole('heading', { name: '測試', exact: true })).toBeVisible()
+    await page.evaluate(() => {
+      ;(document.querySelector('#__nuxt') as any).__vue_app__.config.globalProperties.$pinia._s.get(
+        'main'
+      ).currentUser = {
+        id: 'TEST-MEMBER',
+        type: 'line',
+        authSource: 'supabase',
+        email: 'test@example.invalid'
+      }
+    })
+    await expect(page.getByRole('button', { name: '確認出價', exact: true })).toBeDisabled()
+    await page.getByRole('button', { name: '建立 LINE 聯絡', exact: true }).click()
+    const link = page.getByRole('link', { name: '前往 LINE 傳送綁定訊息', exact: true })
+    await expect(link).toHaveAttribute(
+      'href',
+      new RegExp(encodeURIComponent('競標綁定 ' + 'a'.repeat(36)))
+    )
+    expect(challengeCalls).toBe(1)
+    await expect(page.getByRole('textbox', { name: 'LINE 綁定訊息', exact: true })).toHaveValue(
+      '競標綁定 ' + 'a'.repeat(36)
+    )
+    await expect(page.getByRole('button', { name: '複製綁定訊息', exact: true })).toBeVisible()
+    if (offsetDays === 0) {
+      for (const invalid of [
+        null,
+        { required: false },
+        { required: true, ready: 'true', restricted: false }
+      ]) {
+        statusOverride = invalid
+        await page.getByRole('button', { name: '我已傳送，重新確認', exact: true }).click()
+        await expect(
+          page.getByText('暫時無法確認 LINE 聯絡狀態，請重新確認。', { exact: true })
+        ).toBeVisible()
+        await expect(page.getByRole('button', { name: '確認出價', exact: true })).toBeDisabled()
+      }
+      statusOverride = undefined
+    }
+    holdStatus = true
+    await page.getByRole('button', { name: '我已傳送，重新確認', exact: true }).click()
+    await expect.poll(() => !!releaseOldStatus).toBe(true)
+    holdStatus = false
+    ready = true
+    await page
+      .getByRole('button', { name: '我已傳送，重新確認', exact: true })
+      .click({ timeout: 1500 })
+      .catch(async (error) => {
+        // 自動輪詢可能已先完成驗證並移除按鈕，此時以實際成功狀態判定。
+        if (!(await page.getByText('官方 LINE 聯絡已驗證', { exact: false }).isVisible()))
+          throw error
+      })
+    await expect(page.getByText('官方 LINE 聯絡已驗證', { exact: false })).toBeVisible()
+    await expect(page.getByRole('button', { name: '確認出價', exact: true })).toBeEnabled()
+    const oldResponse = page.waitForResponse((r) =>
+      r.url().includes('/rpc/get_auction_contact_status')
+    )
+    releaseOldStatus!()
+    await oldResponse
+    await page.evaluate(
+      () =>
+        new Promise<void>((resolve) =>
+          requestAnimationFrame(() => requestAnimationFrame(() => resolve()))
+        )
+    )
+    await expect(page.getByText('官方 LINE 聯絡已驗證', { exact: false })).toBeVisible()
+    await expect(page.getByRole('button', { name: '確認出價', exact: true })).toBeEnabled()
+  })
+}
 
 test('得標者回報付款後進入人工核帳，登出即清除私人結果', async ({ page }) => {
   let state = 'awaiting_payment'
   let holdRead = false
   let outcomeReads = 0
+  let outcomeOverride: any = undefined
   let releaseRead: (() => void) | null = null
   await page.route('**/rest/v1/rpc/my_auction_outcomes', async (r) => {
     outcomeReads++
+    if (outcomeOverride !== undefined) return r.fulfill({ json: outcomeOverride })
     if (holdRead)
       await new Promise<void>((resolve) => {
         releaseRead = resolve
@@ -195,6 +233,15 @@ test('得標者回報付款後進入人工核帳，登出即清除私人結果',
   await page.evaluate(() => window.dispatchEvent(new Event('online')))
   await expect(page.getByText('已確認付款', { exact: true })).toBeVisible()
   await expect(page.locator('.outcomes')).not.toContainText('付款期限')
+  for (const invalid of [[{}], [{ auction_id: 'TEST', amount: 700, state: 'unknown' }]]) {
+    outcomeOverride = invalid
+    await page.getByRole('button', { name: '重新載入得標紀錄', exact: true }).click()
+    await expect(page.getByText('得標紀錄暫時無法載入，請重試。', { exact: true })).toBeVisible()
+    await expect(page.locator('.outcomes article')).toHaveCount(0)
+  }
+  outcomeOverride = []
+  await page.getByRole('button', { name: '重新載入得標紀錄', exact: true }).click()
+  await expect(page.getByText('目前沒有得標待辦。', { exact: true })).toBeVisible()
   await page.evaluate(() => {
     ;(document.querySelector('#__nuxt') as any).__vue_app__.config.globalProperties.$pinia._s.get(
       'main'
@@ -265,6 +312,21 @@ test('管理員解除出價限制必填原因並重新載入結果', async ({ pa
 })
 
 test('結標頁只有得標帳號能取得領標訊息，手機與桌機皆可複製', async ({ page }) => {
+  const started = Date.now()
+  await page.clock.install({ time: started })
+  let claimCalls = 0
+  let claimOverride: any = undefined
+  await page.route('**/rest/v1/rpc/create_auction_winner_claim', (r) => {
+    if (claimOverride !== undefined) return r.fulfill({ json: claimOverride })
+    claimCalls++
+    return r.fulfill({
+      json: {
+        message: `【Gencko 得標確認】\n領標驗證：${String(claimCalls).repeat(36)}`,
+        amount: 700,
+        expires_at: new Date(started + claimCalls * 900000).toISOString()
+      }
+    })
+  })
   let outcomeFails = false
   let outcomeState = 'awaiting_payment'
   await page.route('**/rest/v1/auctions?**', (r) => {
@@ -309,6 +371,64 @@ test('結標頁只有得標帳號能取得領標訊息，手機與桌機皆可�
     ).currentUser = { id: 'WINNER', type: 'google', email: 'test@example.invalid' }
   })
   await expect(page.getByRole('button', { name: '複製得標確認訊息', exact: true })).toBeVisible()
+  for (const invalid of [
+    {},
+    { auction_id: 'OTHER', state: 'awaiting_payment', amount: 700 },
+    { auction_id: 'TEST-AUCTION-20261016-01', state: 'awaiting_payment', amount: '700' }
+  ]) {
+    await page.route('**/rest/v1/rpc/my_auction_outcome', (r) => r.fulfill({ json: invalid }))
+    await page.getByRole('button', { name: '重新確認得標結果', exact: true }).click()
+    await expect(page.getByText('暫時無法確認得標結果，請重試。', { exact: true })).toBeVisible()
+    await expect(page.getByRole('button', { name: '複製得標確認訊息', exact: true })).toHaveCount(0)
+  }
+  await page.unroute('**/rest/v1/rpc/my_auction_outcome')
+  await page.route('**/rest/v1/rpc/my_auction_outcome', (r) =>
+    r.fulfill(
+      outcomeFails
+        ? { status: 400, json: { message: '測試權限查核失敗' } }
+        : {
+            json: {
+              auction_id: 'TEST-AUCTION-20261016-01',
+              amount: 700,
+              state: outcomeState,
+              notification_status: 'manual',
+              payment_due_at: new Date(Date.now() + 23 * 3600000).toISOString()
+            }
+          }
+    )
+  )
+  await page.getByRole('button', { name: '重新確認得標結果', exact: true }).click()
+  await page.getByRole('button', { name: '複製得標確認訊息', exact: true }).click()
+  await expect(page.getByRole('textbox', { name: '得標確認訊息', exact: true })).toBeVisible()
+  await page.clock.fastForward(901000)
+  await expect(page.getByRole('textbox', { name: '得標確認訊息', exact: true })).toHaveCount(0)
+  await expect(
+    page.getByText('領標驗證碼已過期，請重新產生訊息後傳送。', { exact: true })
+  ).toBeVisible()
+  await page.getByRole('button', { name: '複製得標確認訊息', exact: true }).click()
+  await expect(page.getByRole('textbox', { name: '得標確認訊息', exact: true })).toHaveValue(
+    /222222/
+  )
+  for (const invalid of [
+    { message: {}, amount: 700, expires_at: new Date(started + 1800000).toISOString() },
+    { message: '錯誤訊息', amount: 700, expires_at: 'invalid' },
+    { message: '錯誤金額', amount: 800, expires_at: new Date(started + 1800000).toISOString() },
+    { message: '過期訊息', amount: 700, expires_at: new Date(started).toISOString() }
+  ]) {
+    claimOverride = invalid
+    await page.getByRole('button', { name: '複製得標確認訊息', exact: true }).click()
+    await expect(
+      page.getByText('未能產生領標訊息，請確認使用出價時的帳號登入，再重新確認結果。', {
+        exact: true
+      })
+    ).toBeVisible()
+    await expect(page.getByRole('textbox', { name: '得標確認訊息', exact: true })).toHaveCount(0)
+  }
+  claimOverride = undefined
+  await page.getByRole('button', { name: '複製得標確認訊息', exact: true }).click()
+  await expect(page.getByRole('textbox', { name: '得標確認訊息', exact: true })).toHaveValue(
+    /333333/
+  )
   for (const width of [320, 390, 1440]) {
     await page.setViewportSize({ width, height: 850 })
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)

@@ -1,12 +1,14 @@
 <script setup>
 import { computed, ref, watch, onBeforeUnmount, onMounted } from 'vue'
 import { getLineMessageLink } from '~/utils/animal-inquiry'
+import { useMainStore } from '~/stores/useMainStore'
 const props = defineProps({
   auctionId: { type: String, required: true },
   memberId: { type: String, required: true }
 })
 const emit = defineEmits(['verified'])
 const supabase = useSupabaseClient()
+const store = useMainStore()
 const state = ref(null)
 const challenge = ref(null)
 const busy = ref(false)
@@ -14,11 +16,16 @@ const message = ref('')
 const copyMessage = ref('')
 const bindingText = computed(() => (challenge.value ? `競標綁定 ${challenge.value.code}` : ''))
 async function copy() {
+  const owner = revision
+  const current = challenge.value
+  if (!current) return
   try {
     await navigator.clipboard.writeText(bindingText.value)
-    copyMessage.value = '已複製，請貼到 Gencko 官方 LINE 並傳送。'
+    if (owner === revision && current === challenge.value)
+      copyMessage.value = '已複製，請貼到 Gencko 官方 LINE 並傳送。'
   } catch {
-    copyMessage.value = '無法自動複製，請選取下方完整訊息後複製。'
+    if (owner === revision && current === challenge.value)
+      copyMessage.value = '無法自動複製，請選取下方完整訊息後複製。'
   }
 }
 let revision = 0
@@ -42,6 +49,8 @@ async function check() {
     })
     if (owner !== revision || request !== checkRevision) return
     if (error) throw error
+    if (!data || ['required', 'ready', 'restricted'].some((key) => typeof data[key] !== 'boolean'))
+      throw Error('LINE 狀態回應不完整')
     state.value = data
     emit(
       'verified',
@@ -54,26 +63,31 @@ async function check() {
     }
   } catch {
     if (owner !== revision || request !== checkRevision) return
+    state.value = null
     emit('verified', false)
     message.value = '暫時無法確認 LINE 聯絡狀態，請重新確認。'
   }
 }
 async function poll() {
+  const owner = revision
+  const current = challenge.value
   stop()
   if (!challenge.value) return
-  if (Date.parse(challenge.value.expires_at) <= Date.now()) {
+  if (Date.parse(challenge.value.expires_at) <= store.auctionNow()) {
     challenge.value = null
     message.value = '綁定碼已過期，請重新建立。'
     return
   }
   if (document.visibilityState === 'visible') await check()
-  if (challenge.value) timer = setTimeout(poll, 5000)
+  if (owner === revision && current === challenge.value && challenge.value)
+    timer = setTimeout(poll, 5000)
 }
 async function create() {
   if (busy.value) return
   const request = revision
   busy.value = true
   message.value = ''
+  copyMessage.value = ''
   try {
     const { data, error } = await supabase.rpc('create_auction_line_link')
     if (request !== revision) return
@@ -97,6 +111,7 @@ watch(
     challenge.value = null
     busy.value = false
     message.value = ''
+    copyMessage.value = ''
     emit('verified', false)
     if (mounted) void check()
   }
@@ -108,6 +123,7 @@ onMounted(() => {
 onBeforeUnmount(() => {
   revision++
   stop()
+  challenge.value = null
 })
 </script>
 
@@ -123,7 +139,7 @@ onBeforeUnmount(() => {
       <span v-if="state.display_name">：{{ state.display_name }}</span>
     </p>
     <template v-else>
-      <p>首次出價前，請向官方 LINE 傳送綁定訊息，方便得標後聯絡。只需 Google 或 LINE 擇一登入。</p>
+      <p>請向官方 LINE 傳送綁定訊息，以驗證聯絡方式；競標出價僅限 LINE 登入。</p>
       <button
         v-if="!challenge"
         type="button"

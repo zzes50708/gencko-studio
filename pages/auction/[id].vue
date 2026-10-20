@@ -25,7 +25,7 @@ import {
   sampleAuctionClock,
   auctionClockNow
 } from '~/utils/auction-detail'
-import { isAuctionMember, memberOwnerKeys } from '~/utils/member-auth'
+import { isAuctionMember, canPlaceAuctionBid, memberOwnerKeys } from '~/utils/member-auth'
 import { loadPromoImage } from '~/utils/auction-promo'
 import { getLineMessageLink } from '~/utils/animal-inquiry'
 import { getAuctionContactText } from '~/utils/auction-contact'
@@ -207,7 +207,7 @@ const clearPendingBid = (
   if (pendingBid.value?.requestId === intent?.requestId) pendingBid.value = null
 }
 const restorePendingBid = () => {
-  if (!import.meta.client || pendingBid.value || !isAuctionMember(store.currentUser)) return
+  if (!import.meta.client || pendingBid.value || !canPlaceAuctionBid(store.currentUser)) return
   try {
     const saved = memberOwnerKeys(store.currentUser)
       .map((owner) => {
@@ -690,8 +690,8 @@ useHead({
 
 const placeBid = async () => {
   if (isPlacingBid.value || disposed) return
-  if (!isAuctionMember(store.currentUser) || needsLogin.value) {
-    alert('請先使用 Google 或 LINE 登入後再出價。')
+  if (!canPlaceAuctionBid(store.currentUser) || needsLogin.value) {
+    alert('請先使用 LINE 登入後再出價。')
     return
   }
   const owner = memberOwnerKeys(store.currentUser)[0]
@@ -1186,7 +1186,7 @@ const closePromo = () => promoModal.close()
             class="action-box"
             v-if="getAuctionStatus(currentAuction).status === 'active' || pendingBid"
           >
-            <template v-if="isAuctionMember(store.currentUser) && !needsLogin">
+            <template v-if="canPlaceAuctionBid(store.currentUser) && !needsLogin">
               <div class="user-info-box">
                 <span v-if="store.currentUser.type === 'line'" class="u-name">
                   LINE：{{ store.currentUser.name }}
@@ -1288,30 +1288,9 @@ const closePromo = () => promoModal.close()
 
             <template v-else>
               <div class="login-prompt">
-                <p>使用 Google 或 LINE 登入即可出價</p>
+                <p>競標出價請使用 LINE 登入；Google 僅供管理與查閱歷史紀錄。</p>
                 <button type="button" @click="store.loginWithLine" class="btn-login-line">
                   LINE 登入
-                </button>
-                <button type="button" @click="store.loginWithGoogle" class="btn-login-google">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                    <path
-                      d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-                      fill="#4285F4"
-                    />
-                    <path
-                      d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-                      fill="#34A853"
-                    />
-                    <path
-                      d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
-                      fill="#FBBC05"
-                    />
-                    <path
-                      d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
-                      fill="#EA4335"
-                    />
-                  </svg>
-                  Google 登入
                 </button>
               </div>
             </template>
@@ -1379,13 +1358,17 @@ const closePromo = () => promoModal.close()
               {{ currentAuction.diet || '-' }}
             </li>
             <li>
-              <strong>運費：</strong>
+              <strong>餵食頻率：</strong>
+              {{ currentAuction.feeding_freq || '-' }}
+            </li>
+            <li>
+              <strong>運送／面交：</strong>
               {{ currentAuction.shipping_info || '-' }}
             </li>
           </ul>
           <div class="note-box" v-if="currentAuction.note">
-            <strong>備註：</strong>
-            {{ currentAuction.note }}
+            <strong>個體注意事項：</strong>
+            <span class="note-content">{{ currentAuction.note }}</span>
           </div>
         </div>
       </div>
@@ -2632,6 +2615,11 @@ const closePromo = () => promoModal.close()
   padding: 12px 0 12px 14px;
   border-width: 0 0 0 2px;
   background: transparent;
+}
+
+.note-content {
+  white-space: pre-line;
+  overflow-wrap: anywhere;
 }
 
 .loading-state,

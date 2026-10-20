@@ -15,8 +15,10 @@ begin
   select id into strict g from auth.users where raw_app_meta_data->>'auction_admin'='true';
   select user_id into strict l from auth.identities where provider='custom:line-oauth';
   perform set_config('request.jwt.claims',jsonb_build_object('sub',g,'role','authenticated')::text,true);
-  r:=public.submit_auction_bid(gen_random_uuid(),'TEST-PROVIDER-ROLLBACK',100,'Google測試');
-  checks:=checks||jsonb_build_object('google_still_allowed',r#>>'{bid,amount}'='100');
+  denied:=false;
+  begin perform public.submit_auction_bid(gen_random_uuid(),'TEST-PROVIDER-ROLLBACK',100,'Google測試');
+   exception when insufficient_privilege then denied:=true; end;
+  checks:=checks||jsonb_build_object('google_bid_denied',denied);
   perform set_config('request.jwt.claims',jsonb_build_object('sub',l,'role','authenticated')::text,true);
   r:=public.submit_auction_bid(gen_random_uuid(),'TEST-PROVIDER-ROLLBACK',200,'LINE測試');
   checks:=checks||jsonb_build_object('line_still_allowed',r#>>'{bid,amount}'='200');

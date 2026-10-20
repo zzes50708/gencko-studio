@@ -3,12 +3,13 @@ import {
   hasAuctionProvider,
   memberFromSupabaseUser,
   isAuctionMember,
+  canPlaceAuctionBid,
   memberOwnerKeys
 } from '../utils/member-auth'
 
-it('伺服器僅接受已驗證使用者的 Google／LINE app_metadata，不信任 user_metadata', () => {
+it('出價僅接受受信任的 LINE app_metadata，不接受 Google 或 user_metadata', () => {
   expect(hasAuctionProvider({ app_metadata: { provider: 'custom:line' } })).toBe(true)
-  expect(hasAuctionProvider({ app_metadata: { provider: 'google' } })).toBe(true)
+  expect(hasAuctionProvider({ app_metadata: { provider: 'google' } })).toBe(false)
   expect(
     hasAuctionProvider({
       app_metadata: { provider: 'email' },
@@ -85,7 +86,7 @@ it('原本 email 帳號後來綁定 Google 或 LINE，前端與伺服器使用�
       id: 'LINKED',
       app_metadata: { provider: 'email', providers: ['email', provider] }
     }
-    expect(hasAuctionProvider(user)).toBe(true)
+    expect(hasAuctionProvider(user)).toBe(provider !== 'google')
     const member = memberFromSupabaseUser(user)
     expect(member.type).toBe(type)
     expect(isAuctionMember(member)).toBe(true)
@@ -97,4 +98,16 @@ it('原本 email 帳號後來綁定 Google 或 LINE，前端與伺服器使用�
   }
   expect(hasAuctionProvider(spoofed)).toBe(false)
   expect(isAuctionMember(memberFromSupabaseUser(spoofed))).toBe(false)
+})
+
+it('Google 可查歷史但不能新出價，LINE 必須具有真實登入身分', () => {
+  const google = memberFromSupabaseUser({ id: 'G', app_metadata: { provider: 'google' } })
+  expect(isAuctionMember(google)).toBe(true)
+  expect(canPlaceAuctionBid(google)).toBe(false)
+  expect(canPlaceAuctionBid({ type: 'line', id: 'FAKE' })).toBe(false)
+  expect(
+    canPlaceAuctionBid(
+      memberFromSupabaseUser({ id: 'L', app_metadata: { provider: 'custom:line-oauth' } })
+    )
+  ).toBe(true)
 })

@@ -5,5 +5,5 @@ it('實際 H3 API 拒絕無效金額、分類登入與資料庫故障，且不�
   const result = execFileSync(process.execPath, ['scripts/verify-auction-bid-api.mjs'], {
     encoding: 'utf8'
   })
-  expect(result).toContain('競標 API 十六項故障回歸通過')
+  expect(result).toContain('競標 API 十七項故障回歸通過')
 }, 30000)

@@ -2,8 +2,7 @@ export function hasAuctionProvider(user: any) {
   const metadata = user?.app_metadata
   const providers = Array.isArray(metadata?.providers) ? metadata.providers : []
   return [metadata?.provider, ...providers].some(
-    (provider) =>
-      provider === 'google' || provider === 'custom:line' || provider === 'custom:line-oauth'
+    (provider) => provider === 'custom:line' || provider === 'custom:line-oauth'
   )
 }
 
@@ -30,6 +29,7 @@ export function memberFromSupabaseUser(user: any) {
     type,
     authSource: 'supabase',
     auctionAdmin: user.app_metadata?.auction_admin === true,
+    auctionBidder: hasAuctionProvider(user),
     email: user.email || null,
     name:
       display.name ||
@@ -53,4 +53,13 @@ export function memberOwnerKeys(member: any) {
   return [
     ...new Set([member?.id, member?.email].filter((value) => typeof value === 'string' && value))
   ]
+}
+
+// 歷史 Google 紀錄仍可查閱；新的出價只接受已登入的 LINE 身分。
+export function canPlaceAuctionBid(member: any) {
+  return !!(
+    member?.id &&
+    member.authSource === 'supabase' &&
+    (member.type === 'line' || member.auctionBidder === true)
+  )
 }

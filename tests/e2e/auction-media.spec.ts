@@ -69,6 +69,30 @@ async function fixture(page: any, options: any = {}) {
   return state
 }
 
+test('競標詳情顯示餌料、餵食頻率、固定運送方案及個體注意事項', async ({ page }) => {
+  await fixture(page, {
+    auction: {
+      diet: '冷凍蟋蟀/杜比亞',
+      feeding_freq: '3-4天/次',
+      shipping_info: '黑貓 +180 元；三重面交免運',
+      note: '本個體需留意餵食狀況'
+    }
+  })
+  await expect(page.locator('.specs-list')).toContainText('餌料： 冷凍蟋蟀/杜比亞')
+  await expect(page.locator('.specs-list')).toContainText('餵食頻率： 3-4天/次')
+  await expect(page.locator('.specs-list')).toContainText('運送／面交： 黑貓 +180 元；三重面交免運')
+  await expect(page.locator('.note-box')).toContainText('個體注意事項：')
+  await expect(page.locator('.note-box')).toContainText('本個體需留意餵食狀況')
+})
+
+test('個體注意事項保留分行，長字串在手機不溢出', async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 800 })
+  await fixture(page, { auction: { note: `第一行健康說明\n第二行餵食說明\n${'A'.repeat(150)}` } })
+  const note = page.locator('.note-content')
+  await expect(note).toHaveCSS('white-space', 'pre-line')
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+})
+
 test('三張照片可點選、鍵盤切換，背景更新保留選擇', async ({ page }) => {
   await fixture(page)
   await expect(page.getByRole('group', { name: '競標照片切換' }).getByRole('button')).toHaveCount(3)
