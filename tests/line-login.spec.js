@@ -7,12 +7,11 @@ const deferred = () => {
   })
   return { promise, resolve }
 }
-it('只有 Android 安裝版停用 LINE 原生自動登入，一般瀏覽器保留原流程', () => {
+it('Android 安裝版與一般瀏覽器都保留 LINE 原生自動登入', () => {
   expect(
     lineLoginOptions('https://example.invalid/auction/TEST', { android: true, standalone: true })
   ).toEqual({
-    redirectTo: 'https://example.invalid/auction/TEST',
-    queryParams: { disable_auto_login: 'true' }
+    redirectTo: 'https://example.invalid/auction/TEST'
   })
   for (const options of [{}, { android: true }, { standalone: true }])
     expect(lineLoginOptions('https://example.invalid/profile', options).queryParams).toBeUndefined()

@@ -41,7 +41,9 @@ for (const installed of [true, false]) {
       await expect.poll(() => authorize).not.toBe('')
       const url = new URL(authorize)
       expect(url.searchParams.get('provider')).toBe('custom:line-oauth')
-      expect(url.searchParams.get('disable_auto_login')).toBe(installed ? 'true' : null)
+      expect(url.searchParams.has('disable_auto_login')).toBe(false)
+      expect(url.searchParams.get('prompt')).not.toBe('login')
+      expect(url.searchParams.get('code_challenge')).toBeTruthy()
       expect(new URL(url.searchParams.get('redirect_to')!).pathname).toBe('/profile')
     } finally {
       await context.close()

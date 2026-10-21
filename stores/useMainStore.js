@@ -508,10 +508,7 @@ export const useMainStore = defineStore('main', () => {
     try {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'custom:line-oauth',
-        options: lineLoginOptions(window.location.href, {
-          android: /Android/i.test(navigator.userAgent),
-          standalone: window.matchMedia('(display-mode: standalone)').matches
-        })
+        options: lineLoginOptions(window.location.href)
       })
       if (error) throw error
     } catch {

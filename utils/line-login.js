@@ -1,5 +1,5 @@
-/** Android 安裝版避免 LINE 原生 App 將回程交給另一個預設瀏覽器。 */
-export function lineLoginOptions(href, { android = false, standalone = false } = {}) {
+/** 保留 LINE 原生自動登入，回程狀態由工作階段還原處理。 */
+export function lineLoginOptions(href) {
   const url = new URL(href)
   for (const key of ['code', 'state', 'error', 'error_code', 'error_description'])
     url.searchParams.delete(key)
@@ -11,8 +11,7 @@ export function lineLoginOptions(href, { android = false, standalone = false } =
   )
     url.hash = ''
   return {
-    redirectTo: url.href,
-    ...(android && standalone ? { queryParams: { disable_auto_login: 'true' } } : {})
+    redirectTo: url.href
   }
 }
 
