@@ -28,7 +28,6 @@ import {
 import { isAuctionMember, canPlaceAuctionBid, memberOwnerKeys } from '~/utils/member-auth'
 import { loadPromoImage } from '~/utils/auction-promo'
 import { getLineMessageLink } from '~/utils/animal-inquiry'
-import { getAuctionContactText } from '~/utils/auction-contact'
 
 definePageMeta({ key: (route) => route.fullPath })
 
@@ -695,7 +694,7 @@ const placeBid = async () => {
     return
   }
   const owner = memberOwnerKeys(store.currentUser)[0]
-  if (!pendingBid.value && currentAuction.value?.workflow_enabled && !lineContactVerified.value) {
+  if (!pendingBid.value && !lineContactVerified.value) {
     bidNotice.value = '請先完成官方 LINE 聯絡驗證後再出價'
     return
   }
@@ -730,7 +729,7 @@ const placeBid = async () => {
     }
     if (
       !confirm(
-        `確認出價 ${formatPrice(amount)}？\n${currentAuction.value.morph}（${auctionId}）\n送出後無法自行撤回。`
+        `確認出價 ${formatPrice(amount)}？\n${currentAuction.value.morph}（${auctionId}）\n公開名稱：${nickname || '系統匿名'}${nickname ? '（完整顯示，不遮蔽）' : ''}\n送出後無法自行撤回。`
       )
     )
       return
@@ -1061,7 +1060,7 @@ const closePromo = () => promoModal.close()
             <div class="bid-example">
               <span class="bid-example__label">顯示範例</span>
               <br />
-              <strong>王O明（或自訂暱稱）</strong>
+              <strong>使用者***（未填暱稱）</strong>
               出價
               <span>{{ formatPrice(minNextBid) }}</span>
             </div>
@@ -1202,33 +1201,21 @@ const closePromo = () => promoModal.close()
               </div>
               <div class="nick-input-wrap">
                 <AuctionLineContact
-                  v-if="currentAuction.workflow_enabled"
                   :auction-id="auctionId"
                   :member-id="store.currentUser.id"
                   @verified="lineContactVerified = $event"
                 />
-                <p v-else-if="store.currentUser.type === 'line'" class="bid-hint">
-                  首次競標請先加官方 LINE 並傳訊息，方便得標後聯繫。
-                  <a
-                    :href="
-                      getLineMessageLink(
-                        'https://line.me/R/ti/p/@219abdzn',
-                        getAuctionContactText(auctionId, store.currentUser.id)
-                      )
-                    "
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    建立 LINE 聯絡
-                  </a>
-                </p>
                 <input
                   type="text"
                   v-model="customNickname"
-                  placeholder="自訂顯示暱稱 (未填則遮蔽本名)"
+                  placeholder="選填暱稱（填寫內容會完整公開）"
                   class="nick-input"
                   aria-label="自訂顯示暱稱"
+                  aria-describedby="nickname-public-notice"
                 />
+                <p id="nickname-public-notice" class="bid-hint">
+                  未填時由系統匿名顯示；填寫後會完整公開你輸入的文字，不會再遮蔽。請勿填本名、電話等個人資料。
+                </p>
               </div>
               <div class="input-group">
                 <span class="currency">NT$</span>
@@ -1251,10 +1238,7 @@ const closePromo = () => promoModal.close()
                   :disabled="
                     isPlacingBid ||
                     (!pendingBid &&
-                      (!bidsReady ||
-                        !!bidsError ||
-                        !!metadataError ||
-                        (currentAuction.workflow_enabled && !lineContactVerified)))
+                      (!bidsReady || !!bidsError || !!metadataError || !lineContactVerified))
                   "
                 >
                   {{ isPlacingBid ? '處理中...' : pendingBid ? '重試同一筆出價' : '確認出價' }}

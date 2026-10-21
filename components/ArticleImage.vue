@@ -2,8 +2,8 @@
 import { ref, watch, nextTick, onMounted } from 'vue'
 defineOptions({ inheritAttrs: false })
 const props = withDefaults(
-  defineProps<{ src?: string; alt: string; loading?: 'eager' | 'lazy' }>(),
-  { loading: 'lazy' }
+  defineProps<{ src?: string; alt: string; loading?: 'eager' | 'lazy'; emptyText?: string }>(),
+  { loading: 'lazy', emptyText: '文章圖片未提供' }
 )
 const failed = ref(false)
 const image = ref<HTMLImageElement | null>(null)
@@ -37,9 +37,9 @@ watch(
     v-bind="$attrs"
     class="article-image-fallback"
     role="img"
-    :aria-label="`${alt}（圖片暫時無法顯示）`"
+    :aria-label="`${alt}（${src ? '圖片暫時無法顯示' : emptyText}）`"
   >
-    {{ src ? '圖片暫時無法顯示' : '文章圖片未提供' }}
+    {{ src ? '圖片暫時無法顯示' : emptyText }}
   </div>
 </template>
 <style scoped>

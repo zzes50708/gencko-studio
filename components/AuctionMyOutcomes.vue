@@ -13,7 +13,8 @@ let loadRevision = 0
 let mounted = false
 let refreshTimer
 function resumeRefresh() {
-  if (!document.hidden && !loading.value && !busy.value && !abandoning.value) void load(true)
+  if (!document.hidden && navigator.onLine && !loading.value && !busy.value && !abandoning.value)
+    void load(true)
 }
 const labels = {
   pending_contact: '等待建立 LINE 聯絡',
@@ -99,11 +100,15 @@ onMounted(() => {
   refreshTimer = setInterval(resumeRefresh, 15000)
   document.addEventListener('visibilitychange', resumeRefresh)
   window.addEventListener('online', resumeRefresh)
+  window.addEventListener('focus', resumeRefresh)
+  window.addEventListener('pageshow', resumeRefresh)
 })
 onBeforeUnmount(() => {
   clearInterval(refreshTimer)
   document.removeEventListener('visibilitychange', resumeRefresh)
   window.removeEventListener('online', resumeRefresh)
+  window.removeEventListener('focus', resumeRefresh)
+  window.removeEventListener('pageshow', resumeRefresh)
   revision++
   rows.value = []
 })

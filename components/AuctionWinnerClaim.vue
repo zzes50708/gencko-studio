@@ -1,6 +1,5 @@
 <script setup>
 import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
-import { getLineMessageLink } from '~/utils/animal-inquiry'
 import { isAuctionOutcome } from '~/utils/auction-outcomes'
 import { useMainStore } from '~/stores/useMainStore'
 const props = defineProps({
@@ -37,7 +36,6 @@ function checkClaimExpiry() {
     message.value = '領標驗證碼已過期，請重新產生訊息後傳送。'
   } else expiryTimer = setTimeout(checkClaimExpiry, Math.min(remaining, 2147483647))
 }
-const lineLink = computed(() => getLineMessageLink('https://line.me/R/ti/p/@219abdzn', text.value))
 const deadline = computed(() =>
   outcome.value?.payment_due_at
     ? new Date(outcome.value.payment_due_at).toLocaleString('zh-TW', {
@@ -46,13 +44,15 @@ const deadline = computed(() =>
       })
     : '待工作室確認'
 )
-async function load() {
+async function load({ quiet = false } = {}) {
   const owner = revision
   const request = ++loadRevision
   loading.value = true
-  outcome.value = null
-  clearClaim()
-  message.value = ''
+  if (!quiet) {
+    outcome.value = null
+    clearClaim()
+    message.value = ''
+  }
   try {
     const { data, error } = await supabase.rpc('my_auction_outcome', {
       p_auction_id: props.auctionId
@@ -60,13 +60,46 @@ async function load() {
     if (owner !== revision || request !== loadRevision) return
     if (error) throw error
     if (data !== null && !isAuctionOutcome(data, props.auctionId)) throw Error('得標回應不完整')
+    if (
+      quiet &&
+      (data?.state !== outcome.value?.state ||
+        data?.amount !== outcome.value?.amount ||
+        data?.claimed_at !== outcome.value?.claimed_at)
+    ) {
+      clearClaim()
+      message.value = ''
+    }
     outcome.value = data
   } catch {
-    if (owner === revision && request === loadRevision)
+    if (owner === revision && request === loadRevision) {
+      outcome.value = null
+      clearClaim()
       message.value = '暫時無法確認得標結果，請重試。'
+    }
   } finally {
     if (owner === revision && request === loadRevision) loading.value = false
   }
+}
+async function copyText(value, request) {
+  try {
+    await navigator.clipboard.writeText(value)
+    if (request === revision && text.value === value)
+      message.value = '已複製，請貼到官方 LINE 並傳送，完成領標。'
+  } catch {
+    if (request === revision && text.value === value)
+      message.value = '請選取下方完整訊息複製，貼到官方 LINE 並傳送。'
+  }
+}
+async function resume() {
+  if (document.hidden || !navigator.onLine || props.disabled || busy.value || loading.value) return
+  checkClaimExpiry()
+  // 會員頁由父層一次取得全部紀錄，避免每張卡片額外逐場查詢。
+  if (props.initialOutcome) return
+  await load({ quiet: true })
+}
+function openLine(event) {
+  checkClaimExpiry()
+  if (!text.value) event.preventDefault()
 }
 async function copyClaim() {
   if (props.disabled || busy.value || loading.value || !canClaim.value) return
@@ -74,6 +107,11 @@ async function copyClaim() {
   busy.value = true
   message.value = ''
   try {
+    // 複製失敗或再次複製時沿用有效驗證碼，避免撤銷客人剛貼上的訊息。
+    if (text.value && expiresAt > store.auctionNow()) {
+      await copyText(text.value, request)
+      return
+    }
     const { data, error } = await supabase.rpc('create_auction_winner_claim', {
       p_auction_id: props.auctionId
     })
@@ -91,14 +129,7 @@ async function copyClaim() {
     text.value = data.message
     expiresAt = Date.parse(data.expires_at)
     checkClaimExpiry()
-    try {
-      await navigator.clipboard.writeText(text.value)
-      if (request === revision && text.value === data.message)
-        message.value = '已複製，請貼到官方 LINE 並傳送，完成領標。'
-    } catch {
-      if (request === revision && text.value === data.message)
-        message.value = '請選取下方完整訊息複製，貼到官方 LINE 並傳送。'
-    }
+    await copyText(text.value, request)
   } catch {
     if (request === revision) {
       clearClaim()
@@ -134,15 +165,19 @@ watch(
   }
 )
 onMounted(() => {
-  document.addEventListener('visibilitychange', checkClaimExpiry)
-  window.addEventListener('online', checkClaimExpiry)
+  document.addEventListener('visibilitychange', resume)
+  window.addEventListener('online', resume)
+  window.addEventListener('focus', resume)
+  window.addEventListener('pageshow', resume)
   if (!props.initialOutcome) void load()
 })
 onBeforeUnmount(() => {
   revision++
   clearClaim()
-  document.removeEventListener('visibilitychange', checkClaimExpiry)
-  window.removeEventListener('online', checkClaimExpiry)
+  document.removeEventListener('visibilitychange', resume)
+  window.removeEventListener('online', resume)
+  window.removeEventListener('focus', resume)
+  window.removeEventListener('pageshow', resume)
   outcome.value = null
 })
 </script>
@@ -176,15 +211,8 @@ onBeforeUnmount(() => {
       <template v-if="text">
         <textarea aria-label="得標確認訊息" readonly :value="text" rows="6" />
         <p>驗證碼 15 分鐘內有效，請完整傳送、不要轉交他人；過期可重新產生。</p>
-        <a
-          class="btn-app btn-app--secondary"
-          :href="lineLink"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          手機開啟 LINE 領標
-        </a>
-        <p>電腦版請自行開啟 LINE，貼上訊息傳送；複製本身不代表已領標或已付款。</p>
+        <OfficialLineHandoff :message="text" mobile-label="手機開啟 LINE 領標" @open="openLine" />
+        <p>複製或掃描本身不代表已領標或已付款，請在 LINE 按下傳送。</p>
       </template>
     </template>
     <p v-else-if="loading">正在確認本帳號的得標結果…</p>

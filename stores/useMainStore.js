@@ -7,6 +7,7 @@ import { sampleAuctionClock, auctionClockNow } from '~/utils/auction-detail'
 import { useRouter } from 'vue-router'
 import { memberFromSupabaseUser } from '~/utils/member-auth'
 import { withRetry } from '~/utils/supabase-retry'
+import { lineLoginOptions, createAuthSessionReader, signOutCurrentDevice } from '~/utils/line-login'
 
 export const useMainStore = defineStore('main', () => {
   const supabase = useSupabaseClient()
@@ -477,11 +478,12 @@ export const useMainStore = defineStore('main', () => {
     }
   }
 
+  const authSessionReader = createAuthSessionReader(supabase.auth, (session) => {
+    currentUser.value = memberFromSupabaseUser(session?.user)
+  })
   async function checkAuthStatus() {
     if (!import.meta.client) return
-    const { data, error } = await supabase.auth.getSession()
-    if (error) return
-    currentUser.value = memberFromSupabaseUser(data.session?.user)
+    await authSessionReader.read()
   }
 
   // 舊版 LIFF 個人資料不是網站認可的登入憑證；不再從 localStorage 還原成已驗證會員。
@@ -495,42 +497,61 @@ export const useMainStore = defineStore('main', () => {
 
   if (import.meta.client) {
     supabase.auth.onAuthStateChange((_, session) => {
-      currentUser.value = memberFromSupabaseUser(session?.user)
+      authSessionReader.accept(session)
     })
   }
 
+  let authLoginBusy = false
   const loginWithLine = async () => {
+    if (!import.meta.client || authLoginBusy) return
+    authLoginBusy = true
     try {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'custom:line-oauth',
-        options: { redirectTo: window.location.href }
+        options: lineLoginOptions(window.location.href, {
+          android: /Android/i.test(navigator.userAgent),
+          standalone: window.matchMedia('(display-mode: standalone)').matches
+        })
       })
       if (error) throw error
     } catch {
       alert('LINE 登入暫時無法完成，請稍後重試。')
+    } finally {
+      authLoginBusy = false
     }
   }
 
   const loginWithGoogle = async () => {
+    if (!import.meta.client || authLoginBusy) return
+    authLoginBusy = true
     try {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
-        options: { redirectTo: window.location.href }
+        options: { redirectTo: lineLoginOptions(window.location.href).redirectTo }
       })
       if (error) throw error
     } catch (err) {
       console.error('Google 登入失敗:', err)
       alert('登入失敗，請稍後再試！')
+    } finally {
+      authLoginBusy = false
     }
   }
 
   const logout = async () => {
-    await supabase.auth.signOut()
-    if (window.liff?.isLoggedIn()) window.liff.logout()
-    currentUser.value = null
+    authSessionReader.invalidate()
+    try {
+      await signOutCurrentDevice(supabase.auth, () => authSessionReader.accept(null))
+    } catch {
+      alert('登出未完成，請確認網路後重試。')
+      return
+    }
+    try {
+      if (window.liff?.isLoggedIn()) window.liff.logout()
+    } catch {}
     try {
       localStorage.removeItem('gencko_line_user')
-    } catch (e) {}
+    } catch {}
   }
 
   function initTheme() {

@@ -1,10 +1,12 @@
 <script setup>
-import { ref, computed, watch, onBeforeUnmount } from 'vue'
+import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
 import { useHead, useSupabaseClient } from '#imports'
 import { useMainStore } from '~/stores/useMainStore'
-import { isAuctionMember } from '~/utils/member-auth'
+import { isAuctionMember, memberOwnerKeys } from '~/utils/member-auth'
 import { getCleanUrl } from '~/utils/image'
+import { readMemberAuctionHistory } from '~/utils/auction-member-history'
+import { auctionState } from '~/utils/auction-presentation'
 
 const store = useMainStore()
 const router = useRouter()
@@ -37,11 +39,38 @@ const {
 const myBids = ref([])
 const isLoadingBids = ref(false)
 let bidRequestId = 0
+let bidController
+let bidReading = false
+let historyTimer
+const historyNow = ref(store.auctionNow())
+function refreshHistory() {
+  if (
+    document.hidden ||
+    activeTab.value !== 'bids' ||
+    !isAuctionMember(store.currentUser) ||
+    bidReading
+  )
+    return
+  void fetchMyBids(++bidRequestId, true)
+}
+watch(activeTab, refreshHistory)
+onMounted(() => {
+  let ticks = 0
+  historyTimer = setInterval(() => {
+    if (document.hidden) return
+    historyNow.value = store.auctionNow()
+    if (++ticks % 15 === 0) refreshHistory()
+  }, 1000)
+  window.addEventListener('online', refreshHistory)
+  document.addEventListener('visibilitychange', refreshHistory)
+})
 
 // 監聽 Store 中的 currentUser 變化，以載入或清除競標紀錄
 watch(
-  () => store.currentUser,
-  (user) => {
+  () => `${memberOwnerKeys(store.currentUser).join('|')}:${isAuctionMember(store.currentUser)}`,
+  () => {
+    const user = store.currentUser
+    bidController?.abort()
     const requestId = ++bidRequestId
     myBids.value = []
     bidsError.value = ''
@@ -54,63 +83,33 @@ watch(
 )
 onBeforeUnmount(() => {
   bidRequestId++
+  bidController?.abort()
+  clearInterval(historyTimer)
+  window.removeEventListener('online', refreshHistory)
+  document.removeEventListener('visibilitychange', refreshHistory)
 })
 
-// 由伺服器端身份取得自己的競標紀錄，不讓瀏覽器以 phone/email 查詢。
-async function fetchMyBids(requestId) {
-  isLoadingBids.value = true
+// 讀取完整個人紀錄；換帳號或離頁時取消舊查詢。
+async function fetchMyBids(requestId, quiet = false) {
+  bidController?.abort()
+  bidController = new AbortController()
+  const signal = bidController.signal
+  bidReading = true
+  if (!quiet) isLoadingBids.value = true
   bidsError.value = ''
   try {
-    const { data: bidsData, error: bidsError } = await supabase.rpc('get_my_auction_bids')
-    if (requestId !== bidRequestId) return
-
-    if (bidsError) throw bidsError
-    if (!bidsData || bidsData.length === 0) {
-      myBids.value = []
-      return
-    }
-
-    // Step 2：取出不重複的 auction_id，一次查詢對應拍賣資料
-    const auctionIds = [...new Set(bidsData.map((b) => b.auction_id))]
-    const { data: auctionsData, error: auctionsError } = await supabase
-      .from('auctions')
-      .select('id, morph, end_time, status, images')
-      .in('id', auctionIds)
-    if (requestId !== bidRequestId) return
-    if (auctionsError) throw auctionsError
-
-    const auctionsMap = {}
-    ;(auctionsData || []).forEach((a) => {
-      auctionsMap[a.id] = a
-    })
-
-    // Step 3：Grouping — 每場拍賣只保留最高出價與出價次數
-    const grouped = {}
-    bidsData.forEach((bid) => {
-      const auction = auctionsMap[bid.auction_id]
-      if (!grouped[bid.auction_id]) {
-        grouped[bid.auction_id] = {
-          auction_id: bid.auction_id,
-          morph: auction?.morph || '未知品系',
-          image: auction?.images?.[0] || '',
-          end_time: auction?.end_time,
-          my_max_bid: bid.amount,
-          bid_count: 1
-        }
-      } else {
-        grouped[bid.auction_id].bid_count++
-        if (bid.amount > grouped[bid.auction_id].my_max_bid) {
-          grouped[bid.auction_id].my_max_bid = bid.amount
-        }
-      }
-    })
-    myBids.value = Object.values(grouped)
-  } catch (e) {
-    if (requestId !== bidRequestId) return
-    console.error('讀取競標紀錄失敗:', e)
+    const rows = await readMemberAuctionHistory(supabase, signal)
+    if (requestId !== bidRequestId || signal.aborted) return
+    myBids.value = rows
+  } catch {
+    if (requestId !== bidRequestId || signal.aborted) return
+    myBids.value = []
     bidsError.value = '競標紀錄暫時無法載入，請稍後重試。'
   } finally {
-    if (requestId === bidRequestId) isLoadingBids.value = false
+    if (requestId === bidRequestId) {
+      isLoadingBids.value = false
+      bidReading = false
+    }
   }
 }
 
@@ -160,10 +159,9 @@ const retryMyBids = () => {
   if (isAuctionMember(store.currentUser)) void fetchMyBids(++bidRequestId)
 }
 
-const getAuctionStatus = (endTime) => {
-  const now = new Date().getTime()
-  if (now >= new Date(endTime).getTime()) return { text: '已結標', class: 's-sold' }
-  return { text: '競標中', class: 's-res' }
+const getAuctionStatus = (bid) => {
+  const state = auctionState(bid, historyNow.value)
+  return { ...state, class: state.status === 'active' ? 's-res' : 's-sold' }
 }
 
 const getMapLink = (h) => {
@@ -658,11 +656,8 @@ const getMapLink = (h) => {
             <!-- 🌟 核心修正：NuxtImg 替換為原生 img -->
             <ArticleImage
               :alt="bid.morph || '競標個體'"
-              :src="
-                bid.image
-                  ? getCleanUrl(bid.image)
-                  : 'https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/placeholder.jpg'
-              "
+              empty-text="尚無個體照片"
+              :src="bid.image ? getCleanUrl(bid.image) : ''"
               class="bid-img"
               loading="lazy"
               decoding="async"
@@ -679,12 +674,12 @@ const getMapLink = (h) => {
                 <h3 style="margin: 0; font-size: 1.1rem; color: var(--txt); line-height: 1.3">
                   {{ bid.morph }}
                 </h3>
-                <span class="status-badge" :class="getAuctionStatus(bid.end_time).class">
-                  {{ getAuctionStatus(bid.end_time).text }}
+                <span class="status-badge" :class="getAuctionStatus(bid).class">
+                  {{ getAuctionStatus(bid).text }}
                 </span>
               </div>
               <div class="bid-detail-row">
-                <span>最高出價</span>
+                <span>我的最高出價</span>
                 <strong style="color: var(--pri); font-size: 1.1rem">${{ bid.my_max_bid }}</strong>
               </div>
               <div style="font-size: 0.8rem; color: #888; margin-top: 8px">

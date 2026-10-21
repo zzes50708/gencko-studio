@@ -1,6 +1,5 @@
 <script setup>
 import { computed, ref, watch, onBeforeUnmount, onMounted } from 'vue'
-import { getLineMessageLink } from '~/utils/animal-inquiry'
 import { useMainStore } from '~/stores/useMainStore'
 const props = defineProps({
   auctionId: { type: String, required: true },
@@ -18,7 +17,7 @@ const bindingText = computed(() => (challenge.value ? `競標綁定 ${challenge.
 async function copy() {
   const owner = revision
   const current = challenge.value
-  if (!current) return
+  if (!current || expireChallenge()) return
   try {
     await navigator.clipboard.writeText(bindingText.value)
     if (owner === revision && current === challenge.value)
@@ -32,13 +31,29 @@ let revision = 0
 let checkRevision = 0
 let timer
 let mounted = false
-const link = computed(() =>
-  challenge.value
-    ? getLineMessageLink('https://line.me/R/ti/p/@219abdzn', `競標綁定 ${challenge.value.code}`)
-    : ''
-)
+let resuming = false
+async function resume() {
+  if (resuming || document.hidden || !navigator.onLine) return
+  resuming = true
+  try {
+    await check()
+  } finally {
+    resuming = false
+  }
+}
 function stop() {
   clearTimeout(timer)
+}
+function expireChallenge() {
+  if (!challenge.value || Date.parse(challenge.value.expires_at) > store.auctionNow()) return false
+  stop()
+  challenge.value = null
+  copyMessage.value = ''
+  message.value = '綁定碼已過期，請重新建立。'
+  return true
+}
+function openLine(event) {
+  if (!challenge.value || expireChallenge()) event.preventDefault()
 }
 async function check() {
   const owner = revision
@@ -73,17 +88,16 @@ async function poll() {
   const current = challenge.value
   stop()
   if (!challenge.value) return
-  if (Date.parse(challenge.value.expires_at) <= store.auctionNow()) {
-    challenge.value = null
-    message.value = '綁定碼已過期，請重新建立。'
-    return
-  }
+  if (expireChallenge()) return
   if (document.visibilityState === 'visible') await check()
   if (owner === revision && current === challenge.value && challenge.value)
-    timer = setTimeout(poll, 5000)
+    timer = setTimeout(
+      poll,
+      Math.max(0, Math.min(5000, Date.parse(challenge.value.expires_at) - store.auctionNow()))
+    )
 }
 async function create() {
-  if (busy.value) return
+  if (busy.value || !state.value?.required || state.value?.ready || state.value?.restricted) return
   const request = revision
   busy.value = true
   message.value = ''
@@ -92,7 +106,11 @@ async function create() {
     const { data, error } = await supabase.rpc('create_auction_line_link')
     if (request !== revision) return
     if (error) throw error
-    if (!/^[0-9a-f]{36}$/.test(data?.code) || !Number.isFinite(Date.parse(data.expires_at)))
+    if (
+      !/^[0-9a-f]{36}$/.test(data?.code) ||
+      !Number.isFinite(Date.parse(data.expires_at)) ||
+      Date.parse(data.expires_at) <= store.auctionNow()
+    )
       throw Error()
     challenge.value = data
     void poll()
@@ -119,11 +137,20 @@ watch(
 onMounted(() => {
   mounted = true
   void check()
+  window.addEventListener('focus', resume)
+  window.addEventListener('pageshow', resume)
+  window.addEventListener('online', resume)
+  document.addEventListener('visibilitychange', resume)
 })
 onBeforeUnmount(() => {
+  mounted = false
   revision++
   stop()
   challenge.value = null
+  window.removeEventListener('focus', resume)
+  window.removeEventListener('pageshow', resume)
+  window.removeEventListener('online', resume)
+  document.removeEventListener('visibilitychange', resume)
 })
 </script>
 
@@ -138,8 +165,12 @@ onBeforeUnmount(() => {
       ✓ 官方 LINE 聯絡已驗證
       <span v-if="state.display_name">：{{ state.display_name }}</span>
     </p>
-    <template v-else>
-      <p>請向官方 LINE 傳送綁定訊息，以驗證聯絡方式；競標出價僅限 LINE 登入。</p>
+    <p v-else-if="!state && !message" role="status">正在確認出價資格與官方 LINE 聯絡狀態…</p>
+    <template v-else-if="state?.required">
+      <p>
+        首次出價前，請用目前登入的 LINE 向 Gencko 官方帳號傳送驗證碼。每個 LINE
+        帳號只需驗證一次，之後不用重複傳送；棄標等出價限制仍適用。
+      </p>
       <button
         v-if="!challenge"
         type="button"
@@ -150,18 +181,15 @@ onBeforeUnmount(() => {
         {{ busy ? '建立中…' : '建立 LINE 聯絡' }}
       </button>
       <template v-else>
-        <p>電腦版請複製下方訊息，貼到 Gencko 官方 LINE（@219abdzn）並傳送；手機可直接使用連結。</p>
+        <p>請將下方完整訊息傳送至 Gencko 官方 LINE（@219abdzn）。</p>
         <button type="button" class="btn-app btn-app--secondary" @click="copy">複製綁定訊息</button>
         <textarea readonly aria-label="LINE 綁定訊息" :value="bindingText" rows="2" />
         <p role="status">{{ copyMessage }}</p>
-        <a
-          class="btn-app btn-app--secondary"
-          :href="link"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          前往 LINE 傳送綁定訊息
-        </a>
+        <OfficialLineHandoff
+          :message="bindingText"
+          mobile-label="前往 LINE 傳送綁定訊息"
+          @open="openLine"
+        />
         <p>請在 LINE 按下傳送；綁定碼 15 分鐘內有效，請勿轉交他人。</p>
         <button type="button" class="btn-app btn-app--ghost" @click="check">
           我已傳送，重新確認

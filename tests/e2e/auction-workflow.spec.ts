@@ -2,6 +2,12 @@ import { test, expect } from '@playwright/test'
 
 for (const offsetDays of [0, 2, -2]) {
   test(`新流程 LINE 綁定與延遲回應驗證（裝置日期偏移 ${offsetDays} 天）`, async ({ page }) => {
+    await page.addInitScript(() =>
+      Object.defineProperty(navigator, 'userAgent', {
+        configurable: true,
+        value: 'Mozilla Android 14 Mobile'
+      })
+    )
     const serverTime = Date.now()
     await page.clock.install({ time: serverTime + offsetDays * 86400000 })
     await page.route('**/api/server-time', (r) => r.fulfill({ json: { serverTime } }))
@@ -103,13 +109,30 @@ for (const offsetDays of [0, 2, -2]) {
         { required: true, ready: 'true', restricted: false }
       ]) {
         statusOverride = invalid
-        await page.getByRole('button', { name: '我已傳送，重新確認', exact: true }).click()
+        const retryStatus = page.getByRole('button', { name: '重新確認 LINE 狀態', exact: true })
+        if (await retryStatus.isVisible()) await retryStatus.click()
+        else await page.getByRole('button', { name: '我已傳送，重新確認', exact: true }).click()
         await expect(
           page.getByText('暫時無法確認 LINE 聯絡狀態，請重新確認。', { exact: true })
         ).toBeVisible()
         await expect(page.getByRole('button', { name: '確認出價', exact: true })).toBeDisabled()
       }
       statusOverride = undefined
+      await page
+        .getByRole('button', { name: '重新確認 LINE 狀態', exact: true })
+        .click({ timeout: 1500 })
+        .catch(async (error) => {
+          // 輪詢可能已先恢復正常狀態，重試按鈕因此被撤下。
+          if (
+            !(await page
+              .getByRole('button', { name: '我已傳送，重新確認', exact: true })
+              .isVisible())
+          )
+            throw error
+        })
+      await expect(
+        page.getByRole('button', { name: '我已傳送，重新確認', exact: true })
+      ).toBeVisible()
     }
     holdStatus = true
     await page.getByRole('button', { name: '我已傳送，重新確認', exact: true }).click()
@@ -146,6 +169,11 @@ test('得標者回報付款後進入人工核帳，登出即清除私人結果',
   let state = 'awaiting_payment'
   let holdRead = false
   let outcomeReads = 0
+  let individualReads = 0
+  await page.route('**/rest/v1/rpc/my_auction_outcome', (r) => {
+    individualReads++
+    return r.fulfill({ json: null })
+  })
   let outcomeOverride: any = undefined
   let releaseRead: (() => void) | null = null
   await page.route('**/rest/v1/rpc/my_auction_outcomes', async (r) => {
@@ -198,6 +226,19 @@ test('得標者回報付款後進入人工核帳，登出即清除私人結果',
   })
   await page.getByRole('button', { name: /^競標/ }).click()
   await page.evaluate(() => {
+    const g = (document.querySelector('#__nuxt') as any).__vue_app__.config.globalProperties
+    g.$supabase.client.auth.getSession = async () => ({
+      data: {
+        session: {
+          user: {
+            id: 'TEST-MEMBER',
+            email: 'test@example.invalid',
+            app_metadata: { provider: 'google' }
+          }
+        }
+      },
+      error: null
+    })
     ;(document.querySelector('#__nuxt') as any).__vue_app__.config.globalProperties.$pinia._s.get(
       'main'
     ).currentUser = { id: 'TEST-MEMBER', type: 'google', email: 'test@example.invalid' }
@@ -215,6 +256,15 @@ test('得標者回報付款後進入人工核帳，登出即清除私人結果',
   await expect(page.getByRole('textbox', { name: '得標確認訊息', exact: true })).toHaveValue(
     /領標驗證/
   )
+  expect(individualReads).toBe(0)
+  const readsBeforeFocus = outcomeReads
+  await page.evaluate(() => {
+    window.dispatchEvent(new Event('focus'))
+    window.dispatchEvent(new Event('pageshow'))
+  })
+  await expect.poll(() => outcomeReads).toBe(readsBeforeFocus + 1)
+  await expect(page.getByRole('button', { name: '重新載入得標紀錄', exact: true })).toBeEnabled()
+  expect(individualReads).toBe(0)
   holdRead = true
   await page.getByRole('button', { name: '重新載入得標紀錄', exact: true }).click()
   await expect.poll(() => !!releaseRead).toBe(true)
@@ -416,6 +466,8 @@ test('結標頁只有得標帳號能取得領標訊息，手機與桌機皆可�
     { message: '過期訊息', amount: 700, expires_at: new Date(started).toISOString() }
   ]) {
     claimOverride = invalid
+    // 有效訊息重複複製會沿用原碼；重新確認結果後才測下一個伺服器回應。
+    await page.getByRole('button', { name: '重新確認得標結果', exact: true }).click()
     await page.getByRole('button', { name: '複製得標確認訊息', exact: true }).click()
     await expect(
       page.getByText('未能產生領標訊息，請確認使用出價時的帳號登入，再重新確認結果。', {
