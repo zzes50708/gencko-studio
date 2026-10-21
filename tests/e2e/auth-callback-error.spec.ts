@@ -22,6 +22,7 @@ for (const fragment of [false, true]) {
 }
 for (const firstProvider of ['line', 'google']) {
   test(`同時點登入不覆寫驗證流程，失敗後可重新登入（先 ${firstProvider}）`, async ({ page }) => {
+    await page.route('**/api/auth/line/relay', (r) => r.fulfill({ json: { status: 'ok' } }))
     await page.goto('/profile', { waitUntil: 'domcontentloaded' })
     await expect(page.getByRole('button', { name: 'LINE 登入', exact: true }).first()).toBeVisible()
     await page.waitForFunction(
@@ -50,6 +51,7 @@ for (const firstProvider of ['line', 'google']) {
       )
       const first = firstProvider === 'line' ? store.loginWithLine() : store.loginWithGoogle()
       await (firstProvider === 'line' ? store.loginWithGoogle() : store.loginWithLine())
+      for (let n = 0; !release && n < 100; n++) await new Promise((r) => setTimeout(r, 10))
       const pendingCount = calls.length
       release({ error: new Error('隔離登入失敗') })
       await first

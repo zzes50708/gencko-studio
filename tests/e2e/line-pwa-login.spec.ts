@@ -32,6 +32,7 @@ for (const installed of [true, false]) {
     try {
       const page = await context.newPage()
       let authorize = ''
+      await page.route('**/api/auth/line/relay', (r) => r.fulfill({ json: { status: 'ok' } }))
       await page.route('**/auth/v1/authorize?**', (r) => {
         authorize = r.request().url()
         return r.fulfill({ contentType: 'text/html', body: '<p>隔離登入測試</p>' })
@@ -44,7 +45,8 @@ for (const installed of [true, false]) {
       expect(url.searchParams.has('disable_auto_login')).toBe(false)
       expect(url.searchParams.get('prompt')).not.toBe('login')
       expect(url.searchParams.get('code_challenge')).toBeTruthy()
-      expect(new URL(url.searchParams.get('redirect_to')!).pathname).toBe('/profile')
+      expect(new URL(url.searchParams.get('redirect_to')!).pathname).toBe('/api/auth/line/callback')
+      expect(new URL(url.searchParams.get('redirect_to')!).searchParams.get('flow')).toBeTruthy()
     } finally {
       await context.close()
     }

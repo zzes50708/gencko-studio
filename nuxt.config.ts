@@ -207,7 +207,7 @@ export default defineNuxtConfig({
 
   sitemap: {
     sources: ['/api/_sitemap-urls'],
-    exclude: ['/hero-lab', '/compare', '/stories', '/profile', '/identity/**']
+    exclude: ['/hero-lab', '/compare', '/stories', '/profile', '/line-login-return', '/identity/**']
   },
 
   robots: {
@@ -267,6 +267,13 @@ export default defineNuxtConfig({
   // Supabase / wsrv.nl 圖床 / GitHub Raw / jsDelivr）。
   // 'unsafe-inline' 保留：站內大量 JSON-LD 與 inline style；'unsafe-eval' 給 Pinia / GSAP / Vue 編譯期使用
   routeRules: {
+    '/line-login-return': {
+      headers: {
+        'Cache-Control': 'private, no-store',
+        'Referrer-Policy': 'no-referrer',
+        'X-Robots-Tag': 'noindex, nofollow'
+      }
+    },
     '/**': {
       headers: {
         'Content-Security-Policy': [

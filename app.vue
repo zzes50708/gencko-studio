@@ -276,6 +276,7 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
+  <LineLoginResume />
   <!-- Skip to content：鍵盤 Tab 第一站即可跳過全站 nav 直達主內容（WCAG 2.4.1） -->
   <a href="#main-content" class="skip-to-content">跳至主要內容</a>
 

@@ -8,6 +8,7 @@ import { useRouter } from 'vue-router'
 import { memberFromSupabaseUser } from '~/utils/member-auth'
 import { withRetry } from '~/utils/supabase-retry'
 import { lineLoginOptions, createAuthSessionReader, signOutCurrentDevice } from '~/utils/line-login'
+import { createLineLoginRelay } from '~/utils/line-login-relay'
 
 export const useMainStore = defineStore('main', () => {
   const supabase = useSupabaseClient()
@@ -481,6 +482,57 @@ export const useMainStore = defineStore('main', () => {
   const authSessionReader = createAuthSessionReader(supabase.auth, (session) => {
     currentUser.value = memberFromSupabaseUser(session?.user)
   })
+  let lineRelay
+  const lineLoginNeedsTransfer = ref(false)
+  const getLineRelay = () => {
+    if (!lineRelay && import.meta.client)
+      lineRelay = createLineLoginRelay({
+        storage: {
+          getItem: (key) => window.localStorage.getItem(key),
+          setItem: (key, value) => window.localStorage.setItem(key, value),
+          removeItem: (key) => window.localStorage.removeItem(key)
+        },
+        auth: supabase.auth,
+        request: (body) =>
+          $fetch('/api/auth/line/relay', { method: 'POST', body, retry: 0, timeout: 15000 })
+      })
+    return lineRelay
+  }
+  const resumeLineLogin = async () => {
+    if (!import.meta.client) return null
+    try {
+      const relay = getLineRelay()
+      const read = () => relay.resume()
+      // 同瀏覽器多分頁共享 verifier，避免兩個分頁同時消耗一次性授權碼。
+      const result = navigator.locks
+        ? await navigator.locks.request('gencko-line-login-resume', read)
+        : await read()
+      if (result?.needsTransfer) {
+        lineLoginNeedsTransfer.value = true
+        return null
+      }
+      if (result) {
+        lineLoginNeedsTransfer.value = false
+        authSessionReader.accept(result.session)
+      }
+      return result
+    } catch (error) {
+      if (error?.message === 'LINE_LOGIN_RESTART') {
+        lineLoginNeedsTransfer.value = false
+        alert('LINE 登入尚未完成或已逾時，請重新點選 LINE 登入。')
+      }
+      return null
+    }
+  }
+  const hasPendingLineLogin = () => {
+    const pending = import.meta.client && !!getLineRelay()?.pending()
+    if (!pending) lineLoginNeedsTransfer.value = false
+    return pending
+  }
+  const completeLineLogin = async (transfer) => {
+    getLineRelay().attachTransfer(transfer)
+    return !!(await resumeLineLogin())
+  }
   async function checkAuthStatus() {
     if (!import.meta.client) return
     await authSessionReader.read()
@@ -506,12 +558,21 @@ export const useMainStore = defineStore('main', () => {
     if (!import.meta.client || authLoginBusy) return
     authLoginBusy = true
     try {
+      const completed = await resumeLineLogin()
+      if (completed) return
+      const relay = getLineRelay()
+      relay.cancel()
+      lineLoginNeedsTransfer.value = false
+      await relay.settle()
+      const redirectTo = await relay.start(lineLoginOptions(window.location.href).redirectTo)
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'custom:line-oauth',
-        options: lineLoginOptions(window.location.href)
+        options: { redirectTo }
       })
       if (error) throw error
-    } catch {
+    } catch (error) {
+      if (error?.message === 'LINE_LOGIN_CANCELLED') return
+      getLineRelay()?.cancel()
       alert('LINE 登入暫時無法完成，請稍後重試。')
     } finally {
       authLoginBusy = false
@@ -522,6 +583,9 @@ export const useMainStore = defineStore('main', () => {
     if (!import.meta.client || authLoginBusy) return
     authLoginBusy = true
     try {
+      getLineRelay()?.cancel()
+      await getLineRelay()?.settle()
+      lineLoginNeedsTransfer.value = false
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: { redirectTo: lineLoginOptions(window.location.href).redirectTo }
@@ -536,6 +600,9 @@ export const useMainStore = defineStore('main', () => {
   }
 
   const logout = async () => {
+    lineLoginNeedsTransfer.value = false
+    getLineRelay()?.cancel()
+    await getLineRelay()?.settle()
     authSessionReader.invalidate()
     try {
       await signOutCurrentDevice(supabase.auth, () => authSessionReader.accept(null))
@@ -700,6 +767,10 @@ export const useMainStore = defineStore('main', () => {
     hasPendingLineAuth,
     restoreLineUser,
     checkAuthStatus,
+    resumeLineLogin,
+    hasPendingLineLogin,
+    lineLoginNeedsTransfer,
+    completeLineLogin,
     loginWithLine,
     loginWithGoogle,
     logout,

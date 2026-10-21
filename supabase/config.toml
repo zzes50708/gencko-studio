@@ -57,6 +57,10 @@ verify_jwt = true
 [functions.auction-workflow]
 verify_jwt = false
 
+# 尚未登入的 PKCE 回程，函式自行驗證短效發起秘密，不接受登入 Token。
+[functions.line-login-relay]
+verify_jwt = false
+
 # 農業部合法獸醫診療機構母表；函式內另以 HOSPITAL_SYNC_SECRET 驗證。
 [functions.sync-veterinary-registry]
 verify_jwt = false
