@@ -205,41 +205,41 @@ watch(
             <span>VIEW COLLECTION</span>
           </div>
         </NuxtLink>
+
+        <!-- 快速入口置於照片左下方；手機依閱讀順序排在主按鈕之後。 -->
+        <nav class="home-scenario-grid" aria-label="快速導覽">
+          <NuxtLink no-prefetch to="/start-here" class="scenario-card">
+            <div class="scenario-body">
+              <div class="scenario-index">01</div>
+              <div class="scenario-title">新手必看</div>
+            </div>
+            <div class="scenario-hint">第一次養守宮，不用心急</div>
+          </NuxtLink>
+          <NuxtLink no-prefetch to="/auction" class="scenario-card">
+            <div v-if="hasActiveAuction" class="live-badge">LIVE</div>
+            <div class="scenario-body">
+              <div class="scenario-index">02</div>
+              <div class="scenario-title">線上競標</div>
+            </div>
+            <div class="scenario-hint">即時出價，與飼主競拍心儀守宮</div>
+          </NuxtLink>
+          <NuxtLink no-prefetch to="/calculator" class="scenario-card">
+            <div class="scenario-body">
+              <div class="scenario-index">03</div>
+              <div class="scenario-title">基因計算</div>
+            </div>
+            <div class="scenario-hint">預測繁殖基因的組合結果</div>
+          </NuxtLink>
+          <NuxtLink no-prefetch to="/hospital" class="scenario-card">
+            <div class="scenario-body">
+              <div class="scenario-index">04</div>
+              <div class="scenario-title">特寵醫院</div>
+            </div>
+            <div class="scenario-hint">提前收藏就近的特寵就醫地點</div>
+          </NuxtLink>
+        </nav>
       </div>
     </section>
-
-    <!-- Scenarios Navigation -->
-    <nav class="home-scenario-grid" aria-label="快速導覽">
-      <NuxtLink no-prefetch to="/start-here" class="scenario-card">
-        <div class="scenario-body">
-          <div class="scenario-index">01</div>
-          <div class="scenario-title">新手必看</div>
-        </div>
-        <div class="scenario-hint">第一次養守宮，不用心急</div>
-      </NuxtLink>
-      <NuxtLink no-prefetch to="/auction" class="scenario-card">
-        <div v-if="hasActiveAuction" class="live-badge">LIVE</div>
-        <div class="scenario-body">
-          <div class="scenario-index">02</div>
-          <div class="scenario-title">線上競標</div>
-        </div>
-        <div class="scenario-hint">即時出價，與飼主競拍心儀守宮</div>
-      </NuxtLink>
-      <NuxtLink no-prefetch to="/calculator" class="scenario-card">
-        <div class="scenario-body">
-          <div class="scenario-index">03</div>
-          <div class="scenario-title">基因計算</div>
-        </div>
-        <div class="scenario-hint">預測繁殖基因的組合結果</div>
-      </NuxtLink>
-      <NuxtLink no-prefetch to="/hospital" class="scenario-card">
-        <div class="scenario-body">
-          <div class="scenario-index">04</div>
-          <div class="scenario-title">特寵醫院</div>
-        </div>
-        <div class="scenario-hint">提前收藏就近的特寵就醫地點</div>
-      </NuxtLink>
-    </nav>
 
     <!-- Hot Picks Section -->
     <section class="home-section home-hot-picks" aria-labelledby="hot-picks-title">
@@ -2032,11 +2032,15 @@ watch(
 .hero-content-inner {
   display: grid;
   grid-template-columns: minmax(0, 1.08fr) minmax(320px, 0.82fr);
+  grid-template-rows: auto auto;
   align-items: start;
-  gap: clamp(36px, 6vw, 88px);
+  column-gap: clamp(36px, 6vw, 88px);
+  row-gap: 24px;
 }
 
 .home-hero__copy {
+  grid-column: 1;
+  grid-row: 1;
   min-width: 0;
   padding-top: clamp(6px, 1.4vw, 20px);
 }
@@ -2086,6 +2090,12 @@ watch(
   white-space: nowrap;
 }
 
+.home-hero__visual {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  align-self: start;
+}
+
 .home-hero__visual img {
   transition: transform 180ms ease-out;
 }
@@ -2095,8 +2105,12 @@ watch(
 }
 
 .home-scenario-grid {
+  grid-column: 1;
+  grid-row: 2;
+  align-self: end;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  margin: clamp(20px, 2.5vw, 34px) 0 0;
+  margin: 0;
+  padding-inline: 0;
 }
 
 .scenario-card {
@@ -2113,10 +2127,10 @@ watch(
 }
 
 .scenario-body {
-  display: grid;
-  grid-template-columns: 2.4em max-content;
+  display: flex;
+  flex-wrap: wrap;
   justify-content: center;
-  gap: 12px;
+  gap: 4px 8px;
   width: 100%;
   transition:
     transform 180ms ease-out,
@@ -2130,6 +2144,9 @@ watch(
 
 .scenario-title {
   font-size: clamp(0.9rem, 1.15vw, 1.04rem);
+  max-width: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 .scenario-hint {
@@ -2351,6 +2368,15 @@ watch(
   }
 }
 
+@media (min-width: 769px) and (max-width: 1200px) {
+  .home-scenario-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .scenario-card {
+    min-height: 64px;
+  }
+}
+
 @media (max-width: 960px) and (min-width: 769px) {
   .hero-content-inner {
     grid-template-columns: minmax(0, 1fr) minmax(280px, 0.78fr);
@@ -2448,6 +2474,8 @@ watch(
   .home-scenario-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     margin-top: 22px;
+    order: 6;
+    width: 100%;
   }
 
   .scenario-card {

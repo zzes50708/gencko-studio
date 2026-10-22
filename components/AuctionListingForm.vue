@@ -11,6 +11,8 @@ import {
   AUCTION_FEEDING_OPTIONS
 } from '~/utils/auction-listing'
 import { getCleanUrl } from '~/utils/image'
+import { createRequestDeadline } from '~/utils/request-deadline'
+import { formatAnimalSex } from '~/utils/incubation-sex'
 const props = defineProps({ ownerId: { type: String, required: true } })
 const emit = defineEmits(['created', 'cancel'])
 const store = useMainStore()
@@ -40,6 +42,7 @@ const form = reactive({
 })
 let alive = true
 let searchRevision = 0
+let searchRequest, publishRequest
 const storageKey = `auction-listing-pending:${props.ownerId}`
 function saveIntent(value) {
   try {
@@ -52,13 +55,15 @@ function saveIntent(value) {
 async function searchAnimals() {
   if (intent.value || busy.value) return
   const request = ++searchRevision
+  searchRequest?.abort()
+  const scope = (searchRequest = createRequestDeadline())
   searching.value = true
   searchFailed.value = false
   message.value = ''
   try {
-    const { data, error } = await supabase.rpc('admin_auction_candidates', {
-      p_query: query.value.trim()
-    })
+    const { data, error } = await scope.run((signal) =>
+      supabase.rpc('admin_auction_candidates', { p_query: query.value.trim() }).abortSignal(signal)
+    )
     if (!alive || request !== searchRevision) return
     if (error) throw error
     if (
@@ -112,12 +117,16 @@ async function publish() {
     saveIntent(intent.value)
   }
   busy.value = true
+  const scope = (publishRequest = createRequestDeadline(15000))
   try {
-    const { data, error } = await supabase.rpc('admin_create_auction', intent.value)
+    const { data, error } = await scope.run((signal) =>
+      supabase.rpc('admin_create_auction', intent.value).abortSignal(signal)
+    )
     if (!alive) return
     if (error) {
       const validationMessages = new Set([
         '請設定有效的開標與結標時間，結標須晚於開標',
+        '只能啟用尚未截止的競標',
         '起標價須為非負整數，最低增額須為正整數',
         '場次說明文字過長',
         '此個體目前不能上架競標，請重新選取',
@@ -175,6 +184,8 @@ onMounted(() => {
 })
 onBeforeUnmount(() => {
   alive = false
+  searchRequest?.abort()
+  publishRequest?.abort()
   searchRevision++
   candidates.value = []
   selected.value = null
@@ -230,7 +241,14 @@ onBeforeUnmount(() => {
           <p>
             <strong>{{ selected.id }} · {{ selected.morph }}</strong>
             <br />
-            {{ selected.gender_type }} {{ selected.gender_value }} ·
+            {{
+              formatAnimalSex({
+                Species: selected.species,
+                GenderType: selected.gender_type,
+                GenderValue: selected.gender_value
+              })
+            }}
+            ·
             {{ selected.birthday || '未填生日' }}
           </p>
         </div>

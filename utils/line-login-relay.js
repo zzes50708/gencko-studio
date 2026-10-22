@@ -45,8 +45,10 @@ export function createLineLoginRelay({ storage, request, auth, now = Date.now })
     cancel,
     attachTransfer(value) {
       const flow = pending()
-      const [id, returnSecret] = String(value).trim().split('.')
-      if (!flow || id !== flow.id || !/^[\da-f]{64}$/.test(returnSecret || ''))
+      const parts = String(value).trim().split('.')
+      const [id, returnSecret] = parts
+      if (!flow) throw new Error('LINE_LOGIN_RESTART')
+      if (parts.length !== 2 || id !== flow.id || !/^[\da-f]{64}$/.test(returnSecret || ''))
         throw new Error('LINE_TRANSFER_INVALID')
       storage.setItem(KEY, JSON.stringify({ ...flow, returnSecret }))
     },
@@ -105,9 +107,9 @@ export function createLineLoginRelay({ storage, request, auth, now = Date.now })
         if (!current(flow)) return null
         cancel()
         // 交換成功後即使清理請求斷線，也不撤銷已建立的工作階段。
-        try {
-          await request({ action: 'ack', flow: flow.id, secret: flow.secret })
-        } catch {}
+        void Promise.resolve()
+          .then(() => request({ action: 'ack', flow: flow.id, secret: flow.secret }))
+          .catch(() => {})
         return { session: data.session, returnTo: flow.returnTo }
       })()
       try {

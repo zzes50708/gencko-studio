@@ -1,17 +1,20 @@
 <script setup>
 import { ref, watch, onBeforeUnmount, onMounted } from 'vue'
 import { isAuctionOutcome } from '~/utils/auction-outcomes'
+import { createRequestDeadline } from '~/utils/request-deadline'
 const props = defineProps({ memberId: { type: String, required: true } })
 const supabase = useSupabaseClient()
 const rows = ref([])
 const message = ref('')
 const loading = ref(false)
 const busy = ref(false)
+const needsRefresh = ref(false)
 const abandoning = ref('')
 let revision = 0
 let loadRevision = 0
 let mounted = false
 let refreshTimer
+let readRequest, actionRequest
 function resumeRefresh() {
   if (!document.hidden && navigator.onLine && !loading.value && !busy.value && !abandoning.value)
     void load(true)
@@ -33,10 +36,14 @@ async function load(quiet = false) {
   quiet = quiet === true
   const owner = revision
   const request = ++loadRevision
+  readRequest?.abort()
+  const scope = (readRequest = createRequestDeadline())
   loading.value = true
   message.value = ''
   try {
-    const { data, error } = await supabase.rpc('my_auction_outcomes')
+    const { data, error } = await scope.run((signal) =>
+      supabase.rpc('my_auction_outcomes').abortSignal(signal)
+    )
     if (owner !== revision || request !== loadRevision) return false
     if (error) throw error
     if (!Array.isArray(data) || data.some((row) => !isAuctionOutcome(row)))
@@ -47,6 +54,7 @@ async function load(quiet = false) {
       const old = previous.get(row.auction_id)
       return quiet && old && JSON.stringify(old) === JSON.stringify(row) ? old : row
     })
+    needsRefresh.value = false
     return true
   } catch {
     if (owner === revision && request === loadRevision) {
@@ -59,12 +67,15 @@ async function load(quiet = false) {
   }
 }
 async function act(id, action) {
-  if (busy.value || loading.value) return
+  if (busy.value || loading.value || needsRefresh.value) return
   const request = revision
   busy.value = true
   message.value = ''
+  const scope = (actionRequest = createRequestDeadline(15000))
   try {
-    const { error } = await supabase.rpc(action, { p_auction_id: id })
+    const { error } = await scope.run((signal) =>
+      supabase.rpc(action, { p_auction_id: id }).abortSignal(signal)
+    )
     if (request !== revision) return
     if (error) throw error
     abandoning.value = ''
@@ -78,7 +89,13 @@ async function act(id, action) {
       ? successMessage
       : '操作已送出，但未能重新確認最新紀錄。請重新載入，不要重複操作。'
   } catch {
-    if (request === revision) message.value = '未能確認操作結果，請重新載入紀錄；勿重複付款。'
+    if (request === revision) {
+      needsRefresh.value = true
+      message.value =
+        action === 'report_auction_payment'
+          ? '未能確認操作結果，請重新載入紀錄；勿重複付款。'
+          : '未能確認棄標結果，請重新載入紀錄後再操作。'
+    }
   } finally {
     if (request === revision) busy.value = false
   }
@@ -87,10 +104,13 @@ watch(
   () => props.memberId,
   () => {
     revision++
+    readRequest?.abort()
+    actionRequest?.abort()
     rows.value = []
     message.value = ''
     abandoning.value = ''
     busy.value = false
+    needsRefresh.value = false
     if (mounted) void load()
   }
 )
@@ -104,12 +124,15 @@ onMounted(() => {
   window.addEventListener('pageshow', resumeRefresh)
 })
 onBeforeUnmount(() => {
+  mounted = false
   clearInterval(refreshTimer)
   document.removeEventListener('visibilitychange', resumeRefresh)
   window.removeEventListener('online', resumeRefresh)
   window.removeEventListener('focus', resumeRefresh)
   window.removeEventListener('pageshow', resumeRefresh)
   revision++
+  readRequest?.abort()
+  actionRequest?.abort()
   rows.value = []
 })
 </script>
@@ -130,7 +153,7 @@ onBeforeUnmount(() => {
         :auction-id="row.auction_id"
         :member-id="memberId"
         :initial-outcome="row"
-        :disabled="loading || busy"
+        :disabled="loading || busy || needsRefresh"
       />
       <p v-if="row.notification_status === 'failed' && !['paid', 'cancelled'].includes(row.state)">
         通知未成功，付款期限尚未開始。請聯絡官方 LINE 確認。
@@ -144,7 +167,7 @@ onBeforeUnmount(() => {
         <button
           type="button"
           class="btn-app btn-app--primary"
-          :disabled="busy || loading"
+          :disabled="busy || loading || needsRefresh"
           @click="act(row.auction_id, 'report_auction_payment')"
         >
           我已付款，送出核帳
@@ -175,7 +198,7 @@ onBeforeUnmount(() => {
           v-if="abandoning !== row.auction_id"
           type="button"
           class="btn-app btn-app--ghost"
-          :disabled="busy || loading"
+          :disabled="busy || loading || needsRefresh"
           @click="abandoning = row.auction_id"
         >
           申請棄標
@@ -185,7 +208,7 @@ onBeforeUnmount(() => {
           <button
             type="button"
             class="btn-app btn-app--secondary"
-            :disabled="busy || loading"
+            :disabled="busy || loading || needsRefresh"
             @click="act(row.auction_id, 'abandon_auction')"
           >
             確認棄標並限制出價
@@ -193,7 +216,7 @@ onBeforeUnmount(() => {
           <button
             type="button"
             class="btn-app btn-app--ghost"
-            :disabled="busy || loading"
+            :disabled="busy || loading || needsRefresh"
             @click="abandoning = ''"
           >
             取消

@@ -188,6 +188,47 @@ test('個體另有未完成得標交易時，清除已拒絕的請求並讓管�
   expect(calls).toBe(1)
 })
 
+test('上架寫入途中截止屬明確回滾，能修改時間並建立新請求', async ({ page }) => {
+  await setup(page)
+  const sent: any[] = []
+  await page.route('**/rest/v1/rpc/admin_create_auction', (route) => {
+    const body = route.request().postDataJSON()
+    sent.push(body)
+    return route.fulfill(
+      sent.length === 1
+        ? { status: 400, json: { code: '22023', message: '只能啟用尚未截止的競標' } }
+        : { json: { id: `A-${body.p_request_id}`, replayed: false } }
+    )
+  })
+  await page.getByRole('button', { name: '確認上架', exact: true }).click()
+  await expect(page.getByText('只能啟用尚未截止的競標', { exact: true })).toBeVisible()
+  await expect(page.getByLabel('結標時間（台灣）', { exact: true })).toBeEnabled()
+  expect(
+    await page.evaluate(() => sessionStorage.getItem('auction-listing-pending:ADMIN-LISTING'))
+  ).toBeNull()
+  await page.getByLabel('結標時間（台灣）', { exact: true }).fill('2030-01-03T22:00')
+  await page.getByRole('button', { name: '確認上架', exact: true }).click()
+  await expect(page.getByText(/場次已上架：A-/)).toBeVisible()
+  expect(sent).toHaveLength(2)
+  expect(sent[1].p_request_id).not.toBe(sent[0].p_request_id)
+  expect(sent[1].p_end_time).toBe('2030-01-03T14:00:00.000Z')
+})
+
+test('上架預覽不外露舊欄位用語，未提供物種時不推測公母溫', async ({ page }) => {
+  await setup(page)
+  await page.route('**/rest/v1/rpc/admin_auction_candidates', (route) =>
+    route.fulfill({
+      json: [
+        { id: 'TEST-NEW', morph: '測試品系', gender_type: '溫控', gender_value: '32', images: [] }
+      ]
+    })
+  )
+  await page.getByRole('button', { name: '搜尋個體', exact: true }).click()
+  await page.getByRole('button', { name: /TEST-NEW/ }).click()
+  await expect(page.locator('.selected-animal')).toContainText('孵化溫度:32度（不保證性別）')
+  await expect(page.locator('.selected-animal')).not.toContainText(/溫控|公溫|母溫/)
+})
+
 test('個體搜尋異常不得冒充沒有庫存，重試可恢復；清單滿額提示縮小搜尋', async ({ page }) => {
   await setup(page)
   for (const payload of [null, {}, [null], [{ id: 'BROKEN' }]]) {
@@ -240,4 +281,29 @@ test('預約詳情開標前不顯示出價入口，到時自動開放', async ({
   await expect(page.getByRole('button', { name: 'LINE 登入', exact: true })).toHaveCount(0)
   await page.clock.runFor(11000)
   await expect(page.getByRole('button', { name: 'LINE 登入', exact: true })).toBeVisible()
+})
+
+test('競標列表及詳情一致顯示孵化紀錄，不以缺少物種的溫度猜性別', async ({ page }) => {
+  const auction = {
+    id: 'TEST-AUCTION-20261016-01',
+    morph: '孵化紀錄測試',
+    gender: '溫控32',
+    status: 'active',
+    end_time: '2030-01-01T00:00:00Z',
+    start_price: 200,
+    min_increment: 100,
+    images: []
+  }
+  await page.route('**/rest/v1/auctions?**', (route) =>
+    route.fulfill({
+      json: new URL(route.request().url()).searchParams.has('id') ? auction : [auction]
+    })
+  )
+  await page.route('**/rest/v1/auction_bids?**', (route) => route.fulfill({ json: [] }))
+  await page.routeWebSocket('**/realtime/v1/websocket**', () => {})
+  await page.goto('/auction')
+  await expect(page.locator('.gender-tag')).toHaveText('孵化溫度:32度（不保證性別）')
+  await page.goto(`/auction/${auction.id}`)
+  await expect(page.locator('.specs-list')).toContainText('孵化溫度:32度（不保證性別）')
+  await expect(page.locator('.specs-list')).not.toContainText(/溫控|公溫|母溫/)
 })

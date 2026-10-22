@@ -97,7 +97,13 @@ for (const isolated of [true, false])
         }
       ])
       await callback.route('**/api/auth/line/transfer', (route) =>
-        route.fulfill({ json: { transfer: `${flow}.${returnSecret}` } })
+        route.fulfill({
+          json: {
+            transfer: `${flow}.${returnSecret}`,
+            serverTime: Date.now(),
+            expiresAt: Date.now() + 240000
+          }
+        })
       )
       const returned = await callback.newPage()
       await returned.goto(`/line-login-return?flow=${flow}&status=ready`, {

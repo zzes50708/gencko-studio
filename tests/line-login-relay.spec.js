@@ -11,6 +11,43 @@ const memory = () => {
   }
 }
 describe('LINE 跨瀏覽器回程', () => {
+  it('登入交換成功後，不等待可能失敗的清理請求才通知畫面', async () => {
+    let cleanup
+    const relay = createLineLoginRelay({
+      storage: memory(),
+      auth: {
+        exchangeCodeForSession: async () => ({ data: { session: { user: { id: 'DONE' } } } })
+      },
+      request: async (body) => {
+        if (body.action === 'read') return { status: 'ready', code: 'CODE' }
+        if (body.action === 'ack') return new Promise((r) => (cleanup = r))
+        return { status: 'ok' }
+      }
+    })
+    await relay.start('https://example.invalid/profile')
+    let completed = false
+    const result = relay.resume().then((v) => {
+      completed = !!v?.session
+    })
+    await new Promise((r) => setTimeout(r, 20))
+    const beforeCleanup = completed
+    cleanup({ status: 'ok' })
+    await result
+    expect(beforeCleanup).toBe(true)
+  })
+  it('拒絕尾端夾帶額外內容的接續碼，保留原有流程供重新貼上', async () => {
+    const relay = createLineLoginRelay({
+      storage: memory(),
+      auth: {},
+      request: async () => ({ status: 'ok' })
+    })
+    const redirect = await relay.start('https://example.invalid/profile')
+    const id = new URL(redirect).searchParams.get('flow')
+    expect(() => relay.attachTransfer(`${id}.${'b'.repeat(64)}.junk`)).toThrow(
+      'LINE_TRANSFER_INVALID'
+    )
+    expect(relay.pending()).toBeTruthy()
+  })
   it('登出取消尚未完成的發起請求，不可再開啟舊授權流程', async () => {
     let release
     const relay = createLineLoginRelay({

@@ -20,15 +20,40 @@ async function copy() {
   if (!current || expireChallenge()) return
   try {
     await navigator.clipboard.writeText(bindingText.value)
-    if (owner === revision && current === challenge.value)
+    if (owner === revision && current === challenge.value && !expireChallenge())
       copyMessage.value = '已複製，請貼到 Gencko 官方 LINE 並傳送。'
   } catch {
-    if (owner === revision && current === challenge.value)
+    if (owner === revision && current === challenge.value && !expireChallenge())
       copyMessage.value = '無法自動複製，請選取下方完整訊息後複製。'
   }
 }
 let revision = 0
 let checkRevision = 0
+let checking = null
+const requests = new Set()
+async function requestStatus(name, args) {
+  const controller = new AbortController()
+  requests.add(controller)
+  let onAbort
+  const cancelled = new Promise((_, reject) => {
+    onAbort = () => reject(new Error('LINE_CONTACT_REQUEST_CANCELLED'))
+    controller.signal.addEventListener('abort', onAbort, { once: true })
+  })
+  const timeout = setTimeout(() => controller.abort(), 10000)
+  try {
+    // SDK 可能先等候登入憑證；逾時必須涵蓋送出網路請求前的階段。
+    return await Promise.race([supabase.rpc(name, args).abortSignal(controller.signal), cancelled])
+  } finally {
+    clearTimeout(timeout)
+    controller.signal.removeEventListener('abort', onAbort)
+    requests.delete(controller)
+  }
+}
+function cancelRequests() {
+  for (const controller of requests) controller.abort()
+  requests.clear()
+  checking = null
+}
 let timer
 let mounted = false
 let resuming = false
@@ -56,10 +81,21 @@ function openLine(event) {
   if (!challenge.value || expireChallenge()) event.preventDefault()
 }
 async function check() {
+  if (!mounted || !navigator.onLine) return
+  if (checking) return checking
   const owner = revision
   const request = ++checkRevision
+  const operation = checkStatus(owner, request)
+  checking = operation
   try {
-    const { data, error } = await supabase.rpc('get_auction_contact_status', {
+    await operation
+  } finally {
+    if (checking === operation) checking = null
+  }
+}
+async function checkStatus(owner, request) {
+  try {
+    const { data, error } = await requestStatus('get_auction_contact_status', {
       p_auction_id: props.auctionId
     })
     if (owner !== revision || request !== checkRevision) return
@@ -89,7 +125,7 @@ async function poll() {
   stop()
   if (!challenge.value) return
   if (expireChallenge()) return
-  if (document.visibilityState === 'visible') await check()
+  if (document.visibilityState === 'visible' && navigator.onLine) await check()
   if (owner === revision && current === challenge.value && challenge.value)
     timer = setTimeout(
       poll,
@@ -103,8 +139,10 @@ async function create() {
   message.value = ''
   copyMessage.value = ''
   try {
-    const { data, error } = await supabase.rpc('create_auction_line_link')
+    const { data, error } = await requestStatus('create_auction_line_link')
     if (request !== revision) return
+    // 查詢已確認通過或限制出價時，不再採用較晚返回的建碼結果。
+    if (!state.value?.required || state.value.ready || state.value.restricted) return
     if (error) throw error
     if (
       !/^[0-9a-f]{36}$/.test(data?.code) ||
@@ -124,6 +162,7 @@ watch(
   () => [props.memberId, props.auctionId],
   () => {
     revision++
+    cancelRequests()
     stop()
     state.value = null
     challenge.value = null
@@ -145,6 +184,7 @@ onMounted(() => {
 onBeforeUnmount(() => {
   mounted = false
   revision++
+  cancelRequests()
   stop()
   challenge.value = null
   window.removeEventListener('focus', resume)

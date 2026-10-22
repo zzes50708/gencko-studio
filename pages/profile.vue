@@ -7,6 +7,7 @@ import { isAuctionMember, memberOwnerKeys } from '~/utils/member-auth'
 import { getCleanUrl } from '~/utils/image'
 import { readMemberAuctionHistory } from '~/utils/auction-member-history'
 import { auctionState } from '~/utils/auction-presentation'
+import { createRequestDeadline } from '~/utils/request-deadline'
 
 const store = useMainStore()
 const router = useRouter()
@@ -46,6 +47,7 @@ const historyNow = ref(store.auctionNow())
 function refreshHistory() {
   if (
     document.hidden ||
+    !navigator.onLine ||
     activeTab.value !== 'bids' ||
     !isAuctionMember(store.currentUser) ||
     bidReading
@@ -92,17 +94,17 @@ onBeforeUnmount(() => {
 // 讀取完整個人紀錄；換帳號或離頁時取消舊查詢。
 async function fetchMyBids(requestId, quiet = false) {
   bidController?.abort()
-  bidController = new AbortController()
-  const signal = bidController.signal
+  const scope = (bidController = createRequestDeadline())
+  const signal = scope.signal
   bidReading = true
   if (!quiet) isLoadingBids.value = true
   bidsError.value = ''
   try {
-    const rows = await readMemberAuctionHistory(supabase, signal)
+    const rows = await scope.run((signal) => readMemberAuctionHistory(supabase, signal))
     if (requestId !== bidRequestId || signal.aborted) return
     myBids.value = rows
   } catch {
-    if (requestId !== bidRequestId || signal.aborted) return
+    if (requestId !== bidRequestId) return
     myBids.value = []
     bidsError.value = '競標紀錄暫時無法載入，請稍後重試。'
   } finally {

@@ -2,6 +2,7 @@
 import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue'
 import { useMainStore } from '~/stores/useMainStore'
 import { restoreAdminIntent, matchesAdminReceipt } from '~/utils/auction-admin'
+import { createRequestDeadline } from '~/utils/request-deadline'
 const props = defineProps({ auctionId: { type: String, required: true } })
 const supabase = useSupabaseClient()
 const store = useMainStore()
@@ -33,6 +34,7 @@ const message = ref('')
 const confirmingAbandon = ref(false)
 let revision = 0
 let loadRevision = 0
+let readRequest, actionRequest
 const outcome = computed(() => data.value?.outcome)
 const thisAuctionRestricted = computed(
   () => outcome.value?.auction_restricted ?? outcome.value?.restricted
@@ -61,13 +63,15 @@ async function load(quiet = false) {
   quiet = quiet === true
   const owner = revision
   const request = ++loadRevision
+  readRequest?.abort()
+  const scope = (readRequest = createRequestDeadline())
   loading.value = true
   message.value = ''
   if (!quiet) data.value = null
   try {
-    const { data: result, error } = await supabase.rpc('admin_auction_workflow', {
-      p_auction_id: props.auctionId
-    })
+    const { data: result, error } = await scope.run((signal) =>
+      supabase.rpc('admin_auction_workflow', { p_auction_id: props.auctionId }).abortSignal(signal)
+    )
     if (owner !== revision || request !== loadRevision) return false
     if (error) throw error
     if (
@@ -112,9 +116,12 @@ async function act(action) {
   const intent = pending.value
   const request = revision
   busy.value = true
+  const scope = (actionRequest = createRequestDeadline(15000))
   message.value = ''
   try {
-    const { data: receipt, error } = await supabase.rpc('admin_auction_action_once', intent)
+    const { data: receipt, error } = await scope.run((signal) =>
+      supabase.rpc('admin_auction_action_once', intent).abortSignal(signal)
+    )
     if (request !== revision) return
     if (error) throw error
     if (!matchesAdminReceipt(receipt, intent)) throw Error('管理操作回執不完整')
@@ -154,6 +161,8 @@ watch(
   () => props.auctionId,
   () => {
     revision++
+    readRequest?.abort()
+    actionRequest?.abort()
     data.value = null
     reason.value = ''
     confirmingAbandon.value = false
@@ -169,6 +178,8 @@ onMounted(() => {
 })
 onBeforeUnmount(() => {
   revision++
+  readRequest?.abort()
+  actionRequest?.abort()
   data.value = null
 })
 </script>

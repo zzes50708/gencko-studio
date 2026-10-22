@@ -24,6 +24,15 @@ export function getIncubationEstimate(species, value) {
 export const isIncubationRecord = (item) =>
   ['溫控', '孵化溫度', '公溫', '母溫'].includes(String(item?.GenderType ?? '').trim())
 
+// 舊競標把種類與數值合併成字串；沒有物種時只顯示紀錄，不推測公母溫。
+export function formatAuctionSex(value, species) {
+  const raw = String(value ?? '').trim()
+  const match = /^(溫控|孵化溫度|公溫|母溫)\s*[:：]?\s*(.*)$/.exec(raw)
+  if (!match) return raw
+  if (/[（(]/.test(match[2])) return raw.replace(/^溫控/, '孵化溫度')
+  return formatAnimalSex({ Species: species, GenderType: match[1], GenderValue: match[2] })
+}
+
 export function formatAnimalSex(item, { disclaimer = true, fallback = '未登錄' } = {}) {
   const type = String(item?.GenderType ?? '').trim()
   if (!isIncubationRecord(item)) return type || fallback

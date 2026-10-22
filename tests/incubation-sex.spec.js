@@ -1,5 +1,23 @@
 import { describe, expect, it } from 'vitest'
-import { getIncubationEstimate, formatAnimalSex, getAnimalSexTone } from '../utils/incubation-sex'
+import {
+  getIncubationEstimate,
+  formatAnimalSex,
+  formatAuctionSex,
+  getAnimalSexTone
+} from '../utils/incubation-sex'
+
+it('競標舊字串使用孵化溫度，未知物種不猜公母；已確認性別不混入其他數值', () => {
+  expect(formatAuctionSex('溫控27.5')).toBe('孵化溫度:27.5度（不保證性別）')
+  expect(formatAuctionSex('溫控 ３２°C')).toBe('孵化溫度:32度（不保證性別）')
+  expect(formatAuctionSex('溫控')).toBe('孵化溫度未登錄（不保證性別）')
+  expect(formatAuctionSex('溫控32', '肥尾守宮')).toContain('母溫')
+  expect(formatAuctionSex('溫控32', '豹紋守宮')).toContain('公溫')
+  expect(formatAuctionSex('母')).toBe('母')
+  expect(formatAuctionSex(null)).toBe('')
+  expect(formatAuctionSex('未定')).toBe('未定')
+  const formatted = '孵化溫度:32度（不保證性別）'
+  expect(formatAuctionSex(formatted)).toBe(formatted)
+})
 describe('物種孵化溫度表', () => {
   it.each([
     [24, '絕大多數母'],

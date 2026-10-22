@@ -4,6 +4,7 @@ import { useMainStore } from '~/stores/useMainStore'
 import { OFFICIAL_LINE_INBOX_URL } from '~/utils/auction-contact'
 import { auctionState } from '~/utils/auction-presentation'
 import { readAuctionBidderContacts } from '~/utils/auction-admin'
+import { createRequestDeadline } from '~/utils/request-deadline'
 
 const store = useMainStore()
 const supabase = useSupabaseClient()
@@ -64,7 +65,8 @@ const detailHeading = ref(null)
 const listHeading = ref(null)
 const workflowPanel = ref(null)
 let listRevision = 0
-let bidderRead
+let bidderRead, listRead
+let copyRevision = 0
 let liveChannel, liveTimer, liveDebounce
 let liveGeneration = 0
 let disposed = false
@@ -79,12 +81,19 @@ function stopLive() {
   window.removeEventListener('online', queueLiveRefresh)
 }
 function queueLiveRefresh() {
-  if (disposed || !manager.value || document.hidden) return
+  if (disposed || !manager.value || document.hidden || !navigator.onLine) return
   if (liveDebounce) return
   const generation = liveGeneration
   liveDebounce = setTimeout(async () => {
     liveDebounce = null
-    if (disposed || generation !== liveGeneration || !manager.value || document.hidden) return
+    if (
+      disposed ||
+      generation !== liveGeneration ||
+      !manager.value ||
+      document.hidden ||
+      !navigator.onLine
+    )
+      return
     if (listLoading.value || loading.value) {
       queueLiveRefresh()
       return
@@ -115,24 +124,31 @@ function startLive() {
   window.addEventListener('online', queueLiveRefresh)
 }
 async function loadAuctions() {
+  if (disposed || !manager.value) return
+  listRead?.abort()
+  const scope = (listRead = createRequestDeadline())
   const request = ++listRevision
   listLoading.value = true
   listError.value = ''
   try {
-    const result = []
-    for (let offset = 0; ; offset += 500) {
-      const { data, error } = await supabase
-        .from('auctions')
-        .select('id,morph,status,start_price,min_increment,buy_now_price,start_time,end_time')
-        .order('end_time', { ascending: false, nullsFirst: false })
-        .order('id')
-        .range(offset, offset + 499)
-      if (request !== listRevision) return
-      if (error) throw error
-      if (!Array.isArray(data)) throw Error('場次列表回應不完整')
-      result.push(...data)
-      if (data.length < 500) break
-    }
+    const result = await scope.run(async (signal) => {
+      const rows = []
+      for (let offset = 0; ; offset += 500) {
+        if (signal.aborted) throw Error('查詢已取消')
+        const { data, error } = await supabase
+          .from('auctions')
+          .select('id,morph,status,start_price,min_increment,buy_now_price,start_time,end_time')
+          .order('end_time', { ascending: false, nullsFirst: false })
+          .order('id')
+          .range(offset, offset + 499)
+          .abortSignal(signal)
+        if (error) throw error
+        if (!Array.isArray(data)) throw Error('場次列表回應不完整')
+        rows.push(...data)
+        if (data.length < 500) return rows
+      }
+    })
+    if (request !== listRevision) return
     auctions.value = result
     if (selectedAuction.value) {
       const latest = result.find((a) => a.id === selectedAuction.value.id)
@@ -145,12 +161,14 @@ async function loadAuctions() {
   }
 }
 async function selectAuction(auction) {
+  copyRevision++
   selectedAuction.value = auction
   void search()
   await nextTick()
   detailHeading.value?.focus()
 }
 async function backToList() {
+  copyRevision++
   bidderRead?.abort()
   revision++
   selectedAuction.value = null
@@ -184,6 +202,8 @@ const formatTime = (value) =>
     : '未設定'
 onBeforeUnmount(() => {
   disposed = true
+  copyRevision++
+  listRead?.abort()
   stopLive()
   bidderRead?.abort()
   clearInterval(clockTimer)
@@ -199,6 +219,8 @@ let revision = 0
 watch(
   () => `${store.currentUser?.id || ''}:${manager.value}`,
   () => {
+    copyRevision++
+    listRead?.abort()
     bidderRead?.abort()
     revision++
     rows.value = []
@@ -220,26 +242,27 @@ watch(
   { immediate: true }
 )
 async function search(quiet = false) {
+  if (disposed || !manager.value) return
   // DOM 點擊事件會傳入 Event，只有明確的 true 才是背景更新。
   quiet = quiet === true
   bidderRead?.abort()
-  bidderRead = new AbortController()
-  const signal = bidderRead.signal
+  const request = ++revision
   const id = auctionId.value.trim()
   if (!quiet) {
     rows.value = []
     searched.value = false
   }
   if (!/^[A-Za-z0-9_-]+$/.test(id)) {
+    loading.value = false
     message.value = '請輸入完整場次編號。'
     return
   }
-  const request = ++revision
+  const scope = (bidderRead = createRequestDeadline())
   loading.value = true
   message.value = ''
   try {
     // 權限由資料庫查核實際管理員設定，不能只相信前端旗標。
-    const data = await readAuctionBidderContacts(supabase, id, signal)
+    const data = await scope.run((signal) => readAuctionBidderContacts(supabase, id, signal))
     if (request !== revision) return
     rows.value = data || []
     searched.value = true
@@ -257,11 +280,12 @@ async function search(quiet = false) {
   }
 }
 async function copy(value) {
+  const request = ++copyRevision
   try {
     await navigator.clipboard.writeText(value)
-    message.value = '已複製。'
+    if (request === copyRevision) message.value = '已複製。'
   } catch {
-    message.value = '無法自動複製，請選取文字複製。'
+    if (request === copyRevision) message.value = '無法自動複製，請選取文字複製。'
   }
 }
 </script>

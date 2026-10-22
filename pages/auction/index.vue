@@ -4,6 +4,7 @@ import { useHead, useAsyncData, useSupabaseClient } from '#imports'
 import { useMainStore } from '~/stores/useMainStore'
 import { getCleanUrl } from '~/utils/image'
 import { serializeJsonLd } from '~/utils/structured-data'
+import { formatAuctionSex } from '~/utils/incubation-sex'
 import {
   auctionState,
   auctionCountdown,
@@ -32,7 +33,7 @@ const { data: ssrAuctions } = await useAsyncData('auction-list-seo-v1', async ()
       .map((a) => ({
         id: a.id,
         morph: a.morph,
-        gender: a.gender,
+        gender: formatAuctionSex(a.gender),
         start_price: a.start_price,
         buy_now_price: a.buy_now_price,
         end_time: a.end_time,
@@ -443,7 +444,7 @@ const formatPrice = (value, fallback) => {
             <div class="card-info">
               <h3 class="morph-name">{{ item.morph }}</h3>
               <span class="gender-tag" v-if="item.gender && item.gender !== '未定'">
-                {{ item.gender }}
+                {{ formatAuctionSex(item.gender) }}
               </span>
               <p class="morph-desc" v-if="item.note">
                 {{ item.note.substring(0, 20) }}{{ item.note.length > 20 ? '...' : '' }}

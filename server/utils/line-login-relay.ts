@@ -1,8 +1,9 @@
 import { createError, getHeader, getRequestURL, getCookie, setHeader, type H3Event } from 'h3'
+import { parseLineReturnCookie } from '~/utils/line-login-transfer'
 
 export function returnSecretFor(event: H3Event, flow: string) {
-  const stored = getCookie(event, 'gencko_line_return')?.split('.')
-  return stored?.[0] === flow && /^[\da-f]{64}$/.test(stored[1] || '') ? stored[1] : undefined
+  const stored = parseLineReturnCookie(getCookie(event, 'gencko_line_return'))
+  return stored?.flow === flow ? stored.secret : undefined
 }
 
 export function privateLoginResponse(event: H3Event) {

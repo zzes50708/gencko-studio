@@ -83,21 +83,188 @@ async function openContact(page: any, required = true, workflow = true) {
   return state
 }
 
+test('切換會員不沿用前一位的公開暱稱與尚未送出的金額', async ({ page }) => {
+  await openContact(page, false)
+  await page.getByRole('textbox', { name: '自訂顯示暱稱' }).fill('前一位會員的暱稱')
+  await page.locator('.input-group input[type=number]').fill('900')
+  await page.evaluate(() => {
+    const store = (
+      document.querySelector('#__nuxt') as any
+    ).__vue_app__.config.globalProperties.$pinia._s.get('main')
+    store.currentUser = { id: 'ANOTHER-LINE-MEMBER', type: 'line', authSource: 'supabase' }
+  })
+  await expect(page.getByRole('textbox', { name: '自訂顯示暱稱' })).toHaveValue('')
+  await expect(page.locator('.input-group input[type=number]')).toHaveValue('100')
+})
+
+test('同一會員更新登入狀態，保留尚未送出的暱稱與金額', async ({ page }) => {
+  await openContact(page, false)
+  await page.getByRole('textbox', { name: '自訂顯示暱稱' }).fill('保留此暱稱')
+  await page.locator('.input-group input[type=number]').fill('900')
+  await page.evaluate(() => {
+    const store = (
+      document.querySelector('#__nuxt') as any
+    ).__vue_app__.config.globalProperties.$pinia._s.get('main')
+    store.currentUser = { ...store.currentUser, name: '重新整理後的名稱' }
+  })
+  await expect(page.getByRole('textbox', { name: '自訂顯示暱稱' })).toHaveValue('保留此暱稱')
+  await expect(page.locator('.input-group input[type=number]')).toHaveValue('900')
+})
+
+test('官方已確認通過，不採用延遲返回的建碼結果重新啟動輪詢', async ({ page }) => {
+  await openContact(page)
+  let release: (() => void) | undefined,
+    calls = 0
+  await page.route('**/rest/v1/rpc/create_auction_line_link', async (r) => {
+    await new Promise<void>((resolve) => (release = resolve))
+    await r.fulfill({
+      json: { code: 'c'.repeat(36), expires_at: new Date(Date.now() + 60000).toISOString() }
+    })
+  })
+  await page.route('**/rest/v1/rpc/get_auction_contact_status', (r) => {
+    calls++
+    return r.fulfill({ json: { required: true, ready: true, restricted: false } })
+  })
+  await page.getByRole('button', { name: '建立 LINE 聯絡', exact: true }).click()
+  await expect.poll(() => !!release).toBe(true)
+  await page.evaluate(() => window.dispatchEvent(new Event('focus')))
+  await expect(page.getByRole('button', { name: '確認出價', exact: true })).toBeEnabled()
+  const before = calls
+  release!()
+  await page.waitForTimeout(150)
+  expect(calls).toBe(before)
+  await expect(page.getByRole('textbox', { name: 'LINE 綁定訊息', exact: true })).toHaveCount(0)
+})
+
+test('官方驗證在離線時不輪詢，恢復連線才重新確認', async ({ page }) => {
+  const state = await openContact(page)
+  await page.getByRole('button', { name: '建立 LINE 聯絡', exact: true }).click()
+  await expect.poll(() => state.calls).toBeGreaterThanOrEqual(2)
+  await page.evaluate(() =>
+    Object.defineProperty(navigator, 'onLine', { configurable: true, value: false })
+  )
+  const before = state.calls
+  await page.clock.fastForward(6000)
+  await page.waitForTimeout(150)
+  expect(state.calls).toBe(before)
+  await page.evaluate(() => {
+    Object.defineProperty(navigator, 'onLine', { configurable: true, value: true })
+    window.dispatchEvent(new Event('online'))
+  })
+  await expect.poll(() => state.calls).toBeGreaterThan(before)
+})
+
+test('連按重新確認及同時回前景只共用一筆未完成的驗證查詢', async ({ page }) => {
+  await openContact(page)
+  await page.getByRole('button', { name: '建立 LINE 聯絡', exact: true }).click()
+  await expect(page.getByRole('textbox', { name: 'LINE 綁定訊息', exact: true })).toBeVisible()
+  const releases: (() => void)[] = []
+  let calls = 0
+  await page.route('**/rest/v1/rpc/get_auction_contact_status', async (r) => {
+    calls++
+    await new Promise<void>((resolve) => releases.push(resolve))
+    await r.fulfill({ json: { required: true, ready: false, restricted: false } })
+  })
+  try {
+    await page.evaluate(() => {
+      const button = [...document.querySelectorAll('button')].find((b) =>
+        b.textContent?.includes('我已傳送，重新確認')
+      )!
+      button.click()
+      button.click()
+      button.click()
+      window.dispatchEvent(new Event('focus'))
+    })
+    await expect.poll(() => calls).toBeGreaterThan(0)
+    await page.waitForTimeout(100)
+    expect(calls).toBe(1)
+  } finally {
+    releases.forEach((release) => release())
+  }
+})
+
+test('複製授權延遲完成時，再檢查官方驗證碼是否過期', async ({ page }) => {
+  await openContact(page)
+  await page.evaluate(() => {
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: {
+        writeText: () =>
+          new Promise<void>((resolve) => ((window as any).finishContactCopy = resolve))
+      }
+    })
+  })
+  await page.getByRole('button', { name: '建立 LINE 聯絡', exact: true }).click()
+  await page.getByRole('button', { name: '複製綁定訊息', exact: true }).click()
+  await page.evaluate(() => {
+    const store = (
+      document.querySelector('#__nuxt') as any
+    ).__vue_app__.config.globalProperties.$pinia._s.get('main')
+    store.auctionNow = () => Date.now() + 60000
+    ;(window as any).finishContactCopy()
+  })
+  await expect(page.getByText('已複製，請貼到 Gencko 官方 LINE 並傳送。')).toHaveCount(0)
+  await expect(page.getByRole('textbox', { name: 'LINE 綁定訊息', exact: true })).toHaveCount(0)
+})
+
+for (const operation of ['查詢', '建立']) {
+  test(`官方驗證${operation}卡住時可結束等待並重試`, async ({ page }) => {
+    await openContact(page)
+    const rpc = operation === '查詢' ? 'get_auction_contact_status' : 'create_auction_line_link'
+    let entered = false
+    await page.route(`**/rest/v1/rpc/${rpc}`, async () => {
+      entered = true
+    })
+    if (operation === '查詢') await page.evaluate(() => window.dispatchEvent(new Event('focus')))
+    else await page.getByRole('button', { name: '建立 LINE 聯絡', exact: true }).click()
+    await expect.poll(() => entered).toBe(true)
+    await page.clock.fastForward(16000)
+    await expect(
+      page.getByText(
+        operation === '查詢'
+          ? '暫時無法確認 LINE 聯絡狀態，請重新確認。'
+          : '暫時無法建立綁定碼，請稍後重試。'
+      )
+    ).toBeVisible()
+    await page.route(`**/rest/v1/rpc/${rpc}`, (r) =>
+      r.fulfill({
+        json:
+          operation === '查詢'
+            ? { required: true, ready: true, restricted: false }
+            : { code: 'c'.repeat(36), expires_at: new Date(Date.now() + 60000).toISOString() }
+      })
+    )
+    await page
+      .getByRole('button', {
+        name: operation === '查詢' ? '重新確認 LINE 狀態' : '建立 LINE 聯絡',
+        exact: true
+      })
+      .click()
+    if (operation === '查詢')
+      await expect(page.getByRole('button', { name: '確認出價', exact: true })).toBeEnabled()
+    else
+      await expect(page.getByRole('textbox', { name: 'LINE 綁定訊息', exact: true })).toBeVisible()
+  })
+}
+
 test('離開競標頁後，延遲完成的LINE輪詢不得重新啟動背景請求', async ({ page }) => {
   const state = await openContact(page)
   state.hold = true
   await page.getByRole('button', { name: '建立 LINE 聯絡', exact: true }).click()
   await expect.poll(() => !!state.release).toBe(true)
+  const settled = Promise.race([
+    page.waitForResponse((r) => r.url().includes('/rpc/get_auction_contact_status')),
+    page.waitForEvent('requestfailed', (r) => r.url().includes('/rpc/get_auction_contact_status'))
+  ])
   await page.evaluate(async () =>
     (document.querySelector('#__nuxt') as any).__vue_app__.config.globalProperties.$router.push(
       '/stories'
     )
   )
   await expect(page.locator('.line-contact')).toHaveCount(0)
-  const response = page.waitForResponse((r) => r.url().includes('/rpc/get_auction_contact_status'))
   state.hold = false
   state.release!()
-  await response
+  await settled
   await page.evaluate(
     () =>
       new Promise<void>((resolve) =>
@@ -108,6 +275,35 @@ test('離開競標頁後，延遲完成的LINE輪詢不得重新啟動背景請�
   await page.clock.fastForward(6000)
   await page.waitForTimeout(150)
   expect(state.calls).toBe(before)
+})
+
+test('SDK 在取得登入憑證時卡住，驗證也能逾時退出且不補送舊查詢', async ({ page }) => {
+  const state = await openContact(page)
+  const before = state.calls
+  await page.evaluate(() => {
+    const auth = (document.querySelector('#__nuxt') as any).__vue_app__.config.globalProperties
+      .$supabase.client.auth
+    const original = auth.getSession
+    const waits: ((value: any) => void)[] = []
+    auth.getSession = () => new Promise((resolve) => waits.push(resolve))
+    ;(window as any).waitingAuthReads = () => waits.length
+    ;(window as any).restoreContactAuth = async () => {
+      auth.getSession = original
+      const value = await original.call(auth)
+      waits.forEach((resolve) => resolve(value))
+    }
+    window.dispatchEvent(new Event('focus'))
+  })
+  await expect
+    .poll(() => page.evaluate(() => (window as any).waitingAuthReads()))
+    .toBeGreaterThan(0)
+  await page.clock.fastForward(16000)
+  await expect(page.getByText('暫時無法確認 LINE 聯絡狀態，請重新確認。')).toBeVisible()
+  await page.evaluate(() => (window as any).restoreContactAuth())
+  await page.waitForTimeout(100)
+  expect(state.calls).toBe(before)
+  await page.getByRole('button', { name: '重新確認 LINE 狀態', exact: true }).click()
+  await expect(page.getByRole('button', { name: '建立 LINE 聯絡', exact: true })).toBeVisible()
 })
 
 test('僅Google登入不出現出價入口，切回LINE可繼續', async ({ page }) => {

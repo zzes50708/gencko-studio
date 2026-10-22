@@ -147,13 +147,21 @@ for (const offsetDays of [0, 2, -2]) {
         if (!(await page.getByText('官方 LINE 聯絡已驗證', { exact: false }).isVisible()))
           throw error
       })
-    await expect(page.getByText('官方 LINE 聯絡已驗證', { exact: false })).toBeVisible()
-    await expect(page.getByRole('button', { name: '確認出價', exact: true })).toBeEnabled()
-    const oldResponse = page.waitForResponse((r) =>
+    // 查詢現在合併為單一進行中請求；卡住的舊查詢必須先逾時取消，才可重新取得最新狀態。
+    const oldRequestClosed = page.waitForEvent('requestfailed', (r) =>
       r.url().includes('/rpc/get_auction_contact_status')
     )
+    await page.clock.fastForward(10001)
+    await oldRequestClosed
+    await expect(
+      page.getByText('暫時無法確認 LINE 聯絡狀態，請重新確認。', { exact: true })
+    ).toBeVisible()
+    await expect(page.getByRole('button', { name: '確認出價', exact: true })).toBeDisabled()
+    await page.getByRole('button', { name: '重新確認 LINE 狀態', exact: true }).click()
+    await expect(page.getByText('官方 LINE 聯絡已驗證', { exact: false })).toBeVisible()
+    await expect(page.getByRole('button', { name: '確認出價', exact: true })).toBeEnabled()
     releaseOldStatus!()
-    await oldResponse
+    await page.waitForTimeout(100)
     await page.evaluate(
       () =>
         new Promise<void>((resolve) =>

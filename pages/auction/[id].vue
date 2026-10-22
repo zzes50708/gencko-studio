@@ -28,6 +28,7 @@ import {
 import { isAuctionMember, canPlaceAuctionBid, memberOwnerKeys } from '~/utils/member-auth'
 import { loadPromoImage } from '~/utils/auction-promo'
 import { getLineMessageLink } from '~/utils/animal-inquiry'
+import { formatAuctionSex } from '~/utils/incubation-sex'
 
 definePageMeta({ key: (route) => route.fullPath })
 
@@ -66,6 +67,8 @@ const {
 
   return data
 })
+
+const displayGender = computed(() => formatAuctionSex(currentAuction.value?.gender))
 
 // SSR 直接讀取最高一筆公開出價，分享預覽不依賴瀏覽器再補讀。
 const { data: initialBid, error: initialBidError } = await useAsyncData(
@@ -233,10 +236,17 @@ const restorePendingBid = () => {
   }
 }
 watch(
-  () => [store.currentUser, memberOwnerKeys(store.currentUser).join('|')],
-  () => {
+  () => [
+    store.currentUser?.id || '',
+    store.currentUser,
+    memberOwnerKeys(store.currentUser).join('|')
+  ],
+  ([ownerId], [previousOwnerId]) => {
     needsLogin.value = false
-    if (pendingBid.value && !memberOwnerKeys(store.currentUser).includes(pendingBid.value.owner)) {
+    if (
+      ownerId !== previousOwnerId ||
+      (pendingBid.value && !memberOwnerKeys(store.currentUser).includes(pendingBid.value.owner))
+    ) {
       // 保留原帳號的待確認暫存，但不可顯示在另一個帳號上。
       pendingBid.value = null
       bidNotice.value = ''
@@ -510,7 +520,9 @@ const siteData = computed(() => {
       category: '寵物 > 爬蟲 > 守宮',
       brand: { '@type': 'Brand', name: 'Gencko Breeding Studio' },
       additionalProperty: [
-        ...(a.gender ? [{ '@type': 'PropertyValue', name: '性別', value: a.gender }] : []),
+        ...(a.gender
+          ? [{ '@type': 'PropertyValue', name: '性別', value: formatAuctionSex(a.gender) }]
+          : []),
         ...(a.birth_year
           ? [{ '@type': 'PropertyValue', name: '孵化日', value: a.birth_year }]
           : []),
@@ -753,7 +765,10 @@ const placeBid = async () => {
     clearPendingBid(intent, intentOwners)
     if (disposed || !memberOwnerKeys(store.currentUser).includes(intent.owner)) return
     if (!realBids.value.some((bid) => bid.id === result.bid.id)) realBids.value.push(result.bid)
-    currentAuction.value = { ...currentAuction.value, end_time: result.auction.end_time }
+    // 重試回執是原成交快照，不能倒退其他出價已延長的截止；完整場次仍由補查核對。
+    const currentEnd = Date.parse(currentAuction.value?.end_time)
+    if (!Number.isFinite(currentEnd) || Date.parse(result.auction.end_time) > currentEnd)
+      currentAuction.value = { ...currentAuction.value, end_time: result.auction.end_time }
     isBidsExpanded.value = true
     bidNotice.value = `已確認出價 ${formatPrice(intent.amount)}。`
     alert(result.extended ? '出價成功！結標時間已自動延長 3 分鐘。' : '出價成功！')
@@ -903,7 +918,7 @@ const generatePromo = async () => {
     const statusTxt = getAuctionStatus(currentAuction.value).text
     const genderTxt =
       currentAuction.value.gender && currentAuction.value.gender !== '未定'
-        ? `(${currentAuction.value.gender})`
+        ? `(${displayGender.value})`
         : ''
     ctx.fillText(`${statusTxt}   ${genderTxt}`, 50, 1010)
 
@@ -941,7 +956,7 @@ const closePromo = () => promoModal.close()
     <h1 v-if="currentAuction" class="sr-only">
       {{ currentAuction.morph }}
       <template v-if="currentAuction.gender && currentAuction.gender !== '未定'">
-        （{{ currentAuction.gender }}）
+        （{{ displayGender }}）
       </template>
       守宮競標｜Gencko Breeding Studio
     </h1>
@@ -1106,7 +1121,7 @@ const closePromo = () => promoModal.close()
           <h2 class="page-title">
             {{ currentAuction.morph }}
             <span class="m-gender" v-if="currentAuction.gender && currentAuction.gender !== '未定'">
-              ({{ currentAuction.gender }})
+              ({{ displayGender }})
             </span>
           </h2>
         </div>
@@ -1327,7 +1342,7 @@ const closePromo = () => promoModal.close()
             </li>
             <li>
               <strong>性別：</strong>
-              {{ currentAuction.gender || '-' }}
+              {{ displayGender || '-' }}
             </li>
             <li>
               <strong>生日：</strong>

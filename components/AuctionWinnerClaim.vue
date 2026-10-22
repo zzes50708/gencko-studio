@@ -2,6 +2,7 @@
 import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
 import { isAuctionOutcome } from '~/utils/auction-outcomes'
 import { useMainStore } from '~/stores/useMainStore'
+import { createRequestDeadline } from '~/utils/request-deadline'
 const props = defineProps({
   auctionId: { type: String, required: true },
   memberId: { type: String, required: true },
@@ -22,6 +23,12 @@ let revision = 0
 let loadRevision = 0
 let expiryTimer
 let expiresAt = 0
+let readRequest, claimRequest, clipboardRequest
+function cancelRequests() {
+  readRequest?.abort()
+  claimRequest?.abort()
+  clipboardRequest?.abort()
+}
 function clearClaim() {
   clearTimeout(expiryTimer)
   expiresAt = 0
@@ -47,6 +54,8 @@ const deadline = computed(() =>
 async function load({ quiet = false } = {}) {
   const owner = revision
   const request = ++loadRevision
+  readRequest?.abort()
+  const scope = (readRequest = createRequestDeadline())
   loading.value = true
   if (!quiet) {
     outcome.value = null
@@ -54,9 +63,9 @@ async function load({ quiet = false } = {}) {
     message.value = ''
   }
   try {
-    const { data, error } = await supabase.rpc('my_auction_outcome', {
-      p_auction_id: props.auctionId
-    })
+    const { data, error } = await scope.run((signal) =>
+      supabase.rpc('my_auction_outcome', { p_auction_id: props.auctionId }).abortSignal(signal)
+    )
     if (owner !== revision || request !== loadRevision) return
     if (error) throw error
     if (data !== null && !isAuctionOutcome(data, props.auctionId)) throw Error('得標回應不完整')
@@ -81,11 +90,18 @@ async function load({ quiet = false } = {}) {
   }
 }
 async function copyText(value, request) {
+  if (request !== revision) return
+  checkClaimExpiry()
+  if (!text.value || text.value !== value) return
+  clipboardRequest?.abort()
+  const scope = (clipboardRequest = createRequestDeadline())
   try {
-    await navigator.clipboard.writeText(value)
+    await scope.run(() => navigator.clipboard.writeText(value))
+    if (request === revision) checkClaimExpiry()
     if (request === revision && text.value === value)
       message.value = '已複製，請貼到官方 LINE 並傳送，完成領標。'
   } catch {
+    if (request === revision) checkClaimExpiry()
     if (request === revision && text.value === value)
       message.value = '請選取下方完整訊息複製，貼到官方 LINE 並傳送。'
   }
@@ -112,9 +128,12 @@ async function copyClaim() {
       await copyText(text.value, request)
       return
     }
-    const { data, error } = await supabase.rpc('create_auction_winner_claim', {
-      p_auction_id: props.auctionId
-    })
+    const scope = (claimRequest = createRequestDeadline(15000))
+    const { data, error } = await scope.run((signal) =>
+      supabase
+        .rpc('create_auction_winner_claim', { p_auction_id: props.auctionId })
+        .abortSignal(signal)
+    )
     if (request !== revision) return
     if (
       error ||
@@ -144,6 +163,7 @@ watch(
   (value) => {
     // 更新結算結果時，同時撤下舊訊息並讓先前的非同步請求失效。
     revision++
+    cancelRequests()
     outcome.value = value
     clearClaim()
     message.value = ''
@@ -156,6 +176,7 @@ watch(
   () => [props.auctionId, props.memberId],
   () => {
     revision++
+    cancelRequests()
     outcome.value = props.initialOutcome
     clearClaim()
     message.value = ''
@@ -173,6 +194,7 @@ onMounted(() => {
 })
 onBeforeUnmount(() => {
   revision++
+  cancelRequests()
   clearClaim()
   document.removeEventListener('visibilitychange', resume)
   window.removeEventListener('online', resume)
@@ -216,7 +238,7 @@ onBeforeUnmount(() => {
       </template>
     </template>
     <p v-else-if="loading">正在確認本帳號的得標結果…</p>
-    <p v-else>此帳號沒有可領標紀錄，或結果仍在確認中；請使用出價時的帳號登入。</p>
+    <p v-else-if="!message">此帳號沒有可領標紀錄，或結果仍在確認中；請使用出價時的帳號登入。</p>
     <p role="status">{{ message }}</p>
     <button
       type="button"

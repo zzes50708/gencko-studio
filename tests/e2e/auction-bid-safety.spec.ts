@@ -56,6 +56,9 @@ test('競標出價故障回歸：同步、斷線重試、登入及輸入', async
     page.on('pageerror', (e) => state.errors.push(e.message))
     await context.route('**/rest/v1/**', async (r) => {
       const url = new URL(r.request().url())
+      // 此組隔離案例專測出價；明確模擬已完成官方驗證，不略過正式頁面的資格檢查。
+      if (url.pathname.endsWith('/rpc/get_auction_contact_status'))
+        return r.fulfill({ json: { required: true, ready: true, restricted: false } })
       if (r.request().method() !== 'GET') return r.abort()
       if (url.pathname.endsWith('/auction_bids')) {
         state.bidReads++
@@ -107,6 +110,18 @@ test('競標出價故障回歸：同步、斷線重試、登入及輸入', async
     await page.evaluate(async (a) => {
       const g = document.querySelector('#__nuxt').__vue_app__.config.globalProperties
       const s = g.$pinia._s.get('main')
+      g.$supabase.client.auth.getSession = async () => ({
+        data: {
+          session: {
+            user: {
+              id: 'auction-audit@example.invalid',
+              app_metadata: { provider: 'custom:line-oauth' },
+              user_metadata: {}
+            }
+          }
+        },
+        error: null
+      })
       s.auctionList = [a]
       s.currentUser = {
         type: 'line',
@@ -219,6 +234,46 @@ test('競標出價故障回歸：同步、斷線重試、登入及輸入', async
         assert.equal((await t.vm('read')).end, end)
         return { pass: true }
       } finally {
+        await t.context.close()
+      }
+    })
+    await run('原出價舊回執晚到，不倒退其他客人後續延長的截止與最高價', async () => {
+      const t = await create({ nearEnd: true })
+      const gate = deferred()
+      try {
+        let accepted
+        t.state.postHandler = async (route) => {
+          if (!accepted) {
+            t.state.bids.push({ id: 'ORIGINAL', auction_id: id, amount: 500 })
+            t.state.auction.end_time = new Date(
+              Date.parse(t.state.auction.end_time) + 180000
+            ).toISOString()
+            accepted = JSON.parse(JSON.stringify(receipt(t)))
+            return route.abort('failed')
+          }
+          return route.fulfill({ json: accepted })
+        }
+        await t.page.locator('.btn-bid').click()
+        await settle(t)
+        t.state.auction.end_time = new Date(
+          Date.parse(t.state.auction.end_time) + 180000
+        ).toISOString()
+        const latestEnd = t.state.auction.end_time
+        t.state.bids.push({ id: 'LATER-BIDDER', auction_id: id, amount: 600 })
+        await t.vm('refresh')
+        await t.page.waitForFunction(
+          (end) => window.auditVM.currentAuction.end_time === end,
+          latestEnd
+        )
+        t.state.holdMeta = gate
+        await t.page.getByRole('button', { name: '重試同一筆出價', exact: true }).click()
+        await t.page.waitForFunction(() => !window.auditVM.isPlacingBid)
+        while (!gate.started) await wait(20)
+        assert.equal((await t.vm('read')).end, latestEnd)
+        assert.match(await t.page.locator('.highest-price').innerText(), /600/)
+        return { pass: true }
+      } finally {
+        gate.release()
         await t.context.close()
       }
     })

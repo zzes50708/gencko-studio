@@ -7,7 +7,12 @@ import { sampleAuctionClock, auctionClockNow } from '~/utils/auction-detail'
 import { useRouter } from 'vue-router'
 import { memberFromSupabaseUser } from '~/utils/member-auth'
 import { withRetry } from '~/utils/supabase-retry'
-import { lineLoginOptions, createAuthSessionReader, signOutCurrentDevice } from '~/utils/line-login'
+import {
+  lineLoginOptions,
+  createAuthSessionReader,
+  signOutCurrentDevice,
+  withAuthContextLock
+} from '~/utils/line-login'
 import { createLineLoginRelay } from '~/utils/line-login-relay'
 
 export const useMainStore = defineStore('main', () => {
@@ -484,6 +489,8 @@ export const useMainStore = defineStore('main', () => {
   })
   let lineRelay
   const lineLoginNeedsTransfer = ref(false)
+  const lineLoginTransferId = ref('')
+  const lineLoginError = ref('')
   const getLineRelay = () => {
     if (!lineRelay && import.meta.client)
       lineRelay = createLineLoginRelay({
@@ -504,10 +511,10 @@ export const useMainStore = defineStore('main', () => {
       const relay = getLineRelay()
       const read = () => relay.resume()
       // 同瀏覽器多分頁共享 verifier，避免兩個分頁同時消耗一次性授權碼。
-      const result = navigator.locks
-        ? await navigator.locks.request('gencko-line-login-resume', read)
-        : await read()
+      const result = await withAuthContextLock(read)
+      lineLoginError.value = ''
       if (result?.needsTransfer) {
+        lineLoginTransferId.value = relay.pending()?.id || ''
         lineLoginNeedsTransfer.value = true
         return null
       }
@@ -520,7 +527,7 @@ export const useMainStore = defineStore('main', () => {
       if (error?.message === 'LINE_LOGIN_RESTART') {
         lineLoginNeedsTransfer.value = false
         alert('LINE 登入尚未完成或已逾時，請重新點選 LINE 登入。')
-      }
+      } else lineLoginError.value = '目前網路或登入服務不穩定，請稍後重試；不用重新取得接續碼。'
       return null
     }
   }
@@ -530,8 +537,21 @@ export const useMainStore = defineStore('main', () => {
     return pending
   }
   const completeLineLogin = async (transfer) => {
-    getLineRelay().attachTransfer(transfer)
+    try {
+      getLineRelay().attachTransfer(transfer)
+    } catch (error) {
+      if (error?.message !== 'LINE_LOGIN_RESTART') throw error
+      lineLoginNeedsTransfer.value = false
+      alert('LINE 登入尚未完成或已逾時，請重新點選 LINE 登入。')
+      return false
+    }
     return !!(await resumeLineLogin())
+  }
+  const cancelLineLogin = () => {
+    getLineRelay()?.cancel()
+    lineLoginNeedsTransfer.value = false
+    lineLoginTransferId.value = ''
+    lineLoginError.value = ''
   }
   async function checkAuthStatus() {
     if (!import.meta.client) return
@@ -554,25 +574,31 @@ export const useMainStore = defineStore('main', () => {
   }
 
   let authLoginBusy = false
+  let authLogoutBusy = false
   const loginWithLine = async () => {
-    if (!import.meta.client || authLoginBusy) return
+    if (!import.meta.client || authLoginBusy || authLogoutBusy) return
     authLoginBusy = true
     try {
       const completed = await resumeLineLogin()
       if (completed) return
-      const relay = getLineRelay()
-      relay.cancel()
-      lineLoginNeedsTransfer.value = false
-      await relay.settle()
-      const redirectTo = await relay.start(lineLoginOptions(window.location.href).redirectTo)
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'custom:line-oauth',
-        options: { redirectTo }
+      await withAuthContextLock(async () => {
+        const relay = getLineRelay()
+        cancelLineLogin()
+        await relay.settle()
+        try {
+          const redirectTo = await relay.start(lineLoginOptions(window.location.href).redirectTo)
+          const { error } = await supabase.auth.signInWithOAuth({
+            provider: 'custom:line-oauth',
+            options: { redirectTo }
+          })
+          if (error) throw error
+        } catch (error) {
+          relay.cancel()
+          throw error
+        }
       })
-      if (error) throw error
     } catch (error) {
       if (error?.message === 'LINE_LOGIN_CANCELLED') return
-      getLineRelay()?.cancel()
       alert('LINE 登入暫時無法完成，請稍後重試。')
     } finally {
       authLoginBusy = false
@@ -580,17 +606,18 @@ export const useMainStore = defineStore('main', () => {
   }
 
   const loginWithGoogle = async () => {
-    if (!import.meta.client || authLoginBusy) return
+    if (!import.meta.client || authLoginBusy || authLogoutBusy) return
     authLoginBusy = true
     try {
-      getLineRelay()?.cancel()
-      await getLineRelay()?.settle()
-      lineLoginNeedsTransfer.value = false
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: { redirectTo: lineLoginOptions(window.location.href).redirectTo }
+      await withAuthContextLock(async () => {
+        cancelLineLogin()
+        await getLineRelay()?.settle()
+        const { error } = await supabase.auth.signInWithOAuth({
+          provider: 'google',
+          options: { redirectTo: lineLoginOptions(window.location.href).redirectTo }
+        })
+        if (error) throw error
       })
-      if (error) throw error
     } catch (err) {
       console.error('Google 登入失敗:', err)
       alert('登入失敗，請稍後再試！')
@@ -600,15 +627,21 @@ export const useMainStore = defineStore('main', () => {
   }
 
   const logout = async () => {
-    lineLoginNeedsTransfer.value = false
-    getLineRelay()?.cancel()
-    await getLineRelay()?.settle()
-    authSessionReader.invalidate()
+    if (authLogoutBusy) return
+    authLogoutBusy = true
+    cancelLineLogin()
     try {
-      await signOutCurrentDevice(supabase.auth, () => authSessionReader.accept(null))
+      await getLineRelay()?.settle()
+      await withAuthContextLock(async () => {
+        cancelLineLogin()
+        authSessionReader.invalidate()
+        await signOutCurrentDevice(supabase.auth, () => authSessionReader.accept(null))
+      })
     } catch {
       alert('登出未完成，請確認網路後重試。')
       return
+    } finally {
+      authLogoutBusy = false
     }
     try {
       if (window.liff?.isLoggedIn()) window.liff.logout()
@@ -770,6 +803,9 @@ export const useMainStore = defineStore('main', () => {
     resumeLineLogin,
     hasPendingLineLogin,
     lineLoginNeedsTransfer,
+    lineLoginTransferId,
+    lineLoginError,
+    cancelLineLogin,
     completeLineLogin,
     loginWithLine,
     loginWithGoogle,

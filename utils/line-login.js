@@ -15,6 +15,11 @@ export function lineLoginOptions(href) {
   }
 }
 
+/** 所有分頁的發起、接續與登出共用同一把鎖，避免覆寫 PKCE cookie。 */
+export function withAuthContextLock(action, locks = globalThis.navigator?.locks) {
+  return locks ? locks.request('gencko-line-login-resume', action) : action()
+}
+
 /** 僅處理失敗回程；成功登入的 code／憑證交由驗證套件完成交換。 */
 export function readOAuthFailure(href) {
   const url = new URL(href)

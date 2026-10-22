@@ -10,6 +10,7 @@ export default defineEventHandler(async (event) => {
     try {
       if (typeof query.code === 'string' && !query.error) {
         const returnSecret = randomBytes(32).toString('hex')
+        const returnExpiresAt = Date.now() + 4 * 60 * 1000
         status = (
           await relayRequest(event, {
             action: 'complete',
@@ -19,12 +20,13 @@ export default defineEventHandler(async (event) => {
           })
         ).status
         if (status === 'ready')
-          setCookie(event, 'gencko_line_return', `${flow}.${returnSecret}`, {
+          setCookie(event, 'gencko_line_return', `${flow}.${returnSecret}.${returnExpiresAt}`, {
             httpOnly: true,
             secure: getRequestURL(event).protocol === 'https:',
             sameSite: 'lax',
             path: '/api/auth/line',
-            maxAge: 4 * 60
+            maxAge: Math.max(0, Math.floor((returnExpiresAt - Date.now()) / 1000)),
+            expires: new Date(returnExpiresAt)
           })
       } else {
         await relayRequest(event, { action: 'fail', flow })

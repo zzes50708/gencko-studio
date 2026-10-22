@@ -7,6 +7,7 @@ export default defineNuxtPlugin((nuxtApp) => {
   let reading = false
   let disposed = false
   let timer: ReturnType<typeof setInterval>
+  let waitingTicks = 0
   const resume = async () => {
     if (disposed || reading || document.hidden || !navigator.onLine) return
     reading = true
@@ -22,7 +23,11 @@ export default defineNuxtPlugin((nuxtApp) => {
   nuxtApp.hook('app:mounted', async () => {
     void resume()
     timer = setInterval(() => {
-      if (store.hasPendingLineLogin() && !store.lineLoginNeedsTransfer) void resume()
+      if (
+        store.hasPendingLineLogin() &&
+        (!store.lineLoginNeedsTransfer || ++waitingTicks % 5 === 0)
+      )
+        void resume()
     }, 3000)
     window.addEventListener('pageshow', resume)
     window.addEventListener('focus', resume)

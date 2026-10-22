@@ -23,14 +23,32 @@ const safeRpcMessages = new Set([
 export default defineEventHandler(async (event) => {
   const auctionId = getRouterParam(event, 'id')
   if (!auctionId || !/^[A-Za-z0-9_-]+$/.test(auctionId)) {
-    throw createError({ statusCode: 400, message: '競標編號無效' })
+    throw createError({
+      statusCode: 400,
+      message: '競標編號無效',
+      data: { outcome: 'not_submitted' }
+    })
   }
 
-  const supabase = await serverSupabaseClient(event)
+  // 身分查詢失敗時尚未呼叫出價 RPC，不能誤導客人以為出價可能已成立。
+  const { supabase, auth } = await (async () => {
+    try {
+      const supabase = await serverSupabaseClient(event)
+      const auth = await supabase.auth.getUser()
+      if (!auth?.data) throw new Error('登入驗證回應不完整')
+      return { supabase, auth }
+    } catch {
+      throw createError({
+        statusCode: 503,
+        message: '登入驗證服務暫時無法連線，請稍後再試',
+        data: { outcome: 'not_submitted' }
+      })
+    }
+  })()
   const {
     data: { user },
     error: authError
-  } = await supabase.auth.getUser()
+  } = auth
 
   if (
     authError &&
@@ -57,7 +75,13 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  const body = await readBody(event)
+  const body = await readBody(event).catch(() => {
+    throw createError({
+      statusCode: 400,
+      message: '出價內容無法讀取，請重新確認',
+      data: { outcome: 'not_submitted' }
+    })
+  })
   const amount = body?.amount
   const nickname = typeof body?.nickname === 'string' ? body.nickname.trim() : null
 
@@ -69,7 +93,11 @@ export default defineEventHandler(async (event) => {
     })
   }
   if (nickname && [...nickname].length > 15) {
-    throw createError({ statusCode: 400, message: '暱稱不可超過 15 個字' })
+    throw createError({
+      statusCode: 400,
+      message: '暱稱不可超過 15 個字',
+      data: { outcome: 'not_submitted' }
+    })
   }
 
   // 舊版頁面沒有請求編號時仍可送出；新版重試必須沿用原編號。
@@ -84,12 +112,23 @@ export default defineEventHandler(async (event) => {
       data: { outcome: 'not_submitted' }
     })
   }
-  const { data, error } = await supabase.rpc('submit_auction_bid', {
-    p_request_id: requestId,
-    p_auction_id: auctionId,
-    p_amount: amount,
-    p_nickname: nickname
-  })
+  const { data, error } = await (async () => {
+    try {
+      return await supabase.rpc('submit_auction_bid', {
+        p_request_id: requestId,
+        p_auction_id: auctionId,
+        p_amount: amount,
+        p_nickname: nickname
+      })
+    } catch {
+      // RPC 已開始，連線拋錯不能證明交易已回滾；客人必須沿用原請求編號查回結果。
+      throw createError({
+        statusCode: 503,
+        message: '出價結果尚待確認，請重試同一筆出價',
+        data: { outcome: 'unknown' }
+      })
+    }
+  })()
 
   if (error) {
     console.error('[auction bid] RPC failed:', error.message)
