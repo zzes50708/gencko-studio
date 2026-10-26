@@ -553,6 +553,17 @@ const informationRows = computed(() => [
     font-size: 10px;
   }
 }
+@media (max-width: 359px) {
+  .card-purchase-row {
+    padding-inline: 0;
+  }
+  .card-purchase-row > .slim-price-row {
+    padding-inline: 6px !important;
+  }
+  .card-purchase-row .flip-front-actions {
+    gap: 0;
+  }
+}
 @media (pointer: coarse) and (min-width: 768px) {
   .card-action-btn {
     min-height: 40px;

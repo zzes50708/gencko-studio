@@ -996,8 +996,8 @@ a:focus-visible {
     min-width: 0;
   }
   .grid.photo-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 10px;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
   }
   .compare-bar {
     bottom: calc(var(--mobile-nav-height, 62px) + 8px);

@@ -71,7 +71,7 @@ test('桌面六欄、翻卡完整資訊與收藏操作', async ({ page }) => {
   await expect(card.locator('.flip-card-link')).toBeFocused()
 })
 
-test('手機保留兩欄與基本資訊，不執行翻卡', async ({ page }) => {
+test('手機三欄與基本資訊，不執行翻卡', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 850 })
   await seed(page)
   const card = page.locator('.flip-card').first()
@@ -80,7 +80,7 @@ test('手機保留兩欄與基本資訊，不執行翻卡', async ({ page }) => 
       .locator('.grid.photo-grid')
       .last()
       .evaluate((element) => getComputedStyle(element).gridTemplateColumns.split(' ').length)
-  ).toBe(2)
+  ).toBe(3)
   await expect(card.locator('.flip-back')).toBeHidden()
   await expect(card.locator('.mobile-card-details-body')).toBeHidden()
   await expect(card.locator('.mobile-card-meta')).toHaveCount(0)
@@ -115,15 +115,18 @@ test('未確認性別可獨立排除，網址重載與重置保持一致', async
   await expect(page).not.toHaveURL(/sexU=/)
 })
 
-for (const width of [320, 390]) {
+for (const width of [320, 360, 390, 430]) {
   test(`${width}px 商品可讀與44px觸控區不擠壓價格`, async ({ page }) => {
     await page.setViewportSize({ width, height: 844 })
     await seed(page)
     const card = page.locator('.flip-card').first()
+    const cardBounds = await card.boundingBox()
     for (const name of ['收藏', '加入比較']) {
       const bounds = await card.getByRole('button', { name, exact: true }).boundingBox()
       expect(bounds!.width).toBeGreaterThanOrEqual(44)
       expect(bounds!.height).toBeGreaterThanOrEqual(44)
+      expect(bounds!.x).toBeGreaterThanOrEqual(cardBounds!.x - 1)
+      expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(cardBounds!.x + cardBounds!.width + 1)
     }
     expect((await card.locator('summary').boundingBox())!.height).toBeGreaterThanOrEqual(44)
     await card.locator('summary').click()
