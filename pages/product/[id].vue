@@ -676,6 +676,14 @@ useContentResponse(currentProduct, pending, productError)
             </div>
             <div class="prod-price-area">
               <template v-if="productModules.transaction.status === 'Sold'">
+                <div class="price">
+                  {{
+                    productModules.transaction.price == null ||
+                    productModules.transaction.price === ''
+                      ? '售價未登錄'
+                      : `NT$ ${productModules.transaction.price}`
+                  }}
+                </div>
                 <span class="status-badge s-sold">已售出</span>
               </template>
               <template v-else-if="productModules.transaction.status === 'Auction'">

@@ -51,8 +51,7 @@ const uploadedText = computed(() => {
 })
 
 const priceText = computed(() => {
-  if (store.isExhibitionMode) return store.exhibitionNote
-  if (props.item?.Status === 'Sold') return '售出'
+  if (store.isExhibitionMode && props.item?.Status !== 'Sold') return store.exhibitionNote
   const p = props.item?.ListingPrice
   if (p === null || p === undefined || p === '') return '未登錄'
   return `NT$${p}`
@@ -123,7 +122,7 @@ const informationRows = computed(() => [
           <div v-else class="card-image-placeholder">
             {{ imageFailed ? '照片暫時無法載入' : '尚無照片' }}
           </div>
-          <span v-if="item.Status === 'Sold'" class="card-status">已售出</span>
+          <span v-if="item.Status === 'Sold'" class="card-sold-stamp">已售出</span>
           <span v-else-if="item.Status === 'Reserved'" class="card-status">已保留</span>
           <span v-else-if="item.Status === 'Auction' && hasAuction" class="card-status">
             競標中
@@ -154,15 +153,20 @@ const informationRows = computed(() => [
     </div>
     <div class="card-purchase-row">
       <div class="slim-price-row">
-        <span v-if="item.Status === 'Sold'" class="status-badge">售出</span>
-        <span v-else-if="item.Status === 'Auction' && hasAuction" class="status-badge">競標中</span>
+        <span v-if="item.Status === 'Auction' && hasAuction" class="status-badge">競標中</span>
         <span v-else-if="item.Status === 'SelfKeep' && showStatusBadge" class="status-badge">
           自留
         </span>
-        <span v-else-if="store.isExhibitionMode" class="exhibition-note">
+        <span v-else-if="store.isExhibitionMode && item.Status !== 'Sold'" class="exhibition-note">
           {{ store.exhibitionNote }}
         </span>
-        <span v-else class="price slim-price">${{ item.ListingPrice }}</span>
+        <span v-else class="price slim-price">
+          {{
+            item.ListingPrice == null || item.ListingPrice === ''
+              ? '售價未登錄'
+              : `$${item.ListingPrice}`
+          }}
+        </span>
       </div>
       <div v-if="showWishlist || showCompare" class="card-action-stack flip-front-actions">
         <button
@@ -325,6 +329,22 @@ const informationRows = computed(() => [
   padding: 3px 7px;
   font-size: 12px;
   border: 1px solid var(--bd);
+}
+.card-sold-stamp {
+  position: absolute;
+  right: 8%;
+  bottom: 12%;
+  padding: 3px 8px;
+  border: 3px double currentColor;
+  color: var(--pri);
+  background: var(--card-bg-solid);
+  font-family: 'Noto Serif TC', serif;
+  font-size: clamp(12px, 1.2vw, 20px);
+  font-weight: 900;
+  line-height: 1.3;
+  white-space: nowrap;
+  transform: rotate(-12deg);
+  pointer-events: none;
 }
 .slim-body {
   padding: 10px !important;
