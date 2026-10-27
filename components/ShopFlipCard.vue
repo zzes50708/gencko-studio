@@ -2,7 +2,7 @@
 import { computed, ref, watch } from 'vue'
 import { useMainStore } from '~/stores/useMainStore'
 import { getCleanUrl } from '~/utils/image'
-import { formatAnimalSex, isIncubationRecord } from '~/utils/incubation-sex'
+import { formatAnimalSex, formatAnimalPreviewSex } from '~/utils/incubation-sex'
 
 const store = useMainStore()
 
@@ -17,7 +17,7 @@ const props = defineProps({
   showWishlist: { type: Boolean, default: true },
   showStatusBadge: { type: Boolean, default: true },
   showBackPrice: { type: Boolean, default: true },
-  showMobileMeta: { type: Boolean, default: false },
+  showMobileMeta: { type: Boolean, default: true },
   showMobileGenes: { type: Boolean, default: true },
   showInteractiveGrid: { type: Boolean, default: true },
   onToggleWishlist: { type: Function, required: true },
@@ -32,8 +32,7 @@ const normalizeSpace = (s) =>
     .trim()
 
 const genderText = computed(() => formatAnimalSex(props.item))
-const isIncubationTemperature = computed(() => isIncubationRecord(props.item))
-const mobileGenderText = computed(() => formatAnimalSex(props.item, { disclaimer: false }))
+const mobileGenderText = computed(() => formatAnimalPreviewSex(props.item))
 
 const birthdayText = computed(() => {
   const b = normalizeSpace(props.item?.Birthday || '')
@@ -72,7 +71,6 @@ watch(
     imgLoaded.value = false
   }
 )
-const birthYear = computed(() => String(props.item.Birthday || '').match(/\d{4}/)?.[0] || '')
 const previewGenes = computed(() => (props.item.Genes || []).slice(0, 2))
 const statusText = computed(
   () =>
@@ -136,11 +134,8 @@ const informationRows = computed(() => [
           <h3 class="slim-title" :title="item.Morph">{{ item.Morph }}</h3>
           <div class="desktop-front-price price slim-price">{{ priceText }}</div>
           <div v-if="showMobileMeta" class="mobile-card-meta">
-            <span :title="genderText">
-              {{ isIncubationTemperature ? mobileGenderText : genderText }}
-              <small v-if="isIncubationTemperature">不保證性別</small>
-            </span>
-            <span v-if="birthYear">{{ birthYear }} 年出生</span>
+            <span aria-label="生日">{{ birthdayText }}</span>
+            <span :title="genderText" aria-label="性別或孵化溫度">{{ mobileGenderText }}</span>
           </div>
           <div v-if="showMobileGenes && previewGenes.length" class="card-genes">
             <span v-for="gene in previewGenes" :key="gene">{{ gene }}</span>
@@ -198,12 +193,6 @@ const informationRows = computed(() => [
         </button>
       </div>
     </div>
-    <details class="mobile-card-details">
-      <summary :aria-label="`查看 ${item.Morph} 的基本資訊`">基本資訊</summary>
-      <div class="mobile-card-details-body">
-        <span v-for="[label, value] in informationRows" :key="label">{{ label }}：{{ value }}</span>
-      </div>
-    </details>
   </article>
 </template>
 <style scoped>
@@ -357,16 +346,8 @@ const informationRows = computed(() => [
   color: var(--txt);
 }
 .mobile-card-meta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 3px 8px;
-  line-height: 1.45;
-  font-size: 12px;
+  display: none;
   color: var(--txt-muted);
-}
-.mobile-card-meta small {
-  font-size: 11px;
-  display: block;
 }
 .card-genes {
   display: flex;
@@ -442,7 +423,6 @@ const informationRows = computed(() => [
 .flip-img--loaded {
   opacity: 1;
 }
-.mobile-card-details,
 .action-icon {
   display: none;
 }
@@ -451,19 +431,20 @@ const informationRows = computed(() => [
 }
 @media (max-width: 767px) {
   .flip-card {
-    align-self: start;
+    align-self: stretch;
     height: auto;
   }
   .flip-inner {
     flex: none;
   }
   .slim-body > .card-id,
-  .slim-body > .mobile-card-meta,
   .slim-body > .card-genes {
     display: none;
   }
   .slim-title {
-    min-height: 0;
+    height: 2.8em;
+    min-height: 2.8em;
+    overflow-wrap: anywhere;
     margin: 0 !important;
   }
   .card-purchase-row {
@@ -472,6 +453,7 @@ const informationRows = computed(() => [
     align-items: center;
     gap: 2px;
     padding: 0 6px 2px;
+    margin-top: auto;
   }
   .card-purchase-row > .slim-price-row {
     flex: 1 0 auto;
@@ -498,41 +480,15 @@ const informationRows = computed(() => [
     display: inline;
     font-size: 21px;
   }
-  .mobile-card-details {
-    display: block;
-    position: relative;
-    z-index: 2;
-    border-top: 1px solid var(--bd);
-    margin: 0 8px;
-  }
-  .mobile-card-details summary {
-    min-height: 44px;
-    padding: 6px 0;
-    cursor: pointer;
-    font-size: 11px;
-    color: var(--txt-muted);
-  }
-  .mobile-card-details summary:focus-visible {
-    outline: 2px solid var(--pri);
-  }
-  .mobile-card-details-body {
-    display: grid;
-    gap: 4px;
-    padding: 2px 0 8px;
-    font-size: 13px;
-    line-height: 1.65;
-    overflow-wrap: anywhere;
-    color: var(--txt-muted);
-  }
 
   .slim-body {
-    padding: 8px !important;
+    padding: 6px !important;
   }
   .slim-title {
-    font-size: 14px !important;
+    font-size: 12px !important;
   }
   .slim-price {
-    font-size: 17px !important;
+    font-size: 15px !important;
   }
   .flip-front-actions {
     padding: 0 8px 8px;
@@ -544,7 +500,13 @@ const informationRows = computed(() => [
     padding: 4px 5px;
   }
   .mobile-card-meta {
-    font-size: 11px;
+    display: grid;
+    grid-template-rows: repeat(2, 1.5em);
+    margin-top: 3px;
+    font-size: 10px;
+    line-height: 1.5;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
   }
   .card-id {
     font-size: 10px;

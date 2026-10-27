@@ -24,6 +24,16 @@ export function getIncubationEstimate(species, value) {
 export const isIncubationRecord = (item) =>
   ['溫控', '孵化溫度', '公溫', '母溫'].includes(String(item?.GenderType ?? '').trim())
 
+// 預覽卡只保留已確認性別或原始孵化溫度，完整說明仍顯示於個體頁。
+export function formatAnimalPreviewSex(item) {
+  if (!isIncubationRecord(item)) return formatAnimalSex(item)
+  const temperature = String(item?.GenderValue ?? '')
+    .normalize('NFKC')
+    .trim()
+    .replace(/\s*(?:°?C|℃|度)$/i, '')
+  return temperature ? `${temperature}度` : '未登錄'
+}
+
 // 舊競標把種類與數值合併成字串；沒有物種時只顯示紀錄，不推測公母溫。
 export function formatAuctionSex(value, species) {
   const raw = String(value ?? '').trim()

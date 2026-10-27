@@ -7,7 +7,7 @@ import { GENES_DB } from '~/utils/genes-db'
 import { getCleanUrl } from '~/utils/image'
 import { formatAnimalSex } from '~/utils/incubation-sex'
 import ShopFlipCard from '~/components/ShopFlipCard.vue'
-import { useMediaQuery } from '@vueuse/core'
+import { useIntersectionObserver, useMediaQuery } from '@vueuse/core'
 import {
   createShopFilters,
   cloneShopFilters,
@@ -250,6 +250,19 @@ const catalogOptions = (filters) => ({
 })
 const allMatches = computed(() => filterShopItems(store.inv || [], catalogOptions(fil.value)))
 const shopList = computed(() => allMatches.value.slice(0, store.displayLimit))
+const loadMoreTrigger = ref(null)
+const showMoreItems = () => {
+  if (store.displayLimit >= allMatches.value.length) return
+  store.displayLimit = Math.min(store.displayLimit + 20, allMatches.value.length)
+}
+// 以商品清單尾端預載，避免把頁尾高度算進觸發距離；離開頁面時自動清理觀察器。
+useIntersectionObserver(
+  loadMoreTrigger,
+  ([entry]) => {
+    if (entry?.isIntersecting) showMoreItems()
+  },
+  { rootMargin: '0px 0px 800px 0px' }
+)
 const draftCount = computed(() =>
   priceError.value
     ? 0
@@ -550,18 +563,24 @@ onBeforeUnmount(() => clearTimeout(searchTimer))
               store.compareList.length >= 3 && !store.compareList.includes(item.ID)
             "
             :has-auction="store.auctionList.some((auction) => auction.animal_id === item.ID)"
-            :show-mobile-meta="false"
             :show-mobile-genes="false"
             :show-interactive-grid="false"
             :on-toggle-wishlist="toggleWishlist"
             :on-toggle-compare="store.toggleCompare"
           />
         </div>
+        <div
+          v-if="shopList.length && shopList.length < allMatches.length"
+          :key="shopList.length"
+          ref="loadMoreTrigger"
+          class="shop-load-trigger"
+          aria-hidden="true"
+        />
         <button
           v-if="shopList.length < allMatches.length"
           class="load-more"
           type="button"
-          @click="store.displayLimit += 20"
+          @click="showMoreItems"
         >
           顯示更多個體（還有 {{ allMatches.length - shopList.length }} 隻）
         </button>

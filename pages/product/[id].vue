@@ -4,7 +4,7 @@ import { useRoute } from 'vue-router'
 import { useHead, useAsyncData, useSupabaseClient } from '#imports'
 import { useMainStore } from '~/stores/useMainStore'
 import { getCleanUrl } from '~/utils/image'
-import { formatAnimalSex, getAnimalSexTone } from '~/utils/incubation-sex'
+import { formatAnimalSex, formatAnimalPreviewSex, getAnimalSexTone } from '~/utils/incubation-sex'
 import { getAnimalInquiryLink, getAnimalInquiryText } from '~/utils/animal-inquiry'
 import { auctionState } from '~/utils/auction-presentation'
 
@@ -820,7 +820,11 @@ useContentResponse(currentProduct, pending, productError)
                 </span>
               </div>
               <div class="related-info">
-                <div class="related-morph">{{ item.Morph }}</div>
+                <div class="related-morph" :title="item.Morph">{{ item.Morph }}</div>
+                <div class="related-meta">
+                  <span aria-label="生日">{{ item.Birthday || '未登錄' }}</span>
+                  <span aria-label="性別或孵化溫度">{{ formatAnimalPreviewSex(item) }}</span>
+                </div>
                 <div class="related-price">
                   <span v-if="store.isExhibitionMode" style="color: var(--pri)">展場中</span>
                   <span v-else-if="item.Status === 'ForSale'">${{ item.ListingPrice }}</span>
@@ -1326,16 +1330,18 @@ useContentResponse(currentProduct, pending, productError)
     font-size: 0.65rem;
     padding: 4px 6px;
   }
-  /* (d) 資訊列一律不換行（超出則可橫向捲動，避免版面斷行） */
+  /* 手機資訊依可用寬度換行，避免長基因名稱與孵化紀錄撐開版面。 */
   .guarantee-icons-row,
   .gene-tag-row {
-    flex-wrap: nowrap;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
+    flex-wrap: wrap;
   }
   .spec-row {
-    flex-wrap: nowrap;
-    white-space: nowrap;
+    flex-wrap: wrap;
+    white-space: normal;
+    gap: 4px 12px;
+  }
+  .sex-val {
+    margin-right: 0;
   }
 
   /* (f) 相似個體推薦排到「取貨注意事項」之上（僅手機；桌機維持原順序） */
@@ -1374,8 +1380,8 @@ useContentResponse(currentProduct, pending, productError)
     margin-top: 5px;
   }
   .related-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
-    gap: 8px !important;
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+    gap: 6px !important;
   }
 }
 
@@ -1449,6 +1455,9 @@ useContentResponse(currentProduct, pending, productError)
 }
 .related-info {
   padding: 8px 10px;
+}
+.related-meta {
+  display: none;
 }
 .related-morph {
   font-size: 0.88rem;
@@ -1615,10 +1624,53 @@ dialog.promo-modal-overlay::backdrop {
   }
 }
 @media (max-width: 767px) {
+  .prod-container {
+    padding-inline: 0;
+  }
   .prod-layout {
     display: flex;
     flex-direction: column;
+    align-items: stretch;
     gap: 8px;
+  }
+  .prod-header,
+  .prod-img-box,
+  .prod-actions,
+  .guarantee-icons-row {
+    min-width: 0;
+    max-width: 100%;
+  }
+  .prod-header {
+    overflow-wrap: anywhere;
+  }
+  .related-info {
+    padding: 6px 4px;
+  }
+  .related-morph,
+  .related-price {
+    font-size: 12px;
+    line-height: 1.4;
+  }
+  .related-morph {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    height: 2.8em;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+  .related-meta {
+    display: grid;
+    grid-template-rows: repeat(2, 1.5em);
+    margin-bottom: 3px;
+    color: var(--txt-muted);
+    font-size: 10px;
+    line-height: 1.5;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+  .related-price {
+    overflow-wrap: anywhere;
   }
   .prod-info-box {
     display: contents;

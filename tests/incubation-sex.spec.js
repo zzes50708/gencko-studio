@@ -2,9 +2,18 @@ import { describe, expect, it } from 'vitest'
 import {
   getIncubationEstimate,
   formatAnimalSex,
+  formatAnimalPreviewSex,
   formatAuctionSex,
   getAnimalSexTone
 } from '../utils/incubation-sex'
+
+it('預覽卡只顯示性別或溫度，單位正規化且不推測性別', () => {
+  expect(formatAnimalPreviewSex({ GenderType: '母', GenderValue: 27.5 })).toBe('母')
+  expect(formatAnimalPreviewSex({ GenderType: '公' })).toBe('公')
+  for (const value of [27.5, '27.5度', '２７.５°C', '27.5℃'])
+    expect(formatAnimalPreviewSex({ GenderType: '孵化溫度', GenderValue: value })).toBe('27.5度')
+  expect(formatAnimalPreviewSex({ GenderType: '母溫' })).toBe('未登錄')
+})
 
 it('競標舊字串使用孵化溫度，未知物種不猜公母；已確認性別不混入其他數值', () => {
   expect(formatAuctionSex('溫控27.5')).toBe('孵化溫度:27.5度（不保證性別）')

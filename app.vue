@@ -74,12 +74,6 @@ const handleLenisScroll = ({ scroll }) => {
   } else if (delta < -2) {
     store.navHidden = false
   }
-  if (
-    route.path === '/shop' &&
-    st + window.innerHeight >= document.documentElement.scrollHeight - 300
-  ) {
-    if (st > store.lastScrollY && store.displayLimit < 2000) store.displayLimit += 20
-  }
   store.lastScrollY = st
   if (route.path.startsWith('/articles/') && store.readingArticle) {
     const docH = document.documentElement.scrollHeight
