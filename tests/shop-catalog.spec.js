@@ -8,6 +8,26 @@ import {
 } from '../utils/shop-catalog'
 
 describe('選購條件與比較資料', () => {
+  it('品系清單使用完整名稱比對，不把不同組合或編號當作同品系', () => {
+    const items = ['黑夜', '川白黑夜', '黑夜'].map((Morph, index) => ({
+      ID: `個體-${index}`,
+      Species: '豹紋守宮',
+      Status: 'ForSale',
+      Morph
+    }))
+    expect(
+      filterShopItems(items, {
+        species: '豹紋守宮',
+        filters: { ...createShopFilters(), morph: '黑夜' }
+      }).map((item) => item.ID)
+    ).toEqual(['個體-0', '個體-2'])
+    expect(
+      filterShopItems(items, {
+        species: '豹紋守宮',
+        filters: createShopFilters()
+      })
+    ).toHaveLength(3)
+  })
   it('錯誤價格區間有明確原因，不能當作零庫存', () => {
     expect(getPriceRangeError({ minP: '9000', maxP: '1000' })).toBe('最低價不可高於最高價')
     expect(getPriceRangeError({ minP: '-1', maxP: '' })).toBe('價格不可小於 0')

@@ -3,6 +3,7 @@ export const createShopFilters = () => ({
   sold: false,
   minP: '',
   maxP: '',
+  morph: '',
   sexM: true,
   sexF: true,
   sexU: true,
@@ -56,6 +57,7 @@ export function filterShopItems(
   return inventory
     .filter((item) => {
       if (item.Species !== species || ['Trash', 'SelfKeep'].includes(item.Status)) return false
+      if (filters.morph && item.Morph !== filters.morph) return false
       const status = item.Status === 'Auction' && !auctionIds.has(item.ID) ? 'ForSale' : item.Status
       if (!filters.sold && status === 'Sold') return false
       if (!filters.stock && ['ForSale', 'Reserved', 'Auction'].includes(status)) return false

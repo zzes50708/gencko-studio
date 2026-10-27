@@ -137,6 +137,20 @@ for (const width of [320, 360, 390, 430]) {
       expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(cardBounds!.x + cardBounds!.width + 1)
     }
     await expect(card.locator('details, summary')).toHaveCount(0)
+    const footer = await card.evaluate((element) => {
+      const price = element.querySelector('.card-purchase-row > .slim-price-row')!
+      const actions = element.querySelector('.flip-front-actions')!
+      const cardBox = element.getBoundingClientRect()
+      const actionBox = actions.getBoundingClientRect()
+      return {
+        fontSize: parseFloat(getComputedStyle(price.querySelector('.slim-price')!).fontSize),
+        gap: actionBox.top - price.getBoundingClientRect().bottom,
+        centerOffset: Math.abs(actionBox.x + actionBox.width / 2 - cardBox.x - cardBox.width / 2)
+      }
+    })
+    expect(footer.fontSize).toBe(13)
+    expect(footer.gap).toBeLessThanOrEqual(1)
+    expect(footer.centerOffset).toBeLessThanOrEqual(1)
     const cards = page.locator('.flip-card')
     const firstRow = await cards.evaluateAll((elements) =>
       elements.slice(0, 3).map((element) => ({

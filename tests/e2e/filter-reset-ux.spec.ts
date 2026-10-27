@@ -1,21 +1,28 @@
 import { test, expect } from '@playwright/test'
 
-test('輸入後立即重置，不被延遲搜尋重新套用', async ({ page }) => {
-  await page.goto('/shop')
-  await page.waitForFunction(
-    () => !!(document.querySelector('.catalog-search') as any)?.__vueParentComponent
+test('已選品系可重置，網址不保留舊條件', async ({ page }) => {
+  await page.route('**/rest/v1/animals**', (route) =>
+    route.fulfill({
+      json: [
+        {
+          id: 'RESET-MORPH',
+          species: '豹紋守宮',
+          morph: '黑夜',
+          status: 'ForSale',
+          listing_price: 8000,
+          genes: []
+        }
+      ]
+    })
   )
-  await page.evaluate(async () => {
-    let c = (document.querySelector('.catalog-search') as any).__vueParentComponent
-    while (c && !c.setupState.resetFilters) c = c.parent
-    const input = document.querySelector('.catalog-search') as HTMLInputElement
-    input.value = '不應復活'
-    input.dispatchEvent(new Event('input', { bubbles: true }))
-    await c.setupState.resetFilters()
-  })
-  await page.waitForTimeout(400)
+  await page.goto('/shop?morph=' + encodeURIComponent('黑夜'))
+  await expect(page.getByRole('combobox', { name: '選擇品系' })).toHaveValue('黑夜')
+  await expect(page.locator('.flip-card')).toHaveCount(1)
+  await page.getByRole('button', { name: /展開篩選/ }).click()
+  await page.getByRole('button', { name: '重置全部篩選', exact: true }).click()
   await expect(page.locator('.catalog-search')).toHaveValue('')
-  expect(new URL(page.url()).searchParams.has('kw')).toBe(false)
+  await expect(page).not.toHaveURL(/morph=/)
+  await expect(page.locator('.flip-card')).toHaveCount(1)
 })
 
 test('手機篩選清除同步清掉基因搜尋文字', async ({ page }) => {

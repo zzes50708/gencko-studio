@@ -68,7 +68,7 @@ test.describe('全站 UI 關鍵互動收尾', () => {
     await expect(page.locator('.breeders-page-wrapper')).toBeVisible()
   })
 
-  test('Shop 搜尋、收藏與比較維持可操作', async ({ page }) => {
+  test('Shop 品系選取、收藏與比較維持可操作', async ({ page }) => {
     await page.addInitScript(() => {
       localStorage.removeItem('gencko_wishlist')
     })
@@ -90,7 +90,8 @@ test.describe('全站 UI 關鍵互動收尾', () => {
       .poll(() => firstCard.locator('.flip-inner').evaluate((el) => getComputedStyle(el).transform))
       .not.toBe('none')
 
-    await page.getByRole('searchbox', { name: '搜尋關鍵字或編號' }).fill(id!)
+    const morph = await firstCard.locator('.slim-title').getAttribute('title')
+    await page.getByRole('combobox', { name: '選擇品系' }).selectOption(morph!)
     await expect(page.locator(`a[href="/product/${id}"]`).first()).toBeVisible()
 
     const compare = firstCard.locator('.flip-back-actions').getByRole('button', {

@@ -449,14 +449,14 @@ const informationRows = computed(() => [
   }
   .card-purchase-row {
     display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 2px;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0;
     padding: 0 6px 2px;
     margin-top: auto;
   }
   .card-purchase-row > .slim-price-row {
-    flex: 1 0 auto;
+    flex: none;
     margin: 0;
     padding: 0 !important;
   }
@@ -465,7 +465,8 @@ const informationRows = computed(() => [
     flex-wrap: nowrap;
     gap: 2px;
     flex-shrink: 0;
-    margin-left: auto;
+    justify-content: center;
+    margin-inline: auto;
   }
   .card-purchase-row .card-action-btn {
     width: 44px;
@@ -488,7 +489,8 @@ const informationRows = computed(() => [
     font-size: 12px !important;
   }
   .slim-price {
-    font-size: 15px !important;
+    font-size: 13px !important;
+    line-height: 1.3;
   }
   .flip-front-actions {
     padding: 0 8px 8px;

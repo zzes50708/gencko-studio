@@ -1,5 +1,5 @@
 ﻿<script setup>
-import { ref, computed, onBeforeUnmount, onMounted, watch, nextTick } from 'vue'
+import { ref, computed, onMounted, watch, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useHead, useAsyncData, useSupabaseClient, useState } from '#imports'
 import { useMainStore } from '~/stores/useMainStore'
@@ -50,18 +50,7 @@ const { data: ssrForSale } = await useAsyncData('shop-forsale-seo-v1', async () 
 
 const sp = ref('豹紋守宮')
 const kw = ref('')
-const fil = ref({
-  stock: true,
-  sold: false,
-  minP: '',
-  maxP: '',
-  sexM: true,
-  sexF: true,
-  sexU: true,
-  years: [],
-  genes: [],
-  beginner: false
-})
+const fil = ref(createShopFilters())
 const desktopFiltersExpanded = useState('shop-filter-expanded-v2', () => false)
 const sortOrder = ref('price_desc')
 const showOnlyFav = useState('shop-only-favorites', () => false)
@@ -249,6 +238,24 @@ const catalogOptions = (filters) => ({
   auctions: store.auctionList || []
 })
 const allMatches = computed(() => filterShopItems(store.inv || [], catalogOptions(fil.value)))
+const morphOptions = computed(() => {
+  const counts = new Map()
+  // 清單依目前物種與上架狀態產生，不受已選品系或其他條件縮限。
+  for (const item of filterShopItems(store.inv || [], {
+    species: sp.value,
+    filters: { ...createShopFilters(), stock: fil.value.stock, sold: fil.value.sold }
+  })) {
+    if (item.Morph) counts.set(item.Morph, (counts.get(item.Morph) || 0) + 1)
+  }
+  if (fil.value.morph && !counts.has(fil.value.morph)) counts.set(fil.value.morph, 0)
+  return [...counts].sort(([a], [b]) => a.localeCompare(b, 'zh-Hant'))
+})
+const selectMorph = (morph) => {
+  kw.value = ''
+  fil.value = { ...fil.value, morph }
+  editingFilters.value = cloneShopFilters(fil.value)
+  store.displayLimit = 20
+}
 const shopList = computed(() => allMatches.value.slice(0, store.displayLimit))
 const loadMoreTrigger = ref(null)
 const showMoreItems = () => {
@@ -274,6 +281,8 @@ const selectedConditions = computed(() => {
   const add = (key, label, value = null) => conditions.push({ key, label, value })
   if (!filters.stock) add('stock', '不含販售中')
   if (filters.sold) add('sold', '包含已售出')
+  if (filters.morph) add('morph', `品系：${filters.morph}`)
+  if (kw.value) add('keyword', `關鍵字：${kw.value}`)
   if (filters.minP !== '') add('minP', `最低 $${filters.minP}`)
   if (filters.maxP !== '') add('maxP', `最高 $${filters.maxP}`)
   if (!filters.sexM) add('sexM', '不含已確認公')
@@ -286,6 +295,11 @@ const selectedConditions = computed(() => {
 })
 const activeFilterCount = computed(() => selectedConditions.value.length)
 const removeCondition = (condition) => {
+  if (condition.key === 'keyword') {
+    kw.value = ''
+    store.displayLimit = 20
+    return
+  }
   const next = cloneShopFilters(fil.value)
   if (condition.value !== null)
     next[condition.key] = next[condition.key].filter((value) => value !== condition.value)
@@ -322,12 +336,10 @@ const clearDraft = () => {
 }
 const filterResetVersion = ref(0)
 const resetFilters = async () => {
-  clearTimeout(searchTimer)
   if (showMobileFilter.value) await closeMobileFilter()
   fil.value = createShopFilters()
   editingFilters.value = cloneShopFilters(fil.value)
   kw.value = ''
-  searchText.value = ''
   filterResetVersion.value += 1
   sortOrder.value = 'price_desc'
   showOnlyFav.value = false
@@ -336,7 +348,8 @@ const resetFilters = async () => {
 }
 const selectSpecies = (species) => {
   sp.value = species
-  fil.value = retainSpeciesGenes(fil.value, GENES_DB[species])
+  fil.value = { ...retainSpeciesGenes(fil.value, GENES_DB[species]), morph: '' }
+  kw.value = ''
   editingFilters.value = cloneShopFilters(fil.value)
   store.displayLimit = 20
 }
@@ -352,11 +365,10 @@ onMounted(() => {
   const q = route.query
   sp.value = typeof q.sp === 'string' && GENES_DB[q.sp] ? q.sp : '豹紋守宮'
   kw.value = typeof q.kw === 'string' ? q.kw : ''
-  searchText.value = kw.value
   const filters = createShopFilters()
   for (const key of ['stock', 'sold', 'sexM', 'sexF', 'sexU', 'beginner'])
     if (q[key] !== undefined) filters[key] = q[key] === 'true'
-  for (const key of ['minP', 'maxP']) if (typeof q[key] === 'string') filters[key] = q[key]
+  for (const key of ['minP', 'maxP', 'morph']) if (typeof q[key] === 'string') filters[key] = q[key]
   for (const key of ['years', 'genes'])
     if (q[key])
       filters[key] = Array.isArray(q[key]) ? q[key].filter(Boolean) : String(q[key]).split(',')
@@ -379,7 +391,7 @@ watch(
     const defaults = createShopFilters()
     for (const key of ['stock', 'sold', 'sexM', 'sexF', 'sexU', 'beginner'])
       if (fil.value[key] !== defaults[key]) query[key] = String(fil.value[key])
-    for (const key of ['minP', 'maxP'])
+    for (const key of ['minP', 'maxP', 'morph'])
       if (fil.value[key] !== '') query[key] = String(fil.value[key])
     for (const key of ['years', 'genes'])
       if (fil.value[key].length) query[key] = fil.value[key].join(',')
@@ -388,20 +400,6 @@ watch(
   },
   { deep: true }
 )
-let searchTimer = null
-const searchText = ref('')
-watch(kw, (value) => {
-  searchText.value = value
-})
-const onSearchInput = (event) => {
-  clearTimeout(searchTimer)
-  const value = event.target.value
-  searchText.value = value
-  searchTimer = setTimeout(() => {
-    kw.value = value
-    store.displayLimit = 20
-  }, 250)
-}
 const toggleWishlist = (id) => {
   store.wishlist = store.wishlist.includes(id)
     ? store.wishlist.filter((value) => value !== id)
@@ -421,7 +419,6 @@ const showFavorites = async () => {
   await selectionModal.close()
   showOnlyFav.value = true
 }
-onBeforeUnmount(() => clearTimeout(searchTimer))
 </script>
 <template>
   <div
@@ -460,15 +457,18 @@ onBeforeUnmount(() => clearTimeout(searchTimer))
             </button>
           </div>
           <div class="search-filter-row">
-            <input
-              type="search"
+            <select
               class="catalog-search"
-              :value="searchText"
-              @input="onSearchInput"
-              placeholder="搜尋品系、基因或 ID"
-              aria-label="搜尋關鍵字或編號"
-              enterkeyhint="search"
-            />
+              :value="fil.morph"
+              @change="selectMorph($event.target.value)"
+              aria-label="選擇品系"
+              :disabled="store.loading && !store.inv.length"
+            >
+              <option value="">全部品系</option>
+              <option v-for="[morph, count] in morphOptions" :key="morph" :value="morph">
+                {{ morph }}（{{ count }} 隻）
+              </option>
+            </select>
             <button
               v-if="mobile"
               type="button"
@@ -756,6 +756,9 @@ onBeforeUnmount(() => clearTimeout(searchTimer))
 .catalog-search {
   flex: 1;
   min-width: 0;
+  min-height: 44px;
+  max-width: 100%;
+  text-overflow: ellipsis;
   padding: 6px 10px;
   border: 1px solid var(--bd);
   border-radius: 2px;
