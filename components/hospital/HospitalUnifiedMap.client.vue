@@ -14,6 +14,7 @@ import type {
 import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import { hospitalPhone } from '~/utils/hospitalPhone'
+import { normalizeHospitalQuery, hospitalPixelRatio } from '~/utils/hospitalExperience'
 import type { HospitalMapCameraSnapshot } from '~/composables/useHospitalMapSession'
 import { preciseMapHospitals, type MapHospital } from '~/utils/hospitalMap'
 import {
@@ -42,6 +43,7 @@ const props = defineProps<{
   selectionScope?: string
   searchPerformed?: boolean
   regionLabel?: string
+  searchSuggestions?: { value: string; label: string }[]
 }>()
 const emit = defineEmits<{
   select: [city: string]
@@ -58,6 +60,8 @@ const reduceMotion = useMediaQuery('(prefers-reduced-motion: reduce)')
 const online = useOnline()
 const shell = ref<HTMLElement | null>(null)
 const viewport = ref<HTMLElement | null>(null)
+const sidebar = ref<HTMLElement | null>(null)
+const composing = ref(false)
 const searchInput = ref<HTMLInputElement | null>(null)
 const hospitalDetails = ref<HTMLElement | null>(null)
 const placeDetails = ref<HTMLElement | null>(null)
@@ -98,6 +102,11 @@ const listedHospitals = computed(() =>
   failed.value || hasRegionFilter.value ? shown.value : viewportHospitals.value
 )
 let viewportRevision = 0
+let hospitalEcho: string | undefined
+let lastSource: GeoJSONSource | undefined
+let lastSourceData = ''
+const placeCache = new Map<string, HospitalMapPlace[]>()
+let pendingPlaceKey = ''
 async function syncViewportHospitals() {
   const currentMap = map
   if (!currentMap || !ready.value) return
@@ -124,8 +133,23 @@ async function syncViewportHospitals() {
     if (
       visible.length !== viewportHospitals.value.length ||
       visible.some((h, i) => h !== viewportHospitals.value[i])
-    )
+    ) {
+      const oldAnchor = Array.from(
+        sidebar.value?.querySelectorAll<HTMLElement>('.hosp-card') || []
+      ).find(
+        (el) =>
+          el.getBoundingClientRect().bottom > (sidebar.value?.getBoundingClientRect().top || 0)
+      )
+      const oldTop = oldAnchor?.getBoundingClientRect().top
       viewportHospitals.value = visible
+      await nextTick()
+      if (revision === viewportRevision && sidebar.value && oldAnchor && oldTop !== undefined) {
+        const anchor = Array.from(sidebar.value.querySelectorAll<HTMLElement>('.hosp-card')).find(
+          (el) => el.id === oldAnchor.id
+        )
+        if (anchor) sidebar.value.scrollTop += anchor.getBoundingClientRect().top - oldTop
+      }
+    }
   } catch {
     // 圖資或資料更新後舊群聚已失效，等下一個 idle 重新核對，不寫入過期清單。
   }
@@ -194,7 +218,14 @@ function updateHospitals() {
   viewportRevision++
   fitRevision++
   const source = map?.getSource(HOSPITAL_SOURCE) as GeoJSONSource | undefined
-  source?.setData(hospitalFeatures(shown.value, props.wishlist, localHospital.value?.id))
+  if (!source) return
+  const data = hospitalFeatures(shown.value, props.wishlist, localHospital.value?.id)
+  const signature = JSON.stringify(data)
+  if (source !== lastSource || signature !== lastSourceData) {
+    lastSource = source
+    lastSourceData = signature
+    void source.setData(data)
+  }
 }
 function cameraSnapshot() {
   return map
@@ -223,6 +254,14 @@ function fitCamera(bounds: LngLatBoundsLike, options: FitBoundsOptions) {
 function settleNavigation() {
   if (map?.isMoving() && navigationTarget) map.jumpTo(navigationTarget)
 }
+function currentPixelRatio() {
+  return hospitalPixelRatio(
+    window.devicePixelRatio,
+    compact.value,
+    navigator.hardwareConcurrency,
+    (navigator as Navigator & { deviceMemory?: number }).deviceMemory
+  )
+}
 function adaptivePadding() {
   return {
     top: 30,
@@ -230,7 +269,7 @@ function adaptivePadding() {
     left: compact.value
       ? 30
       : localHospital.value || selectedPlace.value || sharedHospitals.value.length
-        ? 320
+        ? Math.min(320, Math.max(30, (viewport.value?.clientWidth || 700) * 0.42))
         : 30,
     right: 30
   }
@@ -296,14 +335,18 @@ function focusHospital(hospital: MapHospital) {
       center: [hospital.longitude!, hospital.latitude!],
       zoom: Math.max(16.5, Math.min(map.getZoom(), 18)),
       pitch: 40,
-      padding: { top: 30, bottom: 30, left: compact.value ? 30 : 320, right: 30 },
+      padding: adaptivePadding(),
       duration: duration()
     })
 }
 async function chooseHospital(hospital: MapHospital, event?: MouseEvent) {
   userInteraction()
   focusHospital(hospital)
+  hospitalEcho = String(hospital.id)
   emit('selectHospital', hospital)
+  void nextTick(() => {
+    hospitalEcho = undefined
+  })
   if (event?.detail === 0) {
     await nextTick()
     hospitalDetails.value
@@ -317,6 +360,7 @@ function closeDetails() {
   selectedPlace.value = null
   sharedHospitals.value = []
   marker?.remove()
+  if (map && ready.value) map.setPadding(adaptivePadding())
   emit('clearHospital')
   if (hadHospitalSelection) updateHospitals()
   else {
@@ -387,14 +431,19 @@ async function dismissDetails() {
 }
 async function clearSearch() {
   query.value = ''
+  if (props.searchPerformed) emit('search')
   places.value = []
   placesSearched.value = false
   await nextTick()
   searchInput.value?.focus({ preventScroll: true })
 }
 async function searchPlaces(value = query.value) {
+  if (composing.value) return
   emit('search')
-  const q = value.trim()
+  const q = normalizeHospitalQuery(value)
+  const city = props.selected === 'all' ? '' : props.selected
+  const key = JSON.stringify([city, q.toLocaleLowerCase('zh-TW')])
+  if (placeLoading.value && pendingPlaceKey === key) return
   closeDetails()
   searchController?.abort()
   const revision = ++searchRevision
@@ -405,13 +454,21 @@ async function searchPlaces(value = query.value) {
     placeLoading.value = false
     return
   }
-  searchController = new AbortController()
-  placeLoading.value = true
   placesSearched.value = true
+  const cached = placeCache.get(key)
+  if (cached) {
+    places.value = cached
+    placeLoading.value = false
+    return
+  }
+  const controller = new AbortController()
+  searchController = controller
+  pendingPlaceKey = key
+  placeLoading.value = true
   try {
     const result = await $fetch<unknown>('/api/hospital-place-search', {
-      query: { q },
-      signal: searchController.signal,
+      query: { q, ...(city ? { city } : {}) },
+      signal: controller.signal,
       timeout: 9000,
       retry: 0
     })
@@ -419,11 +476,16 @@ async function searchPlaces(value = query.value) {
     const parsed = hospitalPlaceSearchResults(result)
     if (!parsed) throw new Error('Invalid place search response')
     places.value = parsed
+    if (placeCache.size >= 30) placeCache.delete(placeCache.keys().next().value!)
+    placeCache.set(key, parsed)
   } catch {
-    if (!disposed && revision === searchRevision && !searchController.signal.aborted)
+    if (!disposed && revision === searchRevision && !controller.signal.aborted)
       placeError.value = true
   } finally {
-    if (revision === searchRevision) placeLoading.value = false
+    if (revision === searchRevision) {
+      placeLoading.value = false
+      pendingPlaceKey = ''
+    }
   }
 }
 async function showDirectoryDetails() {
@@ -448,7 +510,7 @@ async function choosePlace(place: HospitalMapPlace, event?: MouseEvent) {
     center: [place.longitude, place.latitude],
     zoom: 16.8,
     pitch: 40,
-    padding: { top: 30, bottom: 30, left: compact.value ? 30 : 320, right: 30 },
+    padding: adaptivePadding(),
     duration: duration()
   })
   syncPlaceMarker()
@@ -499,8 +561,8 @@ async function handleMapClick(event: MapMouseEvent) {
   const points = map.getLayer('gencko-points')
     ? map.queryRenderedFeatures(
         [
-          [event.point.x - 8, event.point.y - 8],
-          [event.point.x + 8, event.point.y + 8]
+          [event.point.x - (compact.value ? 16 : 8), event.point.y - (compact.value ? 16 : 8)],
+          [event.point.x + (compact.value ? 16 : 8), event.point.y + (compact.value ? 16 : 8)]
         ],
         { layers: ['gencko-points'] }
       )
@@ -640,11 +702,21 @@ function scheduleRecovery() {
       recovering.value = false
     }, 5000)
 }
+function viewportChanged() {
+  if (shell.value && window.visualViewport)
+    shell.value.style.setProperty(
+      '--hospital-viewport-height',
+      Math.round(window.visualViewport.height * 0.68) + 'px'
+    )
+}
 function visibilityChanged() {
   if (document.hidden) {
     settleNavigation()
     map?.stop()
-  } else map?.resize()
+  } else {
+    map?.resize()
+    if (ready.value) updateMetrics(true)
+  }
   if (recovering.value) scheduleRecovery()
 }
 async function initialize(event?: MouseEvent) {
@@ -701,7 +773,7 @@ async function initialize(event?: MouseEvent) {
       maxZoom: 20,
       renderWorldCopies: false,
       maxTileCacheSize: compact.value ? 72 : 144,
-      pixelRatio: Math.min(window.devicePixelRatio || 1, compact.value ? 1.25 : 1.75),
+      pixelRatio: currentPixelRatio(),
       localIdeographFontFamily: 'sans-serif',
       attributionControl: false,
       canvasContextAttributes: { antialias: !compact.value },
@@ -832,9 +904,11 @@ function retryTiles(event?: MouseEvent) {
     void initialize()
     return
   }
-  retryCamera = cameraSnapshot()
   tileError.value = false
-  map.setStyle(style, { diff: false })
+  // 只重讀圖資，保留樣式、院所來源與選定視角，避免整圖閃爍。
+  for (const [id, source] of Object.entries(style.sources))
+    if ((source.type === 'vector' || source.type === 'raster') && map.getSource(id))
+      map.refreshTiles(id)
 }
 function pointerHover(event: MapMouseEvent) {
   if (!map || compact.value || !ready.value) return
@@ -864,9 +938,11 @@ watch(
 watch(
   () => [shown.value, props.wishlist],
   () => {
-    if (localHospital.value)
-      localHospital.value =
-        shown.value.find((h) => String(h.id) === String(localHospital.value?.id)) || null
+    if (localHospital.value) {
+      const latest = shown.value.find((h) => String(h.id) === String(localHospital.value?.id))
+      if (latest) localHospital.value = latest
+      else closeDetails()
+    }
     const group = new Map(sharedHospitals.value.map((hospital) => [String(hospital.id), hospital]))
     const currentMembers = shown.value.filter((hospital) => {
       const previous = group.get(String(hospital.id))
@@ -884,8 +960,9 @@ watch(
 watch(
   () => [props.focusedHospital, props.focusSequence],
   () => {
-    if (props.focusedHospital) focusHospital(props.focusedHospital)
-    else if (localHospital.value) closeDetails()
+    if (props.focusedHospital) {
+      if (hospitalEcho !== String(props.focusedHospital.id)) focusHospital(props.focusedHospital)
+    } else if (localHospital.value) closeDetails()
   }
 )
 watch(
@@ -898,7 +975,11 @@ watch(
   () => props.selected,
   () => {
     closeDetails()
-    if (ready.value) fitResults()
+    searchController?.abort()
+    searchRevision++
+    places.value = []
+    placesSearched.value = false
+    placeLoading.value = false
   }
 )
 watch(
@@ -918,7 +999,6 @@ watch(
     retryCamera = undefined
     searchController?.abort()
     searchRevision++
-    closeDetails()
     places.value = []
     placesSearched.value = false
     placeLoading.value = false
@@ -931,7 +1011,7 @@ watch(compact, () => {
   map?.off('mousemove', pointerHover)
   if (map) map.getCanvas().style.cursor = ''
   if (!compact.value) map?.on('mousemove', pointerHover)
-  map?.setPixelRatio(Math.min(window.devicePixelRatio || 1, compact.value ? 1.25 : 1.75))
+  map?.setPixelRatio(currentPixelRatio())
   void nextTick(() => {
     map?.resize()
     if (camera) map?.jumpTo({ ...camera, padding: adaptivePadding() })
@@ -954,6 +1034,9 @@ onMounted(async () => {
   }
   void initialize()
   document.addEventListener('visibilitychange', visibilityChanged)
+  window.addEventListener('pageshow', visibilityChanged)
+  window.visualViewport?.addEventListener('resize', viewportChanged)
+  viewportChanged()
 })
 onUnmounted(() => {
   viewportRevision++
@@ -979,6 +1062,9 @@ onUnmounted(() => {
   marker?.remove()
   map?.remove()
   document.removeEventListener('visibilitychange', visibilityChanged)
+  window.removeEventListener('pageshow', visibilityChanged)
+  window.visualViewport?.removeEventListener('resize', viewportChanged)
+  placeCache.clear()
 })
 </script>
 
@@ -989,7 +1075,12 @@ onUnmounted(() => {
     aria-label="特寵醫院立體地圖"
     @keydown="mapKeydown"
   >
-    <aside class="unified-map-sidebar" aria-label="地圖搜尋與篩選" data-lenis-prevent-wheel>
+    <aside
+      ref="sidebar"
+      class="unified-map-sidebar"
+      aria-label="地圖搜尋與篩選"
+      data-lenis-prevent-wheel
+    >
       <form class="unified-map-search" @submit.prevent="searchPlaces()">
         <label for="hospital-unified-search">搜尋院所、路名或地標</label>
         <div>
@@ -999,19 +1090,33 @@ onUnmounted(() => {
             v-model="query"
             type="search"
             maxlength="80"
+            list="hospital-search-suggestions"
+            @compositionstart="composing = true"
+            @compositionend="composing = false"
             placeholder="搜尋醫院、地址或台北101"
             aria-label="在地圖搜尋醫院或地標"
           />
           <button
             type="submit"
-            :disabled="placeLoading"
             :aria-describedby="!online ? 'hospital-map-offline-note' : undefined"
           >
-            {{ placeLoading ? '搜尋中' : '搜尋' }}
+            搜尋
           </button>
           <button v-if="query" type="button" @click="clearSearch">清除</button>
         </div>
       </form>
+      <datalist id="hospital-search-suggestions">
+        <option
+          v-for="item in searchSuggestions"
+          :key="item.value + item.label"
+          :value="item.value"
+        >
+          {{ item.label }}
+        </option>
+      </datalist>
+      <p v-if="placeLoading" role="status" class="unified-map-hint">
+        正在搜尋地點，院所清單仍可操作。
+      </p>
       <slot name="filters" />
       <strong class="unified-visible-count" data-testid="hospital-visible-count">
         {{
@@ -1038,7 +1143,10 @@ onUnmounted(() => {
         :aria-busy="!ready && !failed"
         data-lenis-prevent-wheel
       >
-        <p v-if="placeError" role="status">地點搜尋暫時無法使用，院所篩選仍可操作。</p>
+        <p v-if="placeError" role="status">
+          地點搜尋暫時無法使用，院所篩選仍可操作。
+          <button type="button" @click="searchPlaces()">重試地點搜尋</button>
+        </p>
         <p v-if="placesSearched && !placeLoading && !places.length && !placeError">
           沒有符合的開放地標資料。
         </p>
@@ -1246,7 +1354,6 @@ onUnmounted(() => {
   height: 100%;
   bottom: 0;
 }
-.hospital-unified-map:fullscreen .unified-map-results,
 .hospital-unified-map:fullscreen .unified-map-card {
   position: absolute;
   left: 10px;
@@ -1581,6 +1688,59 @@ a:focus-visible {
   .hospital-unified-map:fullscreen .unified-map-stage {
     flex: 1;
     min-height: 0;
+  }
+}
+</style>
+
+<style scoped>
+.unified-map-card {
+  background: var(--card-bg-solid);
+  color: var(--txt);
+  border-color: var(--bd);
+  overflow-wrap: anywhere;
+}
+.unified-map-card strong,
+.unified-map-card span,
+.unified-place-result {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+@media (min-width: 768px) and (hover: hover) and (pointer: fine) {
+  .hospital-unified-map {
+    height: clamp(480px, calc(100dvh - 150px), 700px);
+  }
+  .hospital-unified-map:fullscreen {
+    height: 100%;
+  }
+}
+@media (min-width: 1024px) and (pointer: coarse) {
+  .hospital-unified-map {
+    grid-template-columns: minmax(300px, 34%) minmax(0, 1fr);
+    align-items: start;
+  }
+  .unified-map-sidebar {
+    max-height: 70svh;
+  }
+}
+@media (max-width: 767px) {
+  .unified-map-card {
+    max-height: min(300px, 45svh);
+  }
+}
+@media (max-width: 767px) and (orientation: landscape) {
+  .hospital-unified-map {
+    --hospital-map-height: clamp(200px, 75svh, 420px);
+  }
+  .unified-map-sidebar {
+    max-height: 45svh;
+  }
+}
+</style>
+
+<style scoped>
+@media (max-width: 767px), (pointer: coarse) {
+  .hospital-unified-map {
+    --hospital-map-height: clamp(200px, min(68svh, var(--hospital-viewport-height, 68svh)), 540px);
   }
 }
 </style>

@@ -1,7 +1,7 @@
 <script setup>
 import { computed, ref, watch } from 'vue'
 import { useMainStore } from '~/stores/useMainStore'
-import { getCleanUrl } from '~/utils/image'
+import { getCleanUrl, getImageSrcset } from '~/utils/image'
 import { formatAnimalSex, formatAnimalPreviewSex } from '~/utils/incubation-sex'
 
 const store = useMainStore()
@@ -110,11 +110,13 @@ const informationRows = computed(() => [
           <img
             v-if="item.ImageURL && !imageFailed"
             :src="getCleanUrl(item.ImageURL, 400)"
+            :srcset="getImageSrcset(item.ImageURL)"
+            sizes="(max-width: 767px) calc((100vw - 48px) / 3), (min-width: 1280px) 240px, 25vw"
             :alt="item.Morph"
             class="card-img slim-img flip-img"
             :class="{ 'flip-img--loaded': imgLoaded }"
             :loading="index < 6 ? 'eager' : 'lazy'"
-            :fetchpriority="index < 6 ? 'high' : 'auto'"
+            :fetchpriority="index === 0 ? 'high' : 'auto'"
             decoding="async"
             @load="onImgLoad"
             @error="imageFailed = true"

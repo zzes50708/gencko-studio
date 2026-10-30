@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, watch, nextTick, onMounted } from 'vue'
+import { getImageSrcset } from '~/utils/image'
 defineOptions({ inheritAttrs: false })
 const props = withDefaults(
   defineProps<{ src?: string; alt: string; loading?: 'eager' | 'lazy'; emptyText?: string }>(),
@@ -27,6 +28,12 @@ watch(
     ref="image"
     v-bind="$attrs"
     :src="src"
+    :srcset="getImageSrcset(src)"
+    :sizes="
+      String(
+        $attrs.sizes || '(max-width: 767px) calc(100vw - 32px), (max-width: 1023px) 45vw, 33vw'
+      )
+    "
     :alt="alt"
     :loading="loading"
     decoding="async"

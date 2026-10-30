@@ -19,7 +19,7 @@ const overviewBlocks = [
     body: '輸入個體 ID，查看品系、性別與生日，並保存專屬證書',
     to: '/certificates',
     image: '/previews/identity-card.png',
-    alt: 'Gencko 熱門個體電子身分證畫面'
+    alt: 'Gencko 個體證書畫面'
   },
   {
     tag: '飼養',
@@ -32,7 +32,7 @@ const overviewBlocks = [
   {
     tag: '基因計算機',
     title: '工作室都在用的基因計算機',
-    body: '基因變成數據，所有繁殖結果都是可以預測的',
+    body: '依已知遺傳規則推算可能結果，多遺傳表現仍需搭配選育紀錄判斷',
     to: '/calculator',
     image: '/previews/calculator-tool.png',
     alt: 'Gencko 基因計算機頁面畫面'

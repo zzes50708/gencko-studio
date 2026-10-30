@@ -8,6 +8,7 @@ const props = defineProps({
 const emit = defineEmits(['verified'])
 const supabase = useSupabaseClient()
 const store = useMainStore()
+const track = useAnalytics()
 const state = ref(null)
 const challenge = ref(null)
 const busy = ref(false)
@@ -102,6 +103,8 @@ async function checkStatus(owner, request) {
     if (error) throw error
     if (!data || ['required', 'ready', 'restricted'].some((key) => typeof data[key] !== 'boolean'))
       throw Error('LINE 狀態回應不完整')
+    if (challenge.value && data.ready === true && state.value?.ready !== true)
+      track('line_verified', { surface: 'auction' })
     state.value = data
     emit(
       'verified',

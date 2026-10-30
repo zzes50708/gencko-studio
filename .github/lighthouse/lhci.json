@@ -2,10 +2,10 @@
   "ci": {
     "collect": {
       "settings": {
-        "preset": "desktop",
+        "formFactor": "mobile",
         "throttlingMethod": "simulate"
       },
-      "numberOfRuns": 1
+      "numberOfRuns": 3
     },
     "assert": {
       "assertions": {

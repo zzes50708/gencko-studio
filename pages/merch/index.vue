@@ -2,6 +2,7 @@
 import { computed, ref, watch } from 'vue'
 import { useHead } from '#imports'
 import { SOCIAL_LINKS } from '~/utils/site-constants'
+import { MERCH_AVAILABILITY } from '~/utils/merch-availability'
 
 const selectedTemplateId = ref('a4')
 const mobileCabinet = useMediaQuery('(max-width: 767px), (pointer: coarse), (hover: none)')
@@ -103,6 +104,7 @@ const equipmentSummary = computed(() => {
 const inquiry = computed(() =>
   [
     '客製化爬蟲設備需求',
+    MERCH_AVAILABILITY,
     `款式：${configuration.value.boxLabel || '待選擇'}木製爬櫃`,
     `盒款：${configuration.value.boxLabel || '待選擇'}；盒色：${configuration.value.boxColor === 'smoke' ? '霧黑' : '透白'}`,
     configuration.value.boxDimensions
@@ -123,7 +125,7 @@ const inquiry = computed(() =>
     `可用空間（寬×深×高 cm）：${needs.value.space || '待確認'}`,
     `預算範圍：${needs.value.budget || '待討論'}`,
     `其他需求：${needs.value.note || '無'}`,
-    '以上為初步需求，請協助確認實際尺寸、設備相容性與報價。'
+    '以上僅為規劃討論，非正式訂單。'
   ].join('\n')
 )
 watch(inquiry, () => {
@@ -146,18 +148,17 @@ async function copyInquiry() {
 }
 
 useHead({
-  title: '客製化爬蟲設備｜Honeycomb 蜂巢工作室協作規劃',
+  title: '客製化爬蟲設備｜規劃中・尚未販售',
   meta: [
     {
       name: 'description',
-      content:
-        'Gencko 與 Honeycomb 蜂巢工作室協作的客製化爬蟲設備規劃。依客戶需求規劃木製爬櫃，選擇抽數、層數、貼皮與加購設備，提供溫控、照明及收納選配。'
+      content: `${MERCH_AVAILABILITY} Gencko 與 Honeycomb 蜂巢工作室協作的客製化爬蟲設備配置預覽，可模擬盒款、層數、貼皮與設備。`
     },
     { name: 'keywords', content: '客製化爬蟲設備, 訂製爬櫃, 爬蟲櫃, 爬缸, A4爬櫃, A6爬櫃' },
-    { property: 'og:title', content: '客製化爬蟲設備｜Honeycomb 蜂巢工作室協作規劃' },
+    { property: 'og:title', content: '客製化爬蟲設備｜規劃中・尚未販售' },
     {
       property: 'og:description',
-      content: '依客戶需求規劃木製爬櫃，選擇抽數、層數、貼皮與加購設備，提供溫控、照明及收納選配。'
+      content: MERCH_AVAILABILITY
     },
     { property: 'og:type', content: 'website' },
     { property: 'og:url', content: 'https://www.genckobreeding.com/merch' }
@@ -170,6 +171,7 @@ useHead({
         '@context': 'https://schema.org',
         '@type': 'Service',
         name: '客製化爬蟲設備規劃服務',
+        description: MERCH_AVAILABILITY,
         url: 'https://www.genckobreeding.com/merch',
         provider: { '@type': 'Organization', name: 'Gencko Breeding Studio' },
         areaServed: { '@type': 'Country', name: 'Taiwan' },
@@ -193,6 +195,10 @@ useHead({
         <h1>客製化爬蟲設備</h1>
       </div>
     </header>
+    <aside class="cabinet-availability" role="note" aria-label="販售狀態與購買地區">
+      <strong>規劃中・尚未開始販售</strong>
+      <span>未來開放後僅限台灣地區購買。</span>
+    </aside>
 
     <section id="cabinet-configurator" class="cabinet-3d-slot" aria-labelledby="cabinet-3d-title">
       <div class="cabinet-section-head">
@@ -243,9 +249,7 @@ useHead({
       </ClientOnly>
       <details class="cabinet-price-reference">
         <summary>加購配件參考</summary>
-        <p>
-          以下金額依合作夥伴提供的訂製說明整理，幣別與現行售價於報價時確認。溫控標配不重複計價，額外數量另議。
-        </p>
+        <p>以下僅為規劃階段參考，非正式售價，目前尚未開始販售；實際規格與價格以未來公告為準。</p>
         <dl>
           <div v-for="item in accessoryPrices" :key="item[0]">
             <dt>{{ item[0] }}</dt>
@@ -295,7 +299,7 @@ useHead({
     <section class="cabinet-process" aria-labelledby="cabinet-process-title">
       <div class="cabinet-section-head">
         <span>04 / HOW WE PLAN</span>
-        <h2 id="cabinet-process-title">先規劃，再進入製作</h2>
+        <h2 id="cabinet-process-title">預計規劃流程</h2>
       </div>
       <ol>
         <li>
@@ -312,7 +316,7 @@ useHead({
         </li>
         <li>
           <b>04 選配與報價</b>
-          <span>確認加購設備、數量、製作圖與報價，再安排製作及交付。</span>
+          <span>未來開放販售後，確認設備、數量、製作圖與報價，再安排製作及交付。</span>
         </li>
       </ol>
       <p class="cabinet-note">
@@ -408,6 +412,22 @@ useHead({
 </template>
 
 <style scoped>
+.cabinet-availability {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  margin: 8px 0 16px;
+  padding: 8px 12px;
+  border-left: 3px solid var(--pri);
+  background: var(--card-bg);
+  color: var(--txt);
+  font-size: 0.9rem;
+  line-height: 1.7;
+  overflow-wrap: anywhere;
+}
+.cabinet-availability strong {
+  color: var(--pri);
+}
 .cabinet-price-reference {
   margin-top: 1rem;
   border-block: 1px solid var(--bd);

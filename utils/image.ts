@@ -46,3 +46,24 @@ export const getCleanUrl = (url?: string | null, width = 800): string => {
   // 交由壓縮伺服器處理（依傳入的 width 動態調整尺寸、轉 WebP、畫質 80%）
   return `https://wsrv.nl/?url=${encodeURIComponent(target)}&w=${width}&output=webp&q=80`
 }
+
+/** 只為外部可縮放圖片產生候選，站內靜態檔交由原站處理。 */
+export const getImageSrcset = (url?: string | null, widths = [200, 400, 800, 1200]) => {
+  if (!url || /^\/(?!\/)/.test(url)) return undefined
+  return (
+    widths
+      .map((width) => {
+        const source = getCleanUrl(url, width)
+        try {
+          const parsed = new URL(source)
+          if (parsed.hostname !== 'wsrv.nl') return ''
+          parsed.searchParams.set('w', String(width))
+          return `${parsed.href} ${width}w`
+        } catch {
+          return ''
+        }
+      })
+      .filter(Boolean)
+      .join(', ') || undefined
+  )
+}

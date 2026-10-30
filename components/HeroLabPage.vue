@@ -137,8 +137,21 @@ onBeforeUnmount(() => {
 
 <template>
   <div class="hero-lab full-bleed">
+    <div class="sr-only">
+      <h1>Gencko Studio 守宮選育工作室</h1>
+      <p>豹紋守宮與肥尾守宮選購、基因工具、飼養知識與特寵醫院查詢。</p>
+      <a href="/shop">選購守宮</a>
+      <a href="/start-here">新手入門</a>
+    </div>
     <ClientOnly>
       <HeroDnaGecko />
+      <template #fallback>
+        <section class="hero-static-intro" aria-label="工作室介紹">
+          <p>GENCKO STUDIO</p>
+          <h2>以基因紀錄與日常照護，找到適合你的守宮。</h2>
+          <NuxtLink no-prefetch to="/shop" class="btn-app btn-app--primary">選購守宮</NuxtLink>
+        </section>
+      </template>
     </ClientOnly>
   </div>
   <NuxtLink
@@ -147,7 +160,10 @@ onBeforeUnmount(() => {
     class="hero-lab-home-link btn-app btn-app--ghost btn-app--sm btn-app--pill"
     aria-label="前往首頁"
   >
-    首頁
+    進入官網
+  </NuxtLink>
+  <NuxtLink no-prefetch to="/shop" class="hero-shop-link btn-app btn-app--primary btn-app--sm">
+    選購守宮
   </NuxtLink>
   <div class="hero-lab-scroll-space" aria-hidden="true" />
 </template>
@@ -263,9 +279,28 @@ onBeforeUnmount(() => {
     display: none !important;
   }
 }
+.hero-static-intro {
+  width: min(640px, calc(100% - 40px));
+  margin: 20vh auto;
+  color: #fff;
+  line-height: 1.7;
+}
+.hero-shop-link {
+  position: fixed;
+  top: max(18px, calc(env(safe-area-inset-top) + 8px));
+  right: max(134px, calc(env(safe-area-inset-right) + 122px));
+  z-index: 3600;
+  min-height: 44px;
+}
+.hero-lab-home-link {
+  background: #171714;
+  border-color: #aaa;
+  color: #fff;
+}
 @media (max-width: 767px) {
-  .hero-lab-home-link {
-    display: none;
+  .hero-shop-link {
+    top: max(12px, calc(env(safe-area-inset-top) + 8px));
+    right: max(122px, calc(env(safe-area-inset-right) + 118px));
   }
 }
 </style>

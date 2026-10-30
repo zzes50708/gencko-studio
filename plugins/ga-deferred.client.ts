@@ -1,96 +1,110 @@
-/**
- * GA4 延遲載入 plugin（僅 client）
- *
- * 為什麼這樣做？
- * - 原本 gtag.js 156KB 在 <head> 同步載入，PageSpeed 視為 render-blocking
- * - main thread 還要花 269ms 解析 GA bundle
- * - 延遲到 idle 後載入：GA 仍正常收 page_view，但完全不影響 LCP / FCP / TBT
- *
- * 策略（三路徑搶先生效）：
- *   1. requestIdleCallback（瀏覽器 idle 時，最佳路徑）
- *   2. 2 秒 timeout（fallback，舊瀏覽器）
- *   3. 第一次使用者互動（scroll / pointerdown / keydown）
- *
- * 載入後：
- *   - 注入 gtag.js script
- *   - 設定 dataLayer + gtag()
- *   - 用 router.afterEach 自動發送每個頁面切換的 page_view
- */
-export default defineNuxtPlugin((nuxtApp) => {
-    const config = useRuntimeConfig()
-    const { gaId, enableGa } = config.public as { gaId: string; enableGa: boolean }
+import { nextTick } from 'vue'
+import type { Router } from 'vue-router'
+import { analyticsPage, analyticsEvent } from '~/utils/site-analytics'
 
-    if (!enableGa || !gaId) return
-
-    let loaded = false
-
-    const loadGA = () => {
-        if (loaded) return
-        loaded = true
-        cleanupKickoff()
-
-        // 1. 注入 gtag.js（async）
-        const s = document.createElement('script')
-        s.async = true
-        s.src = `https://www.googletagmanager.com/gtag/js?id=${gaId}`
-        document.head.appendChild(s)
-
-        // 2. 初始化 dataLayer + gtag
-        ;(window as any).dataLayer = (window as any).dataLayer || []
-        function gtag(...args: any[]) {
-            ;(window as any).dataLayer.push(args)
-        }
-        ;(window as any).gtag = gtag
-        gtag('js', new Date())
-        gtag('config', gaId, { send_page_view: true })
-
-        // 3. SPA 路由切換時，手動發送 page_view（gtag config 預設只追蹤初次載入）
-        const router = nuxtApp.$router as any
-        if (router?.afterEach) {
-            router.afterEach((to: any) => {
-                try {
-                    gtag('event', 'page_view', {
-                        page_location: window.location.href,
-                        page_path: to.fullPath,
-                        page_title: document.title
-                    })
-                } catch (e) {
-                    /* silent */
-                }
-            })
-        }
+/** 正式公開頁限定；先清理參數，再延遲送出。 */
+export default defineNuxtPlugin((app) => {
+  const router = app.$router as Router
+  const { gaId, enableGa } = useRuntimeConfig().public
+  const win = window as any
+  const gate = (path: string) => {
+    const current = analyticsPage(new URL(path, location.origin).href)
+    win[`ga-disable-${gaId}`] = !enableGa || !current
+    if (loaded && current) win.gtag('set', { ...current, page_referrer: '' })
+  }
+  const page = () => analyticsPage(location.href)
+  let loaded = false,
+    disposed = false,
+    mounted = false,
+    revision = 0,
+    lastPath = ''
+  let timer: ReturnType<typeof setTimeout> | undefined
+  gate(location.pathname)
+  const queue: Array<{ name: string; parameters: Record<string, unknown> }> = []
+  const send = (name: string, parameters: Record<string, unknown>) => {
+    if (!enableGa || !gaId || disposed || !page()) return
+    if (loaded) (window as any).gtag('event', name, parameters)
+    else {
+      queue.push({ name, parameters })
+      if (queue.length > 30) queue.shift()
     }
-
-    let idleHandle: number | null = null
-    let timeoutHandle: ReturnType<typeof setTimeout> | null = null
-    let kickoffListeners: Array<[string, EventListener]> = []
-
-    const cleanupKickoff = () => {
-        if (idleHandle != null && 'cancelIdleCallback' in window) {
-            ;(window as any).cancelIdleCallback(idleHandle)
-            idleHandle = null
-        }
-        if (timeoutHandle) {
-            clearTimeout(timeoutHandle)
-            timeoutHandle = null
-        }
-        kickoffListeners.forEach(([evt, fn]) => window.removeEventListener(evt, fn))
-        kickoffListeners = []
+  }
+  const track = (name: string, input: Record<string, unknown> = {}) => {
+    const event = analyticsEvent(name, input),
+      current = page()
+    if (event && current) send(event.name, { ...current, ...event.parameters, page_referrer: '' })
+  }
+  const load = () => {
+    if (!mounted || loaded || disposed || !enableGa || !gaId || !page()) return
+    loaded = true
+    win.dataLayer ||= []
+    win.gtag = function () {
+      win.dataLayer.push(arguments)
     }
-
-    // 路徑 A：瀏覽器 idle（推薦路徑，行動裝置常見 100-800ms）
-    if ('requestIdleCallback' in window) {
-        idleHandle = (window as any).requestIdleCallback(loadGA, { timeout: 3500 })
-    } else {
-        // 路徑 B：fallback 2s timeout（Safari < 17）
-        timeoutHandle = setTimeout(loadGA, 2000)
-    }
-
-    // 路徑 C：使用者互動瞬間觸發（不等 idle）
-    const events = ['scroll', 'pointerdown', 'keydown', 'touchstart']
-    events.forEach((evt) => {
-        const fn = () => loadGA()
-        window.addEventListener(evt, fn, { once: true, passive: true })
-        kickoffListeners.push([evt, fn])
+    win.gtag('js', new Date())
+    win.gtag('config', gaId, {
+      send_page_view: false,
+      page_location: page()!.page_location,
+      page_referrer: '',
+      ignore_referrer: true,
+      allow_google_signals: false,
+      allow_ad_personalization_signals: false
     })
+    const script = document.createElement('script')
+    script.async = true
+    script.src = `https://www.googletagmanager.com/gtag/js?id=${encodeURIComponent(String(gaId))}`
+    document.head.appendChild(script)
+    queue.splice(0).forEach((event) => win.gtag('event', event.name, event.parameters))
+  }
+  const recordPage = async () => {
+    const request = ++revision
+    await nextTick()
+    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()))
+    if (disposed || request !== revision) return
+    const current = page()
+    if (!current) {
+      lastPath = ''
+      return
+    }
+    if (lastPath !== current.page_path) {
+      lastPath = current.page_path
+      send('page_view', { ...current, page_title: document.title, page_referrer: '' })
+    }
+    if (!loaded) {
+      clearTimeout(timer)
+      timer = setTimeout(load, 1500)
+    }
+  }
+  const click = (event: Event) => {
+    const link = event.target instanceof Element ? event.target.closest('a[href]') : null
+    const href = link?.getAttribute('href') || ''
+    if (/^https:\/\/(?:line\.me|lin\.ee)\//.test(href)) track('inquiry_click')
+    else if (/^\/[a-z/-]*$/.test(href)) track('navigation_click', { destination: href })
+  }
+  app.hook('app:mounted', () => {
+    mounted = true
+    void recordPage()
+    document.addEventListener('click', click)
+  })
+  app.hook('page:finish', () => {
+    if (mounted) void recordPage()
+  })
+  const remove = router.afterEach(() => {
+    gate(location.pathname)
+    revision++
+    if (mounted) void recordPage()
+  })
+  const removeGate = router.beforeEach((to) => {
+    // 導航尚未確認前先停用，避免取消導航後仍沿用目標頁的權限。
+    win[`ga-disable-${gaId}`] = true
+  })
+  app.vueApp.onUnmount(() => {
+    disposed = true
+    clearTimeout(timer)
+    remove()
+    removeGate()
+    document.removeEventListener('click', click)
+    queue.length = 0
+  })
+  return { provide: { track } }
 })

@@ -9,6 +9,7 @@ useHead({
   meta: [{ name: 'description', content: '以個體 ID 查詢 Gencko Studio 的個體血統紀錄證書。' }],
   link: [{ rel: 'canonical', href: 'https://www.genckobreeding.com/certificates' }]
 })
+const track = useAnalytics()
 const openCertificate = async () => {
   if (navigating.value) return
   const id = certificateId.value.normalize('NFKC').trim().toUpperCase()
@@ -18,6 +19,7 @@ const openCertificate = async () => {
   }
   searchError.value = ''
   navigating.value = true
+  track('certificate_search', { surface: 'certificates' })
   try {
     await navigateTo(`/identity/${encodeURIComponent(id)}`)
   } catch {

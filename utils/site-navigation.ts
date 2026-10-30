@@ -96,11 +96,7 @@ export const MOBILE_NAV_ITEMS = [
       { label: '會員', links: [{ label: '會員專區', to: '/profile' }] },
       {
         label: 'GENCKO',
-        links: [
-          ...brandLinks,
-          { label: '品牌故事', to: '/stories' },
-          { label: '品牌展示', to: '/' }
-        ]
+        links: [...brandLinks, { label: '品牌展示', to: '/' }]
       }
     ] satisfies NavigationSection[]
   }

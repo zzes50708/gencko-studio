@@ -1,0 +1,52 @@
+/* 外框滿版；長字串與資料表在各自區塊處理，不以全站裁切遮住破版。 */
+#main-content {
+  min-width: 0;
+}
+.site-document-page {
+  overflow-wrap: anywhere;
+}
+.reader-content {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  word-break: normal;
+}
+.reader-content :is(p, li, dd) {
+  line-height: 1.8;
+}
+.reader-content :is(pre, table) {
+  display: block;
+  max-width: 100%;
+  overflow-x: auto;
+  overscroll-behavior-inline: contain;
+}
+.reader-content pre {
+  white-space: pre;
+  padding: 12px;
+}
+.reader-content img {
+  display: block;
+  max-width: 100%;
+  object-fit: contain;
+}
+.reader-content :is(th, td) {
+  overflow-wrap: anywhere;
+}
+/* 寬螢幕使用報刊式分欄，外框與圖片仍滿版。 */
+@media (min-width: 1280px) {
+  .article-page .reader-content {
+    column-width: 36rem;
+    column-gap: 3rem;
+  }
+  .reader-content :is(h2, h3, figure, img, table, pre, blockquote) {
+    column-span: all;
+  }
+  .reader-content :is(p, li) {
+    orphans: 3;
+    widows: 3;
+  }
+  .gene-layout--text-only .detail-txt {
+    column-width: 36rem;
+    column-gap: 3rem;
+    line-height: 1.8;
+  }
+}

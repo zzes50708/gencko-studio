@@ -14,10 +14,45 @@ export const TAIWAN_BOUNDS: [[number, number], [number, number]] = [
   [122.15, 25.65]
 ]
 
+/** 缺少道路編號長度時，以超過盾牌上限的值略過，避免空值／字串造成型別警告。 */
+function roadRefLengthFilter(value: unknown): unknown {
+  if (!Array.isArray(value)) return value
+  if (value[0] === 'get' && value[1] === 'ref_length')
+    return ['to-number', ['coalesce', ['get', 'ref_length'], 7], 7]
+  return value.map(roadRefLengthFilter)
+}
+
 /** 道路、文字與建築共用相同向量底圖，不另疊一張地圖。 */
 export function hospitalVectorStyle(original: StyleSpecification): StyleSpecification {
   const style = JSON.parse(JSON.stringify(original)) as StyleSpecification
   for (const layer of style.layers) {
+    if (layer.type === 'symbol' && /shield/.test(layer.id) && layer.filter)
+      layer.filter = roadRefLengthFilter(layer.filter) as typeof layer.filter
+    if (
+      layer.type === 'symbol' &&
+      layer['source-layer'] === 'poi' &&
+      layer.layout?.['icon-image']
+    ) {
+      // 使用同一套圖示集的停車圖示與中性標記；文字與實際地點類型保持原資料。
+      const originalIcon = layer.layout['icon-image']
+      layer.layout['icon-image'] = [
+        'coalesce',
+        ['image', originalIcon],
+        [
+          'image',
+          [
+            'match',
+            originalIcon,
+            'motorcycle_parking',
+            'parking',
+            ['cycle_barrier', 'bollard'],
+            'circle_stroked',
+            originalIcon
+          ]
+        ],
+        ['image', 'circle_stroked']
+      ]
+    }
     // 暖灰與霧藍的低彩度底圖；保留原圖徵、道路層級與文字佈局。
     if (layer.type === 'background') layer.paint = { ...layer.paint, 'background-color': '#e9e5df' }
     if (layer.type === 'raster' && layer.id === 'natural_earth')

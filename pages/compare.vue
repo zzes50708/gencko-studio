@@ -52,7 +52,7 @@ const cmpHowToLd = {
       '@type': 'HowToStep',
       position: 1,
       name: '在商城選擇個體',
-      text: '到 /shop 商城瀏覽守宮，點擊每張卡片右上角的「加入比較」按鈕，最多可選擇 3 隻。'
+      text: '到選購守宮頁面，點擊卡片下方的「加入比較」按鈕，最多可選擇 3 隻。'
     },
     {
       '@type': 'HowToStep',
@@ -458,6 +458,7 @@ const removeItem = (id) => {
                     :href="getAnimalInquiryLink(store.lineLink, item)"
                     target="_blank"
                     class="btn-app btn-app--primary btn-app--sm btn-action"
+                    rel="noopener noreferrer"
                   >
                     私訊購買
                   </NuxtLink>

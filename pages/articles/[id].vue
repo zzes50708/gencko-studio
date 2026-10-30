@@ -1,5 +1,5 @@
 <script setup>
-import { TAXON_LEOPARD_GECKO } from '~/utils/seo-schemas'
+import { GECKO_TAXONS } from '~/utils/seo-schemas'
 import { computed, onMounted, ref, watch, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useHead, useAsyncData, useSupabaseClient } from '#imports'
@@ -70,7 +70,14 @@ const {
   // 若 Store 已經有了，可以直接用 (CSR 場景)
   if (store.articlesList && store.articlesList.length > 0) {
     const found = store.articlesList.find((a) => a.ID === articleId)
-    if (found?.Content) return found
+    if (found?.Content)
+      return {
+        ...found,
+        Content: autoLinkGenes(
+          found.Content,
+          store.genePages.map((g) => g.Name)
+        )
+      }
   }
 
   // 若 Store 沒有 (SSR 場景或直接進入內頁)，則直接去資料庫撈
@@ -198,7 +205,7 @@ const siteData = computed(() => {
       },
       mainEntityOfPage: { '@type': 'WebPage', '@id': artUrl },
       inLanguage: 'zh-TW',
-      about: TAXON_LEOPARD_GECKO,
+      about: GECKO_TAXONS,
       description: art.Summary,
       articleSection: art.Category || undefined,
       articleBody: articleBodyTrimmed || undefined,
@@ -410,6 +417,7 @@ useContentResponse(readingArticle, pending, articleError)
           <ArticleImage
             :src="getCleanUrl(readingArticle.ImageURL)"
             :alt="readingArticle.Title"
+            sizes="(min-width: 1600px) 1600px, 94vw"
             loading="eager"
           />
         </div>
@@ -443,7 +451,7 @@ useContentResponse(readingArticle, pending, articleError)
               <a
                 href="https://www.instagram.com/gencko_breeding"
                 target="_blank"
-                rel="noopener"
+                rel="noopener noreferrer"
                 class="author-link"
                 itemprop="sameAs"
               >
@@ -452,7 +460,7 @@ useContentResponse(readingArticle, pending, articleError)
               <a
                 href="https://www.facebook.com/profile.php?id=61579393505049"
                 target="_blank"
-                rel="noopener"
+                rel="noopener noreferrer"
                 class="author-link"
                 itemprop="sameAs"
               >
@@ -1081,8 +1089,9 @@ useContentResponse(readingArticle, pending, articleError)
   line-height: 1.4;
 }
 .reader-content {
-  max-width: 800px;
-  margin-inline: auto;
+  width: 100%;
+  max-width: none;
+  margin-inline: 0;
 }
 .reader-content :deep(h2),
 .reader-content :deep(h3) {
@@ -1092,7 +1101,7 @@ useContentResponse(readingArticle, pending, articleError)
 .reader-content :deep(p),
 .reader-content :deep(li) {
   font-family: var(--font-body-zh);
-  line-height: 1.85;
+  line-height: 1.8;
 }
 .reader-content :deep(a),
 .author-link,

@@ -7,12 +7,20 @@ import { getRouteTab } from '~/utils/route-tab'
 import { getWishlistInquiryLink } from '~/utils/animal-inquiry'
 import { useOnline } from '@vueuse/core'
 import { parseHospitalFavorites } from '~/utils/hospitalFavorites'
+import { readStoredJson } from '~/utils/browser-storage'
 // #U6：Lenis / gsap 改為動態 import（見 initGlobalLenis），把 ~528KB 移出每頁初始關鍵路徑，
 // 平滑捲動於 mount 後才啟用（漸進增強，不阻擋 LCP）。首頁（about）本就不啟用全域 Lenis。
 
 const store = useMainStore()
 const hospitalFavoriteStorageError = useState('hospital-favorite-storage-error', () => false)
 const route = useRoute()
+const track = useAnalytics()
+watch(
+  () => store.currentUser,
+  (user, previous) => {
+    if (user && !previous) track('login_success')
+  }
+)
 const router = useRouter()
 const pageKey = (pageRoute) => pageRoute.path
 // 淡出中的舊頁面已停止響應，不能再接收觸控或鍵盤輸入。
@@ -185,6 +193,7 @@ useHead({
 watch(
   () => route.path,
   (newPath) => {
+    if (import.meta.client && connectionReady.value) void store.loadPageData(newPath)
     if (!newPath.startsWith('/articles/')) {
       store.readingProgress = 0
       store.readingArticle = null
@@ -203,8 +212,7 @@ const scrollToTop = () => {
 onMounted(() => {
   window.addEventListener('scroll', handleNativeScroll, { passive: true })
   store.initTheme()
-  store.loadDataFromAPI()
-  store.loadAuctions()
+  void store.loadPageData(route.path)
   // Supabase 登入還原獨立於舊 LIFF SDK，直接開啟管理頁或重新整理也要恢復會員。
   void store.checkAuthStatus()
   // 先還原上次 LINE 登入（即時顯示已登入狀態，修：登入後跨頁顯示未登入）
@@ -237,10 +245,11 @@ onMounted(() => {
   }
 
   try {
-    const savedWish = localStorage.getItem('gencko_wishlist')
-    if (savedWish) store.wishlist = JSON.parse(savedWish)
-  } catch (e) {
-    localStorage.removeItem('gencko_wishlist')
+    const savedWish = readStoredJson(localStorage, 'gencko_wishlist')
+    if (Array.isArray(savedWish))
+      store.wishlist = savedWish.filter((value) => typeof value === 'string')
+  } catch {
+    /* 取得 localStorage 本身也可能被瀏覽器拒絕。 */
   }
 
   store.restoreCompare()
@@ -253,10 +262,11 @@ onMounted(() => {
   }
 
   try {
-    const savedHist = localStorage.getItem('gencko_history')
-    if (savedHist) store.history = JSON.parse(savedHist)
-  } catch (e) {
-    localStorage.removeItem('gencko_history')
+    const savedHist = readStoredJson(localStorage, 'gencko_history')
+    if (Array.isArray(savedHist))
+      store.history = savedHist.filter((value) => typeof value === 'string')
+  } catch {
+    /* 儲存被拒絕仍保留其餘初始化流程。 */
   }
 
   // 啟動全域 Lenis（/about 頁有自己的 Lenis，非 about 頁由此接管）

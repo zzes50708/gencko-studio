@@ -34,6 +34,7 @@ definePageMeta({ key: (route) => route.fullPath })
 
 const route = useRoute()
 const store = useMainStore()
+const track = useAnalytics()
 const supabase = useSupabaseClient()
 const auctionId = route.params.id
 const lineContactVerified = ref(false)
@@ -722,6 +723,7 @@ const placeBid = async () => {
       currentAuction.value = { ...currentAuction.value, end_time: result.auction.end_time }
     isBidsExpanded.value = true
     bidNotice.value = `已確認出價 ${formatPrice(intent.amount)}。`
+    track('bid_success', { item_id: auctionId, extended: !!result.extended, surface: 'auction' })
     alert(result.extended ? '出價成功！結標時間已自動延長 3 分鐘。' : '出價成功！')
   } catch (err) {
     const detail = err?.data?.data

@@ -729,7 +729,7 @@ p {
 .brief-txt,
 .detail-txt {
   font-family: var(--font-body-zh);
-  line-height: 1.85;
+  line-height: 1.8;
 }
 .gene-layout {
   padding: 16px 0 0;

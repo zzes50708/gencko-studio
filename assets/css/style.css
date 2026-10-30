@@ -262,7 +262,6 @@ html.day-mode .btn-app--secondary {
 
 html,
 body {
-  overflow-x: hidden;
   width: 100%;
   font-family: var(--font-body-zh);
   margin: 0;

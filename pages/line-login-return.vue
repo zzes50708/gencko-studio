@@ -116,9 +116,9 @@ async function copy() {
 </script>
 
 <template>
-  <main class="line-return">
+  <section class="line-return" aria-labelledby="line-return-title">
     <p class="line-return__brand">GENCKO STUDIO</p>
-    <h1>
+    <h1 id="line-return-title">
       {{
         checking
           ? '正在接續 LINE 登入'
@@ -158,7 +158,7 @@ async function copy() {
       重新取得接續碼
     </button>
     <NuxtLink v-if="failed || phase === 'expired'" to="/profile">前往我的專區重新登入</NuxtLink>
-  </main>
+  </section>
 </template>
 
 <style scoped>

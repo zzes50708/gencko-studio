@@ -1,4 +1,5 @@
 import { defineStore } from 'pinia'
+import { pageDataNeeds } from '~/utils/site-data-policy'
 import { isAuctionListed, auctionState, readAuctionCatalog } from '~/utils/auction-presentation'
 import { ref, computed, watch } from 'vue'
 import { sanitizeCompareIds } from '~/utils/shop-catalog'
@@ -256,53 +257,53 @@ export const useMainStore = defineStore('main', () => {
     return articlesLoadPromise
   }
 
-  async function loadSecondaryData() {
-    // 2. 次要資料表：平行獨立載入，互不影響
-    const [merchResult, , geneResult, configResult] = await Promise.allSettled([
-      withRetry(() => supabase.from('merchandise').select('*'), { label: 'merchandise' }),
-      loadArticles(),
-      withRetry(() => supabase.from('genetic_pages').select('*'), { label: 'genetic_pages' }),
-      withRetry(() => supabase.from('config').select('*'), { label: 'config' })
-      // 註：site_settings（展場模式）改於 app.vue 以 SSR useAsyncData 先載入，避免價格閃爍
-    ])
-
-    if (merchResult.status === 'fulfilled' && !merchResult.value.error && merchResult.value.data) {
-      merchList.value = merchResult.value.data.map((m) => ({
-        ItemID: m.item_id,
-        Name: m.name,
-        Description: m.description,
-        Price: m.price,
-        ImageURL: m.image_url,
-        Category: m.category,
-        Available: m.available,
-        ExternalLink: m.external_link
-      }))
-    } else if (merchResult.status === 'rejected' || merchResult.value?.error) {
-      console.error('讀取周邊商品失敗:', merchResult.reason || merchResult.value?.error)
-    }
-
-    if (geneResult.status === 'fulfilled' && !geneResult.value.error && geneResult.value.data) {
-      genePages.value = geneResult.value.data.map((g) => ({
-        Name: g.name,
-        ImageURL: g.image_url,
-        Warning: g.warning,
-        Brief: g.brief,
-        Detail: g.detail,
-        Source: g.source
-      }))
-    } else if (geneResult.status === 'rejected' || geneResult.value?.error) {
-      console.error('讀取基因圖鑑失敗:', geneResult.reason || geneResult.value?.error)
-    }
-
-    if (
-      configResult.status === 'fulfilled' &&
-      !configResult.value.error &&
-      configResult.value.data
-    ) {
-      marqueeList.value = configResult.value.data.map((c) => ({ text: c.text, url: c.url }))
-    } else if (configResult.status === 'rejected' || configResult.value?.error) {
-      console.error('讀取跑馬燈設定失敗:', configResult.reason || configResult.value?.error)
-    }
+  const tableTasks = new Map()
+  const tableReady = new Set()
+  function loadSecondaryTable(table) {
+    if (tableTasks.has(table)) return tableTasks.get(table)
+    if (tableReady.has(table)) return Promise.resolve()
+    const task = withRetry(() => supabase.from(table).select('*'), { label: table })
+      .then(({ data, error }) => {
+        if (error || !Array.isArray(data)) throw error || new Error('資料回應不完整')
+        if (table === 'merchandise')
+          merchList.value = data.map((m) => ({
+            ItemID: m.item_id,
+            Name: m.name,
+            Description: m.description,
+            Price: m.price,
+            ImageURL: m.image_url,
+            Category: m.category,
+            Available: m.available,
+            ExternalLink: m.external_link
+          }))
+        if (table === 'genetic_pages')
+          genePages.value = data.map((g) => ({
+            Name: g.name,
+            ImageURL: g.image_url,
+            Warning: g.warning,
+            Brief: g.brief,
+            Detail: g.detail,
+            Source: g.source
+          }))
+        if (table === 'config') marqueeList.value = data.map((c) => ({ text: c.text, url: c.url }))
+        tableReady.add(table)
+      })
+      .catch(() => {
+        console.warn('次要資料暫時無法載入:', table)
+      })
+      .finally(() => tableTasks.delete(table))
+    tableTasks.set(table, task)
+    return task
+  }
+  function loadPageData(path) {
+    const needs = pageDataNeeds(path)
+    const tasks = [loadSecondaryTable('config')]
+    if (needs.inventory) tasks.push(ensureInventoryLoaded())
+    if (needs.articles) tasks.push(loadArticles())
+    if (needs.genes) tasks.push(loadSecondaryTable('genetic_pages'))
+    if (needs.merchandise) tasks.push(loadSecondaryTable('merchandise'))
+    if (needs.auctions) tasks.push(loadAuctions())
+    return Promise.allSettled(tasks)
   }
 
   function loadInventory() {
@@ -317,7 +318,7 @@ export const useMainStore = defineStore('main', () => {
   }
 
   function loadDataFromAPI() {
-    return Promise.all([loadInventory(), loadSecondaryData()])
+    return loadPageData(router.currentRoute.value.path)
   }
 
   function ensureInventoryLoaded() {
@@ -653,7 +654,12 @@ export const useMainStore = defineStore('main', () => {
 
   function initTheme() {
     if (import.meta.client) {
-      const savedTheme = localStorage.getItem('gencko_theme')
+      let savedTheme = null
+      try {
+        savedTheme = localStorage.getItem('gencko_theme')
+      } catch {
+        /* 禁止儲存時使用預設主題。 */
+      }
       if (savedTheme === 'dark') {
         isDayMode.value = false
         document.documentElement.classList.remove('day-mode')
@@ -672,7 +678,11 @@ export const useMainStore = defineStore('main', () => {
       } else {
         document.documentElement.classList.remove('day-mode')
       }
-      localStorage.setItem('gencko_theme', isDayMode.value ? 'light' : 'dark')
+      try {
+        localStorage.setItem('gencko_theme', isDayMode.value ? 'light' : 'dark')
+      } catch {
+        /* 本次瀏覽仍可切換主題。 */
+      }
     }
   }
 
@@ -791,6 +801,7 @@ export const useMainStore = defineStore('main', () => {
     toggleCompare,
     clearCompare,
     loadDataFromAPI,
+    loadPageData,
     ensureInventoryLoaded,
     loadAuctions,
     auctionNow,

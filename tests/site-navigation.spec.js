@@ -31,7 +31,8 @@ describe('B2 全站資訊架構', () => {
     const mobilePaths = MOBILE_NAV_ITEMS.flatMap((item) =>
       item.sections.flatMap((section) => section.links.map((link) => link.to))
     )
-    expect(mobilePaths).toEqual(expect.arrayContaining(['/profile', '/about', '/stories', '/']))
+    expect(mobilePaths).toEqual(expect.arrayContaining(['/profile', '/about', '/']))
+    expect(mobilePaths).not.toContain('/stories')
   })
 
   it('依核准語意判定目前群組，並保留 Hero Lab 與商業首頁的分工', () => {

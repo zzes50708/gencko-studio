@@ -74,7 +74,7 @@ const goCalc = () => clearError({ redirect: '/calculator' })
       <a
         href="https://line.me/R/ti/p/@219abdzn"
         target="_blank"
-        rel="noopener"
+        rel="noopener noreferrer"
         class="err-line-link"
       >
         用 LINE 聯絡 Gencko

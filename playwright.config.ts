@@ -23,8 +23,7 @@ export default defineConfig({
     { name: 'chromium-desktop', use: { ...devices['Desktop Chrome'] } },
     {
       name: 'chromium-mobile',
-      use: { ...devices['Pixel 5'] },
-      grep: /Hero Lab|About/
+      use: { ...devices['Pixel 5'] }
     }
   ],
   webServer: {

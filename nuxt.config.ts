@@ -16,7 +16,8 @@ const offlineRevision = createHash('sha256')
   .digest('hex')
 const gaId = process.env.NUXT_PUBLIC_GA_ID || 'G-93T0C2KMEZ'
 const enableGa =
-  process.env.NODE_ENV === 'production' || process.env.NUXT_PUBLIC_ENABLE_GA === 'true'
+  (process.env.NODE_ENV === 'production' && process.env.VERCEL_ENV !== 'preview') ||
+  process.env.NUXT_PUBLIC_ENABLE_GA === 'true'
 
 export default defineNuxtConfig({
   compatibilityDate: '2024-04-16',
@@ -290,7 +291,7 @@ export default defineNuxtConfig({
 
   // #23 全站 CSP（含必要的第三方白名單：GTM / GA / Cloudflare Insights / LINE LIFF /
   // Supabase / wsrv.nl 圖床 / GitHub Raw / jsDelivr）。
-  // 'unsafe-inline' 保留：站內大量 JSON-LD 與 inline style；'unsafe-eval' 給 Pinia / GSAP / Vue 編譯期使用
+  // 保留必要內嵌相容性並禁止 eval；較嚴格內嵌政策先以 Report-Only 驗證。
   routeRules: {
     '/line-login-return': {
       headers: {
@@ -303,7 +304,7 @@ export default defineNuxtConfig({
       headers: {
         'Content-Security-Policy': [
           "default-src 'self'",
-          "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.googletagmanager.com https://www.google-analytics.com https://static.cloudflareinsights.com https://static.line-scdn.net",
+          "script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://www.google-analytics.com https://static.cloudflareinsights.com https://static.line-scdn.net",
           "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
           "font-src 'self' data: https://fonts.gstatic.com",
           "img-src 'self' data: blob: https:",
@@ -316,6 +317,9 @@ export default defineNuxtConfig({
           "base-uri 'self'",
           "form-action 'self' https://access.line.me"
         ].join('; '),
+        // 先觀察內嵌腳本相容性，再收緊第二階段政策。
+        'Content-Security-Policy-Report-Only':
+          "script-src 'self' https://www.googletagmanager.com https://www.google-analytics.com https://static.cloudflareinsights.com https://static.line-scdn.net; object-src 'none'; base-uri 'self'",
         'X-Content-Type-Options': 'nosniff',
         'Referrer-Policy': 'strict-origin-when-cross-origin'
       }
@@ -328,7 +332,7 @@ export default defineNuxtConfig({
     redirect: false
   },
 
-  css: ['~/assets/css/style.css', '~/assets/css/page-headings.css'],
+  css: ['~/assets/css/style.css', '~/assets/css/page-headings.css', '~/assets/css/reading.css'],
 
   // 🌟 全站應用程式設定
   app: {

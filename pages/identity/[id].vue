@@ -20,15 +20,10 @@ const {
     .from('animals')
     .select('*')
     .eq('id', identityId)
-    .single()
+    .maybeSingle()
 
-  if (fetchError || !data) {
-    throw new Error(
-      fetchError?.code === 'PGRST116' || !fetchError
-        ? '找不到此個體資料或已下架'
-        : '資料暫時無法載入，請重新嘗試'
-    )
-  }
+  if (fetchError) throw new Error('資料暫時無法載入，請重新嘗試')
+  if (!data) return null
 
   return {
     ID: data.id,
@@ -40,6 +35,8 @@ const {
     ImageURL: data.image_url
   }
 })
+
+useContentResponse(item, pending, error)
 
 // 圖片來源先正規化，讓代理失敗時仍能直接載入原始來源
 const getIdentityImageSource = (url) => {
@@ -162,9 +159,9 @@ const triggerPrint = () => {
     <div v-if="pending" class="status-msg" aria-busy="true">
       <p role="status">正在取得個體證書</p>
     </div>
-    <div v-else-if="error" class="status-msg err">
+    <div v-else-if="error || !item" class="status-msg err">
       <h1>無法顯示個體證書</h1>
-      <p role="alert">{{ error.message || '找不到此個體資料或已下架' }}</p>
+      <p role="alert">{{ error?.message || '找不到此個體資料或已下架' }}</p>
       <button type="button" class="act-btn" @click="refresh()">重新載入</button>
       <TheBackButton fallback="/certificates" text="返回搜尋" />
     </div>

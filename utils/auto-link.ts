@@ -9,11 +9,13 @@
  * @param {string[]} geneNames 基因名陣列（來自 genetic_pages.name）
  * @returns {string} 處理後的 HTML
  */
+import { cleanArticleHtml } from './article-html'
 const PROTECTED_TAGS = new Set(['a', 'code', 'pre', 'script', 'style', 'h1', 'h2', 'h3'])
 
 const escapeRegex = (s: string): string => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 
 export function autoLinkGenes(html: string, geneNames: string[]): string {
+  html = cleanArticleHtml(html)
   if (!html || !Array.isArray(geneNames) || geneNames.length === 0) return html || ''
 
   // ASCII 名要 >= 3（避免「OG」這種短名誤抓），CJK 名要 >= 2（守宮基因多為 2 字中文）
@@ -77,5 +79,5 @@ export function autoLinkGenes(html: string, geneNames: string[]): string {
     parts[i] = text
   }
 
-  return parts.join('')
+  return cleanArticleHtml(parts.join(''))
 }

@@ -233,6 +233,16 @@ const catalogOptions = (filters) => ({
   auctions: store.auctionList || []
 })
 const allMatches = computed(() => filterShopItems(store.inv || [], catalogOptions(fil.value)))
+useEmptySearchAnalytics(
+  () =>
+    hydrated.value &&
+    store.inventoryLoaded &&
+    !store.loading &&
+    !store.dataError &&
+    !!kw.value &&
+    allMatches.value.length === 0,
+  'shop'
+)
 const morphOptions = computed(() => {
   const counts = new Map()
   // 清單依目前物種與上架狀態產生，不受已選品系或其他條件縮限。
@@ -626,7 +636,7 @@ const showFavorites = async () => {
           v-if="store.wishlist.length"
           :href="wishlistLink"
           target="_blank"
-          rel="noopener"
+          rel="noopener noreferrer"
           class="wishlist-inquire"
         >
           詢問收藏（{{ store.wishlist.length }}）

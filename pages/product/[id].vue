@@ -3,7 +3,7 @@ import { computed, ref, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { useHead, useAsyncData, useSupabaseClient } from '#imports'
 import { useMainStore } from '~/stores/useMainStore'
-import { getCleanUrl } from '~/utils/image'
+import { getCleanUrl, getImageSrcset } from '~/utils/image'
 import { serializeJsonLd } from '~/utils/structured-data'
 import { seoPrice } from '~/utils/seo-head'
 import { formatAnimalSex, formatAnimalPreviewSex, getAnimalSexTone } from '~/utils/incubation-sex'
@@ -615,10 +615,13 @@ useContentResponse(currentProduct, pending, productError)
                 :key="idx"
                 ref="mainPhotoRefs"
                 :src="getCleanUrl(img)"
+                :srcset="getImageSrcset(img)"
+                sizes="(max-width: 767px) calc(100vw - 24px), 55vw"
                 :alt="`${productModules.identity.morph}（${productModules.identity.id}）`"
                 @error="photoFailed = true"
                 class="prod-main-img"
-                loading="eager"
+                :loading="idx === 0 ? 'eager' : 'lazy'"
+                :fetchpriority="idx === 0 ? 'high' : 'auto'"
                 decoding="async"
               />
             </div>
@@ -714,6 +717,7 @@ useContentResponse(currentProduct, pending, productError)
                 :href="getAnimalInquiryLink(store.lineLink, currentProduct)"
                 target="_blank"
                 class="btn-app btn-app--primary btn-app--lg btn-buy-lg"
+                rel="noopener noreferrer"
               >
                 私訊購買（Line）
               </a>

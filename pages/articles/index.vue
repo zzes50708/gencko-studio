@@ -110,6 +110,15 @@ const filteredArticles = computed(() => {
   return list
 })
 
+useEmptySearchAnalytics(
+  () =>
+    !!searchQuery.value.trim() &&
+    store.articlesLoaded &&
+    !store.articlesLoading &&
+    !store.articlesError &&
+    filteredArticles.value.length === 0,
+  'articles'
+)
 const groupedFilteredArticles = computed(() => {
   const groups = {}
 

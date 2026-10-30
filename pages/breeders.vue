@@ -296,8 +296,8 @@ useHead({
             :alt="`${i.Morph} 種群（${i.ID}）`"
             class="breeder-photo"
             @error="markPhotoFailed(i.ID)"
-            :loading="index < 8 ? 'eager' : 'lazy'"
-            :fetchpriority="index < 8 ? 'high' : 'auto'"
+            :loading="index < 4 ? 'eager' : 'lazy'"
+            :fetchpriority="index === 0 ? 'high' : 'auto'"
             decoding="async"
           />
           <div

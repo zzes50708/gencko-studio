@@ -7,7 +7,15 @@ import { useMainStore } from '~/stores/useMainStore'
 // HOSPITAL_REGIONS 仍從 js 讀（縣市區域分組是固定常數）；HOSPITAL_DATA 已搬到 Supabase
 import { HOSPITAL_REGIONS as hospitalRegions } from '~/utils/hospitals'
 import { hospitalPhone, hospitalPhoneE164 } from '~/utils/hospitalPhone'
-import { hospitalMatchesQuery } from '~/utils/hospitalSearch'
+import {
+  hospitalHours,
+  hospitalLoadedTime,
+  hospitalGoogleMapUrl,
+  hospitalSpecies,
+  hospitalVerifiedDate,
+  normalizeHospitalQuery,
+  rankHospitalMatches
+} from '~/utils/hospitalExperience'
 import { preciseMapHospitals } from '~/utils/hospitalMap'
 
 const store = useMainStore()
@@ -22,10 +30,15 @@ const {
 
 // 本次瀏覽期間保留最後成功名錄，避免重讀失敗後返回頁面遺失；成功空陣列仍以最新結果為準。
 const lastAvailableHospitals = useState('hospital-last-available-directory', () => [])
+const directoryLoadedAt = useState('hospital-directory-loaded-at', () => '')
 watch(
   hospitalsData,
   (data) => {
-    if (Array.isArray(data)) lastAvailableHospitals.value = data
+    if (Array.isArray(data)) {
+      if (lastAvailableHospitals.value !== data || !directoryLoadedAt.value)
+        directoryLoadedAt.value = new Date().toISOString()
+      lastAvailableHospitals.value = data
+    }
   },
   { immediate: true }
 )
@@ -46,6 +59,7 @@ const directoryContext = useState('hospital-directory-context', () => ({
   city: 'all',
   district: 'all',
   query: '',
+  appliedQuery: '',
   savedOnly: false,
   searched: false,
   expanded: [],
@@ -54,51 +68,29 @@ const directoryContext = useState('hospital-directory-context', () => ({
 const hospCity = toRef(directoryContext.value, 'city')
 const hospDistrict = toRef(directoryContext.value, 'district')
 const hospQuery = toRef(directoryContext.value, 'query')
+if (directoryContext.value.appliedQuery === undefined)
+  directoryContext.value.appliedQuery = directoryContext.value.query
+const appliedQuery = toRef(directoryContext.value, 'appliedQuery')
 const savedOnly = toRef(directoryContext.value, 'savedOnly')
 const searchPerformed = toRef(directoryContext.value, 'searched')
-const beginMapSearch = async () => {
-  searchPerformed.value = true
-  await nextTick()
-  cancelPendingMapFit()
-  mapFitSequence.value++
+let mapFitIntent = 0
+const cancelPendingMapFit = () => {
+  mapFitIntent++
 }
 const mapFitSequence = ref(
-  hospQuery.value.trim() ||
-    hospCity.value !== 'all' ||
-    hospDistrict.value !== 'all' ||
-    savedOnly.value
-    ? 1
-    : 0
+  appliedQuery.value || hospCity.value !== 'all' || savedOnly.value ? 1 : 0
 )
-let mapFitTimer = null
-const cancelPendingMapFit = () => {
-  if (mapFitTimer !== null) clearTimeout(mapFitTimer)
-  mapFitTimer = null
+const beginMapSearch = async () => {
+  const intent = ++mapFitIntent
+  appliedQuery.value = normalizeHospitalQuery(hospQuery.value)
+  searchPerformed.value = true
+  await nextTick()
+  if (intent === mapFitIntent) mapFitSequence.value++
 }
 watch(
-  [
-    hospQuery,
-    hospCity,
-    hospDistrict,
-    savedOnly,
-    () => (savedOnly.value ? store.hospWishlist.join(',') : '')
-  ],
-  (_filters, previous, onCleanup) => {
-    if (!searchPerformed.value) return
-    // 回到全台時由場景重設視角，避免延遲取景覆蓋全台視角。
-    if (
-      hospCity.value === 'all' &&
-      previous[1] !== 'all' &&
-      !hospQuery.value.trim() &&
-      hospDistrict.value === 'all' &&
-      !savedOnly.value
-    )
-      return
-    mapFitTimer = setTimeout(() => {
-      mapFitTimer = null
-      mapFitSequence.value++
-    }, 250)
-    onCleanup(cancelPendingMapFit)
+  () => (savedOnly.value ? store.hospWishlist.join(',') : ''),
+  () => {
+    if (savedOnly.value && searchPerformed.value) void beginMapSearch()
   }
 )
 const hospExpanded = ref(new Set(directoryContext.value.expanded))
@@ -122,6 +114,7 @@ const clearFilters = async () => {
   hospCity.value = 'all'
   hospDistrict.value = 'all'
   hospQuery.value = ''
+  appliedQuery.value = ''
   savedOnly.value = false
   focusedHospital.value = null
   await nextTick()
@@ -159,22 +152,25 @@ const hospDistricts = computed(() => {
 
 const favoriteStorageError = useState('hospital-favorite-storage-error', () => false)
 const hasHospitalLocation = (hospital) => preciseMapHospitals([hospital]).length > 0
-const hospFiltered = computed(() => {
-  return HOSPITAL_DATA.value.filter((h) => {
-    const cityMatch = hospCity.value === 'all' || h.city === hospCity.value
-    const districtMatch = hospDistrict.value === 'all' || h.district === hospDistrict.value
-    const keywordMatch = hospitalMatchesQuery(
-      [h.name, h.address, h.city, h.district],
-      hospQuery.value
-    )
-    return (
-      cityMatch &&
-      districtMatch &&
-      keywordMatch &&
-      (!savedOnly.value || hospWishlist.value.includes(h.id))
-    )
-  })
-})
+const regionHospitals = computed(() =>
+  HOSPITAL_DATA.value.filter(
+    (h) =>
+      (hospCity.value === 'all' || h.city === hospCity.value) &&
+      (hospDistrict.value === 'all' || h.district === hospDistrict.value) &&
+      (!savedOnly.value || store.hospWishlist.includes(h.id))
+  )
+)
+const hospFiltered = computed(() => rankHospitalMatches(regionHospitals.value, appliedQuery.value))
+const searchSuggestions = computed(() =>
+  hospQuery.value.trim()
+    ? rankHospitalMatches(regionHospitals.value, hospQuery.value)
+        .slice(0, 6)
+        .map((h) => ({
+          value: h.name,
+          label: [h.city, h.district, h.address].filter(Boolean).join(' ')
+        }))
+    : []
+)
 
 const hospWishlist = computed(() => store.hospWishlist)
 watch(hospFiltered, (hospitals) => {
@@ -229,10 +225,7 @@ const toggleHospWishlist = (id) => {
   }
 }
 
-const getMapLink = (h) => {
-  if (h.mapUrl) return h.mapUrl
-  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(h.name + ' ' + h.address)}`
-}
+const getMapLink = (h) => hospitalGoogleMapUrl(h)
 
 const hospUrl = 'https://www.genckobreeding.com/hospital'
 const hospImg =
@@ -415,7 +408,7 @@ useHead({
       <LazyHospitalUnifiedMap
         ref="hospitalMap"
         :reset-sequence="mapResetSequence"
-        :selection-scope="JSON.stringify([hospCity, hospDistrict, savedOnly])"
+        :selection-scope="JSON.stringify([hospCity, hospDistrict, savedOnly, appliedQuery])"
         :hospitals="HOSPITAL_DATA"
         :wishlist="hospWishlist"
         :selected="hospCity"
@@ -423,6 +416,7 @@ useHead({
         :visible-hospitals="hospFiltered"
         :fit-sequence="mapFitSequence"
         :query="hospQuery"
+        :search-suggestions="searchSuggestions"
         :search-performed="searchPerformed"
         @search="beginMapSearch"
         :focused-hospital="focusedHospital"
@@ -517,7 +511,7 @@ useHead({
               </div>
               <div class="hosp-count-row" aria-live="polite">
                 <span v-if="hospitalsVerifiedDate" class="hosp-verified">
-                  更新 {{ hospitalsVerifiedDate }}
+                  最近一筆確認 {{ hospitalsVerifiedDate }}
                 </span>
               </div>
               <button v-if="hospitalsError" type="button" @click="refreshHospitals()">
@@ -543,7 +537,7 @@ useHead({
                   <p>
                     {{
                       HOSPITAL_DATA.length
-                        ? '名錄更新失敗，暫時顯示上次載入的資料。請稍後重試更新。'
+                        ? `名錄更新失敗，暫時顯示上次載入的資料（取得時間：${hospitalLoadedTime(directoryLoadedAt)}）。請稍後重試更新。`
                         : '醫院名錄暫時無法載入，請稍後重試。'
                     }}
                   </p>
@@ -569,13 +563,17 @@ useHead({
                   :id="`hospital-${h.id}`"
                   ref="hospitalCards"
                   class="hosp-card"
-                  :class="{ expanded: isHospExpanded(h.id) }"
+                  :class="{
+                    expanded: isHospExpanded(h.id),
+                    selected: focusedHospital?.id === h.id
+                  }"
                 >
                   <div class="hosp-header">
                     <button
                       type="button"
                       class="hosp-header-toggle"
                       :aria-expanded="isHospExpanded(h.id)"
+                      :aria-current="focusedHospital?.id === h.id ? 'true' : undefined"
                       :aria-controls="`hosp-details-${h.id}`"
                       @click="toggleHospExpand(h.id)"
                     >
@@ -617,6 +615,28 @@ useHead({
                     >
                       在地圖上定位 ↗
                     </button>
+                    <dl class="hosp-record-facts">
+                      <template v-if="hospitalHours(h.hours)">
+                        <dt>看診時間</dt>
+                        <dd>{{ hospitalHours(h.hours) }}（請先致電確認）</dd>
+                      </template>
+                      <template v-if="!hospitalHours(h.hours)">
+                        <dt>看診時間</dt>
+                        <dd>尚未提供，請先致電確認</dd>
+                      </template>
+                      <template v-if="hospitalSpecies(h.acceptSpecies)">
+                        <dt>收診物種</dt>
+                        <dd>{{ hospitalSpecies(h.acceptSpecies) }}</dd>
+                      </template>
+                      <template v-if="h.hasEmergency === true">
+                        <dt>急診資訊</dt>
+                        <dd>有提供急診紀錄，出發前請致電確認</dd>
+                      </template>
+                      <template v-if="hospitalVerifiedDate(h.verifiedAt)">
+                        <dt>資料確認</dt>
+                        <dd>{{ hospitalVerifiedDate(h.verifiedAt) }}</dd>
+                      </template>
+                    </dl>
                     <p v-if="!hasHospitalLocation(h)" class="hosp-location-note">
                       此院所目前未顯示地圖定位點，請先致電確認地址與看診安排。
                     </p>
@@ -1853,5 +1873,40 @@ useHead({
   .hosp-map-section {
     scroll-margin-top: 12px;
   }
+}
+</style>
+
+<style scoped>
+.hosp-record-facts {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 5px 10px;
+  margin: 6px 0 12px;
+  font-size: 13px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+.hosp-record-facts:empty {
+  display: none;
+}
+.hosp-record-facts dt {
+  color: var(--txt-muted);
+}
+.hosp-record-facts dd {
+  margin: 0;
+  white-space: pre-line;
+}
+.hosp-map-focus {
+  min-height: 44px;
+}
+.hosp-name,
+.hosp-link {
+  overflow-wrap: anywhere;
+}
+</style>
+
+<style scoped>
+.hosp-sidebar-directory .hosp-card.selected {
+  box-shadow: inset 3px 0 var(--pri);
 }
 </style>

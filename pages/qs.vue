@@ -44,7 +44,7 @@ const qsHowToLd = {
       '@type': 'HowToStep',
       position: 1,
       name: '進入評估',
-      text: '點擊「開始評估」進入問卷流程。本評估完全免費、不需註冊。'
+      text: '開啟評估頁即可依序作答。本評估完全免費、不需註冊。'
     },
     {
       '@type': 'HowToStep',

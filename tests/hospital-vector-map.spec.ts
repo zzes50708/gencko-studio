@@ -1,3 +1,4 @@
+import { featureFilter, createExpression } from '@maplibre/maplibre-gl-style-spec'
 import { describe, it, expect } from 'vitest'
 import {
   hospitalVectorStyle,
@@ -68,8 +69,10 @@ describe('統一向量地圖', () => {
     expect(JSON.stringify(result.layers.find((l) => l.id === 'highway-name-major'))).toContain(
       'name:zh-Hant'
     )
-    for (const layer of liberty.layers.filter((l) => /shield/.test(l.id)))
-      expect(result.layers.find((l) => l.id === layer.id)).toEqual(layer)
+    for (const layer of liberty.layers.filter((l) => /shield/.test(l.id))) {
+      const { filter: _filter, ...unchanged } = layer
+      expect(result.layers.find((l) => l.id === layer.id)).toMatchObject(unchanged)
+    }
   })
   it('缺少精確座標時不放上虛構點位', () =>
     expect(hospitalFeatures(hospitals, []).features).toHaveLength(1))
@@ -196,5 +199,84 @@ describe('圖上地標座標', () => {
         [121, 25]
       )
     ).toBeNull()
+  })
+})
+
+describe('底圖道路與缺圖容錯', () => {
+  it('道路編號缺值或格式錯誤時安全略過，正常編號仍顯示', () => {
+    const result = hospitalVectorStyle(liberty as any)
+    const originalWarn = console.warn
+    const warnings: unknown[][] = []
+    console.warn = (...args) => {
+      warnings.push(args)
+    }
+    try {
+      for (const layer of result.layers.filter((l) => /shield/.test(l.id))) {
+        const compiled = featureFilter((layer as any).filter, `layers[${layer.id}].filter`)
+        const network =
+          layer.id === 'highway-shield-us-interstate'
+            ? 'us-interstate'
+            : layer.id === 'road_shield_us'
+              ? 'us-highway'
+              : 'tw-highway'
+        for (const refLength of [undefined, null, 'invalid', 7])
+          expect(
+            compiled.filter({ zoom: 14 }, {
+              type: 2,
+              properties: { network, ref_length: refLength }
+            } as any)
+          ).toBe(false)
+        for (const refLength of [1, 3, 6, '3'])
+          expect(
+            compiled.filter({ zoom: 14 }, {
+              type: 2,
+              properties: { network, ref_length: refLength }
+            } as any)
+          ).toBe(true)
+      }
+      expect(warnings).toEqual([])
+    } finally {
+      console.warn = originalWarn
+    }
+  })
+  it('缺漏交通圖示使用已有圖示，其他商家圖示保持原意', () => {
+    const result = hospitalVectorStyle(liberty as any)
+    for (const layer of result.layers.filter((l) => /^poi_r/.test(l.id))) {
+      const expression = createExpression(
+        (layer as any).layout['icon-image'],
+        `layers[${layer.id}].layout.icon-image`
+      )
+      expect(expression.result).toBe('success')
+      if (expression.result !== 'success') throw new Error('圖示運算式無效')
+      for (const [type, expected] of Object.entries({
+        motorcycle_parking: 'parking',
+        cycle_barrier: 'circle_stroked',
+        bollard: 'circle_stroked',
+        restaurant: 'restaurant',
+        florist: 'florist',
+        unknown_future_poi: 'circle_stroked'
+      }))
+        expect(
+          expression.value.evaluate(
+            { zoom: 17 },
+            {
+              properties: { class: type, subclass: type }
+            } as any,
+            {},
+            undefined,
+            ['parking', 'circle_stroked', 'restaurant', 'florist']
+          )?.name
+        ).toBe(expected)
+      expect(
+        expression.value.evaluate(
+          { zoom: 17 },
+          { properties: { class: 'motorcycle_parking' } } as any,
+          {},
+          undefined,
+          ['motorcycle_parking', 'parking', 'circle_stroked']
+        )?.name
+      ).toBe('motorcycle_parking')
+      expect((layer as any).layout['text-field']).toBeDefined()
+    }
   })
 })
