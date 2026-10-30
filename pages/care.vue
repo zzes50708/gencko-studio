@@ -1,4 +1,6 @@
 <script setup>
+import { TAXON_LEOPARD_GECKO, TAXON_FAT_TAIL_GECKO } from '~/utils/seo-schemas'
+import { serializeJsonLd } from '~/utils/structured-data'
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { useHead } from '#imports'
 import { useMainStore } from '~/stores/useMainStore'
@@ -58,42 +60,6 @@ const howToFeedLd = {
   }))
 }
 
-// JSON-LD：BreadcrumbList
-const howToAppetiteLd = {
-  '@context': 'https://schema.org',
-  '@type': 'HowTo',
-  '@id': 'https://www.genckobreeding.com/care#howto-appetite',
-  name: '守宮拒食時，怎麼判斷先觀察還是就醫',
-  description:
-    '用環境、體態、排泄與警訊四個層次，快速判斷守宮拒食時該先調整飼養條件，還是直接安排特寵醫院就診。',
-  step: [
-    {
-      '@type': 'HowToStep',
-      position: 1,
-      name: '先排查環境和近期變化',
-      text: '先確認熱端、冷端、濕躲與補鈣節奏是否正常，再回想最近是否有換環境、換餌料、脫皮或搬家等壓力事件。'
-    },
-    {
-      '@type': 'HowToStep',
-      position: 2,
-      name: '再看體態是否正在掉',
-      text: '如果尾巴厚度、體重和精神都還穩定，短期拒食通常可以先觀察；如果尾巴明顯變瘦、眼神疲弱或活動力下降，就不是單純挑食。'
-    },
-    {
-      '@type': 'HowToStep',
-      position: 3,
-      name: '把排泄和外觀一起看',
-      text: '同時檢查是否仍有正常排便、腹部是否脹、嘴角眼鼻是否有分泌物，避免只看吃不吃而漏掉消化道或感染問題。'
-    },
-    {
-      '@type': 'HowToStep',
-      position: 4,
-      name: '分辨何時該直接就醫',
-      text: '幼體連續多日不吃、成體長時間拒食合併掉重、拉稀、嘔吐、呼吸異常或脫水時，不要再拖，直接找會看爬蟲的特寵醫院。'
-    }
-  ]
-}
-
 const breadcrumbLd = {
   '@context': 'https://schema.org',
   '@type': 'BreadcrumbList',
@@ -120,7 +86,7 @@ const articleBodyText = [
 
 // JSON-LD：WebPage 包覆（Article 為 mainEntity，HowTo 為 hasPart）
 const webPageLd = computed(() => {
-  const hasPart = [howToEnvLd, howToFeedLd, howToAppetiteLd]
+  const hasPart = [howToEnvLd, howToFeedLd]
   return {
     '@context': 'https://schema.org',
     '@type': 'WebPage',
@@ -140,9 +106,9 @@ const webPageLd = computed(() => {
     mainEntity: {
       '@type': 'Article',
       '@id': 'https://www.genckobreeding.com/care#article',
-      headline: '豹紋與肥尾守宮飼養指南：環境、溫濕度、餵食、補充品、地雷、FAQ 全收錄',
+      headline: '豹紋與肥尾守宮飼養指南：環境、溫濕度、餵食、補充品、地雷',
       description:
-        '豹紋守宮（Eublepharis macularius）與肥尾守宮（Hemitheconyx caudicinctus）完整新手飼養教學：飼養箱、底材、溫度梯度、濕度、餵食頻率、餌料對照、補充品劑量、致命地雷與新手常見問題。',
+        '豹紋守宮（Eublepharis macularius）與肥尾守宮（Hemitheconyx caudicinctus）完整新手飼養教學：飼養箱、底材、溫度梯度、濕度、餵食頻率、餌料對照、補充品劑量、致命地雷。',
       image: [
         'https://wsrv.nl/?url=raw.githubusercontent.com%2Fzzes50708%2Fgencko-assets%2Fmain%2Fimg%2F11.png&w=1200&h=630&fit=contain&bg=e6e3e3&output=webp&q=85'
       ],
@@ -150,20 +116,7 @@ const webPageLd = computed(() => {
       articleBody: articleBodyText,
       wordCount: articleBodyText.replace(/\s+/g, '').length,
       inLanguage: 'zh-TW',
-      about: [
-        {
-          '@type': 'Taxon',
-          name: 'Eublepharis macularius',
-          alternateName: '豹紋守宮',
-          sameAs: 'https://www.wikidata.org/wiki/Q185061'
-        },
-        {
-          '@type': 'Taxon',
-          name: 'Hemitheconyx caudicinctus',
-          alternateName: '肥尾守宮',
-          sameAs: 'https://www.wikidata.org/wiki/Q913571'
-        }
-      ],
+      about: [TAXON_LEOPARD_GECKO, TAXON_FAT_TAIL_GECKO],
       author: {
         '@type': 'Organization',
         name: 'Gencko Breeding Studio',
@@ -198,7 +151,7 @@ useHead({
     {
       name: 'description',
       content:
-        '豹紋守宮（Eublepharis macularius）與肥尾守宮（Hemitheconyx caudicinctus）完整新手飼養教學：環境配置、溫度梯度、濕度配置、餵食頻率、餌料對照、補充品劑量、致命地雷與新手常見問題一站收錄。'
+        '豹紋守宮與肥尾守宮完整新手飼養教學：環境配置、溫度梯度、濕度配置、餵食頻率、餌料對照、補充品劑量、致命地雷與新手常見問題一站收錄。'
     },
     // Open Graph
     { property: 'og:title', content: '豹紋與肥尾守宮飼養指南｜環境、溫濕度、餵食、地雷一次看' },
@@ -225,7 +178,8 @@ useHead({
     { name: 'twitter:title', content: '豹紋與肥尾守宮飼養指南｜環境、溫濕度、餵食、地雷一次看' },
     {
       name: 'twitter:description',
-      content: '環境、溫濕度、餌料對照、補充品、致命地雷、FAQ 全收錄。'
+      content:
+        '環境、溫濕度、餌料對照、補充品、致命地雷、FAQ 全收錄。新手飼養豹紋守宮與肥尾守宮的一站式指南。'
     },
     {
       name: 'twitter:image',
@@ -235,8 +189,8 @@ useHead({
   ],
   link: [{ rel: 'canonical', href: 'https://www.genckobreeding.com/care' }],
   script: [
-    { type: 'application/ld+json', children: computed(() => JSON.stringify(webPageLd.value)) },
-    { type: 'application/ld+json', innerHTML: JSON.stringify(breadcrumbLd) }
+    { type: 'application/ld+json', children: computed(() => serializeJsonLd(webPageLd.value)) },
+    { type: 'application/ld+json', innerHTML: serializeJsonLd(breadcrumbLd) }
   ]
 })
 

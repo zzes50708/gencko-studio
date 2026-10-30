@@ -1,9 +1,12 @@
 <script setup>
+import { TAXON_LEOPARD_GECKO, TAXON_FAT_TAIL_GECKO } from '~/utils/seo-schemas'
 import { formatAnimalSex } from '~/utils/incubation-sex'
 import { computed, onMounted, ref } from 'vue'
 import { useHead, useAsyncData, useSupabaseClient } from '#imports'
 import { useMainStore } from '~/stores/useMainStore'
 import { getCleanUrl } from '~/utils/image'
+import { serializeJsonLd } from '~/utils/structured-data'
+import { breederFallbackHtml } from '~/utils/catalog-fallback'
 
 const store = useMainStore()
 const supabase = useSupabaseClient()
@@ -34,6 +37,11 @@ const { data: ssrBreeders } = await useAsyncData('breeders-list-seo-v1', async (
 
 // 物種切換（使用本地 ref，store 中未定義 breeder_sp，直接寫入 store 不具響應性）
 const breederSp = ref('豹紋守宮')
+const breederFallback = computed(() =>
+  breederFallbackHtml(
+    (ssrBreeders.value || []).map((item) => ({ ...item, Sex: formatAnimalSex(item) }))
+  )
+)
 const breederKeyword = ref('')
 const failedPhotos = ref(new Set())
 const markPhotoFailed = (id) => {
@@ -141,68 +149,55 @@ const breedersWebPageLd = computed(() => ({
   '@type': 'CollectionPage',
   '@id': breedersUrl,
   url: breedersUrl,
-  name: 'Gencko 種群展示｜豹紋守宮與肥尾守宮繁育種公種母',
+  name: 'Gencko 種群展示｜豹紋守宮與肥尾守宮選育種公種母',
   inLanguage: 'zh-TW',
   isPartOf: { '@type': 'WebSite', '@id': 'https://www.genckobreeding.com/#website' },
   primaryImageOfPage: { '@type': 'ImageObject', url: breedersImg },
   speakable: {
     '@type': 'SpeakableSpecification',
-    cssSelector: ['.page-title', '.morph-title']
+    cssSelector: ['h1']
   },
   publisher: breedersPublisher,
   about: breedersPublisher,
-  mentions: [
-    {
-      '@type': 'Taxon',
-      name: 'Eublepharis macularius',
-      alternateName: '豹紋守宮',
-      sameAs: 'https://www.wikidata.org/wiki/Q185061'
-    },
-    {
-      '@type': 'Taxon',
-      name: 'Hemitheconyx caudicinctus',
-      alternateName: '肥尾守宮',
-      sameAs: 'https://www.wikidata.org/wiki/Q913571'
-    }
-  ],
+  mentions: [TAXON_LEOPARD_GECKO, TAXON_FAT_TAIL_GECKO],
   ...(breedersListLd.value ? { mainEntity: breedersListLd.value } : {})
 }))
 
 useHead({
-  title: 'Gencko 種群展示｜豹紋守宮與肥尾守宮繁育種公種母',
+  title: 'Gencko 種群展示｜豹紋守宮與肥尾守宮選育種公種母',
   meta: [
     {
       name: 'description',
       content:
-        'Gencko Breeding Studio 自留種群展示。完整收錄正在使用中的豹紋守宮與肥尾守宮繁育種公與種母，含基因組合、性別與孵化日，是了解 Gencko 選育血統與未來子代規劃的窗口。'
+        'Gencko Studio 自留種群展示。完整收錄工作室選育種公母或自留子代，是了解 Gencko 選育血統與未來子代規劃的窗口。'
     },
     {
       name: 'keywords',
       content: '守宮種群, 豹紋守宮種公, 豹紋守宮種母, 肥尾守宮種公, 守宮繁育血統, Gencko 選育'
     },
     // Open Graph
-    { property: 'og:title', content: 'Gencko 種群展示｜豹紋守宮與肥尾守宮繁育種公種母' },
+    { property: 'og:title', content: 'Gencko 種群展示｜豹紋守宮與肥尾守宮選育種公種母' },
     {
       property: 'og:description',
-      content: 'Gencko Breeding Studio 自留種群展示，含基因組合、性別與孵化日。'
+      content: 'Gencko Studio 自留種群展示，完整收錄工作室選育種公母或自留子代。'
     },
     { property: 'og:image', content: breedersImg },
-    { property: 'og:image:alt', content: 'Gencko 種群展示 - 豹紋守宮與肥尾守宮繁育種公種母' },
+    { property: 'og:image:alt', content: 'Gencko 種群展示 - 豹紋守宮與肥尾守宮選育種公種母' },
     { property: 'og:url', content: breedersUrl },
     { property: 'og:type', content: 'website' },
     // Twitter Card
     { name: 'twitter:card', content: 'summary_large_image' },
-    { name: 'twitter:title', content: 'Gencko 種群展示｜豹紋守宮與肥尾守宮繁育種公種母' },
+    { name: 'twitter:title', content: 'Gencko 種群展示｜豹紋守宮與肥尾守宮選育種公種母' },
     {
       name: 'twitter:description',
-      content: 'Gencko Breeding Studio 自留種群展示，含基因組合、性別與孵化日。'
+      content: 'Gencko Studio 自留種群展示，完整收錄工作室選育種公母或自留子代。'
     },
     { name: 'twitter:image', content: breedersImg }
   ],
   link: [{ rel: 'canonical', href: breedersUrl }],
   script: computed(() => [
-    { type: 'application/ld+json', innerHTML: JSON.stringify(breedersWebPageLd.value) },
-    { type: 'application/ld+json', innerHTML: JSON.stringify(breedersBreadcrumbLd) }
+    { type: 'application/ld+json', innerHTML: serializeJsonLd(breedersWebPageLd.value) },
+    { type: 'application/ld+json', innerHTML: serializeJsonLd(breedersBreadcrumbLd) }
   ])
 })
 </script>
@@ -241,6 +236,7 @@ useHead({
     </div>
 
     <section class="breeders-directory-stage" aria-labelledby="breeders-directory-title">
+      <noscript v-if="breederFallback" v-html="breederFallback" />
       <div class="breeders-catalog-tools">
         <h2 id="breeders-directory-title" class="sr-only">{{ breederSp }}精選種群</h2>
         <input
@@ -288,7 +284,12 @@ useHead({
       </div>
 
       <div class="grid photo-grid" v-else>
-        <article v-for="(i, index) in breedersList" :key="i.ID" class="breeder-photo-card">
+        <article
+          v-for="(i, index) in breedersList"
+          :key="i.ID"
+          :id="`breeder-${i.ID}`"
+          class="breeder-photo-card"
+        >
           <img
             v-if="i.ImageURL && !failedPhotos.has(i.ID)"
             :src="getCleanUrl(i.ImageURL, 600)"

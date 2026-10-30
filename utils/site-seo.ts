@@ -20,6 +20,7 @@ export const PUBLIC_SITEMAP_ROUTES: PublicSitemapRoute[] = [
   { loc: '/hospital', changefreq: 'monthly', priority: 0.8 },
   { loc: '/why-gencko', changefreq: 'monthly', priority: 0.7 },
   { loc: '/buying-guide', changefreq: 'monthly', priority: 0.7 },
+  { loc: '/certificates', changefreq: 'monthly', priority: 0.5 },
   { loc: '/about', changefreq: 'monthly', priority: 0.5 },
   { loc: '/breeders', changefreq: 'monthly', priority: 0.7 },
   { loc: '/merch', changefreq: 'weekly', priority: 0.8 },

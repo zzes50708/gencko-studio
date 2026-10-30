@@ -1,9 +1,11 @@
 <script setup>
+import { TAXON_LEOPARD_GECKO, TAXON_FAT_TAIL_GECKO } from '~/utils/seo-schemas'
 import { computed, onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { useHead, useAsyncData, useSupabaseClient } from '#imports'
 import { useMainStore } from '~/stores/useMainStore'
 import { getCleanUrl } from '~/utils/image'
+import { serializeJsonLd } from '~/utils/structured-data'
 import { sourceSegments } from '~/utils/source-links'
 
 definePageMeta({ key: (route) => route.fullPath })
@@ -84,7 +86,7 @@ const siteData = computed(() => {
     const g = viewingGene.value
     const img = getCleanUrl(g.ImageURL)
     const url = `https://www.genckobreeding.com/genes/${encodeURIComponent(g.Name)}`
-    const desc = `${g.Name} 守宮基因介紹｜遺傳模式、外觀特徵與繁育注意事項。${g.Brief || ''}`.trim()
+    const desc = `${g.Name} 守宮基因介紹｜遺傳模式、外觀特徵與選育注意事項。${g.Brief || ''}`.trim()
     const altNameArr = g.EnglishName ? [g.EnglishName] : []
     const plainDetail = toPlainText(g.Detail)
     const fullBody = [g.Brief, plainDetail].filter(Boolean).join(' ')
@@ -136,8 +138,8 @@ const siteData = computed(() => {
     const article = {
       '@type': 'Article',
       '@id': `${url}#article`,
-      headline: `${g.Name}${g.EnglishName ? `（${g.EnglishName}）` : ''} - 豹紋守宮（Eublepharis macularius）基因圖鑑`,
-      image: [img],
+      headline: `${g.Name}${g.EnglishName ? `（${g.EnglishName}）` : ''} - 守宮基因圖鑑`,
+      ...(img ? { image: [img] } : {}),
       author: {
         '@type': 'Organization',
         name: 'Gencko Breeding Studio',
@@ -162,21 +164,11 @@ const siteData = computed(() => {
         ]
       },
       description: g.Brief || `${g.Name} 守宮基因介紹`,
+      citation: sourceSegments(g.Source || '')
+        .filter((part) => part.href)
+        .map((part) => part.href),
       about: { '@id': `${url}#term` },
-      mentions: [
-        {
-          '@type': 'Taxon',
-          name: 'Eublepharis macularius',
-          alternateName: '豹紋守宮',
-          sameAs: 'https://www.wikidata.org/wiki/Q185061'
-        },
-        {
-          '@type': 'Taxon',
-          name: 'Hemitheconyx caudicinctus',
-          alternateName: '肥尾守宮',
-          sameAs: 'https://www.wikidata.org/wiki/Q913571'
-        }
-      ],
+      mentions: [TAXON_LEOPARD_GECKO, TAXON_FAT_TAIL_GECKO],
       inLanguage: 'zh-TW',
       ...(articleBody ? { articleBody: articleBody } : {}),
       ...(wordCount ? { wordCount: wordCount } : {}),
@@ -228,8 +220,8 @@ const siteData = computed(() => {
       url,
       type: 'article',
       script: [
-        { type: 'application/ld+json', innerHTML: JSON.stringify(webPageLd) },
-        { type: 'application/ld+json', innerHTML: JSON.stringify(breadcrumb) }
+        { type: 'application/ld+json', innerHTML: serializeJsonLd(webPageLd) },
+        { type: 'application/ld+json', innerHTML: serializeJsonLd(breadcrumb) }
       ]
     }
   }
@@ -333,7 +325,7 @@ useContentResponse(viewingGene, pending, geneError)
           <span class="warn-text">{{ geneWarningText }}</span>
         </div>
 
-        <div class="gene-layout">
+        <div class="gene-layout" :class="{ 'gene-layout--text-only': !viewingGene.ImageURL }">
           <!-- 🌟 核心修正：將 NuxtImg 替換為原生 img -->
           <ArticleImage
             v-if="viewingGene.ImageURL"
@@ -551,6 +543,14 @@ p {
   opacity: 0.6;
   border-top: 1px dashed var(--bd);
   padding-top: 15px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.source-text a {
+  overflow-wrap: anywhere;
+}
+.gene-layout--text-only .gene-text-content {
+  max-width: none;
 }
 
 /* 🌟 Mobile Responsive */

@@ -4,6 +4,8 @@ import { useRoute } from 'vue-router'
 import { useHead, useAsyncData, useSupabaseClient } from '#imports'
 import { useMainStore } from '~/stores/useMainStore'
 import { getCleanUrl } from '~/utils/image'
+import { serializeJsonLd } from '~/utils/structured-data'
+import { seoPrice } from '~/utils/seo-head'
 import { formatAnimalSex, formatAnimalPreviewSex, getAnimalSexTone } from '~/utils/incubation-sex'
 import { getAnimalInquiryLink, getAnimalInquiryText } from '~/utils/animal-inquiry'
 import { auctionState } from '~/utils/auction-presentation'
@@ -121,7 +123,7 @@ const statusToAvailability = (status) => {
     case 'Auction':
       return 'https://schema.org/LimitedAvailability'
     case 'Reserved':
-      return 'https://schema.org/PreOrder'
+      return 'https://schema.org/OutOfStock'
     case 'Sold':
       return 'https://schema.org/SoldOut'
     case 'SelfKeep':
@@ -141,9 +143,10 @@ const siteData = computed(() => {
   if (currentProduct.value) {
     const p = currentProduct.value
     const sexSym = p.GenderType === '公' ? '♂' : p.GenderType === '母' ? '♀' : ''
-    const title = `${p.Morph} ${sexSym}`.trim()
+    const title = `${p.Morph}${sexSym}`.trim()
     const geneStr = (p.Genes || []).join('、')
-    const desc = `${p.Morph}（${formatAnimalSex(p, { fallback: '性別未定' })}）${geneStr ? ' 基因：' + geneStr + '。' : ''}${p.Birthday ? p.Birthday + ' 出生。' : ''}售價 NT$${p.ListingPrice}。Gencko Breeding Studio 專業繁育，100% 健康保證、基因正確、運輸賠償。`
+    const price = seoPrice(p.ListingPrice)
+    const desc = `${p.Morph}（${formatAnimalSex(p, { fallback: '性別未定' })}），${p.Birthday ? `生日${p.Birthday}。` : ''}${price ? `售價NT$${price}。` : '售價請向官方確認。'}查看個體照片與資料，購買、交付及售後安排請依官網購買規定並向 Gencko 官方 LINE 確認。`
     const img = getCleanUrl(p.ImageURL)
     const url = `https://www.genckobreeding.com/product/${p.ID}`
     const identityUrl = `https://www.genckobreeding.com/identity/${p.ID}`
@@ -159,11 +162,6 @@ const siteData = computed(() => {
       })
     if (p.Birthday) addProp.push({ '@type': 'PropertyValue', name: '孵化日', value: p.Birthday })
     if (p.Species) addProp.push({ '@type': 'PropertyValue', name: '物種', value: p.Species })
-
-    // priceValidUntil：個體商品給 1 年後（schema.org Offer 建議欄位）
-    const validUntil = new Date()
-    validUntil.setFullYear(validUntil.getFullYear() + 1)
-    const priceValidUntil = validUntil.toISOString().split('T')[0]
 
     const product = {
       '@type': 'Product',
@@ -187,48 +185,28 @@ const siteData = computed(() => {
       },
       ...(addProp.length ? { additionalProperty: addProp } : {}),
       subjectOf: { '@type': 'WebPage', '@id': identityUrl, name: '電子身分證' },
-      offers: {
-        '@type': 'Offer',
-        '@id': `${url}#offer`,
-        url: url,
-        priceCurrency: 'TWD',
-        price: p.ListingPrice,
-        priceValidUntil: priceValidUntil,
-        availability: statusToAvailability(p.Status),
-        itemCondition: 'https://schema.org/NewCondition',
-        businessFunction: 'http://purl.org/goodrelations/v1#Sell',
-        areaServed: { '@type': 'Country', name: 'Taiwan' },
-        seller: {
-          '@type': 'Organization',
-          name: 'Gencko Breeding Studio',
-          alternateName: ['Gencko Studio'],
-          url: 'https://www.genckobreeding.com',
-          logo: 'https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/11.png'
-        },
-        hasMerchantReturnPolicy: {
-          '@type': 'MerchantReturnPolicy',
-          applicableCountry: 'TW',
-          returnPolicyCategory: 'https://schema.org/MerchantReturnFiniteReturnWindow',
-          merchantReturnDays: 2,
-          returnMethod: 'https://schema.org/ReturnByMail',
-          returnFees: 'https://schema.org/FreeReturn'
-        },
-        shippingDetails: {
-          '@type': 'OfferShippingDetails',
-          shippingDestination: { '@type': 'DefinedRegion', addressCountry: 'TW' },
-          shippingRate: { '@type': 'MonetaryAmount', currency: 'TWD', value: 0 },
-          deliveryTime: {
-            '@type': 'ShippingDeliveryTime',
-            handlingTime: {
-              '@type': 'QuantitativeValue',
-              minValue: 0,
-              maxValue: 2,
-              unitCode: 'DAY'
-            },
-            transitTime: { '@type': 'QuantitativeValue', minValue: 1, maxValue: 3, unitCode: 'DAY' }
+      ...(price
+        ? {
+            offers: {
+              '@type': 'Offer',
+              '@id': `${url}#offer`,
+              url: url,
+              priceCurrency: 'TWD',
+              price,
+              availability: statusToAvailability(p.Status),
+              itemCondition: 'https://schema.org/NewCondition',
+              businessFunction: 'http://purl.org/goodrelations/v1#Sell',
+              areaServed: { '@type': 'Country', name: 'Taiwan' },
+              seller: {
+                '@type': 'Organization',
+                name: 'Gencko Breeding Studio',
+                alternateName: ['Gencko Studio'],
+                url: 'https://www.genckobreeding.com',
+                logo: 'https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/11.png'
+              }
+            }
           }
-        }
-      }
+        : {})
     }
 
     // WebPage 包覆，並聲明 SpeakableSpecification
@@ -274,8 +252,8 @@ const siteData = computed(() => {
       img,
       url,
       script: [
-        { type: 'application/ld+json', innerHTML: JSON.stringify(webPageLd) },
-        { type: 'application/ld+json', innerHTML: JSON.stringify(breadcrumb) }
+        { type: 'application/ld+json', innerHTML: serializeJsonLd(webPageLd) },
+        { type: 'application/ld+json', innerHTML: serializeJsonLd(breadcrumb) }
       ]
     }
   }

@@ -61,15 +61,17 @@ test('窄桌面資訊在地圖下方，標記可點選，Esc 焦點正常', asyn
   await expect(page.locator('.map-hospital-detail')).toHaveCount(0)
   await expect(stage.locator('canvas')).toBeFocused()
 })
-test('零結果移除地圖與縣市數字，清除篩選可恢復', async ({ page }) => {
+test('零結果保留地圖但移除院所與縣市數字，清除篩選可恢復', async ({ page }) => {
   await page.getByRole('searchbox', { name: '搜尋醫院名稱或地址', exact: true }).fill('不存在院所')
-  await expect(page.locator('.map-stage')).toHaveCount(0)
+  await expect(page.locator('.map-stage')).toHaveCount(1)
   await expect(page.locator('.map-pin')).toHaveCount(0)
   const empty = page.locator('.hosp-map-empty-state')
   await expect(empty).toContainText('沒有符合條件')
   expect((await empty.boundingBox())!.height).toBeLessThan(120)
   await empty.getByRole('button', { name: '清除篩選', exact: true }).click()
-  await expect(page.getByRole('searchbox', { name: '在地圖搜尋醫院', exact: true })).toBeFocused()
+  await expect(
+    page.getByRole('searchbox', { name: '搜尋醫院名稱或地址', exact: true })
+  ).toBeFocused()
   await expect(page.locator('.hosp-card')).toHaveCount(1)
   await expect(page.locator('.map-stage')).toHaveAttribute('data-map-ready', 'true', {
     timeout: 30000

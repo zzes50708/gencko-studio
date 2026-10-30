@@ -1,4 +1,5 @@
 <script setup>
+import { serializeJsonLd } from '~/utils/structured-data'
 import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useHead } from '#imports'
@@ -68,37 +69,6 @@ const cmpHowToLd = {
   ]
 }
 
-const cmpFaqLd = {
-  '@type': 'FAQPage',
-  '@id': `${cmpUrl}#faq`,
-  mainEntity: [
-    {
-      '@type': 'Question',
-      name: '可以同時比較幾隻守宮？',
-      acceptedAnswer: {
-        '@type': 'Answer',
-        text: '目前最多支援 3 隻並排比較，避免行動裝置上欄位過窄造成可讀性下降。若想比較更多隻，建議先用基因條件在 /shop 商城篩選。'
-      }
-    },
-    {
-      '@type': 'Question',
-      name: '比較清單會儲存嗎？',
-      acceptedAnswer: {
-        '@type': 'Answer',
-        text: '會。比較清單儲存在瀏覽器本機（localStorage），清除瀏覽器資料或更換裝置時會消失。也可以將比較結果以 URL（含 ?ids= 參數）分享給朋友。'
-      }
-    },
-    {
-      '@type': 'Question',
-      name: '「共有基因」與「獨有基因」是怎麼判斷的？',
-      acceptedAnswer: {
-        '@type': 'Answer',
-        text: '系統比對所選個體的基因陣列（animals.genes 欄位）：所有個體都包含的基因會標為「共有」，僅部分個體擁有的標為「獨有」，並依擁有者數量排序。'
-      }
-    }
-  ]
-}
-
 const cmpBreadcrumbLd = {
   '@context': 'https://schema.org',
   '@type': 'BreadcrumbList',
@@ -146,7 +116,7 @@ const cmpWebPageLd = {
       '本地儲存比較清單'
     ]
   },
-  hasPart: [cmpHowToLd, cmpFaqLd]
+  hasPart: [cmpHowToLd]
 }
 
 useHead({
@@ -172,13 +142,16 @@ useHead({
     // Twitter Card
     { name: 'twitter:card', content: 'summary_large_image' },
     { name: 'twitter:title', content: '守宮個體並排比較｜基因 × 性別 × 價格 一次看' },
-    { name: 'twitter:description', content: '最多 3 隻守宮並排對照，自動標示共有與獨有基因。' },
+    {
+      name: 'twitter:description',
+      content: '最多 3 隻守宮並排對照，自動標示共有與獨有基因，幫助快速判讀差異。'
+    },
     { name: 'twitter:image', content: cmpImg }
   ],
   link: [{ rel: 'canonical', href: cmpUrl }],
   script: [
-    { type: 'application/ld+json', innerHTML: JSON.stringify(cmpWebPageLd) },
-    { type: 'application/ld+json', innerHTML: JSON.stringify(cmpBreadcrumbLd) }
+    { type: 'application/ld+json', innerHTML: serializeJsonLd(cmpWebPageLd) },
+    { type: 'application/ld+json', innerHTML: serializeJsonLd(cmpBreadcrumbLd) }
   ]
 })
 
@@ -291,7 +264,7 @@ const removeItem = (id) => {
         <h1 class="page-title">個體比較</h1>
         <p>相似個體挑選，看看喜歡哪個。</p>
       </div>
-      <div class="compare-header__actions">
+      <div v-if="ids.length > 0" class="compare-header__actions">
         <span class="compare-count">已選擇 {{ ids.length }} / 3 隻</span>
         <NuxtLink no-prefetch to="/shop" class="btn-app btn-app--ghost btn-app--sm back-btn">
           返回商城

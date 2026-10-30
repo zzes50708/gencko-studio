@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { serializeJsonLd } from '~/utils/structured-data'
 import { useHead } from '#imports'
 import { reactive, ref, onMounted } from 'vue'
 const guideImageErrors = reactive({ hero: false, leopard: false, fatTail: false })
@@ -105,7 +106,7 @@ const faqLd = {
 }
 
 const breadcrumbLd = getBreadcrumb([
-  { name: '首頁', url: '/' },
+  { name: '首頁', url: '/home' },
   { name: '守宮介紹', url: '/guide' }
 ])
 
@@ -134,9 +135,9 @@ useHead({
   ],
   link: [{ rel: 'canonical', href: pageUrl }],
   script: [
-    { type: 'application/ld+json', innerHTML: JSON.stringify(webPageLd) },
-    { type: 'application/ld+json', innerHTML: JSON.stringify(faqLd) },
-    { type: 'application/ld+json', innerHTML: JSON.stringify(breadcrumbLd) }
+    { type: 'application/ld+json', innerHTML: serializeJsonLd(webPageLd) },
+    { type: 'application/ld+json', innerHTML: serializeJsonLd(faqLd) },
+    { type: 'application/ld+json', innerHTML: serializeJsonLd(breadcrumbLd) }
   ]
 })
 </script>

@@ -28,7 +28,7 @@ import { SOCIAL_LINKS } from '~/utils/site-constants'
 
     <div class="footer-bottom">
       <span>© 2026 Gencko Studio. 版權所有</span>
-      <span>從基因、照護到選購，讓每一步都有依據。</span>
+      <span>從基因、照護到選購，每一個階段都有依據。</span>
     </div>
   </footer>
 </template>
@@ -39,9 +39,9 @@ import { SOCIAL_LINKS } from '~/utils/site-constants'
   width: 100%;
   margin-top: clamp(24px, 3vw, 40px);
   padding: clamp(36px, 4vw, 56px) max(20px, env(safe-area-inset-left, 0px)) 28px;
-  color: #171714;
-  background: #fff;
-  border-top: 1px solid #e4e0d9;
+  color: var(--txt);
+  background: var(--bg-dark);
+  border-top: 1px solid var(--bd);
 }
 .footer-inner,
 .footer-bottom {
@@ -71,7 +71,7 @@ import { SOCIAL_LINKS } from '~/utils/site-constants'
 .footer-brand p {
   max-width: 24ch;
   margin: 14px auto 20px;
-  color: #6f6a63;
+  color: var(--txt-muted);
   font-size: 0.82rem;
   line-height: 1.7;
   text-align: center;
@@ -87,9 +87,9 @@ import { SOCIAL_LINKS } from '~/utils/site-constants'
 .social-links a {
   min-height: auto;
   padding: 0 0 4px;
-  color: #171714;
+  color: var(--txt);
   border: 0;
-  border-bottom: 1px solid #cfc9bf;
+  border-bottom: 1px solid var(--bd);
   border-radius: 0;
   font-size: 0.7rem;
   font-weight: 850;
@@ -109,13 +109,13 @@ import { SOCIAL_LINKS } from '~/utils/site-constants'
 }
 .footer-group h2 {
   margin: 0 0 12px;
-  color: #171714;
+  color: var(--txt);
   font-size: 0.7rem;
   font-weight: 700;
   letter-spacing: 0.14em;
 }
 .footer-group a {
-  color: #6f6a63;
+  color: var(--txt-muted);
   font-size: 0.76rem;
   font-weight: 400;
   line-height: 1.45;
@@ -144,9 +144,9 @@ import { SOCIAL_LINKS } from '~/utils/site-constants'
   gap: 24px;
   margin-top: clamp(24px, 3vw, 36px);
   padding-top: 18px;
-  color: #6f6a63;
+  color: var(--txt-muted);
   font-size: 0.68rem;
-  border-top: 1px solid #e4e0d9;
+  border-top: 1px solid var(--bd);
 }
 @media (max-width: 960px) {
   .footer-inner {

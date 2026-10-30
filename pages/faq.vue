@@ -42,7 +42,7 @@ const faqWebPageLd = getWebPage({
   url: faqUrl,
   name: faqTitle,
   image: DEFAULT_OG_IMAGE,
-  speakable: ['.faq-q', '.faq-a', '.q-text'],
+  speakable: ['h1', '.q-text'],
   about: GECKO_TAXONS,
   mainEntity: faqPageLd
 })

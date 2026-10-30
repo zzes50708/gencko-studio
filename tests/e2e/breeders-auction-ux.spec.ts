@@ -1,13 +1,17 @@
 import { test, expect } from '@playwright/test'
 
 async function setup(page: any) {
+  // 正式版不暴露 Vue 元件的除錯屬性，改由既有 Pinia 測試入口取得狀態。
   await page.waitForFunction(
-    () => !!(document.querySelector('.sticky-nav, .bottom-nav') as any)?.__vueParentComponent
+    () =>
+      !!(
+        document.querySelector('#__nuxt') as any
+      )?.__vue_app__?.config.globalProperties.$pinia?._s.get('main')
   )
   await page.evaluate(() => {
-    let c = (document.querySelector('.sticky-nav, .bottom-nav') as any).__vueParentComponent
-    while (c && !c.setupState.store) c = c.parent
-    ;(window as any).uxStore = c.setupState.store
+    ;(window as any).uxStore = (
+      document.querySelector('#__nuxt') as any
+    ).__vue_app__.config.globalProperties.$pinia._s.get('main')
   })
 }
 const auction = {
@@ -36,7 +40,16 @@ test('種群手機兩欄、搜尋編號、失敗重試且不新增放大', async
     isMobile: true
   })
   const page = await context.newPage()
-  await page.route('**/ux-broken-photo**', (r) => r.abort())
+  let photoRequests = 0
+  await page.route('**/ux-broken-photo**', (r) => {
+    photoRequests += 1
+    return photoRequests === 1
+      ? r.abort()
+      : r.fulfill({
+          contentType: 'image/svg+xml',
+          body: '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20"><rect width="20" height="20" fill="gray"/></svg>'
+        })
+  })
   // 固定背景資料回應，避免初始載入稍後蓋掉本測試注入的種群。
   await page.route('**/rest/v1/animals**', (r) =>
     r.fulfill({
@@ -46,7 +59,7 @@ test('種群手機兩欄、搜尋編號、失敗重試且不新增放大', async
         species: '豹紋守宮',
         status: 'SelfKeep',
         genes: ['土匪'],
-        image_url: i === 2 ? 'http://localhost/ux-broken-photo' : ''
+        image_url: i === 2 ? '/ux-broken-photo' : ''
       }))
     })
   )
@@ -60,7 +73,7 @@ test('種群手機兩欄、搜尋編號、失敗重試且不新增放大', async
       Species: '豹紋守宮',
       Status: 'SelfKeep',
       Genes: ['土匪'],
-      ImageURL: i === 2 ? 'http://localhost/ux-broken-photo' : ''
+      ImageURL: i === 2 ? '/ux-broken-photo' : ''
     }))
     store.inventoryLoaded = true
   })
@@ -73,10 +86,10 @@ test('種群手機兩欄、搜尋編號、失敗重試且不新增放大', async
   await page.getByPlaceholder('搜尋品系、基因或編號').fill('B-2')
   await expect(page.locator('.breeder-photo-card')).toHaveCount(1)
   await expect(page.locator('.breeder-caption')).toContainText('B-2')
-  await page.locator('.breeder-photo-card img').evaluate((e) => e.dispatchEvent(new Event('error')))
   await expect(page.getByRole('button', { name: '重試照片' })).toBeVisible()
   await page.getByRole('button', { name: '重試照片' }).tap()
   await expect(page.locator('.breeder-photo-card img')).toHaveCount(1)
+  await expect(page.locator('.breeder-photo-card img')).toHaveJSProperty('naturalWidth', 20)
   await expect(page.locator('.breeder-photo-card a')).toHaveCount(0)
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
   await context.close()

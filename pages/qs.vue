@@ -1,4 +1,6 @@
 <script setup>
+import { TAXON_LEOPARD_GECKO, TAXON_FAT_TAIL_GECKO } from '~/utils/seo-schemas'
+import { serializeJsonLd } from '~/utils/structured-data'
 import { ref, computed, onMounted, onBeforeUnmount, nextTick, watch } from 'vue'
 import { onBeforeRouteLeave } from 'vue-router'
 import { useHead } from '#imports'
@@ -65,46 +67,6 @@ const qsHowToLd = {
   ]
 }
 
-// FAQPage：常見問題
-const qsFaqLd = {
-  '@type': 'FAQPage',
-  '@id': `${qsUrl}#faq`,
-  mainEntity: [
-    {
-      '@type': 'Question',
-      name: '什麼樣的人適合養守宮？',
-      acceptedAnswer: {
-        '@type': 'Answer',
-        text: '適合長期穩定的飼主：① 能持續 10–15 年負責照顧（豹紋守宮平均壽命）② 可接受餵食活餌或冷凍餌料 ③ 能維持穩定的溫濕度環境 ④ 有基本預算購買設備（約 3,000–8,000 元起跳）⑤ 願意持續學習飼養與健康知識。若以上任一項目猶豫，建議先完成本評估找出風險點再決定。'
-      }
-    },
-    {
-      '@type': 'Question',
-      name: '評估完發現總分不高怎麼辦？',
-      acceptedAnswer: {
-        '@type': 'Answer',
-        text: '分數不高並不代表「不能養」，而是顯示哪些面向需要先補強。建議：① 看「需要特別注意的面向」逐項改善 ② 依推薦學習路線補課 ③ 若是知識儲備不足，先讀 /care 與 /articles 累積知識 ④ 若是預算或環境不足，先準備好硬體再迎接個體 ⑤ 補強後再重新評估。'
-      }
-    },
-    {
-      '@type': 'Question',
-      name: '本評估會儲存資料嗎？',
-      acceptedAnswer: {
-        '@type': 'Answer',
-        text: '不會上傳到伺服器。所有作答進度與結果僅儲存在你瀏覽器的 localStorage（本機），清除瀏覽器資料或更換裝置時會消失。Gencko Breeding Studio 不會看到任何個人作答內容。'
-      }
-    },
-    {
-      '@type': 'Question',
-      name: '為什麼有「時間承諾」與「心理接受」這兩個維度？',
-      acceptedAnswer: {
-        '@type': 'Answer',
-        text: '因為這兩項是新手最常低估、也最常導致棄養的核心因素。「時間承諾」指長達 10–15 年的日常餵食、清理、健康觀察；「心理接受」則涵蓋對活餌（蟋蟀、杜比亞）的接受度，以及面對個體生病、斷尾、死亡的心理準備。設備可以買、知識可以學，但這兩項若無法承擔，後續其他面向再強也撐不起穩定的飼養關係。'
-      }
-    }
-  ]
-}
-
 // BreadcrumbList
 const qsBreadcrumbLd = {
   '@context': 'https://schema.org',
@@ -127,23 +89,10 @@ const qsWebPageLd = {
   primaryImageOfPage: { '@type': 'ImageObject', url: qsImg },
   speakable: {
     '@type': 'SpeakableSpecification',
-    cssSelector: ['.page-title', '.qs-section-title']
+    cssSelector: ['.page-title']
   },
   publisher: qsPublisher,
-  about: [
-    {
-      '@type': 'Taxon',
-      name: 'Eublepharis macularius',
-      alternateName: '豹紋守宮',
-      sameAs: 'https://www.wikidata.org/wiki/Q185061'
-    },
-    {
-      '@type': 'Taxon',
-      name: 'Hemitheconyx caudicinctus',
-      alternateName: '肥尾守宮',
-      sameAs: 'https://www.wikidata.org/wiki/Q913571'
-    }
-  ],
+  about: [TAXON_LEOPARD_GECKO, TAXON_FAT_TAIL_GECKO],
   mainEntity: {
     '@type': 'Quiz',
     '@id': `${qsUrl}#quiz`,
@@ -156,7 +105,7 @@ const qsWebPageLd = {
     publisher: qsPublisher,
     numberOfQuestions: 18
   },
-  hasPart: [qsHowToLd, qsFaqLd]
+  hasPart: [qsHowToLd]
 }
 
 useHead({
@@ -192,8 +141,8 @@ useHead({
   ],
   link: [{ rel: 'canonical', href: qsUrl }],
   script: [
-    { type: 'application/ld+json', innerHTML: JSON.stringify(qsWebPageLd) },
-    { type: 'application/ld+json', innerHTML: JSON.stringify(qsBreadcrumbLd) }
+    { type: 'application/ld+json', innerHTML: serializeJsonLd(qsWebPageLd) },
+    { type: 'application/ld+json', innerHTML: serializeJsonLd(qsBreadcrumbLd) }
   ]
 })
 

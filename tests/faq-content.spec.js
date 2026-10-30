@@ -21,12 +21,14 @@ describe('FAQ 文案、連結與政策內容', () => {
     expect(compare).not.toContain('href="/auction"')
   })
 
-  it('會員說明如實區分本機資料與 Google 競標紀錄', () => {
+  it('會員說明區分 LINE 出價、Google 管理與本機資料', () => {
     const login = question('website', '如何登入會員？支援哪些登入方式？').ans
     expect(login).toContain('LINE 登入')
     expect(login).toContain('Google 登入')
     expect(login).toContain('不會隨登入帳號同步')
-    expect(login).toContain('競標紀錄目前需使用 Google 登入後查看')
+    expect(login).toContain('新的競標出價僅限 LINE 帳號')
+    expect(login).toContain('Google 保留管理員登入與歷史競標紀錄查閱')
+    expect(login).toContain('首次出價前須向官方帳號傳送一次驗證碼')
   })
 
   it('套用健康上架說明、50% 訂金與孵化性別機率', () => {

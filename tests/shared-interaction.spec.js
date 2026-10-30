@@ -112,15 +112,15 @@ describe('Phase 1 共用互動元件 contract', () => {
     expect(hotPicksMarquee).not.toContain('hot-stamp-auction')
   })
 
-  it('選購與種群型錄維持直角商品卡，Footer 使用白底精品殼層', () => {
+  it('選購與種群型錄維持直角商品卡，Footer 配色跟隨日夜主題', () => {
     // 選購頁已改由 shopping-ux.spec.ts 驗證實際互動與布局。
     for (const source of [breeders]) {
       expect(source).toMatch(
         /:deep\(\.photo-grid \.flip-card\),[\s\S]*?:deep\(\.photo-grid \.slim-body\)\s*\{[\s\S]*?border-radius:\s*0 !important/
       )
     }
-    expect(footer).toMatch(/\.site-footer\s*\{[\s\S]*?background:\s*#fff/)
-    expect(footer).toMatch(/\.site-footer\s*\{[\s\S]*?border-top:\s*1px solid #e4e0d9/)
+    expect(footer).toMatch(/\.site-footer\s*\{[\s\S]*?background:\s*var\(--bg-dark\)/)
+    expect(footer).toMatch(/\.site-footer\s*\{[\s\S]*?border-top:\s*1px solid var\(--bd\)/)
     expect(footer).toMatch(
       /@media\s*\(max-width:\s*960px\)[\s\S]*?\.footer-inner\s*\{[\s\S]*?grid-template-columns:\s*minmax\(0,\s*1fr\)/
     )
@@ -394,7 +394,7 @@ describe('Phase 1 共用互動元件 contract', () => {
     )
   })
 
-  it('Product 詳情補齊收藏操作、mobile 相關個體欄數與 focus contract', () => {
+  it('Product 詳情補齊收藏操作、mobile 四欄相關個體與 focus contract', () => {
     expect(productDetail).toContain('const isWishlisted = computed(')
     expect(productDetail).toMatch(
       /<button[\s\S]*?type="button"[\s\S]*?class="[^"\n]*\bbtn-wishlist\b[^"\n]*"[\s\S]*?:aria-pressed="isWishlisted"/
@@ -404,7 +404,7 @@ describe('Phase 1 共用互動元件 contract', () => {
     )
     expect(productDetail).toMatch(/\.related-card:focus-visible\s*\{[\s\S]*?outline:/)
     expect(productDetail).toMatch(
-      /@media\s*\(max-width:\s*768px\)\s*\{[\s\S]*?\.related-grid\s*\{[\s\S]*?grid-template-columns:\s*repeat\(2,\s*minmax\(0,\s*1fr\)\)/
+      /@media\s*\(max-width:\s*768px\)\s*\{[\s\S]*?\.related-grid\s*\{[\s\S]*?grid-template-columns:\s*repeat\(4,\s*minmax\(0,\s*1fr\)\)/
     )
   })
 

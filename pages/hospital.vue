@@ -1,4 +1,5 @@
 <script setup>
+import { serializeJsonLd } from '~/utils/structured-data'
 import { ref, computed, nextTick, toRef, watch, onMounted } from 'vue'
 import { useMediaQuery } from '@vueuse/core'
 import { useHead } from '#imports'
@@ -19,8 +20,16 @@ const {
   refresh: refreshHospitals
 } = await useHospitalDirectoryData()
 
-// 對外暴露給原本邏輯用
-const HOSPITAL_DATA = computed(() => hospitalsData.value || [])
+// 本次瀏覽期間保留最後成功名錄，避免重讀失敗後返回頁面遺失；成功空陣列仍以最新結果為準。
+const lastAvailableHospitals = useState('hospital-last-available-directory', () => [])
+watch(
+  hospitalsData,
+  (data) => {
+    if (Array.isArray(data)) lastAvailableHospitals.value = data
+  },
+  { immediate: true }
+)
+const HOSPITAL_DATA = computed(() => hospitalsData.value || lastAvailableHospitals.value)
 
 // 取最新驗證日（前台顯示「資料更新：YYYY-MM-DD」）
 const hospitalsVerifiedDate = computed(() => {
@@ -38,14 +47,21 @@ const directoryContext = useState('hospital-directory-context', () => ({
   district: 'all',
   query: '',
   savedOnly: false,
+  searched: false,
   expanded: [],
   scrollY: 0
 }))
 const hospCity = toRef(directoryContext.value, 'city')
 const hospDistrict = toRef(directoryContext.value, 'district')
 const hospQuery = toRef(directoryContext.value, 'query')
-const mapSearch = ref(null)
 const savedOnly = toRef(directoryContext.value, 'savedOnly')
+const searchPerformed = toRef(directoryContext.value, 'searched')
+const beginMapSearch = async () => {
+  searchPerformed.value = true
+  await nextTick()
+  cancelPendingMapFit()
+  mapFitSequence.value++
+}
 const mapFitSequence = ref(
   hospQuery.value.trim() ||
     hospCity.value !== 'all' ||
@@ -68,6 +84,7 @@ watch(
     () => (savedOnly.value ? store.hospWishlist.join(',') : '')
   ],
   (_filters, previous, onCleanup) => {
+    if (!searchPerformed.value) return
     // 回到全台時由場景重設視角，避免延遲取景覆蓋全台視角。
     if (
       hospCity.value === 'all' &&
@@ -93,60 +110,28 @@ onBeforeRouteLeave(() => {
 })
 const isMobile = useMediaQuery('(max-width: 767px), (pointer: coarse)')
 const viewportReady = ref(false)
+const mapSession = useHospitalMapSession()
+const mapResetSequence = ref(0)
 onMounted(() => {
   viewportReady.value = true
 })
-const mobileMapOpen = ref(false)
-const mobileMapInteractive = ref(false)
-const mobileMapToggle = ref(null)
-let mobileMapReturnFocus = null
-watch(isMobile, () => {
-  mobileMapInteractive.value = false
-})
-const toggleMobileMap = async () => {
-  mobileMapReturnFocus = null
-  mobileMapOpen.value = !mobileMapOpen.value
-  mobileMapInteractive.value = false
-  if (mobileMapOpen.value) {
-    await nextTick()
-    mapSection.value?.scrollIntoView({ behavior: scrollBehavior(), block: 'start' })
-    mapSection.value?.focus({ preventScroll: true })
-  }
-}
-const closeMobileMap = async () => {
-  mobileMapOpen.value = false
-  mobileMapInteractive.value = false
-  await nextTick()
-  const target = mobileMapReturnFocus?.isConnected ? mobileMapReturnFocus : mobileMapToggle.value
-  target?.focus({ preventScroll: target === mobileMapToggle.value })
-  mobileMapReturnFocus = null
-}
 const hospitalCards = ref([])
-const hospitalSearch = ref(null)
 const clearFilters = async () => {
+  mapSession.value = null
+  mapResetSequence.value++
   hospCity.value = 'all'
   hospDistrict.value = 'all'
   hospQuery.value = ''
   savedOnly.value = false
   focusedHospital.value = null
   await nextTick()
-  hospitalSearch.value?.focus({ preventScroll: true })
-}
-const resetMapFilters = async () => {
-  await clearFilters()
-  mapSearch.value?.focus({ preventScroll: true })
 }
 const scrollBehavior = () =>
   window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth'
-const mobileMapUrl = computed(() => {
-  const hospital = mobilePreviewHospital.value
-  if (!hospital) return ''
-  const query = `${hospital.name} ${hospital.address}`
-  return `https://maps.google.com/maps?q=${encodeURIComponent(query)}&output=embed&hl=zh-TW`
-})
 const focusedHospital = ref(null)
 const mapFocusSequence = ref(0)
 const mapSection = ref(null)
+const hospitalMap = ref(null)
 
 const toggleHospExpand = (id) => {
   if (hospExpanded.value.has(id)) {
@@ -192,17 +177,6 @@ const hospFiltered = computed(() => {
 })
 
 const hospWishlist = computed(() => store.hospWishlist)
-const mobilePreviewHospital = computed(
-  () =>
-    hospFiltered.value.find(
-      (hospital) => String(hospital.id) === String(focusedHospital.value?.id)
-    ) ||
-    hospFiltered.value[0] ||
-    null
-)
-watch(mobileMapUrl, () => {
-  mobileMapInteractive.value = false
-})
 watch(hospFiltered, (hospitals) => {
   if (
     focusedHospital.value &&
@@ -211,15 +185,12 @@ watch(hospFiltered, (hospitals) => {
     focusedHospital.value = null
   }
 })
-const selectMobilePreview = (event) => {
-  const hospital = hospFiltered.value.find((item) => String(item.id) === event.target.value)
-  if (hospital) focusHospital(hospital)
-}
 
 const changeCity = (val) => {
   hospCity.value = val
   hospDistrict.value = 'all'
   focusedHospital.value = null
+  void beginMapSearch()
 }
 
 const focusHospital = (hospital) => {
@@ -229,23 +200,17 @@ const focusHospital = (hospital) => {
   hospExpanded.value = new Set([hospital.id])
 }
 const showHospitalDetails = async (hospital) => {
+  searchPerformed.value = true
   focusHospital(hospital)
   await nextTick()
   const card = hospitalCards.value.find((el) => el.id === `hospital-${hospital.id}`)
   card?.scrollIntoView({ behavior: scrollBehavior(), block: 'center' })
   card?.querySelector('.hosp-header-toggle')?.focus({ preventScroll: true })
 }
-const showHospitalOnMap = async (hospital, event) => {
-  mobileMapReturnFocus = event?.currentTarget || null
+const showHospitalOnMap = async (hospital) => {
   focusHospital(hospital)
-  mobileMapOpen.value = true
-  mobileMapInteractive.value = false
   await nextTick()
-  mapSection.value?.scrollIntoView({
-    behavior: scrollBehavior(),
-    block: 'start'
-  })
-  mapSection.value?.focus({ preventScroll: true })
+  await hospitalMap.value?.focusMap()
 }
 
 const toggleHospWishlist = (id) => {
@@ -302,86 +267,6 @@ const hospMapUrlOf = (h) =>
   h.mapUrl ||
   `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(h.name + ' ' + h.address)}`
 
-// FAQ：5 題（草稿已與使用者確認）
-const hospFaqLd = {
-  '@type': 'FAQPage',
-  '@id': `${hospUrl}#faq`,
-  mainEntity: [
-    {
-      '@type': 'Question',
-      name: '什麼是特寵醫院？',
-      acceptedAnswer: {
-        '@type': 'Answer',
-        text: '特寵醫院是指能診療特殊寵物的醫療院所，常見對象包含守宮、蛇、龜、兩棲類、鳥類與其他非犬貓動物。這類醫院通常較熟悉不同物種的保溫需求、麻醉與用藥劑量，也比較有處理爬蟲與兩棲動物常見疾病的經驗。'
-      }
-    },
-    {
-      '@type': 'Question',
-      name: '看守宮要找哪種醫院？',
-      acceptedAnswer: {
-        '@type': 'Answer',
-        text: '看守宮時，優先找有收治爬蟲或特殊寵物經驗的特寵醫院，而不是只看離家最近的一般犬貓醫院。掛號前建議先電話確認院方是否有看守宮、是否能處理急診或住院，以及是否熟悉守宮常見的拒食、代謝性骨病、脫皮異常與外傷問題。'
-      }
-    },
-    {
-      '@type': 'Question',
-      name: '特寵醫院一定有夜間急診嗎？',
-      acceptedAnswer: {
-        '@type': 'Answer',
-        text: '不一定。特寵醫院代表院方有看特殊寵物的能力，但不代表每一間都有 24 小時急診、夜診或假日門診。帶守宮就醫前，最好先確認該院平日門診時段、夜間是否有人值班，以及遇到突發狀況時是否需要先電話聯繫。'
-      }
-    },
-    {
-      '@type': 'Question',
-      name: '爬蟲獸醫和特寵醫院是一樣的意思嗎？',
-      acceptedAnswer: {
-        '@type': 'Answer',
-        text: '不完全一樣。爬蟲獸醫通常是指對守宮、蛇、龜等爬蟲類有診療經驗的醫師；特寵醫院則是較廣義的名稱，可能同時收治爬蟲、鳥類、兔子、鼠類與其他特殊寵物。對守宮飼主來說，重點不是名稱本身，而是院方是否真的有看爬蟲與守宮的臨床經驗。'
-      }
-    },
-    {
-      '@type': 'Question',
-      name: '找不到我附近的特寵醫院怎麼辦？',
-      acceptedAnswer: {
-        '@type': 'Answer',
-        text: '本頁名單為持續更新的版本，若你的縣市或行政區未列入，可能是該地區尚無收治爬蟲、守宮、兩棲類等特殊寵物的專業獸醫。建議先以「所有縣市」搜尋鄰近區域的醫院，並提前以電話確認該院是否診療你的物種；若知道遺漏的醫院，歡迎透過 LINE @219abdzn 回報，我們會更新清單。'
-      }
-    },
-    {
-      '@type': 'Question',
-      name: '守宮急診時要怎麼判斷該不該帶去醫院？',
-      acceptedAnswer: {
-        '@type': 'Answer',
-        text: '建議出現下列任一情況就立即就醫：超過 14 天完全拒食且體重明顯下降、斷尾流血止不住、嘔吐或腹瀉持續超過 24 小時、無法正常翻身或站立、神經症狀（轉圈、頭傾斜、抽搐）、明顯外傷或紅腫。其他輕微狀況可先參考 /health 健康評估，但若不確定請以就醫為優先。'
-      }
-    },
-    {
-      '@type': 'Question',
-      name: '特寵醫院和一般動物醫院有什麼差異？',
-      acceptedAnswer: {
-        '@type': 'Answer',
-        text: '一般動物醫院多以犬貓為主，對爬蟲、兩棲、鳥類的解剖學、麻醉劑量、常見疾病的處置經驗有限。特寵醫院（或稱特殊寵物專科醫院）有專門的設備（保溫箱、爬蟲適用 X 光與超音波）、知道守宮 / 蛇 / 龜等動物的劑量計算，能更精準診斷與用藥。'
-      }
-    },
-    {
-      '@type': 'Question',
-      name: '掛號前要準備什麼？',
-      acceptedAnswer: {
-        '@type': 'Answer',
-        text: '建議準備：① 個體基本資訊（物種、年齡、性別、體重）② 飼養環境照片或數值（溫度、濕度、底材、燈具）③ 近期飲食與排便狀況紀錄 ④ 症狀出現的時間軸 ⑤ 若有可疑食物或藥品請一併帶去 ⑥ 用通風的保溫盒運送（冬天加暖暖包但隔絕直接接觸）。'
-      }
-    },
-    {
-      '@type': 'Question',
-      name: '夜間或假日守宮突發狀況怎麼辦？',
-      acceptedAnswer: {
-        '@type': 'Answer',
-        text: '請先撥打名單中標示有夜間或 24 小時的醫院確認當天有醫師值班；多數特寵醫院門診時段固定，無夜間急診。緊急情況下可先進行基礎穩定：保持環境溫度 28–30°C、避免進一步刺激、止血（如有外傷）、並盡快聯絡有經驗的飼主或醫院。建議平時就記下 1–2 間最近的特寵醫院電話。'
-      }
-    }
-  ]
-}
-
 // BreadcrumbList
 const hospBreadcrumbLd = {
   '@context': 'https://schema.org',
@@ -398,8 +283,9 @@ const siteData = computed(() => {
   const dist = hospDistrict.value === 'all' ? '' : hospDistrict.value
   const locationStr = city ? `${city}${dist}` : '全台'
 
-  const title = `${locationStr} 特寵醫院查詢｜爬蟲、守宮、兩棲動物獸醫地圖`
-  const desc = `${locationStr}爬蟲、守宮、兩棲動物等特殊寵物醫院名單（共 ${hospFiltered.value.length} 間），提供電話、地址與 Google Maps 導航。Gencko Breeding Studio 整理之全台特寵獸醫資源，協助飼主在第一時間找到專業醫療協助。`
+  const title = `${locationStr}特寵醫院查詢｜爬蟲、守宮、兩棲動物獸醫地圖`
+  const shareTitle = `${locationStr} 特寵醫院查詢｜爬蟲、守宮、兩棲動物獸醫地圖`
+  const desc = `${locationStr}爬蟲、守宮、兩棲動物等特殊寵物醫院名單，提供電話、地址與 Google Maps 導航。Gencko Breeding Studio 整理之全台特寵獸醫資源，協助飼主在第一時間找到專業醫療協助。`
 
   // ItemList of VeterinaryCare：列出全部（不再 slice 20）
   const itemListLd = {
@@ -452,7 +338,7 @@ const siteData = computed(() => {
     primaryImageOfPage: { '@type': 'ImageObject', url: hospImg },
     speakable: {
       '@type': 'SpeakableSpecification',
-      cssSelector: ['.page-title', '.hosp-name', '.hosp-alert-box']
+      cssSelector: ['h1', '.hosp-name', '.hosp-alert-box']
     },
     publisher: hospPublisher,
     about: [
@@ -460,16 +346,16 @@ const siteData = computed(() => {
       { '@type': 'Taxon', name: 'Eublepharis macularius', alternateName: '豹紋守宮' },
       { '@type': 'Taxon', name: 'Hemitheconyx caudicinctus', alternateName: '肥尾守宮' }
     ],
-    mainEntity: itemListLd,
-    hasPart: [hospFaqLd]
+    mainEntity: itemListLd
   }
 
   return {
     title,
+    shareTitle,
     desc,
     script: [
-      { type: 'application/ld+json', innerHTML: JSON.stringify(webPageLd) },
-      { type: 'application/ld+json', innerHTML: JSON.stringify(hospBreadcrumbLd) }
+      { type: 'application/ld+json', innerHTML: serializeJsonLd(webPageLd) },
+      { type: 'application/ld+json', innerHTML: serializeJsonLd(hospBreadcrumbLd) }
     ]
   }
 })
@@ -484,7 +370,7 @@ useHead({
         '特寵醫院, 特殊寵物醫院, 爬蟲獸醫, 守宮獸醫, 兩棲動物醫院, 豹紋守宮醫院, 肥尾守宮醫院, 守宮急診'
     },
     // Open Graph
-    { property: 'og:title', content: computed(() => siteData.value.title) },
+    { property: 'og:title', content: computed(() => siteData.value.shareTitle) },
     { property: 'og:description', content: computed(() => siteData.value.desc) },
     { property: 'og:image', content: hospImg },
     { property: 'og:image:alt', content: '全台特寵醫院查詢 - Gencko Breeding Studio' },
@@ -492,7 +378,7 @@ useHead({
     { property: 'og:type', content: 'website' },
     // Twitter Card
     { name: 'twitter:card', content: 'summary_large_image' },
-    { name: 'twitter:title', content: computed(() => siteData.value.title) },
+    { name: 'twitter:title', content: computed(() => siteData.value.shareTitle) },
     { name: 'twitter:description', content: computed(() => siteData.value.desc) },
     { name: 'twitter:image', content: hospImg }
   ],
@@ -517,192 +403,28 @@ useHead({
         <h1>特寵醫院查詢</h1>
         <p>以縣市、行政區或關鍵字縮小既有名單；展開後可直接撥號或前往真實 Google Maps 連結。</p>
       </header>
-
-      <aside class="hosp-filter-panel" aria-label="醫院篩選條件">
-        <div class="hosp-alert-box">
-          <span class="icon">i</span>
-          <div class="text-content" role="status" aria-live="polite">
-            <strong>{{ favoriteStorageError ? '暫時無法儲存收藏' : '收藏儲存在這台裝置' }}</strong>
-            <span>
-              {{
-                favoriteStorageError
-                  ? '目前收藏僅保留於本次瀏覽；重新整理後可能不會保留。'
-                  : '清除瀏覽器資料或更換裝置後，收藏紀錄不會保留。'
-              }}
-            </span>
-          </div>
-        </div>
-
-        <label class="hosp-search-group">
-          <span class="hosp-label">名稱或地址</span>
-          <input
-            v-model="hospQuery"
-            ref="hospitalSearch"
-            type="search"
-            class="hosp-search"
-            aria-label="搜尋醫院名稱或地址"
-            placeholder="輸入醫院、路名或行政區"
-          />
-        </label>
-
-        <!-- Filter Section -->
-        <div class="hosp-filter-row">
-          <div class="hosp-select-group">
-            <label class="hosp-label">區域與縣市</label>
-            <select
-              class="hosp-select"
-              :value="hospCity"
-              @change="changeCity($event.target.value)"
-              aria-label="區域與縣市"
-            >
-              <option value="all">所有縣市</option>
-              <option
-                v-if="
-                  hospCity !== 'all' &&
-                  !Object.values(hospitalRegions).some((cities) => cities.includes(hospCity))
-                "
-                :value="hospCity"
-              >
-                {{ hospCity }}
-              </option>
-              <optgroup v-for="(cities, region) in hospitalRegions" :key="region" :label="region">
-                <option
-                  v-for="city in cities"
-                  :key="city"
-                  :value="city"
-                  v-show="hospAvailableCities.has(city)"
-                >
-                  {{ city }}
-                </option>
-              </optgroup>
-            </select>
-            <div class="hosp-select-icon">▼</div>
-          </div>
-          <div class="hosp-select-group">
-            <label class="hosp-label">行政區</label>
-            <select
-              class="hosp-select"
-              v-model="hospDistrict"
-              :disabled="hospCity === 'all'"
-              aria-label="行政區"
-            >
-              <option value="all">所有區域</option>
-              <option v-for="d in hospDistricts" :key="d" :value="d">{{ d }}</option>
-            </select>
-            <div class="hosp-select-icon">▼</div>
-          </div>
-        </div>
-
-        <div class="hosp-filter-actions">
-          <label>
-            <input type="checkbox" v-model="savedOnly" />
-            只看收藏（{{ hospWishlist.length }}）
-          </label>
-          <button type="button" @click="clearFilters">清除篩選</button>
-          <button
-            v-if="isMobile && !mobileMapOpen"
-            ref="mobileMapToggle"
-            type="button"
-            :aria-expanded="mobileMapOpen"
-            aria-controls="hospital-mobile-map"
-            @click="toggleMobileMap"
-          >
-            查看地圖
-          </button>
-        </div>
-        <div class="hosp-count-row" aria-live="polite">
-          <span class="hosp-count">
-            {{
-              hospitalsStatus === 'pending'
-                ? '載入醫院中…'
-                : hospitalsError
-                  ? '暫時無法載入'
-                  : hospFiltered.length + ' 間符合條件'
-            }}
-          </span>
-          <span v-if="hospitalsVerifiedDate" class="hosp-verified">
-            更新 {{ hospitalsVerifiedDate }}
-          </span>
-        </div>
-      </aside>
     </div>
 
     <div
-      v-if="
-        viewportReady &&
-        (!isMobile || mobileMapOpen) &&
-        HOSPITAL_DATA.length &&
-        !hospitalsError &&
-        hospitalsStatus !== 'pending'
-      "
+      v-if="viewportReady"
       ref="mapSection"
       tabindex="-1"
       class="hosp-map-section"
       id="hospital-mobile-map"
     >
-      <div v-if="!isMobile" class="hosp-map-search">
-        <input
-          ref="mapSearch"
-          v-model="hospQuery"
-          type="search"
-          aria-label="在地圖搜尋醫院"
-          placeholder="搜尋醫院、縣市或地址"
-        />
-        <button
-          type="button"
-          :disabled="!hospQuery && hospCity === 'all' && hospDistrict === 'all' && !savedOnly"
-          @click="resetMapFilters"
-        >
-          清除條件
-        </button>
-        <span role="status">
-          {{ hospFiltered.length }} 間符合條件{{ hospDistrict !== 'all' ? ` · ${hospDistrict}` : ''
-          }}{{ savedOnly ? ' · 僅收藏' : '' }}
-        </span>
-      </div>
-      <div v-if="isMobile" class="hosp-mobile-map">
-        <div class="hosp-mobile-map-actions">
-          <strong>院所位置</strong>
-          <button
-            type="button"
-            v-if="mobilePreviewHospital"
-            :aria-pressed="mobileMapInteractive"
-            @click="mobileMapInteractive = !mobileMapInteractive"
-          >
-            {{ mobileMapInteractive ? '停止操作地圖' : '啟用地圖操作' }}
-          </button>
-          <button type="button" @click="closeMobileMap">關閉地圖</button>
-        </div>
-        <label v-if="mobilePreviewHospital" class="hosp-map-picker">
-          <span>選擇預覽院所</span>
-          <select :value="String(mobilePreviewHospital.id)" @change="selectMobilePreview">
-            <option
-              v-for="hospital in hospFiltered"
-              :key="hospital.id"
-              :value="String(hospital.id)"
-            >
-              {{ hospital.name }}
-            </option>
-          </select>
-        </label>
-        <p v-if="mobilePreviewHospital">單院 Google 位置預覽，地址請以院所資料為準。</p>
-        <p v-else class="hosp-map-empty">沒有符合條件的院所，請調整上方篩選。</p>
-        <iframe
-          v-if="mobilePreviewHospital"
-          :src="mobileMapUrl"
-          :title="`${mobilePreviewHospital.name} Google 地圖`"
-          loading="lazy"
-          :tabindex="mobileMapInteractive ? 0 : -1"
-          :class="{ interactive: mobileMapInteractive }"
-        ></iframe>
-      </div>
-      <LazyHospitalMap
-        v-else-if="hospFiltered.length"
+      <LazyHospitalUnifiedMap
+        ref="hospitalMap"
+        :reset-sequence="mapResetSequence"
+        :selection-scope="JSON.stringify([hospCity, hospDistrict, savedOnly])"
         :hospitals="HOSPITAL_DATA"
         :wishlist="hospWishlist"
         :selected="hospCity"
+        :region-label="[hospCity, hospDistrict].filter((value) => value !== 'all').join(' ')"
         :visible-hospitals="hospFiltered"
         :fit-sequence="mapFitSequence"
+        :query="hospQuery"
+        :search-performed="searchPerformed"
+        @search="beginMapSearch"
         :focused-hospital="focusedHospital"
         :focus-sequence="mapFocusSequence"
         @select="changeCity"
@@ -710,140 +432,246 @@ useHead({
         @show-details="showHospitalDetails"
         @clear-hospital="focusedHospital = null"
         @toggle-favorite="toggleHospWishlist"
-      />
-      <div v-else class="hosp-map-empty-state" role="status">
-        <span>沒有符合條件的院所，請調整篩選。</span>
-        <button type="button" @click="resetMapFilters">清除篩選</button>
-      </div>
-    </div>
-
-    <div
-      v-if="
-        isMobile ||
-        hospFiltered.length ||
-        hospitalsStatus === 'pending' ||
-        hospitalsError ||
-        !HOSPITAL_DATA.length
-      "
-      class="hosp-workspace"
-    >
-      <section class="hosp-list-panel" aria-label="特寵醫院清單">
-        <div class="hosp-list-heading">
-          <span>DIRECTORY</span>
-          <strong>點選醫院查看聯絡方式</strong>
-        </div>
-
-        <!-- Hospital List -->
-        <div class="hosp-list">
-          <div v-if="hospitalsStatus === 'pending'" class="hosp-empty" role="status">
-            正在載入醫院名錄…
-          </div>
-          <div v-else-if="hospitalsError" class="hosp-empty" role="alert">
-            <p>醫院名錄暫時無法載入，請稍後重試。</p>
-            <button type="button" @click="refreshHospitals()">重新載入</button>
-          </div>
-          <div v-else-if="!HOSPITAL_DATA.length" class="hosp-empty">目前尚未收錄院所。</div>
-          <div v-else-if="hospFiltered.length === 0" class="hosp-empty">
-            <p>
-              {{
-                savedOnly && !hospWishlist.length
-                  ? '尚未收藏院所，可點擊醫院旁的愛心收藏。'
-                  : '沒有找到符合的醫院，請放寬縣市或關鍵字條件。'
-              }}
-            </p>
-            <button type="button" @click="clearFilters">清除篩選</button>
-          </div>
-
-          <article
-            v-for="h in hospFiltered"
-            :key="h.id"
-            :id="`hospital-${h.id}`"
-            ref="hospitalCards"
-            class="hosp-card"
-            :class="{ expanded: isHospExpanded(h.id) }"
-          >
-            <div class="hosp-header">
-              <button
-                type="button"
-                class="hosp-header-toggle"
-                :aria-expanded="isHospExpanded(h.id)"
-                :aria-controls="`hosp-details-${h.id}`"
-                @click="toggleHospExpand(h.id)"
-              >
-                <h3 class="hosp-name">{{ h.name }}</h3>
-                <div class="hosp-header-right">
-                  <span class="hosp-tag">{{ h.city }} {{ h.district }}</span>
-                  <span
-                    class="hosp-toggle-icon"
-                    :class="{ expanded: isHospExpanded(h.id) }"
-                    aria-hidden="true"
-                  >
-                    ▼
+        @update-query="hospQuery = $event"
+        @interact="cancelPendingMapFit"
+      >
+        <template #filters>
+          <details class="hosp-sidebar-filter-details" :open="!isMobile">
+            <summary>篩選條件</summary>
+            <aside class="hosp-filter-panel hosp-sidebar-filters" aria-label="醫院篩選條件">
+              <div class="hosp-alert-box">
+                <span class="icon">i</span>
+                <div class="text-content" role="status" aria-live="polite">
+                  <strong>
+                    {{ favoriteStorageError ? '暫時無法儲存收藏' : '收藏儲存在這台裝置' }}
+                  </strong>
+                  <span>
+                    {{
+                      favoriteStorageError
+                        ? '目前收藏僅保留於本次瀏覽；重新整理後可能不會保留。'
+                        : '清除瀏覽器資料或更換裝置後，收藏紀錄不會保留。'
+                    }}
                   </span>
                 </div>
-              </button>
-              <button
-                type="button"
-                class="fav-btn hosp-fav-btn"
-                :class="{ active: hospWishlist.includes(h.id) }"
-                :aria-pressed="hospWishlist.includes(h.id)"
-                :aria-label="hospWishlist.includes(h.id) ? `取消收藏 ${h.name}` : `收藏 ${h.name}`"
-                @click="toggleHospWishlist(h.id)"
-              >
-                ❤
-              </button>
-            </div>
-
-            <div :id="`hosp-details-${h.id}`" v-show="isHospExpanded(h.id)" class="hosp-details">
-              <button type="button" class="hosp-map-focus" @click="showHospitalOnMap(h, $event)">
-                在地圖上定位 ↗
-              </button>
-              <p v-if="!hasHospitalLocation(h)" class="hosp-location-note">
-                此院所目前未顯示地圖定位點，請先致電確認地址與看診安排。
-              </p>
-              <a
-                :href="getMapLink(h)"
-                target="_blank"
-                class="hosp-detail-row hosp-link"
-                rel="noopener noreferrer"
-              >
-                <svg
-                  class="hosp-icon"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                >
-                  <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
-                  <circle cx="12" cy="10" r="3"></circle>
-                </svg>
-                <span>{{ h.address }}</span>
-              </a>
-
-              <div class="hosp-detail-row">
-                <span class="hosp-phone-label">TEL</span>
-                <span class="hosp-phone">
-                  {{ hospitalPhone(h.phone).number || '尚未提供電話' }}
-                </span>
-                <span v-if="hospitalPhone(h.phone).extension" class="hosp-phone-extension">
-                  分機 {{ hospitalPhone(h.phone).extension }}
-                </span>
               </div>
 
-              <a
-                v-if="hospitalPhone(h.phone).href"
-                :href="hospitalPhone(h.phone).href"
-                class="hosp-call-btn"
-                @click.stop
-              >
-                撥打電話
-              </a>
-            </div>
-          </article>
-        </div>
-      </section>
+              <!-- Filter Section -->
+              <div class="hosp-filter-row">
+                <div class="hosp-select-group">
+                  <label class="hosp-label">區域與縣市</label>
+                  <select
+                    class="hosp-select"
+                    :value="hospCity"
+                    @change="changeCity($event.target.value)"
+                    aria-label="區域與縣市"
+                  >
+                    <option value="all">所有縣市</option>
+                    <option
+                      v-if="
+                        hospCity !== 'all' &&
+                        !Object.values(hospitalRegions).some((cities) => cities.includes(hospCity))
+                      "
+                      :value="hospCity"
+                    >
+                      {{ hospCity }}
+                    </option>
+                    <optgroup
+                      v-for="(cities, region) in hospitalRegions"
+                      :key="region"
+                      :label="region"
+                    >
+                      <option
+                        v-for="city in cities"
+                        :key="city"
+                        :value="city"
+                        v-show="hospAvailableCities.has(city)"
+                      >
+                        {{ city }}
+                      </option>
+                    </optgroup>
+                  </select>
+                  <div class="hosp-select-icon">▼</div>
+                </div>
+                <div class="hosp-select-group">
+                  <label class="hosp-label">行政區</label>
+                  <select
+                    class="hosp-select"
+                    v-model="hospDistrict"
+                    @change="beginMapSearch"
+                    :disabled="hospCity === 'all'"
+                    aria-label="行政區"
+                  >
+                    <option value="all">所有區域</option>
+                    <option v-for="d in hospDistricts" :key="d" :value="d">{{ d }}</option>
+                  </select>
+                  <div class="hosp-select-icon">▼</div>
+                </div>
+              </div>
+
+              <div class="hosp-filter-actions">
+                <label>
+                  <input type="checkbox" v-model="savedOnly" @change="beginMapSearch" />
+                  只看收藏（{{ hospWishlist.length }}）
+                </label>
+                <button type="button" @click="clearFilters">清除篩選</button>
+              </div>
+              <div class="hosp-count-row" aria-live="polite">
+                <span v-if="hospitalsVerifiedDate" class="hosp-verified">
+                  更新 {{ hospitalsVerifiedDate }}
+                </span>
+              </div>
+              <button v-if="hospitalsError" type="button" @click="refreshHospitals()">
+                重新載入院所
+              </button>
+            </aside>
+          </details>
+        </template>
+        <template #results="{ hospitals: resultHospitals }">
+          <div class="hosp-sidebar-directory">
+            <section class="hosp-list-panel" aria-label="特寵醫院清單">
+              <div class="hosp-list-heading">
+                <span>DIRECTORY</span>
+                <strong>點選醫院查看聯絡方式</strong>
+              </div>
+
+              <!-- Hospital List -->
+              <div class="hosp-list">
+                <div v-if="hospitalsStatus === 'pending'" class="hosp-empty" role="status">
+                  {{ HOSPITAL_DATA.length ? '正在更新醫院名錄…' : '正在載入醫院名錄…' }}
+                </div>
+                <div v-else-if="hospitalsError" class="hosp-empty" role="alert">
+                  <p>
+                    {{
+                      HOSPITAL_DATA.length
+                        ? '名錄更新失敗，暫時顯示上次載入的資料。請稍後重試更新。'
+                        : '醫院名錄暫時無法載入，請稍後重試。'
+                    }}
+                  </p>
+                  <button type="button" @click="refreshHospitals()">重新載入</button>
+                </div>
+                <div v-else-if="!HOSPITAL_DATA.length" class="hosp-empty">目前尚未收錄院所。</div>
+                <div v-else-if="resultHospitals.length === 0" class="hosp-empty">
+                  <p>
+                    {{
+                      hospCity !== 'all'
+                        ? `${[hospCity, hospDistrict].filter((value) => value !== 'all').join(' ')}內沒有符合目前條件的院所，可調整關鍵字或篩選。`
+                        : !hospFiltered.length
+                          ? '沒有符合目前條件的院所，可調整關鍵字或篩選。'
+                          : '目前畫面內沒有符合的院所，可縮小地圖或調整篩選。'
+                    }}
+                  </p>
+                  <button type="button" @click="clearFilters">清除篩選</button>
+                </div>
+
+                <article
+                  v-for="h in resultHospitals"
+                  :key="h.id"
+                  :id="`hospital-${h.id}`"
+                  ref="hospitalCards"
+                  class="hosp-card"
+                  :class="{ expanded: isHospExpanded(h.id) }"
+                >
+                  <div class="hosp-header">
+                    <button
+                      type="button"
+                      class="hosp-header-toggle"
+                      :aria-expanded="isHospExpanded(h.id)"
+                      :aria-controls="`hosp-details-${h.id}`"
+                      @click="toggleHospExpand(h.id)"
+                    >
+                      <h3 class="hosp-name">{{ h.name }}</h3>
+                      <div class="hosp-header-right">
+                        <span class="hosp-tag">{{ h.city }} {{ h.district }}</span>
+                        <span
+                          class="hosp-toggle-icon"
+                          :class="{ expanded: isHospExpanded(h.id) }"
+                          aria-hidden="true"
+                        >
+                          ▼
+                        </span>
+                      </div>
+                    </button>
+                    <button
+                      type="button"
+                      class="fav-btn hosp-fav-btn"
+                      :class="{ active: hospWishlist.includes(h.id) }"
+                      :aria-pressed="hospWishlist.includes(h.id)"
+                      :aria-label="
+                        hospWishlist.includes(h.id) ? `取消收藏 ${h.name}` : `收藏 ${h.name}`
+                      "
+                      @click="toggleHospWishlist(h.id)"
+                    >
+                      ❤
+                    </button>
+                  </div>
+
+                  <div
+                    :id="`hosp-details-${h.id}`"
+                    v-show="isHospExpanded(h.id)"
+                    class="hosp-details"
+                  >
+                    <button
+                      type="button"
+                      class="hosp-map-focus"
+                      @click="showHospitalOnMap(h, $event)"
+                    >
+                      在地圖上定位 ↗
+                    </button>
+                    <p v-if="!hasHospitalLocation(h)" class="hosp-location-note">
+                      此院所目前未顯示地圖定位點，請先致電確認地址與看診安排。
+                    </p>
+                    <a
+                      :href="getMapLink(h)"
+                      target="_blank"
+                      class="hosp-detail-row hosp-link"
+                      rel="noopener noreferrer"
+                    >
+                      <svg
+                        class="hosp-icon"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                      >
+                        <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                        <circle cx="12" cy="10" r="3"></circle>
+                      </svg>
+                      <span>{{ h.address }}</span>
+                    </a>
+
+                    <div class="hosp-detail-row">
+                      <span class="hosp-phone-label">TEL</span>
+                      <span class="hosp-phone">
+                        {{ hospitalPhone(h.phone).number || '尚未提供電話' }}
+                      </span>
+                      <span v-if="hospitalPhone(h.phone).extension" class="hosp-phone-extension">
+                        分機 {{ hospitalPhone(h.phone).extension }}
+                      </span>
+                    </div>
+
+                    <a
+                      v-if="hospitalPhone(h.phone).href"
+                      :href="hospitalPhone(h.phone).href"
+                      class="hosp-call-btn"
+                      @click.stop
+                    >
+                      撥打電話
+                    </a>
+                  </div>
+                </article>
+              </div>
+            </section>
+          </div>
+        </template>
+      </LazyHospitalUnifiedMap>
+      <p v-if="hospitalsStatus === 'pending'" role="status">
+        正在更新院所資料，地圖暫時保留目前位置。
+      </p>
+      <p v-else-if="hospitalsError" role="status">
+        院所資料更新失敗，地圖暫時顯示先前資料，請稍後重試。
+      </p>
     </div>
   </div>
 </template>
@@ -1738,16 +1566,20 @@ useHead({
     padding-bottom: 10px;
   }
 }
-/* 標題與篩選並列；地圖及院所名單各自保留完整內容寬度。 */
+/* 共用一組搜尋與篩選，接續地圖工具列，避免同頁重複展示。 */
 .hosp-intro {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(320px, 0.9fr);
-  gap: 32px;
-  align-items: center;
-  margin-bottom: 14px;
+  display: block;
+  margin-bottom: 8px;
 }
 .hosp-intro .hosp-hero {
   margin: 0;
+  max-width: none;
+}
+.hosp-intro .hosp-hero p {
+  max-width: none;
+}
+:global(#main-content .hosp-page-wrapper .hosp-intro .hosp-hero) {
+  padding-bottom: 0 !important;
 }
 .hosp-intro .hosp-filter-panel {
   position: static;
@@ -1764,6 +1596,182 @@ useHead({
     grid-template-columns: minmax(0, 1fr);
     gap: 6px;
     margin-bottom: 8px;
+  }
+}
+@media (min-width: 768px) and (hover: hover) and (pointer: fine) {
+  .hosp-intro .hosp-filter-panel {
+    display: grid;
+    grid-template-columns: minmax(180px, 1.4fr) minmax(260px, 1.2fr) auto;
+    gap: 8px 12px;
+    padding: 8px 0;
+    border-width: 1px 0;
+  }
+  .hosp-filter-panel .hosp-alert-box,
+  .hosp-filter-panel .hosp-count-row {
+    grid-column: 1 / -1;
+  }
+  .hosp-filter-panel .hosp-alert-box {
+    margin: 0;
+    padding: 4px 0;
+    border: 0;
+    font-size: 12px;
+  }
+  .hosp-alert-box .text-content {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 4px 8px;
+    align-items: baseline;
+  }
+  .hosp-alert-box strong {
+    margin: 0;
+  }
+  .hosp-filter-panel .hosp-search-group,
+  .hosp-filter-panel .hosp-filter-row {
+    margin: 0;
+  }
+  .hosp-filter-panel .hosp-filter-actions {
+    align-self: end;
+    margin: 0;
+  }
+  .hosp-filter-panel .hosp-count-row {
+    padding-top: 4px;
+  }
+}
+@media (min-width: 768px) and (max-width: 1099px) and (hover: hover) and (pointer: fine) {
+  .hosp-intro .hosp-filter-panel {
+    grid-template-columns: minmax(180px, 1fr) minmax(260px, 1fr);
+  }
+  .hosp-filter-panel .hosp-filter-actions {
+    grid-column: 1 / -1;
+  }
+}
+@media (max-width: 767px), (pointer: coarse) {
+  .hosp-header-toggle {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 4px;
+  }
+  .hosp-header-right {
+    justify-content: space-between;
+  }
+  .hosp-name {
+    width: 100%;
+  }
+}
+</style>
+
+<style scoped>
+.hosp-sidebar-filter-details > summary {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 700;
+  border-bottom: 1px solid var(--bd);
+}
+.hosp-sidebar-filters {
+  position: static !important;
+  display: block !important;
+  padding: 0 !important;
+  border: 0 !important;
+  background: transparent;
+}
+.hosp-sidebar-filters .hosp-alert-box {
+  padding: 8px 0;
+  margin: 0 0 10px;
+  border: 0;
+  font-size: 11px;
+  line-height: 1.55;
+}
+.hosp-sidebar-filters .hosp-alert-box .text-content {
+  display: block;
+}
+.hosp-sidebar-filters .hosp-alert-box .text-content > span {
+  display: block;
+}
+.hosp-sidebar-filters .hosp-filter-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin: 0 0 10px;
+}
+.hosp-sidebar-filters .hosp-select {
+  font-size: 14px;
+  padding: 8px 26px 8px 8px;
+  min-height: 44px;
+}
+.hosp-sidebar-filters .hosp-filter-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 10px;
+  margin: 0;
+}
+.hosp-sidebar-filters .hosp-filter-actions label {
+  font-size: 13px;
+}
+.hosp-sidebar-filters .hosp-filter-actions button {
+  min-height: 44px;
+  padding: 6px 10px;
+  font-size: 13px;
+}
+.hosp-sidebar-filters .hosp-count-row {
+  padding-top: 6px;
+  margin-bottom: 0;
+}
+.hosp-sidebar-directory .hosp-list-heading {
+  padding: 0;
+  margin-bottom: 8px;
+  font-size: 12px;
+  gap: 8px;
+}
+.hosp-sidebar-directory .hosp-header {
+  padding: 10px 0;
+  gap: 6px;
+}
+.hosp-sidebar-directory .hosp-header::before {
+  display: none;
+}
+.hosp-sidebar-directory .hosp-header-toggle {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+.hosp-sidebar-directory .hosp-name {
+  font-size: 14px;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.hosp-sidebar-directory .hosp-header-right {
+  justify-content: flex-start;
+  gap: 6px;
+}
+.hosp-sidebar-directory .hosp-tag {
+  font-size: 11px;
+}
+.hosp-sidebar-directory .hosp-fav-btn {
+  flex: 0 0 44px;
+  width: 44px;
+  height: 44px;
+  background: transparent;
+  border: 0;
+  color: var(--txt-muted);
+  text-shadow: none;
+  filter: none;
+}
+.hosp-sidebar-directory .hosp-fav-btn.active {
+  color: var(--pri);
+}
+.hosp-sidebar-directory .hosp-details {
+  padding: 8px 0 12px;
+  font-size: 13px;
+}
+.hosp-sidebar-directory .hosp-empty {
+  padding: 14px 0;
+}
+@media (min-width: 768px) and (hover: hover) and (pointer: fine) {
+  .hosp-sidebar-filter-details > summary {
+    display: none;
   }
 }
 </style>
@@ -1791,7 +1799,8 @@ useHead({
   margin-top: 8px;
   font-size: 12px;
 }
-.hosp-map-picker select {
+.hosp-map-picker select,
+.hosp-map-picker input {
   width: 100%;
   min-width: 0;
   min-height: 44px;
@@ -1844,26 +1853,5 @@ useHead({
   .hosp-map-section {
     scroll-margin-top: 12px;
   }
-}
-.hosp-map-search {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto auto;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 10px;
-}
-.hosp-map-search input,
-.hosp-map-search button {
-  min-height: 44px;
-  padding: 8px 10px;
-  border: 1px solid var(--bd);
-  background: var(--card-bg-solid);
-  color: var(--txt);
-  font: inherit;
-  min-width: 0;
-}
-.hosp-map-search span {
-  font-size: 12px;
-  color: var(--txt-muted);
 }
 </style>

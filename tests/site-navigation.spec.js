@@ -14,9 +14,9 @@ describe('B2 全站資訊架構', () => {
   it('桌機維持四個核准群組與既有預設入口', () => {
     expect(DESKTOP_NAV_GROUPS.map(({ key, label, to }) => ({ key, label, to }))).toEqual([
       { key: 'explore', label: '探索選購', to: '/shop' },
-      { key: 'learn', label: '新手與知識', to: '/start-here' },
-      { key: 'tools', label: '基因與工具', to: '/genes' },
-      { key: 'brand', label: '品牌與購買', to: '/why-gencko' }
+      { key: 'learn', label: '新手必看', to: '/start-here' },
+      { key: 'tools', label: '基因工具', to: '/genes' },
+      { key: 'brand', label: '品牌服務', to: '/why-gencko' }
     ])
   })
 
@@ -56,9 +56,9 @@ describe('B2 全站資訊架構', () => {
     const footerPaths = paths(FOOTER_NAV_GROUPS)
     expect(FOOTER_NAV_GROUPS.map((group) => group.label)).toEqual([
       '探索選購',
-      '新手與知識',
-      '基因與工具',
-      '品牌與服務'
+      '新手知識',
+      '基因工具',
+      '品牌服務'
     ])
     expect(footerPaths).not.toContain('/terms')
     expect(footerPaths).not.toContain('/contact')

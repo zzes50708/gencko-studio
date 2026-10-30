@@ -12,7 +12,7 @@ const is404 = computed(() => statusCode.value === 404)
 const headline = computed(() => (is404.value ? '找不到此頁面' : '出了一點狀況'))
 const subtitle = computed(() =>
   is404.value
-    ? '這個頁面可能已下架、搬家了，或從來不存在。但 Gencko 還有很多地方值得逛。'
+    ? '這個頁面可能已下架、搬家了，或從來不存在。但 Gencko 還有很多地方值得您看。'
     : '伺服器短暫打結，請稍後再試，或從下方入口繼續探索。'
 )
 
@@ -77,7 +77,7 @@ const goCalc = () => clearError({ redirect: '/calculator' })
         rel="noopener"
         class="err-line-link"
       >
-        用 LINE 直接問捷客
+        用 LINE 聯絡 Gencko
       </a>
     </div>
   </div>

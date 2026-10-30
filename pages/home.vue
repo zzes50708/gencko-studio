@@ -1,28 +1,37 @@
 <script setup>
 // 原本首頁內容已搬到 /home（保留舊首頁供導覽使用）
 import { computed, ref, watch } from 'vue'
-import { useHead } from '#imports'
+import { useHead, useAsyncData } from '#imports'
 import { useMainStore } from '~/stores/useMainStore'
 import { getCleanUrl } from '~/utils/image'
 import heroGeckoUrl from '~/assets/NDBE.jpg'
 import HotPicksMarquee from '~/components/home/HotPicksMarquee.vue'
 import { auctionState } from '~/utils/auction-presentation'
+import { recentArticles } from '~/utils/recent-articles'
+import { getWebPage, GECKO_TAXONS } from '~/utils/seo-schemas'
+import { serializeJsonLd } from '~/utils/structured-data'
+import { seoDate } from '~/utils/seo-head'
 
 const store = useMainStore()
+// 與文章列表共用已公開摘要及載入狀態，SSR 即提供可閱讀、可點擊的文章。
+await useAsyncData('published-articles-ready', async () => {
+  await store.loadArticles()
+  return true
+})
 
 useHead({
-  title: 'GENCKO專業選育工作室｜豹紋・肥尾守宮選購與新手飼養',
+  title: 'GENCKO專業守宮選育工作室｜豹紋、肥尾守宮選購與新手飼養輔助',
   meta: [
     {
       name: 'description',
       content:
-        'Gencko Studio 專注於豹紋守宮繁育、提供基因計算機工具、全台特寵醫院地圖，以及豐富的飼養知識專欄。新手入門首選的爬蟲與守宮平台。'
+        'Gencko Studio 專注於豹紋守宮選育、提供基因計算機工具、全台特寵醫院地圖，以及豐富的飼養知識專欄。新手入門首選的爬蟲與守宮平台。'
     },
     {
       name: 'keywords',
       content: '守宮,豹紋守宮,肥尾守宮,守宮選育,守宮選購,守宮飼養,基因計算機,特寵醫院'
     },
-    { property: 'og:title', content: '專業豹紋守宮選育與爬蟲知識 | Gencko Studio' },
+    { property: 'og:title', content: '專業豹紋守宮選育工作室 | Gencko Studio' },
     { property: 'og:description', content: '提供專業守宮選育、基因計算工具與特寵醫療地圖。' },
     { property: 'og:url', content: 'https://www.genckobreeding.com/home' },
     {
@@ -31,29 +40,44 @@ useHead({
         'https://wsrv.nl/?url=raw.githubusercontent.com%2Fzzes50708%2Fgencko-assets%2Fmain%2Fimg%2F11.png&w=1200&h=630&fit=contain&bg=e6e3e3&output=webp&q=85'
     }
   ],
-  script: [
-    {
-      type: 'application/ld+json',
-      innerHTML: JSON.stringify({
-        '@context': 'https://schema.org',
-        '@type': 'WebSite',
-        name: 'Gencko Studio',
-        url: 'https://www.genckobreeding.com/',
-        potentialAction: {
-          '@type': 'SearchAction',
-          target: 'https://www.genckobreeding.com/shop?kw={search_term_string}',
-          'query-input': 'required name=search_term_string'
-        }
-      })
-    }
-  ],
   link: [{ rel: 'canonical', href: 'https://www.genckobreeding.com/home' }]
 })
 
 // 透過 Pinia Store 取得資料
 const loading = computed(() => store.loading)
 const hotList = computed(() => store.hotList)
-const articlesList = computed(() => store.articlesList)
+const articlesList = computed(() => recentArticles(store.articlesList))
+useHead(() => ({
+  script: [
+    {
+      key: 'home-page-schema',
+      type: 'application/ld+json',
+      innerHTML: serializeJsonLd(
+        getWebPage({
+          url: 'https://www.genckobreeding.com/home',
+          name: 'Gencko 守宮選育與飼養知識首頁',
+          about: GECKO_TAXONS,
+          mainEntity: {
+            '@type': 'ItemList',
+            name: '最新文章',
+            numberOfItems: Math.min(4, articlesList.value.length),
+            itemListElement: articlesList.value.slice(0, 4).map((article, index) => ({
+              '@type': 'ListItem',
+              position: index + 1,
+              item: {
+                '@type': 'BlogPosting',
+                headline: article.Title,
+                url: `https://www.genckobreeding.com/articles/${encodeURIComponent(article.ID)}`,
+                datePublished: seoDate(article.PublishDate),
+                description: article.Summary || undefined
+              }
+            }))
+          }
+        })
+      )
+    }
+  ]
+}))
 const auctionList = computed(() => store.auctionList)
 const hotRows = computed(() => {
   const items = hotList.value

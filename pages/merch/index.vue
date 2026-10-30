@@ -151,13 +151,13 @@ useHead({
     {
       name: 'description',
       content:
-        'Gencko 與 Honeycomb 蜂巢工作室協作的客製化爬蟲設備規劃。依塑膠盒或壓克力盒規劃木製爬櫃，選擇抽數、層數、貼皮與加購設備。'
+        'Gencko 與 Honeycomb 蜂巢工作室協作的客製化爬蟲設備規劃。依客戶需求規劃木製爬櫃，選擇抽數、層數、貼皮與加購設備，提供溫控、照明及收納選配。'
     },
     { name: 'keywords', content: '客製化爬蟲設備, 訂製爬櫃, 爬蟲櫃, 爬缸, A4爬櫃, A6爬櫃' },
     { property: 'og:title', content: '客製化爬蟲設備｜Honeycomb 蜂巢工作室協作規劃' },
     {
       property: 'og:description',
-      content: '依盒款、抽數、層數與櫃體尺寸規劃貼皮木櫃，提供溫控、照明及收納選配。'
+      content: '依客戶需求規劃木製爬櫃，選擇抽數、層數、貼皮與加購設備，提供溫控、照明及收納選配。'
     },
     { property: 'og:type', content: 'website' },
     { property: 'og:url', content: 'https://www.genckobreeding.com/merch' }

@@ -1,4 +1,6 @@
 ﻿<script setup>
+import { TAXON_LEOPARD_GECKO, TAXON_FAT_TAIL_GECKO, TAXON_HOGNOSE_SNAKE } from '~/utils/seo-schemas'
+import { serializeJsonLd } from '~/utils/structured-data'
 import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import { useHead } from '#imports'
 import { useMainStore } from '~/stores/useMainStore'
@@ -58,33 +60,14 @@ const calcAppLd = {
     '孟德爾遺傳定律子代機率計算',
     'Het（雜合）基因推算',
     '共顯性與不完全顯性表現型機率',
-    '多基因（Polygenic）表現型分布',
+    '多基因（Polygenic）特徵與選育限制說明',
     '反向匹配（Reverse Match）：由子代反推親代',
     '致死基因組合偵測（如肥尾立可白 Super White Out）',
     '支援豹紋守宮 / 肥尾守宮 / 豬鼻蛇'
   ],
   publisher: calcPublisher,
   author: calcPublisher,
-  about: [
-    {
-      '@type': 'Taxon',
-      name: 'Eublepharis macularius',
-      alternateName: '豹紋守宮',
-      sameAs: 'https://www.wikidata.org/wiki/Q185061'
-    },
-    {
-      '@type': 'Taxon',
-      name: 'Hemitheconyx caudicinctus',
-      alternateName: '肥尾守宮',
-      sameAs: 'https://www.wikidata.org/wiki/Q913571'
-    },
-    {
-      '@type': 'Taxon',
-      name: 'Heterodon nasicus',
-      alternateName: '豬鼻蛇',
-      sameAs: 'https://www.wikidata.org/wiki/Q914251'
-    }
-  ]
+  about: [TAXON_LEOPARD_GECKO, TAXON_FAT_TAIL_GECKO, TAXON_HOGNOSE_SNAKE]
 }
 
 // HowTo：如何使用基因計算機
@@ -124,63 +107,7 @@ const calcHowToLd = {
       '@type': 'HowToStep',
       position: 5,
       name: '解讀計算結果',
-      text: '結果區會列出所有可能的子代基因型與其發生機率（25% / 50% / 75%）；多基因表現型則以機率分布呈現；致死組合會被標示。'
-    }
-  ]
-}
-
-// FAQPage：常見問題
-const calcFaqLd = {
-  '@type': 'FAQPage',
-  '@id': `${calcUrl}#faq`,
-  mainEntity: [
-    {
-      '@type': 'Question',
-      name: '基因計算機是怎麼算出子代機率的？',
-      acceptedAnswer: {
-        '@type': 'Answer',
-        text: '依據孟德爾遺傳定律（隱性、顯性、共顯性）計算等位基因組合機率。每一個子代基因型的機率為 25%、50% 或 75%，取決於親代為純合 (homo) 或雜合 (het)。多基因表現型（如高黃、橘化、土匪）由多個基因座共同決定，無法用單一比例預測，計算機會以機率分布形式呈現。'
-      }
-    },
-    {
-      '@type': 'Question',
-      name: '「Het」是什麼意思？',
-      acceptedAnswer: {
-        '@type': 'Answer',
-        text: 'Het 是 Heterozygous（雜合）的縮寫，表示個體攜帶一份等位基因但外觀未表現。例如「Het Tremper Albino」代表個體帶有一份隱性 Tremper 白化基因但外觀為正常型。將兩隻 Het 個體配對，理論上有 25% 機率產出純合白化子代。'
-      }
-    },
-    {
-      '@type': 'Question',
-      name: '基因計算機支援哪些物種？',
-      acceptedAnswer: {
-        '@type': 'Answer',
-        text: '目前支援豹紋守宮（Eublepharis macularius）、肥尾守宮（Hemitheconyx caudicinctus）與豬鼻蛇（Heterodon nasicus），未來會持續擴充。可在頁面上方切換物種類別與物種。'
-      }
-    },
-    {
-      '@type': 'Question',
-      name: '多基因（Polygenic）能用計算機算嗎？',
-      acceptedAnswer: {
-        '@type': 'Answer',
-        text: '多基因表現型（如橘化 Tangerine、高黃 High Yellow、土匪 Bandit）由多個基因座共同決定，無法以單一機率預測。計算機會顯示表現型機率分布，但實際個體變異會受血統選育與環境影響，建議搭配父母外觀與血統紀錄一併判斷。'
-      }
-    },
-    {
-      '@type': 'Question',
-      name: '反向匹配（Reverse Match）是什麼？',
-      acceptedAnswer: {
-        '@type': 'Answer',
-        text: '反向匹配讓你輸入想要的子代基因型，計算機會反推最有可能產出該子代的親代組合。在任一張卡片切換為「子代」即可啟動反向模式，適用於規劃育種計畫時尋找合適親代。'
-      }
-    },
-    {
-      '@type': 'Question',
-      name: '致死基因會被偵測嗎？',
-      acceptedAnswer: {
-        '@type': 'Answer',
-        text: '會。例如肥尾守宮的「立可白（White Out）」屬於共顯性致死基因，雙份等位基因組合（Super White Out）會在胚胎期致死。計算機會在結果中標示無效或致死組合，協助繁育者避免錯誤配對。'
-      }
+      text: '結果區列出可能子代基因型與機率，並標示致死組合。多基因特徵無法以傳統遺傳法則精確計算機率，請搭配親代表現與選育紀錄判斷。'
     }
   ]
 }
@@ -207,19 +134,19 @@ const calcWebPageLd = {
   primaryImageOfPage: { '@type': 'ImageObject', url: calcImg },
   speakable: {
     '@type': 'SpeakableSpecification',
-    cssSelector: ['.seo-hint', '.calc-help-hint-text']
+    cssSelector: ['h1', '.calc-help-hint-text']
   },
   mainEntity: calcAppLd,
-  hasPart: [calcHowToLd, calcFaqLd]
+  hasPart: [calcHowToLd]
 }
 
 useHead({
-  title: '基因計算機｜守宮配對子代機率推算（孟德爾、Het、致死偵測）',
+  title: '基因計算機｜守宮配對子代機率推算',
   meta: [
     {
       name: 'description',
       content:
-        'Gencko 基因計算機：線上模擬豹紋守宮、肥尾守宮與豬鼻蛇的配對子代機率，依孟德爾遺傳定律計算隱性、顯性、共顯性、多基因（Polygenic）、Het 雜合推算與反向匹配，並偵測致死基因組合。'
+        'Gencko 基因計算機：模擬豹紋守宮、肥尾守宮與豬鼻蛇的孟德爾遺傳、Het 與反向配對機率，標示致死組合；多基因特徵提供選育限制說明。'
     },
     {
       name: 'keywords',
@@ -227,7 +154,7 @@ useHead({
         '基因計算機, 守宮基因計算機, 豹紋守宮基因, 肥尾守宮基因, 豬鼻蛇基因, Morph Calculator, Het, 孟德爾遺傳, 子代機率, 反向匹配, 致死基因'
     },
     // Open Graph
-    { property: 'og:title', content: '基因計算機｜守宮配對子代機率推算（孟德爾、Het、致死偵測）' },
+    { property: 'og:title', content: '基因計算機｜守宮配對子代機率推算' },
     {
       property: 'og:description',
       content:
@@ -249,8 +176,8 @@ useHead({
   ],
   link: [{ rel: 'canonical', href: calcUrl }],
   script: [
-    { type: 'application/ld+json', innerHTML: JSON.stringify(calcWebPageLd) },
-    { type: 'application/ld+json', innerHTML: JSON.stringify(calcBreadcrumbLd) }
+    { type: 'application/ld+json', innerHTML: serializeJsonLd(calcWebPageLd) },
+    { type: 'application/ld+json', innerHTML: serializeJsonLd(calcBreadcrumbLd) }
   ]
 })
 

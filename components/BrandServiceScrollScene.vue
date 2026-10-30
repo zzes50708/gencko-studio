@@ -512,7 +512,7 @@ const geneTokens = computed(() => {
         <h1 v-if="scene.hero && idx === 0" class="scene-title scene-title--hero">
           <!-- eslint-disable-next-line vue/no-v-html -->
           <span v-html="scene.title" />
-          <span class="sr-only">｜台灣豹紋守宮專業繁育工作室</span>
+          <span class="sr-only">｜台灣豹紋守宮專業選育工作室</span>
         </h1>
         <!-- eslint-disable-next-line vue/no-v-html -->
         <h2 v-else-if="scene.hero" class="scene-title scene-title--hero" v-html="scene.title" />

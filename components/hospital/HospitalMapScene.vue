@@ -69,19 +69,21 @@ const emit = defineEmits([
   'labels',
   'ready',
   'lost',
+  'restored',
   'metrics',
   'building-error',
   'building-labels',
   'hospital-clusters',
   'request-command',
-  'tile-status'
+  'tile-status',
+  'gesture-start'
 ])
 const { renderer, sizes, invalidate } = useTres()
 const { start, stop, isActive, onBeforeRender, onRender } = useLoop()
 const camera = shallowRef<PerspectiveCamera>()
 const root = markRaw(new Group())
 let tileCount = 0
-let tilePlaces: TilePlace[] = []
+let tilePlaces: (TilePlace & { worldX: number; worldZ: number; key: string })[] = []
 let buildingTilesEnabled = false
 let tileTimer: ReturnType<typeof setTimeout> | null = null
 const tileLayer = new HospitalTileLayer((status) => {
@@ -89,7 +91,15 @@ const tileLayer = new HospitalTileLayer((status) => {
   tilePlaces = [
     ...status.places.filter((place) => place.category !== 'road'),
     ...status.places.filter((place) => place.category === 'road')
-  ]
+  ].map((place) => {
+    const [worldX, worldZ] = projectTaiwanCoordinate(place.longitude, place.latitude)
+    return {
+      ...place,
+      worldX,
+      worldZ,
+      key: `${place.name}/${place.longitude.toFixed(6)}/${place.latitude.toFixed(6)}`
+    }
+  })
   emit('tile-status', {
     loading: status.loading,
     failed: status.failed,
@@ -443,6 +453,7 @@ async function previewBuildings() {
 let settled = false
 let mounted = false
 let frames = 0
+let lastMetricsEmit = 0
 let lastTimestamp = 0
 let canvas: HTMLCanvasElement | undefined
 let inputSurface: HTMLElement | undefined
@@ -462,10 +473,13 @@ const pointers = new Map<
 const ground = new Plane(new Vector3(0, 1, 0), -0.00001)
 const panStart = new Vector3()
 const panEnd = new Vector3()
+let gestureRect: DOMRect | null = null
+let hospitalAnchors: { id: string | number; x: number; z: number }[] = []
 
 function pan(fromX: number, fromY: number, toX: number, toY: number) {
   if (!canvas || !camera.value) return
-  const rect = canvas.getBoundingClientRect()
+  const rect = gestureRect || (gestureRect = canvas.getBoundingClientRect())
+  if (!rect.width || !rect.height) return
   const intersect = (x: number, y: number, target: Vector3) => {
     pointer.set(((x - rect.left) / rect.width) * 2 - 1, 1 - ((y - rect.top) / rect.height) * 2)
     raycaster.setFromCamera(pointer, camera.value!)
@@ -510,8 +524,10 @@ function focusCity() {
   wake()
 }
 
+let contextLost = false
 function wake() {
-  if (!mounted || !props.active) return
+  if (!mounted || !props.active || contextLost) return
+  if (settled) lastMetricsEmit = 0
   settled = false
   invalidate()
   if (!isActive.value) start()
@@ -523,11 +539,15 @@ function updateData() {
   const favorites = new Set(props.wishlist.map(String))
   markers = ensureHospitalMarkerCapacity(markers, props.hospitals.length)
   markers.count = props.hospitals.length
+  hospitalAnchors = props.hospitals.map((hospital) => {
+    const [x, z] = projectTaiwanCoordinate(hospital.longitude!, hospital.latitude!)
+    return { id: hospital.id, x, z }
+  })
   props.hospitals.forEach((hospital, i) => {
-    const point = projectTaiwanCoordinate(hospital.longitude!, hospital.latitude!)
-    const scale = props.selected === 'all' || hospital.city === props.selected ? 1 : 0.55
-    matrix.makeScale(scale, scale, scale)
-    matrix.setPosition(point[0], 0.00003, point[1])
+    const point = hospitalAnchors[i]!
+    // 院名由可操作的 HTML 標記呈現，隱藏的實例不必隨相機逐幀上傳。
+    matrix.makeScale(0, 0, 0)
+    matrix.setPosition(point.x, 0.00003, point.z)
     markers.setMatrixAt(i, matrix)
     markers.setColorAt(
       i,
@@ -540,7 +560,9 @@ function updateData() {
 }
 
 function setZoom(value: number) {
-  viewTarget.zoom = Math.min(2000, Math.max(0.7, value))
+  const next = Math.min(2000, Math.max(0.7, value))
+  if (next === viewTarget.zoom) return
+  viewTarget.zoom = next
   wake()
 }
 const zoomCamera = new PerspectiveCamera()
@@ -571,6 +593,7 @@ function updateCameraPose(cam: PerspectiveCamera, view: typeof viewTarget) {
   cam.updateMatrixWorld()
 }
 function zoomAtPointer(value: number, x?: number, y?: number) {
+  if (Math.min(2000, Math.max(0.7, value)) === viewTarget.zoom) return
   if (!canvas || !camera.value || x === undefined || y === undefined) {
     setZoom(value)
     return
@@ -662,7 +685,7 @@ function runCommand(action: string) {
   }
 }
 function onPointerDown(event: PointerEvent) {
-  if (event.button !== 0) return
+  if (event.button !== 0 || contextLost || !props.active) return
   const target = event.target instanceof Element ? event.target : null
   if (
     target?.closest(
@@ -670,6 +693,8 @@ function onPointerDown(event: PointerEvent) {
     )
   )
     return
+  emit('gesture-start')
+  if (!pointers.size) gestureRect = canvas?.getBoundingClientRect() || null
   const interactive = !!target?.closest('.map-cluster,.map-building-label,.map-pin')
   if (!interactive) canvas?.focus({ preventScroll: true })
   pointers.set(event.pointerId, {
@@ -752,11 +777,15 @@ function onPointerUp(event: PointerEvent) {
     const hit = raycaster.intersectObjects(proxies, false)[0]
     if (hit && viewCurrent.zoom < 60) emit('select', hit.object.userData.city)
   }
-  if (!pointers.size) touchedMultiple = false
+  if (!pointers.size) {
+    touchedMultiple = false
+    gestureRect = null
+  }
 }
 function onPointerCancel(event: PointerEvent) {
   pointers.delete(event.pointerId)
   if (!pointers.size) {
+    gestureRect = null
     touchedMultiple = false
     if (canvas) canvas.style.cursor = 'grab'
   }
@@ -764,14 +793,26 @@ function onPointerCancel(event: PointerEvent) {
 function onContextMenu(event: Event) {
   event.preventDefault()
 }
+function onDoubleClick(event: MouseEvent) {
+  if (contextLost || !props.active || event.ctrlKey || event.metaKey || event.altKey) return
+  event.preventDefault()
+  emit('gesture-start')
+  zoomAtPointer(viewTarget.zoom * (event.shiftKey ? 0.5 : 2), event.clientX, event.clientY)
+}
 function onKey(event: KeyboardEvent) {
+  if (contextLost || !props.active) return
   if (event.ctrlKey || event.metaKey || event.altKey || event.isComposing) return
-  if (!['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', '+', '=', '-', '0'].includes(event.key))
+  if (
+    !['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', '+', '=', '-', '0', 'Home'].includes(
+      event.key
+    )
+  )
     return
   event.preventDefault()
+  emit('gesture-start')
   if (['+', '='].includes(event.key)) runCommand('in')
   else if (event.key === '-') runCommand('out')
-  else if (event.key === '0') emit('request-command', 'reset')
+  else if (event.key === '0' || event.key === 'Home') emit('request-command', 'reset')
   else {
     const step = 0.5 / viewTarget.zoom
     viewTarget.x += event.key === 'ArrowLeft' ? -step : event.key === 'ArrowRight' ? step : 0
@@ -781,12 +822,18 @@ function onKey(event: KeyboardEvent) {
 }
 function onContextLost(event: Event) {
   event.preventDefault()
+  contextLost = true
   stop()
   emit('lost')
 }
+function onContextRestored() {
+  contextLost = false
+  emit('restored')
+  wake()
+}
 
 const beforeHook = onBeforeRender(({ delta }) => {
-  if (!camera.value || !props.active) {
+  if (!camera.value || !props.active || contextLost) {
     stop()
     return
   }
@@ -800,12 +847,8 @@ const beforeHook = onBeforeRender(({ delta }) => {
   viewCurrent.elevation += (viewTarget.elevation - viewCurrent.elevation) * alpha
   updateCameraPose(camera.value, viewCurrent)
   // 隨縮放保持定位點可辨識，避免近距離時球體遮住整張圖。
-  const favorites = new Set(props.wishlist.map(String))
   const hospitalPoints: { id: string | number; x: number; y: number }[] = []
-  props.hospitals.forEach((hospital, i) => {
-    const [x, z] = projectTaiwanCoordinate(hospital.longitude!, hospital.latitude!)
-    const focused = String(hospital.id) === String(props.focusedHospital?.id)
-    const scale = 0
+  hospitalAnchors.forEach(({ id, x, z }) => {
     projected.set(x, 0.00003, z).project(camera.value)
     const screenX = ((projected.x + 1) / 2) * sizes.width.value
     const screenY = ((-projected.y + 1) / 2) * sizes.height.value
@@ -815,19 +858,10 @@ const beforeHook = onBeforeRender(({ delta }) => {
       screenY > 22 &&
       screenY < sizes.height.value - 22
     )
-      hospitalPoints.push({ id: hospital.id, x: screenX, y: screenY })
-    matrix.makeScale(scale, scale, scale)
-    matrix.setPosition(x, 0.00003 + 0.04 / viewCurrent.zoom, z)
-    markers.setMatrixAt(i, matrix)
-    markers.setColorAt(
-      i,
-      tint.set(
-        focused ? '#ffb06e' : favorites.has(String(hospital.id)) ? colors.saved : colors.marker
-      )
-    )
+      hospitalPoints.push({ id, x: screenX, y: screenY })
   })
-  refreshHospitalMarkerBounds(markers)
   const clusters = clusterScreenHospitals(hospitalPoints, 70, true, sizes.width.value)
+  const clusterBounds = clusters.map((cluster) => hospitalMarkerBounds(cluster, sizes.width.value))
   emit('hospital-clusters', clusters)
   const buildingLabels: {
     name: string
@@ -858,10 +892,9 @@ const beforeHook = onBeforeRender(({ delta }) => {
       )
     )
     for (const place of tilePlaces) {
-      const key = `${place.name}/${place.longitude.toFixed(6)}/${place.latitude.toFixed(6)}`
+      const key = place.key
       if (names.has(key)) continue
-      const [worldX, worldZ] = projectTaiwanCoordinate(place.longitude, place.latitude)
-      projected.set(worldX, 0.00004, worldZ).project(camera.value)
+      projected.set(place.worldX, 0.00004, place.worldZ).project(camera.value)
       const x = ((projected.x + 1) / 2) * sizes.width.value,
         y = ((-projected.y + 1) / 2) * sizes.height.value
       if (x < 95 || x > sizes.width.value - 95 || y < 50 || y > sizes.height.value - 55) continue
@@ -870,8 +903,7 @@ const beforeHook = onBeforeRender(({ delta }) => {
         continue
       // 院所標記優先保留點擊空間，避免一般地標蓋住醫院。
       if (
-        clusters.some((cluster) => {
-          const bounds = hospitalMarkerBounds(cluster, sizes.width.value)
+        clusterBounds.some((bounds) => {
           return (
             x + 95 > bounds.left &&
             x - 95 < bounds.right &&
@@ -931,23 +963,26 @@ const afterHook = onRender(() => {
   frames++
   const now = performance.now()
   const info = (renderer as WebGLRenderer).info
-  emit('metrics', {
-    frames,
-    zoom: viewCurrent.zoom,
-    calls: info.render.calls,
-    triangles: info.render.triangles,
-    geometries: info.memory.geometries,
-    idle: settled,
-    frameMs: lastTimestamp ? Math.round(now - lastTimestamp) : 0,
-    buildings:
-      tileCount ||
-      (viewCurrent.zoom >= 60 &&
-      Math.abs(viewCurrent.x - projectTaiwanCoordinate(121.564, 25.033)[0]) < 0.035 &&
-      Math.abs(viewCurrent.z - projectTaiwanCoordinate(121.564, 25.033)[1]) < 0.035
-        ? buildingCount
-        : 0),
-    cameraType: camera.value?.type || ''
-  })
+  if (settled || now - lastMetricsEmit >= 100) {
+    lastMetricsEmit = now
+    emit('metrics', {
+      frames,
+      zoom: viewCurrent.zoom,
+      calls: info.render.calls,
+      triangles: info.render.triangles,
+      geometries: info.memory.geometries,
+      idle: settled,
+      frameMs: lastTimestamp ? Math.round(now - lastTimestamp) : 0,
+      buildings:
+        tileCount ||
+        (viewCurrent.zoom >= 60 &&
+        Math.abs(viewCurrent.x - projectTaiwanCoordinate(121.564, 25.033)[0]) < 0.035 &&
+        Math.abs(viewCurrent.z - projectTaiwanCoordinate(121.564, 25.033)[1]) < 0.035
+          ? buildingCount
+          : 0),
+      cameraType: camera.value?.type || ''
+    })
+  }
   lastTimestamp = now
   requestViewTiles()
   if (settled) stop()
@@ -973,20 +1008,24 @@ watch(
       for (const id of pointers.keys())
         if (canvas?.hasPointerCapture(id)) canvas.releasePointerCapture(id)
       pointers.clear()
+      gestureRect = null
       if (canvas) canvas.style.cursor = 'grab'
       touchedMultiple = false
       stop()
     }
   }
 )
-watch([sizes.width, sizes.height, () => props.compact], wake)
+watch([sizes.width, sizes.height, () => props.compact], () => {
+  gestureRect = null
+  wake()
+})
 onMounted(() => {
   mounted = true
   canvas = renderer.domElement as HTMLCanvasElement
   canvas.tabIndex = 0
   canvas.setAttribute(
     'aria-label',
-    '立體特寵醫院地圖：垂直俯視，拖曳或方向鍵平移，滾輪縮放，加減鍵縮放，0 重設'
+    '立體特寵醫院地圖：拖曳或方向鍵平移，滾輪或雙擊縮放，加減鍵縮放，Home 或 0 重設'
   )
   canvas.style.touchAction = 'none'
   canvas.style.cursor = 'grab'
@@ -998,7 +1037,9 @@ onMounted(() => {
   inputSurface.addEventListener('lostpointercapture', onPointerCancel)
   canvas.addEventListener('contextmenu', onContextMenu)
   canvas.addEventListener('keydown', onKey)
+  canvas.addEventListener('dblclick', onDoubleClick)
   canvas.addEventListener('webglcontextlost', onContextLost)
+  canvas.addEventListener('webglcontextrestored', onContextRestored)
   emit('ready')
   wake()
 })
@@ -1018,7 +1059,9 @@ onUnmounted(() => {
   inputSurface?.removeEventListener('lostpointercapture', onPointerCancel)
   canvas?.removeEventListener('contextmenu', onContextMenu)
   canvas?.removeEventListener('keydown', onKey)
+  canvas?.removeEventListener('dblclick', onDoubleClick)
   canvas?.removeEventListener('webglcontextlost', onContextLost)
+  canvas?.removeEventListener('webglcontextrestored', onContextRestored)
   pointers.clear()
   const geometries = new Set<BufferGeometry>()
   const materials = new Set<Material>()

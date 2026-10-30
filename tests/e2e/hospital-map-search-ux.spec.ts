@@ -28,7 +28,7 @@ test.beforeEach(async ({ page }) => {
   })
 })
 test('在地圖搜尋自動定位，不移走搜尋焦點，直接電話及收藏', async ({ page }) => {
-  const input = page.getByRole('searchbox', { name: '在地圖搜尋醫院', exact: true })
+  const input = page.getByRole('searchbox', { name: '搜尋醫院名稱或地址', exact: true })
   await input.scrollIntoViewIfNeeded()
   const scroll = await page.evaluate(() => scrollY)
   await input.fill('測試院所12')
@@ -47,7 +47,7 @@ test('在地圖搜尋自動定位，不移走搜尋焦點，直接電話及收�
   )
 })
 test('零結果仍可在原處修改與清除搜尋', async ({ page }) => {
-  const input = page.getByRole('searchbox', { name: '在地圖搜尋醫院', exact: true })
+  const input = page.getByRole('searchbox', { name: '搜尋醫院名稱或地址', exact: true })
   await input.fill('不存在院所')
   await expect(page.locator('.hosp-map-empty-state')).toBeVisible()
   await expect(input).toBeFocused()
@@ -63,7 +63,7 @@ test('零結果仍可在原處修改與清除搜尋', async ({ page }) => {
 })
 
 test('站內返回醫院頁時還原搜尋並自動定位', async ({ page }) => {
-  await page.getByRole('searchbox', { name: '在地圖搜尋醫院', exact: true }).fill('測試院所12')
+  await page.getByRole('searchbox', { name: '搜尋醫院名稱或地址', exact: true }).fill('測試院所12')
   await expect(page.locator('.map-hospital-detail')).toContainText('測試院所12')
   await page
     .locator('a[href="/qs"]')
@@ -71,9 +71,9 @@ test('站內返回醫院頁時還原搜尋並自動定位', async ({ page }) => 
     .evaluate((element) => (element as HTMLAnchorElement).click())
   await expect(page).toHaveURL(/\/qs$/)
   await page.getByRole('link', { name: '查找特寵醫院', exact: true }).click()
-  await expect(page.getByRole('searchbox', { name: '在地圖搜尋醫院', exact: true })).toHaveValue(
-    '測試院所12'
-  )
+  await expect(
+    page.getByRole('searchbox', { name: '搜尋醫院名稱或地址', exact: true })
+  ).toHaveValue('測試院所12')
   await expect(page.locator('.map-hospital-detail')).toContainText('測試院所12')
   await expect
     .poll(async () => Number(await page.locator('.map-stage').getAttribute('data-map-zoom')))
@@ -125,7 +125,7 @@ test('只看收藏時取消其中一間，自動定位剩餘院所', async ({ pa
 })
 
 test('搜尋後立即選院所，延遲取景不蓋掉使用者選擇', async ({ page }) => {
-  await page.getByRole('searchbox', { name: '在地圖搜尋醫院', exact: true }).fill('測試院所1')
+  await page.getByRole('searchbox', { name: '搜尋醫院名稱或地址', exact: true }).fill('測試院所1')
   await page
     .locator('.map-preview-list')
     .getByRole('button', { name: /測試院所12/ })

@@ -1,9 +1,12 @@
 <script setup>
+import { TAXON_LEOPARD_GECKO } from '~/utils/seo-schemas'
 import { computed, onMounted, ref, watch, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useHead, useAsyncData, useSupabaseClient } from '#imports'
 import { useMainStore } from '~/stores/useMainStore'
 import { getCleanUrl } from '~/utils/image'
+import { serializeJsonLd } from '~/utils/structured-data'
+import { seoDate } from '~/utils/seo-head'
 import { autoLinkGenes } from '~/utils/auto-link'
 
 // 🌟 強制每個不同 URL 建立獨立元件實例，防止 CSR 元件複用導致 useAsyncData 不重新抓取
@@ -45,8 +48,11 @@ const goToChapter = () => {
           getComputedStyle(document.documentElement).getPropertyValue('--site-nav-height')
         ) || 64) + 12
   const lenis = window.__lenis
-  if (lenis) lenis.scrollTo(target, { offset: -offset, immediate: reduce })
-  else
+  if (lenis) {
+    // 站內切換後正文高度可能尚未被平滑捲動更新，先同步尺寸以免章節定位過早停止。
+    lenis.resize()
+    lenis.scrollTo(target, { offset: -offset, immediate: reduce })
+  } else
     window.scrollTo({
       top: target.getBoundingClientRect().top + window.scrollY - offset,
       behavior: reduce ? 'instant' : 'smooth'
@@ -146,13 +152,8 @@ const siteData = computed(() => {
     const imgUrl = getCleanUrl(art.ImageURL)
     const artUrl = `https://www.genckobreeding.com/articles/${art.ID}`
 
-    // 🌟 修正 SSR 崩潰 Bug：加入 try-catch 保護日期解析
-    let isoDate = ''
-    try {
-      isoDate = art.PublishDate ? new Date(art.PublishDate).toISOString() : new Date().toISOString()
-    } catch (e) {
-      isoDate = new Date().toISOString() // 若日期格式錯誤，使用當下時間作為預設值
-    }
+    // 沒有真實發佈日期時省略，不把抓取當下時間當作文章更新。
+    const isoDate = seoDate(art.PublishDate)
 
     // 純文字內文 + 字數（截 5000 字避免 schema.org payload 過大）
     const plainBody = htmlToText(art.Content)
@@ -171,17 +172,11 @@ const siteData = computed(() => {
       headline: art.Title,
       image: [imgUrl],
       datePublished: isoDate,
-      dateModified: isoDate,
       author: [
         {
-          '@type': 'Person',
+          '@type': !art.Author || /gencko/i.test(art.Author) ? 'Organization' : 'Person',
           name: art.Author || 'Gencko Breeding Studio',
-          url: 'https://www.genckobreeding.com/about',
-          worksFor: {
-            '@type': 'Organization',
-            name: 'Gencko Breeding Studio',
-            alternateName: ['Gencko Studio']
-          }
+          url: 'https://www.genckobreeding.com/about'
         }
       ],
       publisher: {
@@ -203,12 +198,7 @@ const siteData = computed(() => {
       },
       mainEntityOfPage: { '@type': 'WebPage', '@id': artUrl },
       inLanguage: 'zh-TW',
-      about: {
-        '@type': 'Taxon',
-        name: 'Eublepharis macularius',
-        alternateName: '豹紋守宮',
-        sameAs: 'https://www.wikidata.org/wiki/Q185061'
-      },
+      about: TAXON_LEOPARD_GECKO,
       description: art.Summary,
       articleSection: art.Category || undefined,
       articleBody: articleBodyTrimmed || undefined,
@@ -220,27 +210,7 @@ const siteData = computed(() => {
       }
     }
 
-    // FAQPage：後台 articles.faq 填了內容才會產生（AEO snippet 命中關鍵）
-    // 條件：faq 為非空陣列，且每筆都有 q 與 a
-    const faqValid = (art.Faq || []).filter(
-      (x) => x && typeof x.q === 'string' && typeof x.a === 'string' && x.q.trim() && x.a.trim()
-    )
-    const faqPageLd = faqValid.length
-      ? {
-          '@type': 'FAQPage',
-          '@id': `${artUrl}#faq`,
-          mainEntity: faqValid.map((x) => ({
-            '@type': 'Question',
-            name: x.q.trim(),
-            acceptedAnswer: {
-              '@type': 'Answer',
-              text: x.a.trim()
-            }
-          }))
-        }
-      : null
-
-    // WebPage 包 BlogPosting 為 mainEntity；有 FAQ 時加入 hasPart
+    // 問答未顯示在本文，不輸出隱藏的 FAQ 標記；可見問答由 FAQ 頁負責。
     const webPageLd = {
       '@context': 'https://schema.org',
       '@type': 'WebPage',
@@ -251,9 +221,7 @@ const siteData = computed(() => {
       isPartOf: { '@type': 'WebSite', '@id': 'https://www.genckobreeding.com/#website' },
       primaryImageOfPage: { '@type': 'ImageObject', url: imgUrl },
       datePublished: isoDate,
-      dateModified: isoDate,
-      mainEntity: blogPosting,
-      ...(faqPageLd ? { hasPart: [faqPageLd] } : {})
+      mainEntity: blogPosting
     }
 
     const breadcrumb = {
@@ -287,8 +255,8 @@ const siteData = computed(() => {
       authorName: art.Author || 'Gencko Breeding Studio',
       tags: kwArray,
       script: [
-        { type: 'application/ld+json', innerHTML: JSON.stringify(webPageLd) },
-        { type: 'application/ld+json', innerHTML: JSON.stringify(breadcrumb) }
+        { type: 'application/ld+json', innerHTML: serializeJsonLd(webPageLd) },
+        { type: 'application/ld+json', innerHTML: serializeJsonLd(breadcrumb) }
       ]
     }
   }
@@ -321,7 +289,6 @@ useHead({
     { property: 'og:type', content: 'article' },
     // Article-specific OG（FB / LinkedIn 爬蟲使用）
     { property: 'article:published_time', content: computed(() => siteData.value.isoDate) },
-    { property: 'article:modified_time', content: computed(() => siteData.value.isoDate) },
     { property: 'article:author', content: computed(() => siteData.value.authorName) },
     { property: 'article:section', content: computed(() => siteData.value.section) },
     { property: 'article:tag', content: computed(() => siteData.value.tags.join(', ')) },
@@ -409,22 +376,6 @@ useContentResponse(readingArticle, pending, articleError)
         <span>GENCKO FIELD JOURNAL</span>
         <span>READ / SAVE / APPLY</span>
       </div>
-      <nav class="reader-context-nav" aria-label="文章延伸路徑">
-        <NuxtLink no-prefetch to="/articles">知識文章</NuxtLink>
-        <span aria-hidden="true">/</span>
-        <NuxtLink no-prefetch to="/care">飼養指南</NuxtLink>
-        <span aria-hidden="true">/</span>
-        <NuxtLink no-prefetch to="/genes">基因圖鑑</NuxtLink>
-        <span aria-hidden="true">/</span>
-        <NuxtLink no-prefetch to="/hospital">特寵醫院</NuxtLink>
-      </nav>
-      <button
-        type="button"
-        @click="goBack"
-        class="btn-app btn-app--ghost btn-app--md btn-app--pill"
-      >
-        返回列表
-      </button>
       <article class="reader-container">
         <header class="reader-header">
           <div class="reader-category">{{ readingArticle.Category }}</div>
@@ -437,6 +388,24 @@ useContentResponse(readingArticle, pending, articleError)
             <span>GENCKO FIELD NOTE</span>
           </div>
         </header>
+        <div class="reader-actions">
+          <button
+            type="button"
+            @click="goBack"
+            class="btn-app btn-app--ghost btn-app--md btn-app--pill"
+          >
+            返回列表
+          </button>
+          <nav class="reader-context-nav" aria-label="文章延伸路徑">
+            <NuxtLink no-prefetch to="/articles">知識文章</NuxtLink>
+            <span aria-hidden="true">/</span>
+            <NuxtLink no-prefetch to="/care">飼養指南</NuxtLink>
+            <span aria-hidden="true">/</span>
+            <NuxtLink no-prefetch to="/genes">基因圖鑑</NuxtLink>
+            <span aria-hidden="true">/</span>
+            <NuxtLink no-prefetch to="/hospital">特寵醫院</NuxtLink>
+          </nav>
+        </div>
         <div v-if="readingArticle.ImageURL" class="article-hero-image">
           <ArticleImage
             :src="getCleanUrl(readingArticle.ImageURL)"
@@ -578,7 +547,7 @@ useContentResponse(readingArticle, pending, articleError)
 .reader-container {
   position: relative;
   max-width: 900px;
-  margin: 18px auto 0;
+  margin: 0 auto;
   overflow: hidden;
   border: 1px solid var(--bd);
   border-radius: calc(var(--radius-lg) + 8px);
@@ -1078,11 +1047,33 @@ useContentResponse(readingArticle, pending, articleError)
   border-radius: 0;
   background: transparent;
   box-shadow: none;
-  padding: 20px 0;
+  padding: 0;
 }
 .reader-header {
   padding-block: 18px;
-  margin-bottom: 18px;
+  margin-bottom: 0;
+  border-bottom: 0;
+}
+.reader-category {
+  display: block;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  line-height: 1.4;
+}
+.reader-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 16px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--bd);
+}
+.reader-actions > .btn-app {
+  flex: none;
+}
+.reader-actions .reader-context-nav {
+  margin: 0;
 }
 .reader-header h1 {
   font-family: var(--font-heading-zh);
@@ -1186,7 +1177,7 @@ useContentResponse(readingArticle, pending, articleError)
 }
 .article-hero-image img {
   height: 100% !important;
-  object-fit: contain;
+  object-fit: cover;
 }
 </style>
 

@@ -30,6 +30,7 @@ import {
   BRAND_LOGO_URL,
   SOCIAL_SAME_AS,
   WEBSITE_AT_ID,
+  ORG_AT_ID,
   DEFAULT_OG_IMAGE
 } from './site-constants'
 
@@ -69,6 +70,7 @@ export interface SocialMetaOptions {
 /** 完整 publisher（含 logo width/height，給 Article / BlogPosting 等 Google 規範要求的位置用） */
 export const getPublisher = (): JsonLd => ({
   '@type': 'Organization',
+  '@id': ORG_AT_ID,
   name: SITE_NAME,
   alternateName: SITE_ALT_NAMES,
   url: SITE_URL,
@@ -84,6 +86,7 @@ export const getPublisher = (): JsonLd => ({
 /** 輕量 Organization（用於 brand / seller / manufacturer，不需 ImageObject 包覆） */
 export const getOrgRef = (): JsonLd => ({
   '@type': 'Organization',
+  '@id': ORG_AT_ID,
   name: SITE_NAME,
   alternateName: SITE_ALT_NAMES,
   url: SITE_URL,
@@ -113,10 +116,10 @@ export const ROUTE_LABELS: Record<string, string> = {
   '/genes': '守宮基因圖鑑',
   '/shop': '線上選購',
   '/product': '商品個體',
-  '/calculator': '基因計算機',
+  '/calculator': '基因計算',
   '/care': '新手飼養教學',
   '/health': '健康評估',
-  '/qs': '飼養前評估',
+  '/qs': '飼養評估',
   '/hospital': '特寵醫院查詢',
   '/auction': '守宮競標',
   '/merch': '客製化爬蟲設備',
@@ -124,9 +127,11 @@ export const ROUTE_LABELS: Record<string, string> = {
   '/compare': '個體比較',
   '/faq': '常見問題 FAQ',
   '/home': '首頁',
+  '/guide': '守宮介紹',
+  '/certificates': '個體證書',
   '/start-here': '新手入門',
   '/buying-guide': '購買流程',
-  '/why-gencko': '選擇 Gencko',
+  '/why-gencko': '選擇我們',
   '/stories': '客戶案例'
 }
 
@@ -142,6 +147,7 @@ export const ROUTE_LABELS: Record<string, string> = {
  */
 export const getBreadcrumbForPath = (path: string, lastLabel?: string): BreadcrumbItem[] => {
   if (!path || path === '/') return [{ name: 'Hero Lab', url: '/' }]
+  if (path.split(/[?#]/)[0].replace(/\/$/, '') === '/home') return [{ name: '首頁', url: '/home' }]
 
   const segs = path.split('?')[0].split('#')[0].split('/').filter(Boolean)
   const items: BreadcrumbItem[] = [{ name: '首頁', url: '/home' }]
@@ -224,19 +230,19 @@ export const TAXON_LEOPARD_GECKO = {
   '@type': 'Taxon',
   name: 'Eublepharis macularius',
   alternateName: '豹紋守宮',
-  sameAs: 'https://www.wikidata.org/wiki/Q185061'
+  sameAs: 'https://www.wikidata.org/wiki/Q256860'
 }
 export const TAXON_FAT_TAIL_GECKO = {
   '@type': 'Taxon',
   name: 'Hemitheconyx caudicinctus',
   alternateName: '肥尾守宮',
-  sameAs: 'https://www.wikidata.org/wiki/Q913571'
+  sameAs: 'https://www.wikidata.org/wiki/Q2087254'
 }
 export const TAXON_HOGNOSE_SNAKE = {
   '@type': 'Taxon',
   name: 'Heterodon nasicus',
   alternateName: '豬鼻蛇',
-  sameAs: 'https://www.wikidata.org/wiki/Q914251'
+  sameAs: 'https://www.wikidata.org/wiki/Q1441196'
 }
 
 /** 守宮雙物種（about 欄位最常用） */

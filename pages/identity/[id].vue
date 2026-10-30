@@ -112,8 +112,8 @@ const fmtSex = computed(() =>
 const siteData = computed(() => {
   if (item.value) {
     const i = item.value
-    const title = `${i.Morph}｜個體血統證書`
-    const desc = `Gencko Studio 嚴選繁育個體。ID: ${i.ID}，性別: ${fmtSex.value}，出生日: ${i.Birthday || '未登錄'}。查看已建檔的個體資料。`
+    const title = `${i.Morph}｜個體證書`
+    const desc = `Gencko Studio 嚴選選育個體。ID: ${i.ID}，性別: ${fmtSex.value}，出生日: ${i.Birthday || '未登錄'}。查看已建檔的個體資料。`
     const img =
       displayImg.value ||
       'https://wsrv.nl/?url=raw.githubusercontent.com%2Fzzes50708%2Fgencko-assets%2Fmain%2Fimg%2F11.png&w=1200&h=630&fit=contain&bg=e6e3e3&output=webp&q=85'
@@ -134,7 +134,13 @@ useHead({
   meta: [
     { name: 'description', content: computed(() => siteData.value.desc) },
     { name: 'robots', content: 'noindex, nofollow' },
-    { property: 'og:title', content: computed(() => `${siteData.value.title} | Gencko Studio`) },
+    {
+      property: 'og:title',
+      content: computed(
+        () =>
+          `${item.value ? item.value.Morph + '｜個體血統證書' : siteData.value.title} | Gencko Studio`
+      )
+    },
     { property: 'og:description', content: computed(() => siteData.value.desc) },
     { property: 'og:image', content: computed(() => siteData.value.img) },
     { property: 'og:url', content: computed(() => siteData.value.url) },

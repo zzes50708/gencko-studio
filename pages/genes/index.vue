@@ -1,4 +1,6 @@
 <script setup>
+import { TAXON_LEOPARD_GECKO, TAXON_FAT_TAIL_GECKO } from '~/utils/seo-schemas'
+import { serializeJsonLd } from '~/utils/structured-data'
 import { computed, ref } from 'vue'
 import { useHead } from '#imports'
 import { useMainStore } from '~/stores/useMainStore'
@@ -132,23 +134,10 @@ const genesWebPageLd = computed(() => ({
   primaryImageOfPage: { '@type': 'ImageObject', url: genesImg },
   speakable: {
     '@type': 'SpeakableSpecification',
-    cssSelector: ['.page-title', '.gene-cat-title']
+    cssSelector: ['h1']
   },
   publisher: genesPublisher,
-  about: [
-    {
-      '@type': 'Taxon',
-      name: 'Eublepharis macularius',
-      alternateName: '豹紋守宮',
-      sameAs: 'https://www.wikidata.org/wiki/Q185061'
-    },
-    {
-      '@type': 'Taxon',
-      name: 'Hemitheconyx caudicinctus',
-      alternateName: '肥尾守宮',
-      sameAs: 'https://www.wikidata.org/wiki/Q913571'
-    }
-  ],
+  about: [TAXON_LEOPARD_GECKO, TAXON_FAT_TAIL_GECKO],
   mainEntity: definedTermSetLd.value,
   hasPart: [itemListLd.value]
 }))
@@ -159,7 +148,7 @@ useHead({
     {
       name: 'description',
       content:
-        '完整收錄豹紋守宮（Eublepharis macularius）與肥尾守宮（Hemitheconyx caudicinctus）的色彩、花紋、體型與血統基因詞條，依顯性、隱性、共顯性、多遺傳分類。每筆基因附遺傳模式、特徵說明與選育注意事項。'
+        '完整收錄豹紋守宮與肥尾守宮的色彩、花紋、體型與血統基因詞條，依顯性、隱性、共顯性、多遺傳分類。每筆基因附遺傳模式、特徵說明與選育注意事項。'
     },
     {
       name: 'keywords',
@@ -182,14 +171,15 @@ useHead({
     { name: 'twitter:title', content: '守宮基因圖鑑｜豹紋守宮與肥尾守宮完整基因辭典' },
     {
       name: 'twitter:description',
-      content: '完整收錄豹紋守宮與肥尾守宮的基因詞條，依顯性、隱性、共顯性、多遺傳分類。'
+      content:
+        '完整收錄豹紋守宮與肥尾守宮的基因詞條，依顯性、隱性、共顯性、多遺傳分類，每筆附特徵說明與選育注意事項。'
     },
     { name: 'twitter:image', content: genesImg }
   ],
   link: [{ rel: 'canonical', href: genesUrl }],
   script: computed(() => [
-    { type: 'application/ld+json', innerHTML: JSON.stringify(genesWebPageLd.value) },
-    { type: 'application/ld+json', innerHTML: JSON.stringify(genesBreadcrumbLd) }
+    { type: 'application/ld+json', innerHTML: serializeJsonLd(genesWebPageLd.value) },
+    { type: 'application/ld+json', innerHTML: serializeJsonLd(genesBreadcrumbLd) }
   ])
 })
 </script>

@@ -1,4 +1,5 @@
 <script setup>
+import { TAXON_LEOPARD_GECKO, TAXON_FAT_TAIL_GECKO } from '~/utils/seo-schemas'
 import { computed, ref, onMounted, onUnmounted, watch } from 'vue'
 import { useHead, useAsyncData, useSupabaseClient } from '#imports'
 import { useMainStore } from '~/stores/useMainStore'
@@ -72,50 +73,17 @@ const auctionItemListLd = computed(() => {
     numberOfItems: list.length,
     itemListElement: list.map((a, idx) => {
       const itemUrl = `https://www.genckobreeding.com/auction/${a.id}`
-      const endIso = a.end_time ? new Date(a.end_time).toISOString() : null
       return {
         '@type': 'ListItem',
         position: idx + 1,
         url: itemUrl,
         item: {
-          '@type': 'Product',
-          '@id': `${itemUrl}#product`,
+          '@type': 'WebPage',
+          '@id': itemUrl,
           name: a.morph,
           url: itemUrl,
           image: a.images && a.images.length ? getCleanUrl(a.images[0]) : auctionImg,
-          sku: a.id,
-          category: '寵物 > 爬蟲 > 守宮',
-          description: `${a.morph}${a.gender && a.gender !== '未定' ? '（' + a.gender + '）' : ''} 線上競標進行中`,
-          brand: { '@type': 'Brand', name: 'Gencko Breeding Studio' },
-          offers: {
-            '@type': 'Offer',
-            url: itemUrl,
-            priceCurrency: 'TWD',
-            price: a.start_price || 0,
-            availability: 'https://schema.org/LimitedAvailability',
-            itemCondition: 'https://schema.org/NewCondition',
-            ...(endIso ? { priceValidUntil: endIso.split('T')[0] } : {}),
-            areaServed: { '@type': 'Country', name: 'Taiwan' },
-            seller: auctionSeller,
-            ...(a.buy_now_price
-              ? {
-                  priceSpecification: [
-                    {
-                      '@type': 'PriceSpecification',
-                      name: '起標價',
-                      price: a.start_price || 0,
-                      priceCurrency: 'TWD'
-                    },
-                    {
-                      '@type': 'PriceSpecification',
-                      name: '直購價',
-                      price: a.buy_now_price,
-                      priceCurrency: 'TWD'
-                    }
-                  ]
-                }
-              : {})
-          }
+          description: `${a.morph}${a.gender && a.gender !== '未定' ? '（' + a.gender + '）' : ''} 線上競標進行中`
         }
       }
     })
@@ -128,37 +96,6 @@ const auctionBreadcrumbLd = {
   itemListElement: [
     { '@type': 'ListItem', position: 1, name: '首頁', item: 'https://www.genckobreeding.com/home' },
     { '@type': 'ListItem', position: 2, name: '守宮競標', item: auctionUrl }
-  ]
-}
-
-const auctionFaqLd = {
-  '@type': 'FAQPage',
-  '@id': `${auctionUrl}#faq`,
-  mainEntity: [
-    {
-      '@type': 'Question',
-      name: 'Gencko 守宮競標怎麼運作？',
-      acceptedAnswer: {
-        '@type': 'Answer',
-        text: '每隻個體設有起標價與結標時間，會員可線上即時出價。系統會顯示目前最高出價與倒數計時。結標前 3 分鐘內若有人出價，結標時間將自動延長，避免最後一秒搶標。'
-      }
-    },
-    {
-      '@type': 'Question',
-      name: '什麼是「直購價」？',
-      acceptedAnswer: {
-        '@type': 'Answer',
-        text: '提供直購價的場次可前往官方 LINE 詢問。點擊詢問不會保留個體或結束競標，是否可直購須由工作室確認；目前出價已達直購價時，請依競標出價。'
-      }
-    },
-    {
-      '@type': 'Question',
-      name: '結標後如何取貨？',
-      acceptedAnswer: {
-        '@type': 'Answer',
-        text: '結標後請透過官方 LINE 提供場次編號，由工作室核對得標結果，並依商品頁的「取貨注意事項」確認付款與配送。'
-      }
-    }
   ]
 }
 
@@ -176,31 +113,18 @@ const auctionWebPageLd = computed(() => ({
     cssSelector: ['.page-title', '.morph-name']
   },
   publisher: auctionSeller,
-  about: [
-    {
-      '@type': 'Taxon',
-      name: 'Eublepharis macularius',
-      alternateName: '豹紋守宮',
-      sameAs: 'https://www.wikidata.org/wiki/Q185061'
-    },
-    {
-      '@type': 'Taxon',
-      name: 'Hemitheconyx caudicinctus',
-      alternateName: '肥尾守宮',
-      sameAs: 'https://www.wikidata.org/wiki/Q913571'
-    }
-  ],
-  ...(auctionItemListLd.value ? { mainEntity: auctionItemListLd.value } : {}),
-  hasPart: [auctionFaqLd]
+  about: [TAXON_LEOPARD_GECKO, TAXON_FAT_TAIL_GECKO],
+  ...(auctionItemListLd.value ? { mainEntity: auctionItemListLd.value } : {})
 }))
 
 useHead({
-  title: '線上守宮競標｜限時拍賣專區 - Gencko Breeding Studio',
+  titleTemplate: '%s',
+  title: '線上守宮競標｜限時拍賣專區 | Gencko Breeding Studio',
   meta: [
     {
       name: 'description',
       content:
-        'Gencko Breeding Studio 線上守宮競標專區：豹紋守宮與肥尾守宮限時拍賣，含起標價、直購價、即時出價與倒數計時。結標前 3 分鐘出價自動延長，避免最後一秒搶標。'
+        'Gencko Studio 線上守宮競標專區：豹紋守宮與肥尾守宮限時競標，含起標價、直購價、即時出價與倒數計時。結標前3分鐘出價自動延長，避免最後一秒搶標。'
     },
     { name: 'keywords', content: '守宮競標, 豹紋守宮拍賣, 線上拍賣, 守宮出價, Gencko Studio 競標' },
     // Open Graph
@@ -208,7 +132,7 @@ useHead({
     {
       property: 'og:description',
       content:
-        '豹紋守宮與肥尾守宮限時拍賣，含起標價、直購價、即時出價與倒數計時。結標前 3 分鐘出價自動延長。'
+        '豹紋守宮與肥尾守宮限時拍賣，含起標價、直購價、即時出價與倒數計時。結標前3分鐘出價自動延長。'
     },
     { property: 'og:image', content: auctionImg },
     { property: 'og:image:alt', content: 'Gencko 線上守宮競標' },
@@ -216,10 +140,11 @@ useHead({
     { property: 'og:type', content: 'website' },
     // Twitter Card
     { name: 'twitter:card', content: 'summary_large_image' },
-    { name: 'twitter:title', content: '線上守宮競標｜限時拍賣專區' },
+    { name: 'twitter:title', content: '線上守宮競標｜限時拍賣專區 - Gencko Breeding Studio' },
     {
       name: 'twitter:description',
-      content: '豹紋守宮與肥尾守宮限時拍賣，含起標價、直購價與即時出價。'
+      content:
+        '豹紋守宮與肥尾守宮限時拍賣，含起標價、直購價、即時出價與倒數計時。結標前3分鐘出價自動延長。'
     },
     { name: 'twitter:image', content: auctionImg }
   ],

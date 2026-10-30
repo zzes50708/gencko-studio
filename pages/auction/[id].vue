@@ -508,7 +508,7 @@ const siteData = computed(() => {
       ? new Date(a.end_time).toISOString()
       : null
 
-    // Product + Offer schema
+    // 競標個體資訊不宣稱目前出價就是可成交的售價。
     const product = {
       '@type': 'Product',
       '@id': `${url}#product`,
@@ -531,45 +531,7 @@ const siteData = computed(() => {
           ? [{ '@type': 'PropertyValue', name: '餵食頻率', value: a.feeding_freq }]
           : []),
         ...(a.tongs_fed ? [{ '@type': 'PropertyValue', name: '夾食訓練', value: a.tongs_fed }] : [])
-      ],
-      offers: {
-        '@type': 'Offer',
-        '@id': `${url}#offer`,
-        url: url,
-        priceCurrency: 'TWD',
-        ...(summary.currentPrice !== null ? { price: summary.currentPrice } : {}),
-        ...(endIso ? { priceValidUntil: endIso.split('T')[0] } : {}),
-        availability:
-          summary.status === 'active'
-            ? 'https://schema.org/LimitedAvailability'
-            : summary.status === 'ended'
-              ? 'https://schema.org/SoldOut'
-              : 'https://schema.org/OutOfStock',
-        itemCondition: 'https://schema.org/NewCondition',
-        businessFunction: 'http://purl.org/goodrelations/v1#Sell',
-        areaServed: { '@type': 'Country', name: 'Taiwan' },
-        seller: auctionPublisher,
-        ...(a.buy_now_price && summary.currentPrice !== null
-          ? {
-              priceSpecification: [
-                {
-                  '@type': 'PriceSpecification',
-                  name: '目前出價',
-                  price: summary.currentPrice,
-                  priceCurrency: 'TWD',
-                  ...(endIso ? { validThrough: endIso } : {})
-                },
-                {
-                  '@type': 'PriceSpecification',
-                  name: '直購價（Buy Now）',
-                  price: a.buy_now_price,
-                  priceCurrency: 'TWD',
-                  ...(endIso ? { validThrough: endIso } : {})
-                }
-              ]
-            }
-          : {})
-      }
+      ]
     }
 
     // WebPage 包覆
@@ -654,18 +616,7 @@ useHead({
     { property: 'og:image', content: computed(() => siteData.value.img) },
     { property: 'og:image:alt', content: computed(() => `${siteData.value.title} - 守宮競標`) },
     { property: 'og:url', content: computed(() => siteData.value.url) },
-    { property: 'og:type', content: 'product' },
-    {
-      property: 'product:price:amount',
-      content: computed(() => String(siteData.value.currentPrice ?? ''))
-    },
-    { property: 'product:price:currency', content: 'TWD' },
-    {
-      property: 'product:availability',
-      content: computed(() => siteData.value.availability)
-    },
-    { property: 'product:condition', content: 'new' },
-    { property: 'product:brand', content: 'Gencko Breeding Studio' },
+    { property: 'og:type', content: 'website' },
     // Twitter Card
     { name: 'twitter:card', content: 'summary_large_image' },
     { name: 'twitter:title', content: computed(() => siteData.value.title) },

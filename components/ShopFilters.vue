@@ -148,7 +148,7 @@ const categoryHelp = {
           :checked="modelValue.sexU !== false"
           @change="update('sexU', $event.target.checked)"
         />
-        孵化溫度／未確認
+        <span>孵化溫度／未確認</span>
       </label>
       <p class="hint">公溫、母溫與公母各半都屬於未確認性別。</p>
     </fieldset>
@@ -223,6 +223,12 @@ legend {
   display: flex;
   gap: 4px 10px;
   flex-wrap: wrap;
+}
+label.choice-row {
+  flex-wrap: nowrap;
+}
+label.choice-row span {
+  min-width: 0;
 }
 label {
   display: flex;

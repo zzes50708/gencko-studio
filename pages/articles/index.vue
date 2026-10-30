@@ -1,9 +1,12 @@
 <script setup>
+import { TAXON_LEOPARD_GECKO, TAXON_FAT_TAIL_GECKO } from '~/utils/seo-schemas'
 import { computed } from 'vue'
 import { onBeforeRouteLeave } from 'vue-router'
 import { useHead, useAsyncData } from '#imports'
 import { useMainStore } from '~/stores/useMainStore'
 import { getCleanUrl } from '~/utils/image'
+import { serializeJsonLd } from '~/utils/structured-data'
+import { seoDate } from '~/utils/seo-head'
 
 const store = useMainStore()
 // SSR 與 SPA 共用同一份摘要資料；Pinia hydration 後不再重複抓取。
@@ -173,12 +176,11 @@ const blogSchema = computed(() => {
       headline: a.Title,
       url: `https://www.genckobreeding.com/articles/${a.ID}`,
       image: a.ImageURL ? getCleanUrl(a.ImageURL) : artsImg,
-      datePublished: a.PublishDate || '',
-      dateModified: a.PublishDate || '',
+      datePublished: seoDate(a.PublishDate),
       articleSection: a.Category || '',
       description: a.Summary || '',
       author: {
-        '@type': a.Author && a.Author !== 'Gencko Studio' ? 'Person' : 'Organization',
+        '@type': a.Author && !/gencko/i.test(a.Author) ? 'Person' : 'Organization',
         name: a.Author || 'Gencko Breeding Studio'
       },
       publisher: artsPublisher
@@ -222,23 +224,10 @@ const artsWebPageLd = computed(() => ({
   primaryImageOfPage: { '@type': 'ImageObject', url: artsImg },
   speakable: {
     '@type': 'SpeakableSpecification',
-    cssSelector: ['.page-title', '.search-input']
+    cssSelector: ['h1']
   },
   publisher: artsPublisher,
-  about: [
-    {
-      '@type': 'Taxon',
-      name: 'Eublepharis macularius',
-      alternateName: '豹紋守宮',
-      sameAs: 'https://www.wikidata.org/wiki/Q185061'
-    },
-    {
-      '@type': 'Taxon',
-      name: 'Hemitheconyx caudicinctus',
-      alternateName: '肥尾守宮',
-      sameAs: 'https://www.wikidata.org/wiki/Q913571'
-    }
-  ],
+  about: [TAXON_LEOPARD_GECKO, TAXON_FAT_TAIL_GECKO],
   mainEntity: blogSchema.value,
   hasPart: [itemListSchema.value]
 }))
@@ -268,7 +257,10 @@ useHead({
     // Twitter Card
     { name: 'twitter:card', content: 'summary_large_image' },
     { name: 'twitter:title', content: '守宮文章知識庫｜新手必看、健康、環境、餵食完整指南' },
-    { name: 'twitter:description', content: '豹紋守宮完整知識庫，飼養教學文章一站收錄。' },
+    {
+      name: 'twitter:description',
+      content: '豹紋守宮與肥尾守宮完整知識庫：新手必看、環境佈置、健康照護、行為互動、餵食與營養。'
+    },
     { name: 'twitter:image', content: artsImg }
   ],
   link: [
@@ -281,8 +273,8 @@ useHead({
     }
   ],
   script: computed(() => [
-    { type: 'application/ld+json', innerHTML: JSON.stringify(artsWebPageLd.value) },
-    { type: 'application/ld+json', innerHTML: JSON.stringify(artsBreadcrumbLd) }
+    { type: 'application/ld+json', innerHTML: serializeJsonLd(artsWebPageLd.value) },
+    { type: 'application/ld+json', innerHTML: serializeJsonLd(artsBreadcrumbLd) }
   ])
 })
 

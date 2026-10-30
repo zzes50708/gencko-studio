@@ -151,7 +151,7 @@ test('選擇地標後關閉舊的同位置院所選單', async ({ page }) => {
 })
 
 test('搜尋缺少座標的院所改用地址預覽，恢復有效搜尋回立體地圖', async ({ page }) => {
-  const search = page.getByRole('searchbox', { name: '在地圖搜尋醫院', exact: true })
+  const search = page.getByRole('searchbox', { name: '搜尋醫院名稱或地址', exact: true })
   await search.fill('待補資料')
   await expect(page.getByRole('combobox', { name: 'Google 預覽院所' })).toHaveValue('C')
   await search.fill('位置測試院所甲')
@@ -160,7 +160,9 @@ test('搜尋缺少座標的院所改用地址預覽，恢復有效搜尋回立�
 
 test('使用者選擇 Google 後搜尋有效院所保留底圖偏好', async ({ page }) => {
   await page.getByRole('button', { name: 'Google 地圖', exact: true }).click()
-  await page.getByRole('searchbox', { name: '在地圖搜尋醫院', exact: true }).fill('位置測試院所乙')
+  await page
+    .getByRole('searchbox', { name: '搜尋醫院名稱或地址', exact: true })
+    .fill('位置測試院所乙')
   await expect(page.getByRole('combobox', { name: 'Google 預覽院所' })).toHaveValue('B')
   await expect(page.getByRole('button', { name: 'Google 地圖', exact: true })).toHaveAttribute(
     'aria-pressed',
@@ -169,7 +171,7 @@ test('使用者選擇 Google 後搜尋有效院所保留底圖偏好', async ({ 
 })
 
 test('混合定位資料的搜尋保留全部院所供選擇', async ({ page }) => {
-  await page.getByRole('searchbox', { name: '在地圖搜尋醫院', exact: true }).fill('院所')
+  await page.getByRole('searchbox', { name: '搜尋醫院名稱或地址', exact: true }).fill('院所')
   await expect(page.locator('.map-preview-list button')).toHaveCount(3)
   await expect(page.locator('.map-hospital-detail')).toHaveCount(0)
   await page
@@ -180,7 +182,7 @@ test('混合定位資料的搜尋保留全部院所供選擇', async ({ page }) 
 })
 
 test('地址預覽中自行切換院所維持 Google 模式', async ({ page }) => {
-  await page.getByRole('searchbox', { name: '在地圖搜尋醫院', exact: true }).fill('院所')
+  await page.getByRole('searchbox', { name: '搜尋醫院名稱或地址', exact: true }).fill('院所')
   await page.locator('#hospital-C .hosp-header-toggle').click()
   const picker = page.getByRole('combobox', { name: 'Google 預覽院所' })
   await picker.selectOption('B')
@@ -206,7 +208,7 @@ test('立體地圖失敗後搜尋缺座標院所仍可用地址預覽', async ({
     canvas.getContext('webgl2')!.getExtension('WEBGL_lose_context')!.loseContext()
   })
   await expect(page.getByRole('button', { name: '重新載入地圖', exact: true })).toBeVisible()
-  await page.getByRole('searchbox', { name: '在地圖搜尋醫院', exact: true }).fill('待補資料')
+  await page.getByRole('searchbox', { name: '搜尋醫院名稱或地址', exact: true }).fill('待補資料')
   await expect(page.getByRole('combobox', { name: 'Google 預覽院所' })).toHaveValue('C')
 })
 
@@ -240,7 +242,7 @@ test('多間結果只有一間有座標時仍保留完整選擇', async ({ page 
   await page.waitForLoadState('networkidle')
   await page.getByRole('link', { name: '查找特寵醫院', exact: true }).click()
   await expect(page.locator('.map-stage')).toHaveAttribute('data-map-ready', 'true')
-  await page.getByRole('searchbox', { name: '在地圖搜尋醫院', exact: true }).fill('混合')
+  await page.getByRole('searchbox', { name: '搜尋醫院名稱或地址', exact: true }).fill('混合')
   await page.waitForTimeout(400)
   await expect(page.locator('.map-preview-list button')).toHaveCount(2)
   await expect(page.locator('.map-hospital-detail')).toHaveCount(0)

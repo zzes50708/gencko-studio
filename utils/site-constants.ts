@@ -13,10 +13,11 @@ export const SITE_URL = 'https://www.genckobreeding.com'
 export const SITE_NAME = 'Gencko Breeding Studio'
 export const SITE_ALT_NAMES = ['Gencko Studio']
 export const SITE_DESCRIPTION =
-  'Gencko Breeding Studio 台灣豹紋守宮專業繁育工作室，提供特殊基因品系個體選購、基因計算機、新手飼養教學、健康評估、特寵醫院查詢與線上競標。從基因到飼養的一站式服務。'
+  'Gencko Studio 台灣豹紋守宮專業選育工作室，提供優質基因品系個體選購、基因計算機、新手飼養教學、健康評估、特寵醫院查詢與線上競標。從教學到飼養的一站式服務。'
+export const SITE_SLOGAN = 'Gencko 專業守宮選育：從新手飼養教學到飼養過程輔助的一站式服務'
 export const SITE_FOUNDER = 'Gino'
 export const SITE_FOUNDING_YEAR = '2025'
-export const SITE_FOUNDING_LOCATION = '三重, 台灣'
+export const SITE_FOUNDING_LOCATION = '三重，台灣'
 
 // 圖片資源
 export const BRAND_LOGO_URL = 'https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/11.png'

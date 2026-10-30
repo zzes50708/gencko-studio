@@ -85,12 +85,12 @@ useHead({
   meta: [
     {
       name: 'description',
-      content: '找喜歡的守宮、私訊問清楚、談好流程、準備環境和到家適應，購買守宮的流程一頁看懂。'
+      content: '找喜歡的守宮、私訊問清楚、準備環境和到家適應，購買守宮的流程一頁看懂。'
     },
     { property: 'og:title', content: '購買流程｜從挑選到帶回家，會經過這幾步' },
     {
       property: 'og:description',
-      content: '流程一項一項看，每一步要做什麼一目了然。'
+      content: '流程一項一項看，要做什麼一目了然。'
     },
     { property: 'og:url', content: pageUrl }
   ],

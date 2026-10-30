@@ -266,8 +266,8 @@ body {
   width: 100%;
   font-family: var(--font-body-zh);
   margin: 0;
-  /* 🌟 導入底部安全區，預留給導航列與系統海苔條 */
-  padding-bottom: calc(80px + env(safe-area-inset-bottom, 0px));
+  /* 手機底欄由 page-headings.css 的 body 規則單獨避讓，桌機不重複墊高。 */
+  padding-bottom: 0;
   background-color: var(--bg-dark);
   color: var(--txt);
   min-height: 100vh;

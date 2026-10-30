@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { SITE_DESCRIPTION, SITE_SLOGAN } from '~/utils/site-constants'
+import { TAXON_LEOPARD_GECKO, TAXON_FAT_TAIL_GECKO } from '~/utils/seo-schemas'
 import { useHead } from '#imports'
 import BrandServiceScrollScene from '~/components/BrandServiceScrollScene.vue'
 import { onBeforeUnmount, onMounted } from 'vue'
@@ -24,11 +26,10 @@ const aboutOrganization = {
     height: 512
   },
   image: aboutImg,
-  description:
-    'Gencko Breeding Studio 是台灣專業的豹紋守宮（Eublepharis macularius）繁育工作室，提供特殊基因品系個體選購、基因計算機、新手飼養教學、健康評估、特寵醫院查詢與線上競標。從基因到飼養的一站式服務。',
-  slogan: 'Gencko 專業守宮選育：從特殊基因品系到新手飼養教學的一站式服務',
+  description: SITE_DESCRIPTION,
+  slogan: SITE_SLOGAN,
   foundingDate: '2025',
-  foundingLocation: { '@type': 'Place', name: '三重, 台灣' },
+  foundingLocation: { '@type': 'Place', name: '三重，台灣' },
   founder: {
     '@type': 'Person',
     name: 'Gino',
@@ -87,9 +88,9 @@ const aboutPageLd = {
   '@type': 'AboutPage',
   '@id': aboutUrl,
   url: aboutUrl,
-  name: '關於 Gencko Breeding Studio｜台灣豹紋守宮專業繁育工作室',
+  name: '關於｜Gencko Breeding Studio 台灣豹紋守宮專業選育工作室',
   description:
-    'Gencko Breeding Studio（Gencko Studio）是台灣專業豹紋守宮繁育工作室。創立於 2025 年，由 Gino 創辦於三重，提供守宮選購、基因計算、飼養教學與健康評估的一站式服務。',
+    'Gencko Studio 是台灣專業豹紋守宮選育工作室。創立於 2025 年，由 Gino 創辦於三重，提供守宮選購、基因計算機、新手飼養教學、健康評估、特寵醫院查詢與線上競標的一站式服務。',
   inLanguage: 'zh-TW',
   isPartOf: { '@type': 'WebSite', '@id': 'https://www.genckobreeding.com/#website' },
   primaryImageOfPage: { '@type': 'ImageObject', url: aboutImg },
@@ -99,56 +100,43 @@ const aboutPageLd = {
   },
   about: aboutOrganization,
   mainEntity: aboutOrganization,
-  mentions: [
-    {
-      '@type': 'Taxon',
-      name: 'Eublepharis macularius',
-      alternateName: '豹紋守宮',
-      sameAs: 'https://www.wikidata.org/wiki/Q185061'
-    },
-    {
-      '@type': 'Taxon',
-      name: 'Hemitheconyx caudicinctus',
-      alternateName: '肥尾守宮',
-      sameAs: 'https://www.wikidata.org/wiki/Q913571'
-    }
-  ]
+  mentions: [TAXON_LEOPARD_GECKO, TAXON_FAT_TAIL_GECKO]
 }
 
 useHead({
-  title: '關於我們｜Gencko Breeding Studio 台灣豹紋守宮專業繁育工作室',
+  title: '關於我們｜Gencko Breeding Studio 台灣豹紋守宮專業選育工作室',
   meta: [
     {
       name: 'description',
       content:
-        'Gencko Breeding Studio（Gencko Studio）是台灣專業豹紋守宮繁育工作室。創立於 2025 年，由 Gino 創辦於三重，提供守宮選購、基因計算機、新手飼養教學、健康評估、特寵醫院查詢與線上競標的一站式服務。'
+        'Gencko Studio 是台灣專業豹紋守宮選育工作室。創立於 2025 年，由 Gino 創辦於三重，提供守宮選購、基因計算機、新手飼養教學、健康評估、特寵醫院查詢與線上競標的一站式服務。'
     },
     {
       name: 'keywords',
-      content: 'Gencko, Gencko Breeding Studio, 豹紋守宮工作室, 台灣守宮繁育, 三重守宮, Gino'
+      content: 'Gencko, Gencko Breeding Studio, 豹紋守宮工作室, 台灣守宮選育, 三重守宮, Gino'
     },
     // Open Graph
     {
       property: 'og:title',
-      content: '關於我們｜Gencko Breeding Studio 台灣豹紋守宮專業繁育工作室'
+      content: '關於我們｜Gencko Breeding Studio 台灣豹紋守宮專業選育工作室'
     },
     {
       property: 'og:description',
-      content: '台灣專業豹紋守宮繁育工作室，創立於 2025 年。從基因到飼養的一站式服務。'
+      content: '台灣專業豹紋守宮選育工作室。從教學到飼養的一站式服務。'
     },
     { property: 'og:image', content: aboutImg },
-    { property: 'og:image:alt', content: 'Gencko Breeding Studio - 台灣豹紋守宮專業繁育工作室' },
+    { property: 'og:image:alt', content: 'Gencko Breeding Studio - 台灣豹紋守宮專業選育工作室' },
     { property: 'og:url', content: aboutUrl },
     { property: 'og:type', content: 'website' },
     // Twitter Card
     { name: 'twitter:card', content: 'summary_large_image' },
     {
       name: 'twitter:title',
-      content: '關於我們｜Gencko Breeding Studio 台灣豹紋守宮專業繁育工作室'
+      content: '關於我們｜Gencko Breeding Studio 台灣豹紋守宮專業選育工作室'
     },
     {
       name: 'twitter:description',
-      content: '台灣專業豹紋守宮繁育工作室，創立於 2025 年。從基因到飼養的一站式服務。'
+      content: '台灣專業豹紋守宮選育工作室。從教學到飼養的一站式服務。'
     },
     { name: 'twitter:image', content: aboutImg }
   ],

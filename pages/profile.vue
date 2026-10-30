@@ -18,8 +18,7 @@ useHead({
   meta: [
     {
       name: 'description',
-      content:
-        'Gencko Studio 個人專屬儀表板。管理您的守宮收藏清單、特寵醫院地圖書籤與即時競標紀錄。'
+      content: 'Gencko Studio 個人專屬面板。管理您的收藏清單、特寵醫院地圖書籤與即時競標紀錄。'
     },
     { name: 'robots', content: 'noindex, nofollow' },
     { property: 'og:title', content: '我的專區 | Gencko Studio' },

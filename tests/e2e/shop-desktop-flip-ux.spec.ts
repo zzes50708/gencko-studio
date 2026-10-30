@@ -113,6 +113,8 @@ test('未確認性別可獨立排除，網址重載與重置保持一致', async
   await expect(page.locator('.flip-card')).toHaveCount(0)
   await expect(page).toHaveURL(/sexU=false/)
   await page.reload()
+  // 重新整理後先等水合完成，避免對尚未掛上事件的 SSR 按鈕送出點擊。
+  await page.waitForFunction(() => !!(document.querySelector('#__nuxt') as any)?.__vue_app__)
   await page.getByRole('button', { name: /展開篩選/ }).click()
   await expect(page.locator('.flip-card')).toHaveCount(0)
   await expect(

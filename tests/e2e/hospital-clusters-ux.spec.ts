@@ -23,6 +23,7 @@ test('群聚點選可放大，篩選清除後不殘留院所標記', async ({ pa
     .getByRole('searchbox', { name: '搜尋醫院名稱或地址', exact: true })
     .fill('不存在院所測試')
   await expect(page.locator('.map-cluster')).toHaveCount(0)
-  await expect(page.locator('.map-stage')).toHaveCount(0)
+  await expect(page.locator('.map-stage')).toHaveCount(1)
+  await expect(page.locator('.map-stage canvas')).toBeVisible()
   await expect(page.locator('.hosp-map-empty-state')).toContainText('沒有符合條件的院所')
 })

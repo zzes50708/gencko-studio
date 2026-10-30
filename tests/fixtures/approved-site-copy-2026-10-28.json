@@ -1,0 +1,202 @@
+{
+  "brand": {
+    "主要名稱": "Gencko Studio",
+    "完整英文名稱": "Gencko Breeding Studio",
+    "Logo 文字": "GENCKO",
+    "品牌簡介": "Gencko Studio 台灣豹紋守宮專業選育工作室，提供優質基因品系個體選購、基因計算機、新手飼養教學、健康評估、特寵醫院查詢與線上競標。從教學到飼養的一站式服務。",
+    "品牌標語": "Gencko 專業守宮選育：從新手飼養教學到飼養過程輔助的一站式服務",
+    "創辦人名稱": "Gino",
+    "創立年份": "2025",
+    "所在地": "三重，台灣",
+    "一般頁面標題後綴": "| Gencko Studio"
+  },
+  "routes": [
+    {
+      "label": "首頁",
+      "path": "/home",
+      "title": "GENCKO專業守宮選育工作室｜豹紋、肥尾守宮選購與新手飼養輔助 | Gencko Studio",
+      "description": "Gencko Studio 專注於豹紋守宮選育、提供基因計算機工具、全台特寵醫院地圖，以及豐富的飼養知識專欄。新手入門首選的爬蟲與守宮平台。",
+      "ogTitle": "專業豹紋守宮選育工作室 | Gencko Studio",
+      "ogDescription": "提供專業守宮選育、基因計算工具與特寵醫療地圖。",
+      "h1": "專業守宮選育工作室，嚴選穩定血系。"
+    },
+    {
+      "label": "選購守宮",
+      "path": "/shop",
+      "title": "線上選購守宮｜豹紋與肥尾守宮 | Gencko Breeding Studio",
+      "description": "Gencko Studio 線上選購，提供優質豹紋守宮與肥尾守宮，可依基因品系、性別、價格篩選。每隻個體均有健康保證，支援私訊購買。",
+      "ogTitle": "線上選購守宮｜豹紋與肥尾守宮 | Gencko Breeding Studio",
+      "ogDescription": "線上選購豹紋守宮與肥尾守宮，可依基因品系、性別、價格篩選，每隻個體均有健康保證。",
+      "h1": "選購守宮"
+    },
+    {
+      "label": "線上競標",
+      "path": "/auction",
+      "title": "線上守宮競標｜限時拍賣專區 | Gencko Breeding Studio",
+      "description": "Gencko Studio 線上守宮競標專區：豹紋守宮與肥尾守宮限時競標，含起標價、直購價、即時出價與倒數計時。結標前3分鐘出價自動延長，避免最後一秒搶標。",
+      "ogTitle": "線上守宮競標｜限時拍賣專區 - Gencko Breeding Studio",
+      "ogDescription": "豹紋守宮與肥尾守宮限時拍賣，含起標價、直購價、即時出價與倒數計時。結標前3分鐘出價自動延長。",
+      "h1": "線上競標"
+    },
+    {
+      "label": "種群展示",
+      "path": "/breeders",
+      "title": "Gencko 種群展示｜豹紋守宮與肥尾守宮選育種公種母 | Gencko Studio",
+      "description": "Gencko Studio 自留種群展示。完整收錄工作室選育種公母或自留子代，是了解 Gencko 選育血統與未來子代規劃的窗口。",
+      "ogTitle": "Gencko 種群展示｜豹紋守宮與肥尾守宮選育種公種母",
+      "ogDescription": "Gencko Studio 自留種群展示，完整收錄工作室選育種公母或自留子代。",
+      "h1": "核心種群"
+    },
+    {
+      "label": "客製設備",
+      "path": "/merch",
+      "title": "客製化爬蟲設備｜Honeycomb 蜂巢工作室協作規劃 | Gencko Studio",
+      "description": "Gencko 與 Honeycomb 蜂巢工作室協作的客製化爬蟲設備規劃。依客戶需求規劃木製爬櫃，選擇抽數、層數、貼皮與加購設備，提供溫控、照明及收納選配。",
+      "ogTitle": "客製化爬蟲設備｜Honeycomb 蜂巢工作室協作規劃",
+      "ogDescription": "依客戶需求規劃木製爬櫃，選擇抽數、層數、貼皮與加購設備，提供溫控、照明及收納選配。",
+      "h1": "客製化爬蟲設備"
+    },
+    {
+      "label": "新手入門",
+      "path": "/start-here",
+      "title": "守宮新手｜第一次養守宮，該從哪開始 | Gencko Studio",
+      "description": "第一次養守宮別著急。先學習怎麼養、評估自己準備好了沒，再來看看漂亮的守宮吧。",
+      "ogTitle": "守宮新手｜第一次養守宮，該從哪開始",
+      "ogDescription": "先了解怎麼養，才能讓守宮健康快樂地長大。準備好再開始挑選守宮。",
+      "h1": "第一次養守宮，先別急著帶回家"
+    },
+    {
+      "label": "守宮介紹",
+      "path": "/guide",
+      "title": "守宮是什麼？認識豹紋守宮與肥尾守宮 | Gencko Studio",
+      "description": "守宮是什麼？認識豹紋守宮與肥尾守宮的基本分類、生活方式、外觀特色與飼養前需要確認的事情。",
+      "ogTitle": "守宮是什麼？認識豹紋守宮與肥尾守宮",
+      "ogDescription": "認識守宮的生活方式、飼養前準備，以及豹紋守宮與肥尾守宮的主要差異。",
+      "h1": "守宮是什麼？認識豹紋守宮與肥尾守宮"
+    },
+    {
+      "label": "飼養指南",
+      "path": "/care",
+      "title": "豹紋與肥尾守宮飼養指南｜環境、溫濕度、餵食、地雷一次看 | Gencko Studio",
+      "description": "豹紋守宮與肥尾守宮完整新手飼養教學：環境配置、溫度梯度、濕度配置、餵食頻率、餌料對照、補充品劑量、致命地雷與新手常見問題一站收錄。",
+      "ogTitle": "豹紋與肥尾守宮飼養指南｜環境、溫濕度、餵食、地雷一次看",
+      "ogDescription": "環境、溫濕度、餌料對照、補充品、致命地雷、FAQ 全收錄。新手飼養豹紋守宮與肥尾守宮的一站式指南。",
+      "h1": "守宮飼養指南"
+    },
+    {
+      "label": "健康評估",
+      "path": "/health",
+      "title": "守宮健康評估系統｜緊急快篩、完整檢查、購入評估 | Gencko Studio",
+      "description": "守宮健康評估系統：透過引導式問卷快速判讀守宮狀態。三種情境涵蓋緊急快篩（拒食、嘔吐、神經症狀等異常）、完整健康檢查、與購入前評估，並比對隱孢子蟲、球蟲、MBD、呼吸道感染等常見疾病症狀。本評估不取代專業獸醫診斷。",
+      "ogTitle": "守宮健康評估系統｜緊急快篩、完整檢查、購入評估",
+      "ogDescription": "三種情境快速判讀守宮健康狀況。本評估僅供飼主自我檢視，不取代獸醫診斷。",
+      "h1": "健康評估系統"
+    },
+    {
+      "label": "飼養前評估",
+      "path": "/qs",
+      "title": "飼養前自我評估｜6 維度 18 題守宮準備度測驗 | Gencko Studio",
+      "description": "飼養守宮前的自我評估問卷：時間承諾、心理接受、環境設備、知識儲備、預算資源、飼養目標 6 大維度共 18 題，含風險分析、雷達圖與個人化推薦學習路線。免費、不需註冊、不上傳資料。",
+      "ogTitle": "飼養前自我評估｜6 維度 18 題守宮準備度測驗",
+      "ogDescription": "6 維度 18 題守宮飼養準備度評估，含風險分析、雷達圖與個人化推薦學習路線。",
+      "h1": "飼養前自我評估"
+    },
+    {
+      "label": "常見問題",
+      "path": "/faq",
+      "title": "常見問題 FAQ｜Gencko 守宮飼養、健康、購買完整解答 | Gencko Studio",
+      "description": "Gencko Breeding Studio 常見問題整理：豹紋守宮與肥尾守宮飼養知識、健康判讀、基因與品系說明、官網功能使用、購買流程與售後保障，新手入手前必讀。",
+      "ogTitle": "常見問題 FAQ｜Gencko 守宮飼養、健康、購買完整解答",
+      "ogDescription": "守宮飼養知識、健康判讀、基因品系說明、購買與售後保障完整解答。",
+      "h1": "常見問題"
+    },
+    {
+      "label": "文章列表",
+      "path": "/articles",
+      "title": "守宮文章知識庫｜新手必看、健康、環境、餵食完整指南 | Gencko Studio",
+      "description": "豹紋守宮與肥尾守宮完整知識庫：新手必看、環境佈置、健康照護、行為互動、餵食與營養指南。Gencko Breeding Studio 飼養教學文章一站收錄。",
+      "ogTitle": "守宮文章知識庫｜新手必看、健康、環境、餵食完整指南",
+      "ogDescription": "豹紋守宮與肥尾守宮完整知識庫：新手必看、環境佈置、健康照護、行為互動、餵食與營養。",
+      "h1": "守宮文章知識庫"
+    },
+    {
+      "label": "基因圖鑑",
+      "path": "/genes",
+      "title": "守宮基因圖鑑｜豹紋守宮與肥尾守宮完整基因辭典 | Gencko Studio",
+      "description": "完整收錄豹紋守宮與肥尾守宮的色彩、花紋、體型與血統基因詞條，依顯性、隱性、共顯性、多遺傳分類。每筆基因附遺傳模式、特徵說明與選育注意事項。",
+      "ogTitle": "守宮基因圖鑑｜豹紋守宮與肥尾守宮完整基因辭典",
+      "ogDescription": "完整收錄豹紋守宮與肥尾守宮的基因詞條，依顯性、隱性、共顯性、多遺傳分類，每筆附特徵說明與選育注意事項。",
+      "h1": "守宮基因圖鑑"
+    },
+    {
+      "label": "基因計算機",
+      "path": "/calculator",
+      "title": "基因計算機｜守宮配對子代機率推算 | Gencko Studio",
+      "description": "Gencko 基因計算機：模擬豹紋守宮、肥尾守宮與豬鼻蛇的孟德爾遺傳、Het 與反向配對機率，標示致死組合；多基因特徵提供選育限制說明。",
+      "ogTitle": "基因計算機｜守宮配對子代機率推算",
+      "ogDescription": "線上模擬豹紋守宮、肥尾守宮、豬鼻蛇配對子代機率。支援 Het、共顯性、多基因與反向匹配。",
+      "h1": "基因配對工作台"
+    },
+    {
+      "label": "品牌與購買",
+      "path": "/why-gencko",
+      "title": "品牌與購買｜選擇 Gencko 前先了解 | Gencko Studio",
+      "description": "Gencko 有完整的個體資料、飼養教學、特寵醫院資訊乃至繁殖說明，讓你看完再決定。",
+      "ogTitle": "品牌與購買｜選擇 Gencko 前先了解",
+      "ogDescription": "個體資料、飼養教學、特寵醫院資訊乃至繁殖說明，讓你看完再決定。",
+      "h1": "買之前該知道的，我們都先給你看"
+    },
+    {
+      "label": "購買流程",
+      "path": "/buying-guide",
+      "title": "購買流程｜從挑選到帶回家，會經過這幾步 | Gencko Studio",
+      "description": "找喜歡的守宮、私訊問清楚、準備環境和到家適應，購買守宮的流程一頁看懂。",
+      "ogTitle": "購買流程｜從挑選到帶回家，會經過這幾步",
+      "ogDescription": "流程一項一項看，要做什麼一目了然。",
+      "h1": "買守宮，流程長這樣"
+    },
+    {
+      "label": "個體證書查詢入口",
+      "path": "/certificates",
+      "title": "個體證書 | Gencko Studio",
+      "description": "以個體 ID 查詢 Gencko Studio 的個體血統紀錄證書。",
+      "ogTitle": "個體證書 | Gencko Studio",
+      "ogDescription": "以個體 ID 查詢 Gencko Studio 的個體血統紀錄證書。",
+      "h1": "個體證書"
+    },
+    {
+      "label": "關於我們",
+      "path": "/about",
+      "title": "關於我們｜Gencko Breeding Studio 台灣豹紋守宮專業選育工作室 | Gencko Studio",
+      "description": "Gencko Studio 是台灣專業豹紋守宮選育工作室。創立於 2025 年，由 Gino 創辦於三重，提供守宮選購、基因計算機、新手飼養教學、健康評估、特寵醫院查詢與線上競標的一站式服務。",
+      "ogTitle": "關於我們｜Gencko Breeding Studio 台灣豹紋守宮專業選育工作室",
+      "ogDescription": "台灣專業豹紋守宮選育工作室。從教學到飼養的一站式服務。",
+      "h1": "Gencko Studio｜台灣豹紋守宮專業選育工作室"
+    },
+    {
+      "label": "會員專區",
+      "path": "/profile",
+      "title": "我的專區 | Gencko Studio",
+      "description": "Gencko Studio 個人專屬面板。管理您的收藏清單、特寵醫院地圖書籤與即時競標紀錄。",
+      "ogTitle": "我的專區 | Gencko Studio",
+      "ogDescription": "Gencko Studio 個人專屬面板。管理您的收藏清單、特寵醫院地圖書籤與即時競標紀錄。"
+    },
+    {
+      "label": "個體比較",
+      "path": "/compare",
+      "title": "守宮個體並排比較｜基因 × 性別 × 價格 一次看 | Gencko Studio",
+      "description": "Gencko 線上個體比較工具：最多 3 隻守宮並排對照，自動標示共有與獨有基因、性別、孵化日、狀態與價格，幫助你快速判讀差異做出選購決策。",
+      "ogTitle": "守宮個體並排比較｜基因 × 性別 × 價格 一次看",
+      "ogDescription": "最多 3 隻守宮並排對照，自動標示共有與獨有基因，幫助快速判讀差異。"
+    },
+    {
+      "label": "品牌故事預備頁",
+      "path": "/stories",
+      "title": "客戶案例｜展覽與真實飼養故事預備頁 | Gencko Studio",
+      "description": "這是未來要放客戶案例、展覽照片與真實飼養故事的預備頁，先保留內容位置與結構。",
+      "ogTitle": "客戶案例｜展覽與真實飼養故事預備頁",
+      "ogDescription": "先建立案例頁骨架，後續可逐步補上展覽花絮、到家紀錄與真實客戶故事。",
+      "h1": "真實故事，內容整理中"
+    }
+  ]
+}

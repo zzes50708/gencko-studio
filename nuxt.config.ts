@@ -2,6 +2,15 @@
 import { fileURLToPath } from 'node:url'
 import { readFileSync } from 'node:fs'
 import { createHash } from 'node:crypto'
+import {
+  SITE_URL,
+  SITE_NAME,
+  SITE_DESCRIPTION,
+  SITE_SLOGAN,
+  WEBSITE_AT_ID,
+  ORG_AT_ID
+} from './utils/site-constants'
+import { serializeJsonLd } from './utils/structured-data'
 const offlineRevision = createHash('sha256')
   .update(readFileSync(fileURLToPath(new URL('./public/offline.html', import.meta.url))))
   .digest('hex')
@@ -78,7 +87,7 @@ export default defineNuxtConfig({
       scope: '/',
       name: 'Gencko Studio',
       short_name: 'Gencko',
-      description: 'Gencko Studio 提供專業的豹紋守宮繁育、基因計算機與特寵飼養知識。',
+      description: 'Gencko Studio 提供守宮選購、基因計算機與特寵醫院查詢。',
       theme_color: '#e6e3e3',
       background_color: '#e6e3e3',
       display: 'standalone',
@@ -207,7 +216,15 @@ export default defineNuxtConfig({
 
   sitemap: {
     sources: ['/api/_sitemap-urls'],
-    exclude: ['/hero-lab', '/compare', '/stories', '/profile', '/line-login-return', '/identity/**']
+    exclude: [
+      '/hero-lab',
+      '/compare',
+      '/stories',
+      '/profile',
+      '/auction-management',
+      '/line-login-return',
+      '/identity/**'
+    ]
   },
 
   robots: {
@@ -226,17 +243,25 @@ export default defineNuxtConfig({
           'ChatGPT-User', // ChatGPT browsing on user request
           'PerplexityBot', // Perplexity search index
           'Perplexity-User', // Perplexity on user request
-          'ClaudeBot', // Anthropic search/index
-          'Claude-Web', // Claude on user request
-          'Google-Extended', // Google AI Overviews / Gemini grounding
-          'Applebot-Extended' // Apple Intelligence
+          'Claude-SearchBot', // Claude 搜尋索引
+          'Claude-User' // Claude 使用者要求讀取
         ],
         allow: ['/']
       },
       // AI 模型訓練爬蟲（用於訓練下一代模型，非即時檢索）
       // ❌ 預設 Disallow — 使用者本次僅指定允許「搜尋 / 聯網」類；如要參與模型訓練可改 allow
       {
-        userAgent: ['GPTBot', 'CCBot', 'anthropic-ai', 'cohere-ai', 'Bytespider'],
+        // Google-Extended 同時涵蓋部分訓練與 grounding；不影響 Google Search AI 摘要。
+        userAgent: [
+          'GPTBot',
+          'ClaudeBot',
+          'Google-Extended',
+          'Applebot-Extended',
+          'CCBot',
+          'anthropic-ai',
+          'cohere-ai',
+          'Bytespider'
+        ],
         disallow: ['/']
       }
     ]
@@ -321,8 +346,7 @@ export default defineNuxtConfig({
         },
         {
           name: 'description',
-          content:
-            'Gencko Breeding Studio 台灣豹紋守宮專業繁育工作室，提供特殊基因品系個體選購、基因計算機、新手飼養教學、健康評估、特寵醫院查詢與線上競標。從基因到飼養的一站式服務。'
+          content: SITE_DESCRIPTION
         },
         {
           name: 'keywords',
@@ -337,12 +361,9 @@ export default defineNuxtConfig({
           content:
             'https://wsrv.nl/?url=raw.githubusercontent.com%2Fzzes50708%2Fgencko-assets%2Fmain%2Fimg%2F11.png&w=1200&h=630&fit=contain&bg=e6e3e3&output=webp&q=85'
         },
-        { property: 'og:image:width', content: '1200' },
-        { property: 'og:image:height', content: '630' },
-        { property: 'og:image:type', content: 'image/webp' },
+        // 各頁可覆寫不同尺寸或格式的圖片，避免全站硬套預設分享卡的規格。
         { property: 'og:locale', content: 'zh_TW' },
         { name: 'twitter:card', content: 'summary_large_image' },
-        { name: 'twitter:site', content: '@gencko_breeding' },
         { name: 'mobile-web-app-capable', content: 'yes' },
         { name: 'apple-mobile-web-app-capable', content: 'yes' },
         { name: 'apple-mobile-web-app-status-bar-style', content: 'black-translucent' },
@@ -388,15 +409,15 @@ export default defineNuxtConfig({
           innerHTML: JSON.stringify({
             '@context': 'https://schema.org',
             '@type': 'Organization',
+            '@id': ORG_AT_ID,
             name: 'Gencko Breeding Studio',
             alternateName: ['Gencko Studio'],
             url: 'https://www.genckobreeding.com',
             logo: 'https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/11.png',
-            description:
-              'Gencko Breeding Studio 是台灣專業的豹紋守宮（Eublepharis macularius）繁育工作室，提供特殊基因品系個體選購、基因計算機、新手飼養教學、健康評估、特寵醫院查詢與線上競標。從基因到飼養的一站式服務。',
-            slogan: 'Gencko 專業守宮選育：從特殊基因品系到新手飼養教學的一站式服務',
+            description: SITE_DESCRIPTION,
+            slogan: SITE_SLOGAN,
             foundingDate: '2025',
-            foundingLocation: { '@type': 'Place', name: '三重, 台灣' },
+            foundingLocation: { '@type': 'Place', name: '三重，台灣' },
             founder: { '@type': 'Person', name: 'Gino' },
             areaServed: { '@type': 'Country', name: 'Taiwan' },
             knowsAbout: [
@@ -466,6 +487,20 @@ export default defineNuxtConfig({
               contactType: 'customer service',
               availableLanguage: ['Chinese', 'zh-TW']
             }
+          })
+        },
+        {
+          key: 'site-website',
+          type: 'application/ld+json',
+          innerHTML: serializeJsonLd({
+            '@context': 'https://schema.org',
+            '@type': 'WebSite',
+            '@id': WEBSITE_AT_ID,
+            url: `${SITE_URL}/`,
+            name: SITE_NAME,
+            alternateName: 'Gencko Studio',
+            inLanguage: 'zh-TW',
+            publisher: { '@id': ORG_AT_ID }
           })
         }
       ]

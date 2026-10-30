@@ -122,6 +122,13 @@
   margin-inline: 0;
   padding: 16px 0 10px;
 }
+@media (min-width: 768px) {
+  /* 文章桌面正文與共用內容外框同寬，避免右側留下整片空白。 */
+  #main-content .site-document-page .article-page .reader-content {
+    width: 100%;
+    max-width: none;
+  }
+}
 
 #main-content h1:not(.sr-only),
 #main-content h2.page-title,

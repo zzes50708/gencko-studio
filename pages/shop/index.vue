@@ -1,10 +1,14 @@
-﻿<script setup>
+<script setup>
+import { TAXON_LEOPARD_GECKO, TAXON_FAT_TAIL_GECKO } from '~/utils/seo-schemas'
 import { ref, computed, onMounted, watch, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useHead, useAsyncData, useSupabaseClient, useState } from '#imports'
 import { useMainStore } from '~/stores/useMainStore'
 import { GENES_DB } from '~/utils/genes-db'
 import { getCleanUrl } from '~/utils/image'
+import { serializeJsonLd } from '~/utils/structured-data'
+import { seoPrice } from '~/utils/seo-head'
+import { catalogFallbackHtml } from '~/utils/catalog-fallback'
 import { formatAnimalSex } from '~/utils/incubation-sex'
 import ShopFlipCard from '~/components/ShopFlipCard.vue'
 import { useIntersectionObserver, useMediaQuery } from '@vueuse/core'
@@ -49,6 +53,7 @@ const { data: ssrForSale } = await useAsyncData('shop-forsale-seo-v1', async () 
 })
 
 const sp = ref('豹紋守宮')
+const catalogFallback = computed(() => catalogFallbackHtml(ssrForSale.value || [], sp.value))
 const kw = ref('')
 const fil = ref(createShopFilters())
 const desktopFiltersExpanded = useState('shop-filter-expanded-v2', () => false)
@@ -114,16 +119,20 @@ const itemListSchema = computed(() => {
               ? [{ '@type': 'PropertyValue', name: '物種', value: item.Species }]
               : [])
           ],
-          offers: {
-            '@type': 'Offer',
-            url: productUrl,
-            price: item.ListingPrice,
-            priceCurrency: 'TWD',
-            availability: 'https://schema.org/InStock',
-            itemCondition: 'https://schema.org/NewCondition',
-            areaServed: { '@type': 'Country', name: 'Taiwan' },
-            seller: shopSeller
-          }
+          ...(seoPrice(item.ListingPrice)
+            ? {
+                offers: {
+                  '@type': 'Offer',
+                  url: productUrl,
+                  price: seoPrice(item.ListingPrice),
+                  priceCurrency: 'TWD',
+                  availability: 'https://schema.org/InStock',
+                  itemCondition: 'https://schema.org/NewCondition',
+                  areaServed: { '@type': 'Country', name: 'Taiwan' },
+                  seller: shopSeller
+                }
+              }
+            : {})
         }
       }
     })
@@ -153,42 +162,28 @@ const shopWebPageLd = computed(() => ({
     cssSelector: ['.shop-intro__title']
   },
   publisher: shopSeller,
-  about: [
-    {
-      '@type': 'Taxon',
-      name: 'Eublepharis macularius',
-      alternateName: '豹紋守宮',
-      sameAs: 'https://www.wikidata.org/wiki/Q185061'
-    },
-    {
-      '@type': 'Taxon',
-      name: 'Hemitheconyx caudicinctus',
-      alternateName: '肥尾守宮',
-      sameAs: 'https://www.wikidata.org/wiki/Q913571'
-    }
-  ],
+  about: [TAXON_LEOPARD_GECKO, TAXON_FAT_TAIL_GECKO],
   ...(itemListSchema.value ? { mainEntity: itemListSchema.value } : {})
 }))
 
 useHead({
-  titleTemplate: '%s | Gencko Breeding Studio',
-  title: '線上選購守宮｜豹紋與肥尾守宮個體',
+  titleTemplate: '%s',
+  title: '線上選購守宮｜豹紋與肥尾守宮 | Gencko Breeding Studio',
   meta: [
     {
       name: 'description',
       content:
-        'Gencko Breeding Studio 線上選購頁，提供豹紋守宮與肥尾守宮在售個體，可依基因品系、性別、價格篩選。每隻個體均有健康保證，支援私訊購買。'
+        'Gencko Studio 線上選購，提供優質豹紋守宮與肥尾守宮，可依基因品系、性別、價格篩選。每隻個體均有健康保證，支援私訊購買。'
     },
     {
       name: 'keywords',
       content: '豹紋守宮購買, 肥尾守宮購買, 守宮購買, 守宮價格, 守宮品系, Gencko Studio'
     },
     // Open Graph
-    { property: 'og:title', content: '線上選購守宮｜豹紋與肥尾守宮個體 Gencko Breeding Studio' },
+    { property: 'og:title', content: '線上選購守宮｜豹紋與肥尾守宮 | Gencko Breeding Studio' },
     {
       property: 'og:description',
-      content:
-        '線上選購豹紋守宮與肥尾守宮在售個體，可依基因品系、性別、價格篩選，每隻個體均有健康保證。'
+      content: '線上選購豹紋守宮與肥尾守宮，可依基因品系、性別、價格篩選，每隻個體均有健康保證。'
     },
     { property: 'og:image', content: shopImg },
     { property: 'og:image:alt', content: 'Gencko 守宮線上選購 豹紋守宮與肥尾守宮在售個體' },
@@ -196,17 +191,17 @@ useHead({
     { property: 'og:type', content: 'website' },
     // Twitter Card
     { name: 'twitter:card', content: 'summary_large_image' },
-    { name: 'twitter:title', content: '線上選購守宮｜豹紋與肥尾守宮個體' },
+    { name: 'twitter:title', content: '線上選購守宮｜豹紋與肥尾守宮 | Gencko Breeding Studio' },
     {
       name: 'twitter:description',
-      content: '線上選購豹紋守宮與肥尾守宮在售個體，可依基因品系、性別、價格篩選。'
+      content: '線上選購豹紋守宮與肥尾守宮，可依基因品系、性別、價格篩選，每隻個體均有健康保證。'
     },
     { name: 'twitter:image', content: shopImg }
   ],
   link: [{ rel: 'canonical', href: shopUrl }],
   script: computed(() => [
-    { type: 'application/ld+json', innerHTML: JSON.stringify(shopWebPageLd.value) },
-    { type: 'application/ld+json', innerHTML: JSON.stringify(shopBreadcrumbLd) }
+    { type: 'application/ld+json', innerHTML: serializeJsonLd(shopWebPageLd.value) },
+    { type: 'application/ld+json', innerHTML: serializeJsonLd(shopBreadcrumbLd) }
   ])
 })
 
@@ -538,6 +533,7 @@ const showFavorites = async () => {
           <span>{{ sp }}</span>
           <span>共 {{ allMatches.length }} 隻・已顯示 {{ shopList.length }} 隻</span>
         </div>
+        <noscript v-if="catalogFallback" v-html="catalogFallback" />
         <div v-if="store.loading && !shopList.length" class="grid photo-grid">
           <SkeletonCard v-for="n in 8" :key="n" />
         </div>

@@ -276,11 +276,22 @@ test('預約詳情開標前不顯示出價入口，到時自動開放', async ({
   )
   await page.route('**/rest/v1/auction_bids?**', (r) => r.fulfill({ json: [] }))
   await page.routeWebSocket('**/realtime/v1/websocket**', () => {})
+  // 先完成初次校時才推進虛擬時間，避免把測試等待誤算成 11 秒網路往返。
+  const initialClockResponse = page.waitForResponse('**/api/server-time')
   await page.goto(`/auction/${auction.id}`)
+  await (await initialClockResponse).finished()
   await expect(page.locator('.timer-value')).toContainText('開標倒數')
   await expect(page.getByRole('button', { name: 'LINE 登入', exact: true })).toHaveCount(0)
   await page.clock.runFor(11000)
   await expect(page.getByRole('button', { name: 'LINE 登入', exact: true })).toBeVisible()
+  // 出價數字不是可直接成交的售價，搜尋標記不得將它寫成 Offer。
+  const schemas = (await page.locator('script[type="application/ld+json"]').allTextContents()).map(
+    (text) => JSON.parse(text)
+  )
+  const product = schemas.find((item) => item.mainEntity?.['@type'] === 'Product')?.mainEntity
+  expect(product).toBeTruthy()
+  expect(product).not.toHaveProperty('offers')
+  await expect(page.locator('meta[property="product:price:amount"]')).toHaveCount(0)
 })
 
 test('競標列表及詳情一致顯示孵化紀錄，不以缺少物種的溫度猜性別', async ({ page }) => {

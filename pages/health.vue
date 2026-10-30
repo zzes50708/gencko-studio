@@ -1,4 +1,6 @@
 <script setup>
+import { TAXON_LEOPARD_GECKO, TAXON_FAT_TAIL_GECKO } from '~/utils/seo-schemas'
+import { serializeJsonLd } from '~/utils/structured-data'
 import { ref, computed, reactive, onMounted, onBeforeUnmount, watch, nextTick } from 'vue'
 import { useHead } from '#imports'
 import { useMainStore } from '~/stores/useMainStore'
@@ -34,16 +36,6 @@ const hPublisher = {
     'https://line.me/R/ti/p/@219abdzn'
   ]
 }
-
-// MedicalCondition：將 DISEASES 物件轉為陣列
-const hMedicalConditions = Object.entries(DISEASES).map(([id, d]) => ({
-  '@type': 'MedicalCondition',
-  '@id': `${hUrl}#disease-${id}`,
-  name: d.name,
-  signOrSymptom: (d.signs || []).map((s) => ({ '@type': 'MedicalSymptom', name: s })),
-  associatedAnatomy: { '@type': 'AnatomicalStructure', name: '守宮（爬蟲類）' },
-  ...(d.note ? { description: d.note } : {})
-}))
 
 // HowTo：如何使用健康評估
 const hHowToLd = {
@@ -81,89 +73,6 @@ const hHowToLd = {
   ]
 }
 
-const hInterpretHowToLd = {
-  '@type': 'HowTo',
-  '@id': `${hUrl}#interpret-health`,
-  name: '如何判讀守宮健康狀態',
-  description: '從精神、體態、進食排泄到異常警訊，快速建立守宮日常健康判讀順序。',
-  image: hImg,
-  totalTime: 'PT5M',
-  step: [
-    {
-      '@type': 'HowToStep',
-      position: 1,
-      name: '先看精神與活動力',
-      text: '先確認是否睜眼、抬頭、移動正常，有沒有持續無力、閉眼或反應變慢。'
-    },
-    {
-      '@type': 'HowToStep',
-      position: 2,
-      name: '再看體態與外觀',
-      text: '留意尾巴是否快速變瘦、脫皮是否卡住、嘴角鼻孔與泄殖腔附近是否有異常。'
-    },
-    {
-      '@type': 'HowToStep',
-      position: 3,
-      name: '把進食和排泄一起看',
-      text: '不要只看有沒有吃，還要一起比對體重、排便與拒食持續時間。'
-    },
-    {
-      '@type': 'HowToStep',
-      position: 4,
-      name: '最後分辨是否該就醫',
-      text: '若有快速惡化、神經症狀、呼吸異常、無法站立翻身或外傷，直接找特寵醫院。'
-    }
-  ]
-}
-
-// FAQPage：健康相關常見問題
-const hFaqLd = {
-  '@type': 'FAQPage',
-  '@id': `${hUrl}#faq`,
-  mainEntity: [
-    {
-      '@type': 'Question',
-      name: 'Gencko 健康評估可以取代獸醫診斷嗎？',
-      acceptedAnswer: {
-        '@type': 'Answer',
-        text: '不行。本評估系統僅供初步判斷與飼主自我檢視，無法取代專業獸醫的臨床診斷、影像檢查或實驗室檢驗。當系統觸發「立即就醫警訊」時，請盡快帶守宮到專業的特寵醫院（可使用 /hospital 查詢）。'
-      }
-    },
-    {
-      '@type': 'Question',
-      name: '我的守宮拒食幾天該帶去醫院？',
-      acceptedAnswer: {
-        '@type': 'Answer',
-        text: '依個體狀況不同。一般原則：成體守宮拒食 14 天且體重明顯下降、或合併其他症狀（嘔吐、消瘦、糞便異常、神經症狀）就應就醫；幼體拒食超過 5–7 天應提早就醫。完整評估請使用本頁「緊急快篩」模式。'
-      }
-    },
-    {
-      '@type': 'Question',
-      name: '守宮常見的致命疾病有哪些？',
-      acceptedAnswer: {
-        '@type': 'Answer',
-        text: '本系統涵蓋的常見疾病包含：隱孢子蟲感染（最致命腸道寄生蟲）、球蟲感染、呼吸道感染、代謝性骨病（MBD）、口炎、腸阻塞、脫水、低溫燙傷等。每項都有對應的症狀清單與獸醫處置說明，可於評估結果或 DISEASES 知識庫查看。'
-      }
-    },
-    {
-      '@type': 'Question',
-      name: '「給獸醫看的報告」是什麼？怎麼用？',
-      acceptedAnswer: {
-        '@type': 'Answer',
-        text: '完整健康檢查模式完成後，會產生一份結構化的報告區塊，包含飼主觀察、各項目判讀與可能疾病比對。掛號特寵醫院前截圖此區直接給獸醫，可大幅縮短問診時間並減少資訊遺漏。'
-      }
-    },
-    {
-      '@type': 'Question',
-      name: '評估結果會上傳到伺服器嗎？',
-      acceptedAnswer: {
-        '@type': 'Answer',
-        text: '不會。所有作答進度與結果僅儲存在你瀏覽器的 sessionStorage（本機），關閉分頁或瀏覽器後即清除。Gencko Breeding Studio 不會收集任何健康相關資料。'
-      }
-    }
-  ]
-}
-
 const hBreadcrumbLd = {
   '@context': 'https://schema.org',
   '@type': 'BreadcrumbList',
@@ -173,12 +82,10 @@ const hBreadcrumbLd = {
   ]
 }
 
-// MedicalWebPage 作為主體（醫療權威性訊號），lastReviewed = 部署當日
-const hReviewDate = new Date().toISOString().split('T')[0]
-
+// 依實際工具功能描述，不宣稱具備醫師審閱紀錄。
 const hWebPageLd = {
   '@context': 'https://schema.org',
-  '@type': 'MedicalWebPage',
+  '@type': 'WebPage',
   '@id': hUrl,
   url: hUrl,
   name: '守宮健康評估系統｜緊急快篩、完整檢查、購入評估',
@@ -190,29 +97,17 @@ const hWebPageLd = {
     cssSelector: ['.page-title', '.h-section-title']
   },
   publisher: hPublisher,
-  about: [
-    {
-      '@type': 'Taxon',
-      name: 'Eublepharis macularius',
-      alternateName: '豹紋守宮',
-      sameAs: 'https://www.wikidata.org/wiki/Q185061'
-    },
-    {
-      '@type': 'Taxon',
-      name: 'Hemitheconyx caudicinctus',
-      alternateName: '肥尾守宮',
-      sameAs: 'https://www.wikidata.org/wiki/Q913571'
-    }
-  ],
+  about: [TAXON_LEOPARD_GECKO, TAXON_FAT_TAIL_GECKO],
   audience: { '@type': 'Audience', audienceType: '守宮飼主' },
-  lastReviewed: hReviewDate,
-  specialty: { '@type': 'MedicalSpecialty', name: 'Veterinary' },
-  medicalAudience: [
-    { '@type': 'MedicalAudience', audienceType: 'Patient' },
-    { '@type': 'MedicalAudience', audienceType: 'Caregiver' }
-  ],
-  mentions: hMedicalConditions,
-  hasPart: [hHowToLd, hInterpretHowToLd, hFaqLd]
+  mainEntity: {
+    '@type': 'WebApplication',
+    name: 'Gencko 守宮健康評估',
+    url: hUrl,
+    applicationCategory: 'HealthApplication',
+    operatingSystem: 'All',
+    description: '以引導式問卷整理飼主觀察與就醫參考，不取代獸醫診斷。'
+  },
+  hasPart: [hHowToLd]
 }
 
 useHead({
@@ -237,8 +132,7 @@ useHead({
     { property: 'og:image', content: hImg },
     { property: 'og:image:alt', content: '守宮健康評估系統 - Gencko Breeding Studio' },
     { property: 'og:url', content: hUrl },
-    { property: 'og:type', content: 'article' },
-    { property: 'article:section', content: '健康評估' },
+    { property: 'og:type', content: 'website' },
     // Twitter Card
     { name: 'twitter:card', content: 'summary_large_image' },
     { name: 'twitter:title', content: '守宮健康評估系統｜緊急快篩、完整檢查、購入評估' },
@@ -250,8 +144,8 @@ useHead({
   ],
   link: [{ rel: 'canonical', href: hUrl }],
   script: [
-    { type: 'application/ld+json', innerHTML: JSON.stringify(hWebPageLd) },
-    { type: 'application/ld+json', innerHTML: JSON.stringify(hBreadcrumbLd) }
+    { type: 'application/ld+json', innerHTML: serializeJsonLd(hWebPageLd) },
+    { type: 'application/ld+json', innerHTML: serializeJsonLd(hBreadcrumbLd) }
   ]
 })
 
