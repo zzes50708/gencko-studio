@@ -295,10 +295,10 @@ export const useMainStore = defineStore('main', () => {
     tableTasks.set(table, task)
     return task
   }
-  function loadPageData(path) {
+  function loadPageData(path, { refreshInventory = false } = {}) {
     const needs = pageDataNeeds(path)
     const tasks = [loadSecondaryTable('config')]
-    if (needs.inventory) tasks.push(ensureInventoryLoaded())
+    if (needs.inventory) tasks.push(refreshInventory ? loadInventory() : ensureInventoryLoaded())
     if (needs.articles) tasks.push(loadArticles())
     if (needs.genes) tasks.push(loadSecondaryTable('genetic_pages'))
     if (needs.merchandise) tasks.push(loadSecondaryTable('merchandise'))
@@ -318,7 +318,8 @@ export const useMainStore = defineStore('main', () => {
   }
 
   function loadDataFromAPI() {
-    return loadPageData(router.currentRoute.value.path)
+    // 明確重新載入時必須重讀庫存，不能讓成功快取把重試按鈕變成無作用。
+    return loadPageData(router.currentRoute.value.path, { refreshInventory: true })
   }
 
   function ensureInventoryLoaded() {

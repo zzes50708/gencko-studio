@@ -227,8 +227,9 @@ const fmtStatus = (i) => {
 
 const fmtPrice = (i) => {
   if (!i) return '-'
+  if (i.Status === 'Sold')
+    return i.ListingPrice == null || i.ListingPrice === '' ? '售價未登錄' : `NT$ ${i.ListingPrice}`
   if (store.isExhibitionMode) return store.exhibitionNote
-  if (i.Status === 'Sold') return `已售 $${i.SoldPrice || '?'}`
   if (i.ListingPrice) return `NT$ ${i.ListingPrice}`
   return '-'
 }

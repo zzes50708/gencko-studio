@@ -243,6 +243,66 @@ test('直接進入比較頁也會核對競標資料並提供有效場次入口',
   )
   await expect(page.locator('main')).toHaveCount(1)
 })
+
+test('比較頁重新查詢會重讀庫存，不沿用之前查無個體的快取', async ({ page }) => {
+  let rows: any[] = []
+  let reads = 0
+  await page.route('**/rest/v1/animals**', (route) => {
+    reads++
+    return route.fulfill({ json: rows })
+  })
+  await page.route('**/rest/v1/site_settings**', (route) => route.fulfill({ json: null }))
+  await page.route('**/rest/v1/auctions**', (route) => route.fulfill({ json: [] }))
+  await page.goto('/compare?ids=REFRESH-FOLLOWUP')
+  await ready(page)
+  await expect(page.locator('.missing-items')).toContainText('REFRESH-FOLLOWUP')
+  const previousReads = reads
+  rows = [
+    {
+      id: 'REFRESH-FOLLOWUP',
+      species: '豹紋守宮',
+      morph: '新上架測試個體',
+      status: 'ForSale',
+      listing_price: 8000,
+      genes: []
+    }
+  ]
+  await page.getByRole('button', { name: '重新查詢', exact: true }).click()
+  await expect(page.locator('.item-heading')).toHaveCount(1)
+  expect(reads).toBeGreaterThan(previousReads)
+})
+
+for (const [price, exhibition, expected] of [
+  [8000, false, 'NT$ 8000'],
+  [null, false, '售價未登錄'],
+  [8000, true, 'NT$ 8000']
+] as const) {
+  test(`已售出比較售價 ${price} 展場 ${exhibition} 與商城一致`, async ({ page }) => {
+    await page.route('**/rest/v1/animals**', (route) =>
+      route.fulfill({
+        json: [
+          {
+            id: 'SOLD-FOLLOWUP',
+            species: '豹紋守宮',
+            morph: '已售出價格核對',
+            status: 'Sold',
+            listing_price: price,
+            sold_price: 9999,
+            genes: []
+          }
+        ]
+      })
+    )
+    await page.route('**/rest/v1/site_settings**', (route) =>
+      route.fulfill({ json: { exhibition_enabled: exhibition, exhibition_note: '展場請詢價' } })
+    )
+    await page.route('**/rest/v1/auctions**', (route) => route.fulfill({ json: [] }))
+    await page.goto('/compare?ids=SOLD-FOLLOWUP')
+    await ready(page)
+    await expect(page.locator('.price-cell')).toHaveText(expected)
+    await expect(page.locator('.price-cell')).not.toContainText('9999')
+  })
+}
 async function articleFixture(page: Page, image = '') {
   await page.route('**/rest/v1/articles**', (route) => {
     const article = {
