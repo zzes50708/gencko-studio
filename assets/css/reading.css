@@ -31,22 +31,8 @@
 .reader-content :is(th, td) {
   overflow-wrap: anywhere;
 }
-/* 寬螢幕使用報刊式分欄，外框與圖片仍滿版。 */
-@media (min-width: 1280px) {
-  .article-page .reader-content {
-    column-width: 36rem;
-    column-gap: 3rem;
-  }
-  .reader-content :is(h2, h3, figure, img, table, pre, blockquote) {
-    column-span: all;
-  }
-  .reader-content :is(p, li) {
-    orphans: 3;
-    widows: 3;
-  }
-  .gene-layout--text-only .detail-txt {
-    column-width: 36rem;
-    column-gap: 3rem;
-    line-height: 1.8;
-  }
+.reader-content,
+.gene-layout--text-only .detail-txt {
+  column-count: 1;
+  column-width: auto;
 }

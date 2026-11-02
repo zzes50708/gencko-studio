@@ -57,8 +57,11 @@ export const getImageSrcset = (url?: string | null, widths = [200, 400, 800, 120
         try {
           const parsed = new URL(source)
           if (parsed.hostname !== 'wsrv.nl') return ''
-          parsed.searchParams.set('w', String(width))
-          return `${parsed.href} ${width}w`
+          // 保留檔名原有的 %20；URLSearchParams 會改成 +，部分圖片代理會視為不同檔名。
+          const resized = /([?&])w=/.test(source)
+            ? source.replace(/([?&])w=[^&]*/, `$1w=${width}`)
+            : `${source}${source.includes('?') ? '&' : '?'}w=${width}`
+          return `${resized.replace(/ /g, '%20').replace(/,/g, '%2C')} ${width}w`
         } catch {
           return ''
         }

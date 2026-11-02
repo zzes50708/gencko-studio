@@ -1,7 +1,7 @@
 import { defineConfig, devices } from '@playwright/test'
 export default defineConfig({
   testDir: './tests/e2e',
-  testMatch: 'site-audit-release.spec.ts',
+  testMatch: /(?:site-audit-release|release-regressions)\.spec\.ts/,
   timeout: 45000,
   workers: 1,
   retries: 0,

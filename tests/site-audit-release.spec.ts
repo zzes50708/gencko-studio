@@ -6,6 +6,15 @@ import { pageDataNeeds } from '../utils/site-data-policy'
 import { getImageSrcset } from '../utils/image'
 
 describe('響應式圖片', () => {
+  it('含空白與逗號的檔名不得被改成加號，候選只能改變圖片寬度', () => {
+    const source =
+      'https://wsrv.nl/?url=raw.githubusercontent.com%2Forg%2Frepo%2Fmain%2FGenerated%20Image%20May%2006%2C%202026.jpg&w=600&output=webp&q=80'
+    const result = getImageSrcset(source, [400, 800])!
+    expect(result).not.toContain('+')
+    expect(result).toContain('Generated%20Image%20May%2006%2C%202026.jpg')
+    expect(result).toContain('w=400')
+    expect(result).toContain('w=800')
+  })
   it('站內圖片不轉送外部代理，既有代理可產生不同尺寸', () => {
     expect(getImageSrcset('/previews/a.png')).toBeUndefined()
     const srcset = getImageSrcset('https://wsrv.nl/?url=example.com/a.jpg&w=800', [200, 400])!
@@ -102,6 +111,14 @@ describe('瀏覽器拒絕儲存仍可繼續', () => {
 })
 
 describe('文章公開 HTML 安全邊界', () => {
+  it('保留舊文章 HTML 文字但不繼承內嵌限寬，也不猜測未知圖片比例', () => {
+    const html = autoLinkGenes(
+      '<div class="gecko-article-container" style="max-width:500px"><style>.gecko-article-container{width:500px;columns:2}</style><h2>章節</h2><p>文章內容</p><img src="/photo.jpg"></div>',
+      []
+    )
+    expect(html).toContain('<p>文章內容</p>')
+    expect(html).not.toMatch(/max-width|columns|<style|3\s*\/\s*2/)
+  })
   it('沒有基因連結時也會移除腳本、事件、表單及危險網址', () => {
     const html = autoLinkGenes(
       '<p>照護</p><script>alert(1)</script><img src="/a.jpg" onerror="alert(1)"><a href="java&#x73;cript:alert(1)">連結</a><iframe src="https://x.invalid"></iframe><form><input></form>',

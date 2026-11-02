@@ -7,16 +7,22 @@ const props = withDefaults(
   { loading: 'lazy', emptyText: '文章圖片未提供' }
 )
 const failed = ref(false)
+const responsive = ref(true)
 const image = ref<HTMLImageElement | null>(null)
+const onImageError = () => {
+  if (responsive.value && getImageSrcset(props.src)) responsive.value = false
+  else failed.value = true
+}
 // SSR 圖片可能在 Vue 掛載前就失敗，掛載後再次核對。
 const checkImage = () => {
-  if (image.value?.complete && image.value.naturalWidth === 0) failed.value = true
+  if (image.value?.complete && image.value.naturalWidth === 0) onImageError()
 }
 onMounted(checkImage)
 watch(
   () => props.src,
   async () => {
     failed.value = false
+    responsive.value = true
     await nextTick()
     checkImage()
   }
@@ -25,10 +31,11 @@ watch(
 <template>
   <img
     v-if="src && !failed"
+    :key="responsive ? 'responsive' : 'original'"
     ref="image"
     v-bind="$attrs"
     :src="src"
-    :srcset="getImageSrcset(src)"
+    :srcset="responsive ? getImageSrcset(src) : undefined"
     :sizes="
       String(
         $attrs.sizes || '(max-width: 767px) calc(100vw - 32px), (max-width: 1023px) 45vw, 33vw'
@@ -37,7 +44,7 @@ watch(
     :alt="alt"
     :loading="loading"
     decoding="async"
-    @error="failed = true"
+    @error="onImageError"
   />
   <div
     v-else

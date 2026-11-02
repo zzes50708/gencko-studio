@@ -83,12 +83,15 @@ export function cleanArticleHtml(value: unknown): string {
           tagName: 'img',
           attribs: {
             ...attributes,
-            width,
-            height,
+            ...(width ? { width } : {}),
+            ...(height ? { height } : {}),
             loading: 'lazy',
             decoding: 'async',
-            // 沒有尺寸的舊文章以固定畫框保留位置，contain 保留完整圖片。
-            style: `aspect-ratio: ${width && height ? `${width} / ${height}` : '3 / 2'}; object-fit: contain`
+            // 不替舊文章猜測圖片比例，避免原有照片被壓入固定畫框。
+            style:
+              width && height
+                ? `aspect-ratio: ${width} / ${height}; object-fit: contain`
+                : 'object-fit: contain'
           }
         }
       }
