@@ -284,6 +284,8 @@ export default defineNuxtConfig({
   // 只選內容變動極少的頁（utils/ 內 hardcoded data 為主）
   // 若日後改成動態內容需從這移除以避免 stale
   nitro: {
+    // 將 HTML 清理套件及解析器一併打包，避免正式環境以 CommonJS 載入 ESM 而回傳 500。
+    externals: { inline: ['sanitize-html', 'htmlparser2'] },
     prerender: {
       routes: ['/about', '/faq', '/qs', '/compare', '/calculator']
     }

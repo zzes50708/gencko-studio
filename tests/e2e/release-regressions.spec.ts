@@ -1,6 +1,17 @@
 import { test, expect } from '@playwright/test'
 import type { Page } from '@playwright/test'
 
+test('直接開啟真實文章與圖鑑，伺服器必須回傳正文而非 500', async ({ request }) => {
+  for (const [path, marker] of [
+    ['/articles/ART-007', 'reader-content'],
+    [`/genes/${encodeURIComponent('檸檬霜')}`, 'detail-txt']
+  ]) {
+    const response = await request.get(path)
+    expect(response.status(), path).toBe(200)
+    expect(await response.text()).toContain(marker)
+  }
+})
+
 const text = '這是資料庫儲存的 HTML 文章，應維持單欄滿版並保留正常閱讀順序。'.repeat(35)
 async function ready(page: Page) {
   await page.waitForFunction(() => {
