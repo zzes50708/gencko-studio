@@ -77,7 +77,8 @@ const locationError = ref('')
 const localHospital = shallowRef<MapHospital | null>(null)
 const selectedPlace = shallowRef<HospitalMapPlace | null>(null)
 const sharedHospitals = shallowRef<MapHospital[]>([])
-const resultsVisible = computed(() => !!props.searchPerformed)
+// 已有畫面或替代名錄時就顯示對應院所，不能因搜尋旗標尚未設定而留下空白。
+const resultsVisible = computed(() => !!props.searchPerformed || ready.value || failed.value)
 const places = shallowRef<HospitalMapPlace[]>([])
 const placeLoading = ref(false),
   placeError = ref(false),
@@ -1132,7 +1133,7 @@ onUnmounted(() => {
       <small v-if="hasRegionFilter && ready && !failed" class="unified-region-visible">
         地圖畫面內 {{ viewportHospitals.length }} 間
       </small>
-      <p v-if="!searchPerformed" class="unified-search-prompt">
+      <p v-if="!resultsVisible" class="unified-search-prompt">
         輸入關鍵字或選擇條件，再搜尋院所與地標。
       </p>
       <div

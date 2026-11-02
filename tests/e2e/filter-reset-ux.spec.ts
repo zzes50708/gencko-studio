@@ -28,9 +28,11 @@ test('已選品系可重置，網址不保留舊條件', async ({ page }) => {
 test('手機篩選清除同步清掉基因搜尋文字', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 850 })
   await page.goto('/shop')
-  await page.waitForFunction(
-    () => !!(document.querySelector('.catalog-search') as any)?.__vueParentComponent
-  )
+  await page.waitForFunction(() => {
+    const app = (document.querySelector('#__nuxt') as any)?.__vue_app__?.config.globalProperties
+      .$nuxt
+    return app && !app.isHydrating
+  })
   await page.getByRole('button', { name: '篩選', exact: true }).click()
   const dialog = page.getByRole('dialog', { name: '篩選條件', exact: true })
   await dialog.getByRole('searchbox', { name: '搜尋基因' }).fill('不存在的基因')

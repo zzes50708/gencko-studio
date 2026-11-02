@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test'
+test.use({ serviceWorkers: 'block' })
 if (process.env.UX_BASE_URL) test.use({ baseURL: process.env.UX_BASE_URL })
 for (const width of [320, 390, 768, 1440]) {
   test(`FAQ與文章 ${width}px 排版及章節操作`, async ({ browser, baseURL }) => {
@@ -100,7 +101,11 @@ test('FAQ跨分類搜尋、清除、網址重載與返回保留答案', async ({
 
 test('文章暫時載入失敗可重試，沒有當成下架', async ({ page }) => {
   await page.goto('/articles')
-  await page.waitForTimeout(500)
+  await page.waitForFunction(() => {
+    const app = (document.querySelector('#__nuxt') as any)?.__vue_app__?.config.globalProperties
+      .$nuxt
+    return app && !app.isHydrating
+  })
   let fail = true
   await page.route('**/rest/v1/articles?**', (r) =>
     new URL(r.request().url()).searchParams.has('id') && fail

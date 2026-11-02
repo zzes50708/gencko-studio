@@ -1,12 +1,24 @@
 import { test, expect } from '@playwright/test'
-test.use({ baseURL: process.env.UX_BASE_URL || 'http://[::1]:3000', reducedMotion: 'reduce' })
+test.use({
+  baseURL: process.env.UX_BASE_URL || 'http://[::1]:3000',
+  reducedMotion: 'reduce',
+  serviceWorkers: 'block'
+})
 test('未快取詞條載入失敗可重試，破圖有替代資訊', async ({ page }) => {
   await page.route('**/rest/v1/genetic_pages*', (r) =>
     r.fulfill({ status: 503, contentType: 'application/json', body: '{"message":"模擬暫時失敗"}' })
   )
-  await page.goto('/genes')
-  await page.waitForTimeout(1200)
-  await page.locator('main a[href^="/genes/"]').first().click()
+  await page.goto('/certificates')
+  await page.waitForFunction(() => {
+    const app = (document.querySelector('#__nuxt') as any)?.__vue_app__?.config.globalProperties
+      .$nuxt
+    return app && !app.isHydrating
+  })
+  await page.evaluate(() =>
+    (document.querySelector('#__nuxt') as any).__vue_app__.config.globalProperties.$router.push(
+      '/genes/' + encodeURIComponent('測試基因')
+    )
+  )
   await expect(page.getByRole('button', { name: '重新載入', exact: true })).toBeVisible({
     timeout: 15000
   })

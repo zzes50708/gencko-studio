@@ -488,16 +488,32 @@ const generatePromo = async () => {
     canvas.width = 1080
     canvas.height = 1080
     const ctx = canvas.getContext('2d')
-    const img = new Image()
-    img.crossOrigin = 'Anonymous'
-    const targetUrl = productModules.value.visuals.list[0]
-      ? getCleanUrl(productModules.value.visuals.list[0])
-      : 'https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/placeholder.jpg'
-    img.src = targetUrl
-    await new Promise((resolve, reject) => {
-      img.onload = resolve
-      img.onerror = reject
-    })
+    const loadPromoImage = (url) =>
+      new Promise((resolve, reject) => {
+        const image = new Image()
+        image.crossOrigin = 'Anonymous'
+        const timer = setTimeout(() => {
+          image.onload = image.onerror = null
+          reject(new Error('圖卡圖片載入逾時'))
+        }, 10000)
+        image.onload = () => {
+          clearTimeout(timer)
+          resolve(image)
+        }
+        image.onerror = () => {
+          clearTimeout(timer)
+          reject(new Error('圖卡圖片無法載入'))
+        }
+        image.src = url
+      })
+    const photo = productModules.value.visuals.list[0]
+    let img
+    try {
+      img = await loadPromoImage(photo ? getCleanUrl(photo) : '/logo.png')
+    } catch (error) {
+      if (!photo || route.path !== promoPagePath) throw error
+      img = await loadPromoImage('/logo.png')
+    }
     if (route.path !== promoPagePath) return
     const imgAreaHeight = 820
     ctx.filter = 'blur(40px)'

@@ -56,14 +56,7 @@ test('手機個體加入比較、分享失敗、缺圖及原生圖卡返回隔�
   })
   await page.locator('.btn-share').tap()
   await expect(page.getByLabel('手動複製個體連結')).toBeVisible()
-  await page.locator('.btn-promo').focus()
-  await page.evaluate(() => {
-    let c = (document.querySelector('.btn-promo') as any).__vueParentComponent
-    while (c && !c.setupState.promoModal) c = c.parent
-    c.setupState.generatedImage =
-      'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="1" height="1"/>'
-    c.setupState.promoModal.open()
-  })
+  await page.locator('.btn-promo').tap()
   await expect(page.locator('dialog.promo-modal-overlay')).toBeVisible()
   await page.evaluate(() => (document.querySelector('.btn-share') as HTMLElement).focus())
   expect(await page.evaluate(() => !!document.activeElement?.closest('dialog'))).toBe(true)
@@ -72,6 +65,15 @@ test('手機個體加入比較、分享失敗、缺圖及原生圖卡返回隔�
   await expect(page).toHaveURL(/product\/UX-P$/)
   await context.close()
 })
+test('照片網址失效時製作圖卡會退回站內品牌圖', async ({ page }) => {
+  await fixtures(page, { animal: { image_url: 'https://example.invalid/broken-photo.jpg' } })
+  await page.route('https://wsrv.nl/**', (route) => route.abort())
+  await openProduct(page)
+  await page.locator('.btn-promo').click()
+  await expect(page.locator('dialog.promo-modal-overlay')).toBeVisible()
+  await expect(page.locator('.promo-modal-content img')).toHaveAttribute('src', /^data:image\/jpeg/)
+})
+
 test('比較失效ID、單隻中性基因、中文狀態、展場與分享替代', async ({ page }) => {
   await fixtures(page, { exhibition: true })
   await page.goto('/compare?ids=UX-P,MISSING')

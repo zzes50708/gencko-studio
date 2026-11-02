@@ -127,9 +127,9 @@ async function regionCount(page: any, count: number, label = '台北市') {
   await expect(page.locator('.hosp-card')).toHaveCount(count)
   await expect(page.getByTestId('hospital-visible-count')).toHaveText(`${label} ${count} 間院所`)
 }
-test('初始只有一個搜尋框且不顯示清單，控制位於地圖左側', async ({ page }) => {
+test('初始只有一個搜尋框且清單對應畫面院所，控制位於地圖左側', async ({ page }) => {
   await expect(page.getByLabel('在地圖搜尋醫院或地標', { exact: true })).toHaveCount(1)
-  await expect(page.locator('.hosp-card')).toHaveCount(0)
+  await expect(page.locator('.hosp-card')).toHaveCount(2)
   await expect(page.getByTestId('hospital-visible-count')).toHaveText('畫面內 2 間院所', {
     timeout: 15000
   })
@@ -147,10 +147,10 @@ test('搜尋後單點與群聚數量對應清單，不混入未定位院所', as
   await expect(page.locator('.hosp-card')).not.toContainText(['尚待定位醫院'])
   await expect(page.locator('.unified-unlocated summary')).toContainText('1 間尚未定位')
 })
-test('文字輸入後需搜尋才開啟清單，Enter 可搜尋', async ({ page }) => {
+test('文字輸入前後保留畫面清單，Enter 才套用搜尋', async ({ page }) => {
   const search = page.getByLabel('在地圖搜尋醫院或地標', { exact: true })
   await search.fill('醫院甲')
-  await expect(page.locator('.hosp-card')).toHaveCount(0)
+  await expect(page.locator('.hosp-card')).toHaveCount(2)
   await search.press('Enter')
   await visibleCount(page, 1)
   await expect(page.locator('.hosp-card')).toContainText('測試醫院甲')
@@ -332,7 +332,7 @@ test('離線仍能使用已載入院所的側欄搜尋', async ({ page, context 
 test.describe('手機', () => {
   test.use({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true })
   test('手機直接顯示3D並可展開篩選搜尋，不橫向溢出', async ({ page }) => {
-    await expect(page.locator('.hosp-card')).toHaveCount(0)
+    await expect(page.locator('.hosp-card')).toHaveCount(2)
     await expect(page.locator('.maplibregl-canvas')).toHaveCount(1)
     await page.locator('.hosp-sidebar-filter-details summary').tap()
     await page.getByRole('combobox', { name: '區域與縣市' }).selectOption('台北市')
@@ -577,7 +577,7 @@ test('中文選字期間Enter不搜尋，結束選字後可搜尋', async ({ pag
   await input.dispatchEvent('compositionstart')
   await input.fill('醫院甲')
   await input.press('Enter')
-  await expect(page.locator('.hosp-card')).toHaveCount(0)
+  await expect(page.locator('.hosp-card')).toHaveCount(2)
   await input.dispatchEvent('compositionend')
   await input.press('Enter')
   await visibleCount(page, 1)

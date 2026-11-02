@@ -3,9 +3,9 @@ export function pageDataNeeds(path: string) {
   const root = path.split(/[?#]/)[0].split('/')[1] || ''
   return {
     inventory: ['home', 'shop', 'compare', 'breeders', 'product', 'profile'].includes(root),
-    articles: ['home', 'articles'].includes(root),
+    articles: ['home', 'articles', 'care'].includes(root),
     genes: root === 'genes',
     merchandise: root === 'merch',
-    auctions: ['home', 'shop', 'product', 'auction'].includes(root)
+    auctions: ['home', 'shop', 'product', 'auction', 'compare'].includes(root)
   }
 }

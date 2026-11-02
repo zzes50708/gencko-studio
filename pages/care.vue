@@ -2,7 +2,7 @@
 import { TAXON_LEOPARD_GECKO, TAXON_FAT_TAIL_GECKO } from '~/utils/seo-schemas'
 import { serializeJsonLd } from '~/utils/structured-data'
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
-import { useHead } from '#imports'
+import { useHead, useAsyncData } from '#imports'
 import { useMainStore } from '~/stores/useMainStore'
 import {
   ANCHORS,
@@ -19,6 +19,11 @@ import {
 
 const store = useMainStore()
 const router = useRouter()
+// 指南本身使用文章清單，直接進站與從其他頁面進入必須取得相同內容。
+await useAsyncData('published-articles-ready', async () => {
+  await store.loadArticles()
+  return true
+})
 
 // JSON-LD：HowTo①「如何設置守宮飼養環境」（步驟取自 ENV_ITEMS）
 const howToEnvLd = {
@@ -195,6 +200,7 @@ useHead({
 })
 
 const articleById = (id) => store.articlesList?.find((a) => a.ID === id) || null
+const breedingRelatedArticles = computed(() => BREEDING_RELATED.map(articleById).filter(Boolean))
 
 const goArticle = (id) => {
   const art = articleById(id)
@@ -287,7 +293,7 @@ const handlePersona = (p) => {
     </nav>
 
     <div class="care-body">
-      <main class="care-main">
+      <div class="care-main">
         <section class="care-reading-index" aria-labelledby="care-reading-index-title">
           <div>
             <span>READING INDEX</span>
@@ -520,19 +526,25 @@ const handlePersona = (p) => {
 
           <div class="care-inline-chips">
             <button
-              v-for="aid in BREEDING_RELATED"
-              :key="aid"
+              v-for="article in breedingRelatedArticles"
+              :key="article.ID"
               type="button"
               class="care-chip"
-              @click="goArticle(aid)"
+              @click="goArticle(article.ID)"
             >
-              → {{ articleById(aid)?.Title || '相關閱讀' }}
+              → {{ article.Title }}
             </button>
           </div>
         </section>
 
         <section id="related" class="care-section">
           <h2 class="care-h">完整知識庫</h2>
+          <p v-if="store.articlesError" role="alert">
+            {{ store.articlesError }}
+            <button type="button" class="care-chip" @click="store.loadArticles()">
+              重新載入文章
+            </button>
+          </p>
           <div
             v-for="(arts, cat) in relatedByCategory"
             v-show="arts.length"
@@ -558,7 +570,7 @@ const handlePersona = (p) => {
         <div class="care-quote">
           我們將守宮視為需被妥善照護的生命，而非一般商品。本頁旨在協助飼主以正確、全面的知識理解守宮的行為與需求，並依其生理特性提供安全、穩定且適宜的環境。每個個體的性格、反應與適應能力皆有差異，照護方式並無絕對標準，請依個體狀況彈性調整。
         </div>
-      </main>
+      </div>
     </div>
   </div>
 </template>

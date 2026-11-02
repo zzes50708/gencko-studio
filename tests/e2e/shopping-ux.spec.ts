@@ -24,17 +24,19 @@ const inventory = Array.from({ length: 45 }, (_, n) => ({
   }
 ])
 async function seed(page: any) {
-  await page.waitForFunction(
-    () => !!(document.querySelector('.sticky-nav') as any)?.__vueParentComponent
-  )
-  await page.waitForTimeout(350)
-  await page.evaluate((items: typeof inventory) => {
-    let c = (document.querySelector('.sticky-nav') as any).__vueParentComponent
-    while (c && !c.setupState.store) c = c.parent
-    ;(window as any).uxStore = c.setupState.store
-    c.setupState.store.inv = items
-    c.setupState.store.loading = false
-    c.setupState.store.inventoryLoaded = true
+  await page.waitForFunction(() => {
+    const app = (document.querySelector('#__nuxt') as any)?.__vue_app__?.config.globalProperties
+    return app?.$pinia?._s.get('main') && !app.$nuxt.isHydrating
+  })
+  await page.evaluate(async (items: typeof inventory) => {
+    const store = (
+      document.querySelector('#__nuxt') as any
+    ).__vue_app__.config.globalProperties.$pinia._s.get('main')
+    await store.ensureInventoryLoaded()
+    ;(window as any).uxStore = store
+    store.inv = items
+    store.loading = false
+    store.inventoryLoaded = true
   }, inventory)
 }
 
@@ -160,15 +162,13 @@ test('窄手機價格完整、工具列緊湊，兩隻比較同屏', async ({ br
   const neighbor = page.locator('.flip-card').nth(1)
   const neighborHeight = (await neighbor.boundingBox())!.height
   const neighborPriceY = (await neighbor.locator('.card-purchase-row .slim-price').boundingBox())!.y
-  await card.locator('summary').tap()
-  await expect(card.locator('.mobile-card-details-body')).toContainText('UX-1')
-  expect((await card.boundingBox())!.height).toBeGreaterThan(compactHeight)
+  await expect(card.locator('summary')).toHaveCount(0)
+  expect((await card.boundingBox())!.height).toBeCloseTo(compactHeight, 0)
   expect((await neighbor.boundingBox())!.height).toBeCloseTo(neighborHeight, 0)
   expect((await neighbor.locator('.card-purchase-row .slim-price').boundingBox())!.y).toBeCloseTo(
     neighborPriceY,
     0
   )
-  await card.locator('summary').tap()
   expect(await price.evaluate((e) => e.scrollWidth <= e.clientWidth)).toBe(true)
   expect(
     Math.round((await page.locator('.card-action-btn').first().boundingBox())!.height)

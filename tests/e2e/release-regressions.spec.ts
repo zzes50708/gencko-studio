@@ -29,6 +29,57 @@ async function navigate(page: Page, path: string) {
     path
   )
 }
+
+test('直接進入指南也能看到知識庫並開啟繁殖延伸閱讀', async ({ page }) => {
+  await page.goto('/care')
+  await ready(page)
+  await expect.poll(() => page.locator('.care-related-card').count()).toBeGreaterThan(0)
+  await expect(page.locator('main')).toHaveCount(1)
+  const article = page.locator('.care-inline-chips button').first()
+  await expect(article).not.toHaveText('→ 相關閱讀')
+  await article.click()
+  await expect(page).toHaveURL(/\/articles\/ART-011$/)
+})
+
+test('直接進入比較頁也會核對競標資料並提供有效場次入口', async ({ page }) => {
+  await page.route('**/rest/v1/animals**', (route) =>
+    route.fulfill({
+      json: [
+        {
+          id: 'REG-AUCTION',
+          species: '豹紋守宮',
+          morph: '回歸測試',
+          status: 'Auction',
+          listing_price: 200,
+          genes: []
+        }
+      ]
+    })
+  )
+  await page.route('**/rest/v1/site_settings**', (route) => route.fulfill({ json: null }))
+  await page.route('**/rest/v1/auctions**', (route) =>
+    route.fulfill({
+      json: [
+        {
+          id: 'REG-SALE',
+          animal_id: 'REG-AUCTION',
+          status: 'active',
+          end_time: new Date(Date.now() + 86400000).toISOString(),
+          start_price: 200,
+          current_price: 200
+        }
+      ]
+    })
+  )
+  await page.goto('/compare?ids=REG-AUCTION')
+  await ready(page)
+  await expect(page.locator('.status-badge')).toHaveText('競標中')
+  await expect(page.getByRole('link', { name: '前往競標', exact: true })).toHaveAttribute(
+    'href',
+    '/auction/REG-SALE'
+  )
+  await expect(page.locator('main')).toHaveCount(1)
+})
 async function articleFixture(page: Page, image = '') {
   await page.route('**/rest/v1/articles**', (route) => {
     const article = {

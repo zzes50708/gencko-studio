@@ -147,7 +147,7 @@ test('證書不呈現親本或錯誤品牌名稱且以單頁列印', async ({ pa
 
 test('桌面與手機品牌選單都有個體證書入口', async ({ page }) => {
   await page.goto('/certificates')
-  await page.getByRole('button', { name: '品牌與購買選單', exact: true }).click()
+  await page.getByRole('button', { name: '品牌服務選單', exact: true }).click()
   await expect(
     page.locator('.sticky-nav').getByRole('link', { name: '個體證書', exact: true })
   ).toHaveAttribute('href', '/certificates')
