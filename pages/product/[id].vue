@@ -411,15 +411,19 @@ const toggleWishlist = () => {
   }
 
   if (import.meta.client) {
-    localStorage.setItem('gencko_wishlist', JSON.stringify(store.wishlist))
+    try {
+      localStorage.setItem('gencko_wishlist', JSON.stringify(store.wishlist))
+    } catch {
+      /* 儲存被拒絕時仍可在本次瀏覽使用收藏，不中斷個體頁。 */
+    }
   }
 }
 
 onMounted(() => {
   isHydrated.value = true
   // SSR 圖片可能早於觸控事件綁定失敗，掛載時補查一次。
-  if (mainPhotoRefs.value.some((img) => img.complete && img.naturalWidth === 0))
-    photoFailed.value = true
+  const failedPhoto = mainPhotoRefs.value.find((img) => img.complete && img.naturalWidth === 0)
+  if (failedPhoto) onMainPhotoError(failedPhoto)
   if (currentProduct.value?.ID) {
     const id = currentProduct.value.ID
     store.history = [id, ...(store.history || []).filter((x) => x !== id)].slice(0, 50)
@@ -455,6 +459,18 @@ const shareLink = async () => {
   }
 }
 const photoFailed = ref(false)
+const responsivePhoto = ref(true)
+const onMainPhotoError = (image) => {
+  const hasCandidates = !!getImageSrcset(currentProduct.value?.ImageURL)
+  // 掛載補查及原生 error 可能指向同一個舊候選；不能把它誤判為原尺寸也失敗。
+  if (hasCandidates && image?.hasAttribute('srcset') !== responsivePhoto.value) return
+  if (responsivePhoto.value && hasCandidates) responsivePhoto.value = false
+  else photoFailed.value = true
+}
+const retryMainPhoto = () => {
+  responsivePhoto.value = true
+  photoFailed.value = false
+}
 const failedRelatedPhotos = ref(new Set())
 const markRelatedFailed = (id) => {
   failedRelatedPhotos.value = new Set([...failedRelatedPhotos.value, id])
@@ -628,13 +644,13 @@ useContentResponse(currentProduct, pending, productError)
             <div class="prod-img-link" v-if="productModules.visuals.list.length && !photoFailed">
               <img
                 v-for="(img, idx) in productModules.visuals.list"
-                :key="idx"
+                :key="`${idx}-${responsivePhoto ? 'responsive' : 'original'}`"
                 ref="mainPhotoRefs"
                 :src="getCleanUrl(img)"
-                :srcset="getImageSrcset(img)"
+                :srcset="responsivePhoto ? getImageSrcset(img) : undefined"
                 sizes="(max-width: 767px) calc(100vw - 24px), 55vw"
                 :alt="`${productModules.identity.morph}（${productModules.identity.id}）`"
-                @error="photoFailed = true"
+                @error="onMainPhotoError($event.target)"
                 class="prod-main-img"
                 :loading="idx === 0 ? 'eager' : 'lazy'"
                 :fetchpriority="idx === 0 ? 'high' : 'auto'"
@@ -643,9 +659,7 @@ useContentResponse(currentProduct, pending, productError)
             </div>
             <div v-else class="product-photo-fallback">
               {{ photoFailed ? '照片載入失敗' : '尚無照片' }}
-              <button v-if="photoFailed" type="button" @click="photoFailed = false">
-                重試照片
-              </button>
+              <button v-if="photoFailed" type="button" @click="retryMainPhoto">重試照片</button>
             </div>
           </div>
           <div class="prod-info-box">

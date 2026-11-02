@@ -9,8 +9,12 @@ const props = withDefaults(
 const failed = ref(false)
 const responsive = ref(true)
 const image = ref<HTMLImageElement | null>(null)
-const onImageError = () => {
-  if (responsive.value && getImageSrcset(props.src)) responsive.value = false
+const onImageError = (event?: Event) => {
+  const element = (event?.target as HTMLImageElement | null) || image.value
+  const hasCandidates = !!getImageSrcset(props.src)
+  // 忽略已經切換嘗試後才送達的舊圖片事件。
+  if (hasCandidates && element?.hasAttribute('srcset') !== responsive.value) return
+  if (responsive.value && hasCandidates) responsive.value = false
   else failed.value = true
 }
 // SSR 圖片可能在 Vue 掛載前就失敗，掛載後再次核對。

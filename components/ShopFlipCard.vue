@@ -63,11 +63,17 @@ const onImgLoad = () => {
 }
 
 const imageFailed = ref(false)
+const responsiveImage = ref(true)
+const onImageError = () => {
+  if (responsiveImage.value && getImageSrcset(props.item.ImageURL)) responsiveImage.value = false
+  else imageFailed.value = true
+}
 watch(
   () => props.item.ImageURL,
   () => {
     imageFailed.value = false
     imgLoaded.value = false
+    responsiveImage.value = true
   }
 )
 const previewGenes = computed(() => (props.item.Genes || []).slice(0, 2))
@@ -109,8 +115,9 @@ const informationRows = computed(() => [
         <div class="card-photo">
           <img
             v-if="item.ImageURL && !imageFailed"
+            :key="responsiveImage ? 'responsive' : 'original'"
             :src="getCleanUrl(item.ImageURL, 400)"
-            :srcset="getImageSrcset(item.ImageURL)"
+            :srcset="responsiveImage ? getImageSrcset(item.ImageURL) : undefined"
             sizes="(max-width: 767px) calc((100vw - 48px) / 3), (min-width: 1280px) 240px, 25vw"
             :alt="item.Morph"
             class="card-img slim-img flip-img"
@@ -119,7 +126,7 @@ const informationRows = computed(() => [
             :fetchpriority="index === 0 ? 'high' : 'auto'"
             decoding="async"
             @load="onImgLoad"
-            @error="imageFailed = true"
+            @error="onImageError"
           />
           <div v-else class="card-image-placeholder">
             {{ imageFailed ? '照片暫時無法載入' : '尚無照片' }}

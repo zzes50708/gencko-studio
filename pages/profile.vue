@@ -143,7 +143,13 @@ const toggleWishlist = (id) => {
   } else {
     store.wishlist.push(id)
   }
-  if (import.meta.client) localStorage.setItem('gencko_wishlist', JSON.stringify(store.wishlist))
+  if (import.meta.client) {
+    try {
+      localStorage.setItem('gencko_wishlist', JSON.stringify(store.wishlist))
+    } catch {
+      /* 儲存被拒絕時保留本次瀏覽的收藏。 */
+    }
+  }
 }
 
 const toggleHospWishlist = (id) => {
@@ -152,8 +158,13 @@ const toggleHospWishlist = (id) => {
   } else {
     store.hospWishlist.push(id)
   }
-  if (import.meta.client)
-    localStorage.setItem('gencko_hosp_wishlist', JSON.stringify(store.hospWishlist))
+  if (import.meta.client) {
+    try {
+      localStorage.setItem('gencko_hosp_wishlist', JSON.stringify(store.hospWishlist))
+    } catch {
+      /* 院所收藏仍可在本次瀏覽操作。 */
+    }
+  }
 }
 
 const retryMyBids = () => {
