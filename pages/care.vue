@@ -533,6 +533,7 @@ const handlePersona = (p) => {
               @click="goArticle(article.ID)"
             >
               → {{ article.Title }}
+              <span v-if="article.Status === 'Draft'" class="article-draft-badge">草稿預覽</span>
             </button>
           </div>
         </section>
@@ -561,6 +562,7 @@ const handlePersona = (p) => {
                 class="care-related-card"
               >
                 <div class="care-related-title">{{ a.Title }}</div>
+                <span v-if="a.Status === 'Draft'" class="article-draft-badge">草稿預覽</span>
                 <div class="care-related-summary">{{ a.Summary }}</div>
               </NuxtLink>
             </div>

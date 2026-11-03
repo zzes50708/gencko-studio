@@ -28,7 +28,7 @@ test('文章失敗可重試、並行載入去重且不等待其他資料表', as
     await r.fulfill(
       fail
         ? { status: 400, json: { message: 'test' } }
-        : { json: [{ id: 'test', title: '恢復文章', status: 'published' }] }
+        : { json: [{ id: 'test', title: '恢復文章', status: 'Published' }] }
     )
   })
   let release!: () => void

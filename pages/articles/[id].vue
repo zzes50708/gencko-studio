@@ -8,6 +8,7 @@ import { getCleanUrl } from '~/utils/image'
 import { serializeJsonLd } from '~/utils/structured-data'
 import { seoDate } from '~/utils/seo-head'
 import { autoLinkGenes } from '~/utils/auto-link'
+import { articleIsVisible, articleStatuses } from '~/utils/article-visibility'
 
 // 🌟 強制每個不同 URL 建立獨立元件實例，防止 CSR 元件複用導致 useAsyncData 不重新抓取
 definePageMeta({
@@ -18,6 +19,7 @@ const route = useRoute()
 const router = useRouter()
 const store = useMainStore()
 const supabase = useSupabaseClient()
+const articlePreview = useArticlePreview()
 const articleId = route.params.id
 const content = ref(null)
 const outline = ref([])
@@ -70,7 +72,7 @@ const {
   // 若 Store 已經有了，可以直接用 (CSR 場景)
   if (store.articlesList && store.articlesList.length > 0) {
     const found = store.articlesList.find((a) => a.ID === articleId)
-    if (found?.Content)
+    if (found?.Content && articleIsVisible(found.Status, articlePreview))
       return {
         ...found,
         Content: autoLinkGenes(
@@ -85,11 +87,11 @@ const {
     .from('articles')
     .select('*')
     .eq('id', articleId)
-    .ilike('status', 'published')
+    .in('status', articleStatuses(articlePreview))
     .maybeSingle()
 
   if (error) throw new Error('文章暫時無法載入，請稍後重試。')
-  if (!data) return null
+  if (!data || !articleIsVisible(data.status, articlePreview)) return null
 
   // 自動把內文中的基因名連到 /genes/<name>（GEO topic cluster）
   let geneNames = []
@@ -103,6 +105,7 @@ const {
 
   return {
     ID: data.id,
+    Status: data.status,
     Title: data.title,
     Category: data.category,
     Summary: data.summary,
@@ -261,10 +264,13 @@ const siteData = computed(() => {
       isoDate,
       authorName: art.Author || 'Gencko Breeding Studio',
       tags: kwArray,
-      script: [
-        { type: 'application/ld+json', innerHTML: serializeJsonLd(webPageLd) },
-        { type: 'application/ld+json', innerHTML: serializeJsonLd(breadcrumb) }
-      ]
+      script:
+        art.Status === 'Draft'
+          ? []
+          : [
+              { type: 'application/ld+json', innerHTML: serializeJsonLd(webPageLd) },
+              { type: 'application/ld+json', innerHTML: serializeJsonLd(breadcrumb) }
+            ]
     }
   }
 
@@ -345,6 +351,12 @@ const relatedArticles = computed(() => {
 })
 
 useContentResponse(readingArticle, pending, articleError)
+useHead(() => ({
+  meta:
+    readingArticle.value?.Status === 'Draft'
+      ? [{ name: 'robots', content: 'noindex, nofollow' }]
+      : []
+}))
 </script>
 
 <template>
@@ -385,6 +397,7 @@ useContentResponse(readingArticle, pending, articleError)
       </div>
       <article class="reader-container">
         <header class="reader-header">
+          <span v-if="readingArticle.Status === 'Draft'" class="article-draft-badge">草稿預覽</span>
           <div class="reader-category">{{ readingArticle.Category }}</div>
           <h1>{{ readingArticle.Title }}</h1>
           <div class="reader-meta">
@@ -490,6 +503,7 @@ useContentResponse(readingArticle, pending, articleError)
               />
             </div>
             <div class="related-art-info">
+              <span v-if="art.Status === 'Draft'" class="article-draft-badge">草稿預覽</span>
               <span class="related-art-cat">{{ art.Category }}</span>
               <div class="related-art-title">{{ art.Title }}</div>
             </div>

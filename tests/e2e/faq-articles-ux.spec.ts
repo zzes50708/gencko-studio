@@ -158,7 +158,7 @@ test('短文章不顯示多餘章節操作，真正不存在的文章仍可返�
       body: JSON.stringify({
         id: 'ART-011',
         title: '短篇閱讀驗證',
-        status: 'published',
+        status: 'Published',
         category: '健康照護',
         content: '<h2>單一章節</h2><p>測試用內容</p>',
         keywords: ''

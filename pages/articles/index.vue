@@ -14,7 +14,7 @@ await useAsyncData('published-articles-ready', async () => {
   await store.loadArticles()
   return true
 })
-const seoArticles = computed(() => store.articlesList)
+const seoArticles = computed(() => store.articlesList.filter((a) => a.Status === 'Published'))
 const context = useArticleListContext()
 const artCat = computed({
   get: () => context.value.category,
@@ -450,6 +450,7 @@ const fmtDate = (d) => {
               <div class="article-category-badge">{{ item.Category }}</div>
             </div>
             <div class="article-body">
+              <span v-if="item.Status === 'Draft'" class="article-draft-badge">草稿預覽</span>
               <time :datetime="item.PublishDate" class="date-text">
                 {{ fmtDate(item.PublishDate) }}
               </time>

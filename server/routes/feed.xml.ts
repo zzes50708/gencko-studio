@@ -7,7 +7,7 @@ export default defineEventHandler(async (event) => {
   const { data: articles, error } = await supabase
     .from('articles')
     .select('id, title, summary, image_url, publish_date, author, category')
-    .ilike('status', 'published')
+    .eq('status', 'Published')
     .order('publish_date', { ascending: false })
     .limit(20)
 

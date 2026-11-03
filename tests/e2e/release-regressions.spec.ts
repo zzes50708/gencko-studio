@@ -308,7 +308,7 @@ async function articleFixture(page: Page, image = '') {
     const article = {
       id: 'REGRESSION-HTML',
       title: 'HTML 滿版回歸',
-      status: 'published',
+      status: 'Published',
       category: '環境佈置',
       image_url: image,
       content: `<div class="gecko-article-container" style="max-width:500px"><style>.gecko-article-container{width:500px;line-height:1.3}</style><h2>第一章</h2><p>${text}</p></div>`

@@ -3,7 +3,8 @@ import { pageDataNeeds } from '~/utils/site-data-policy'
 import { isAuctionListed, auctionState, readAuctionCatalog } from '~/utils/auction-presentation'
 import { ref, computed, watch } from 'vue'
 import { sanitizeCompareIds } from '~/utils/shop-catalog'
-import { useSupabaseClient, useState } from '#imports'
+import { useSupabaseClient, useState, useArticlePreview } from '#imports'
+import { articleIsVisible, articleStatuses } from '~/utils/article-visibility'
 import { sampleAuctionClock, auctionClockNow } from '~/utils/auction-detail'
 import { useRouter } from 'vue-router'
 import { memberFromSupabaseUser } from '~/utils/member-auth'
@@ -18,6 +19,7 @@ import { createLineLoginRelay } from '~/utils/line-login-relay'
 
 export const useMainStore = defineStore('main', () => {
   const supabase = useSupabaseClient()
+  const articlePreview = useArticlePreview()
   const router = useRouter()
   const initialAuctionEpoch = useState('auction-global-epoch', () => Date.now())
   let auctionClockAnchor = {
@@ -230,13 +232,15 @@ export const useMainStore = defineStore('main', () => {
             supabase
               .from('articles')
               .select('id,title,summary,category,image_url,publish_date,author,keywords,status')
-              .ilike('status', 'published'),
+              .in('status', articleStatuses(articlePreview)),
           { label: 'articles' }
         )
         if (error) throw error
         articlesList.value = (data || [])
+          .filter((a) => articleIsVisible(a.status, articlePreview))
           .map((a) => ({
             ID: a.id,
+            Status: a.status,
             Title: a.title,
             Category: a.category,
             Summary: a.summary,

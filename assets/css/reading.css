@@ -1,4 +1,14 @@
 /* 外框滿版；長字串與資料表在各自區塊處理，不以全站裁切遮住破版。 */
+.article-draft-badge {
+  display: inline-block;
+  padding: 2px 6px;
+  margin: 4px 0;
+  border: 1px solid currentColor;
+  color: var(--pri);
+  font-size: 0.75rem;
+  font-weight: 700;
+  line-height: 1.5;
+}
 #main-content {
   min-width: 0;
 }

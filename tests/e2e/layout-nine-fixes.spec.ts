@@ -23,7 +23,7 @@ const article = {
   id: 'LAYOUT-ARTICLE',
   title: '文章標題與章節排版驗證',
   category: '環境佈置',
-  status: 'published',
+  status: 'Published',
   author: 'Gencko',
   publish_date: '2026-10-27',
   image_url: '',

@@ -131,7 +131,7 @@ test('不安全文章被清理，長網址及寬表格不撐破頁面', async ({
     id: 'AUDIT-HTML',
     title: '稽核測試文章',
     category: '環境佈置',
-    status: 'published',
+    status: 'Published',
     author: 'Gencko Studio',
     publish_date: '2026-10-30',
     image_url: '',

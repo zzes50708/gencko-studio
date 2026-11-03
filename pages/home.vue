@@ -47,6 +47,7 @@ useHead({
 const loading = computed(() => store.loading)
 const hotList = computed(() => store.hotList)
 const articlesList = computed(() => recentArticles(store.articlesList))
+const publishedArticles = computed(() => articlesList.value.filter((a) => a.Status === 'Published'))
 useHead(() => ({
   script: [
     {
@@ -60,8 +61,8 @@ useHead(() => ({
           mainEntity: {
             '@type': 'ItemList',
             name: '最新文章',
-            numberOfItems: Math.min(4, articlesList.value.length),
-            itemListElement: articlesList.value.slice(0, 4).map((article, index) => ({
+            numberOfItems: Math.min(4, publishedArticles.value.length),
+            itemListElement: publishedArticles.value.slice(0, 4).map((article, index) => ({
               '@type': 'ListItem',
               position: index + 1,
               item: {
@@ -355,6 +356,7 @@ watch(
                 class="card-img"
               />
               <div class="art-cat-tag">{{ item.Category }}</div>
+              <span v-if="item.Status === 'Draft'" class="article-draft-badge">草稿預覽</span>
             </div>
             <div class="card-body">
               <time

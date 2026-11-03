@@ -55,7 +55,7 @@ export default defineEventHandler(async (event) => {
     supabase
       .from('articles')
       .select('id, publish_date, status, image_url')
-      .ilike('status', 'published')
+      .eq('status', 'Published')
       .order('id')
       .range(from, to)
   )
