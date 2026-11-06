@@ -215,7 +215,7 @@ const scenes = [
     hero: false,
     cta: false,
     title: '每一種花紋<br>源於基因',
-    desc: '豹紋守宮的體色與斑紋由基因組合決定。Gencko 以遺傳學為起點，讓選育方向清晰可循。',
+    desc: '',
     btn: { label: '閱讀基因知識', to: '/articles' }
   },
   {
@@ -223,7 +223,7 @@ const scenes = [
     hero: false,
     cta: false,
     title: '專業選育<br>追溯血緣',
-    desc: '每隻個體保有完整紀錄與基因資料，選育過程透明，來源清晰。',
+    desc: '',
     btn: { label: '瀏覽在售個體', to: '/shop' }
   },
   {
@@ -231,7 +231,7 @@ const scenes = [
     hero: false,
     cta: false,
     title: '基因計算機<br>科學化配對',
-    desc: '輸入親本基因型，自動計算子代出現比例。每一次配對，都以孟德爾遺傳定律作為依據。',
+    desc: '',
     btn: { label: '前往基因計算機', to: '/calculator' }
   },
   {
@@ -247,7 +247,7 @@ const scenes = [
     hero: true,
     cta: true,
     title: '準備好了嗎',
-    subtitle: '從你的第一隻豹紋守宮開始',
+    subtitle: '',
     desc: '',
     btn: null
   }

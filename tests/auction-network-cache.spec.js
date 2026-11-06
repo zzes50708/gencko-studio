@@ -21,5 +21,5 @@ it('競標讀取先比對NetworkOnly，不可落入全站Supabase離線快取', 
   const ordinary = entries.find((entry) =>
     entry.pattern.test('https://sfndneptcwhblvrxykcy.supabase.co/rest/v1/articles?select=id')
   )
-  expect(ordinary?.handler).toBe('NetworkFirst')
+  expect(ordinary?.handler).toBe('NetworkOnly')
 })

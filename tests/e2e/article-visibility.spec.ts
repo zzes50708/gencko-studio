@@ -28,7 +28,7 @@ const rows = [
 ]
 test.use({ serviceWorkers: 'block' })
 test.beforeEach(async ({ page }) => {
-  await page.route('**/rest/v1/articles**', (route) => {
+  await page.route('**/rest/v1/*articles**', (route) => {
     const id = new URL(route.request().url()).searchParams.get('id')?.replace(/^eq\./, '')
     return route.fulfill({ json: id ? rows.find((a) => a.id === id) || null : rows })
   })
@@ -55,7 +55,8 @@ async function navigate(page: any, path: string) {
 test('列表、分類及搜尋共用草稿規則', async ({ page }) => {
   const requests: string[] = []
   page.on('request', (request) => {
-    if (request.url().includes('/rest/v1/articles')) requests.push(request.url())
+    if (/\/rest\/v1\/(?:site_public_)?articles(?:\?|$)/.test(request.url()))
+      requests.push(request.url())
   })
   await navigate(page, '/articles')
   await expect(page.locator('.article-entry')).toHaveCount(preview ? 2 : 1)

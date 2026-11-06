@@ -31,10 +31,11 @@ test('手機精選維持跑馬燈且入口是連結', async ({ browser, baseURL 
       .first()
       .evaluate((e) => getComputedStyle(e).animationName)
   ).not.toBe('none')
-  await expect(page.locator('.app-marquee__group[aria-hidden="true"]').first()).toHaveAttribute(
-    'inert',
-    ''
-  )
+  expect(
+    await page
+      .locator('.app-marquee__group[aria-hidden="true"] a')
+      .evaluateAll((links) => links.every((link) => (link as HTMLElement).tabIndex === -1))
+  ).toBe(true)
   for (const width of [320, 390, 740]) {
     await page.setViewportSize({ width, height: 850 })
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
@@ -44,7 +45,7 @@ test('手機精選維持跑馬燈且入口是連結', async ({ browser, baseURL 
   await context.close()
 })
 test('首頁資料失敗可重試、文章缺圖有提示', async ({ page }) => {
-  await page.route('**/rest/v1/articles**', (r) => r.fulfill({ json: [] }))
+  await page.route('**/rest/v1/*articles**', (r) => r.fulfill({ json: [] }))
   await page.goto('/home')
   await page.waitForFunction(
     () =>
@@ -83,8 +84,9 @@ test('首頁資料失敗可重試、文章缺圖有提示', async ({ page }) => 
   await page.getByRole('button', { name: '重新載入文章', exact: true }).click()
   await expect(page.locator('.article-card')).toHaveCount(1)
   await expect(page.locator('.article-card .article-image-fallback')).toHaveText('文章圖片未提供')
-  await expect(page.locator('.app-marquee__group[aria-hidden="true"]').first()).toHaveAttribute(
-    'inert',
-    ''
-  )
+  expect(
+    await page
+      .locator('.app-marquee__group[aria-hidden="true"] a')
+      .evaluateAll((links) => links.every((link) => (link as HTMLElement).tabIndex === -1))
+  ).toBe(true)
 })

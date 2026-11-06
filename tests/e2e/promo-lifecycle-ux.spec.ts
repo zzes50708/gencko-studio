@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test'
 
 test('圖卡生成限制重複呼叫，切頁後圖片失敗不打斷新頁', async ({ page }) => {
-  await page.route('**/rest/v1/animals**', (r) =>
+  await page.route('**/rest/v1/*animals**', (r) =>
     r.fulfill({
       json: r.request().url().includes('id=eq.')
         ? { id: 'UX-P', morph: '測試', status: 'ForSale', species: '豹紋守宮', listing_price: 8000 }

@@ -2,6 +2,7 @@
 import { useHead } from '#imports'
 import { onBeforeUnmount, onMounted } from 'vue'
 import { onBeforeRouteLeave, useRoute } from 'vue-router'
+import HomeDnaMark from '~/components/home/HomeDnaMark.vue'
 
 const route = useRoute()
 
@@ -145,6 +146,13 @@ onBeforeUnmount(() => {
       <HeroDnaGecko />
     </ClientOnly>
   </div>
+  <div class="hero-lab-brand" aria-label="Gencko 科學選育工作室">
+    <HomeDnaMark />
+    <div>
+      <span>GENCKO STUDIO</span>
+      <small>BREED · SELECT · CARE</small>
+    </div>
+  </div>
   <NuxtLink
     no-prefetch
     to="/home"
@@ -157,6 +165,55 @@ onBeforeUnmount(() => {
 </template>
 
 <style scoped>
+.hero-lab-brand {
+  position: fixed;
+  z-index: 3500;
+  top: max(18px, env(safe-area-inset-top));
+  left: max(24px, env(safe-area-inset-left));
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #f4f1e9;
+  padding: 8px 10px;
+  border: 1px solid #ffffff24;
+  background: #1d2026ed;
+  pointer-events: none;
+}
+.hero-lab-brand svg {
+  width: 20px;
+  height: 40px;
+  color: #f0a180;
+}
+.hero-lab-brand span {
+  display: block;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+}
+.hero-lab-brand small {
+  display: block;
+  margin-top: 5px;
+  color: #d2ccc3;
+  font-size: 0.52rem;
+  letter-spacing: 0.14em;
+}
+@media (max-width: 767px) {
+  .hero-lab-brand {
+    top: max(12px, env(safe-area-inset-top));
+    left: 14px;
+    gap: 6px;
+  }
+  .hero-lab-brand span {
+    font-size: 0.6rem;
+  }
+  .hero-lab-brand small {
+    font-size: 0.48rem;
+  }
+  .hero-lab-brand svg {
+    width: 16px;
+    height: 32px;
+  }
+}
 .hero-lab {
   position: fixed;
   inset: 0 var(--hero-native-scrollbar-width, 0px) 0 0;

@@ -848,8 +848,10 @@ const beforeHook = onBeforeRender(({ delta }) => {
   updateCameraPose(camera.value, viewCurrent)
   // 隨縮放保持定位點可辨識，避免近距離時球體遮住整張圖。
   const hospitalPoints: { id: string | number; x: number; y: number }[] = []
+  const activeCamera = camera.value
+  if (!activeCamera) return
   hospitalAnchors.forEach(({ id, x, z }) => {
-    projected.set(x, 0.00003, z).project(camera.value)
+    projected.set(x, 0.00003, z).project(activeCamera)
     const screenX = ((projected.x + 1) / 2) * sizes.width.value
     const screenY = ((-projected.y + 1) / 2) * sizes.height.value
     if (

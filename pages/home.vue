@@ -4,8 +4,11 @@ import { computed, ref, watch } from 'vue'
 import { useHead, useAsyncData } from '#imports'
 import { useMainStore } from '~/stores/useMainStore'
 import { getCleanUrl } from '~/utils/image'
-import heroGeckoUrl from '~/assets/NDBE.jpg'
 import HotPicksMarquee from '~/components/home/HotPicksMarquee.vue'
+import HomeDnaMark from '~/components/home/HomeDnaMark.vue'
+import HomeBrandBridge from '~/components/home/HomeBrandBridge.vue'
+import HomeToolShowcase from '~/components/home/HomeToolShowcase.vue'
+import HomeReveal from '~/components/home/HomeReveal.vue'
 import { auctionState } from '~/utils/auction-presentation'
 import { recentArticles } from '~/utils/recent-articles'
 import { getWebPage, GECKO_TAXONS } from '~/utils/seo-schemas'
@@ -13,6 +16,8 @@ import { serializeJsonLd } from '~/utils/structured-data'
 import { seoDate } from '~/utils/seo-head'
 
 const store = useMainStore()
+const heroGeckoUrl = '/images/home-gecko.webp'
+const showcasePaused = ref(false)
 // 與文章列表共用已公開摘要及載入狀態，SSR 即提供可閱讀、可點擊的文章。
 await useAsyncData('published-articles-ready', async () => {
   await store.loadArticles()
@@ -186,14 +191,14 @@ watch(
     <section class="home-header-wrap home-hero" aria-labelledby="home-hero-title">
       <div class="hero-content hero-content-inner">
         <div class="home-hero__copy">
-          <p class="home-hero__eyebrow">GENCKO STUDIO · TAIWAN</p>
+          <p class="home-hero__eyebrow">
+            <HomeDnaMark class="home-hero__dna" />
+            GENCKO STUDIO · TAIWAN
+          </p>
           <h1 id="home-hero-title">
             <span class="home-hero__line">專業守宮選育工作室，</span>
             <span class="home-hero__line">嚴選穩定血系。</span>
           </h1>
-          <p class="home-hero__lede">
-            專注豹紋與肥尾守宮選育。我們提供擁有優良基因的健康個體，讓你每次挑選都安心。
-          </p>
           <div class="home-hero__actions" aria-label="首頁主要入口">
             <NuxtLink no-prefetch to="/shop" class="home-hero__action home-hero__action--primary">
               選購個體
@@ -211,6 +216,10 @@ watch(
             <span>FAT-TAILED GECKO</span>
             <span>BREEDING · CARE · GENETICS</span>
           </div>
+          <NuxtLink no-prefetch to="/" class="home-journey-link">
+            品牌介紹
+            <span aria-hidden="true">↗</span>
+          </NuxtLink>
         </div>
         <NuxtLink
           no-prefetch
@@ -270,17 +279,30 @@ watch(
     <section class="home-section home-hot-picks" aria-labelledby="hot-picks-title">
       <div class="section-head hot-picks-head">
         <h2 id="hot-picks-title" class="sec-title">熱門精選</h2>
-        <NuxtLink
-          no-prefetch
-          to="/shop"
-          class="sec-more"
-          style="text-decoration: none"
-          aria-label="查看更多熱門商品"
-        >
-          查看商店 &rarr;
-        </NuxtLink>
+        <div class="hot-picks-actions">
+          <button
+            v-if="hotList.length > 0"
+            type="button"
+            :aria-label="showcasePaused ? '繼續個體展示' : '暫停個體展示'"
+            :aria-pressed="showcasePaused"
+            @click="showcasePaused = !showcasePaused"
+          >
+            <span aria-hidden="true">{{ showcasePaused ? '▶' : 'Ⅱ' }}</span>
+            <span class="showcase-pause-label">
+              {{ showcasePaused ? '繼續個體展示' : '暫停個體展示' }}
+            </span>
+          </button>
+          <NuxtLink
+            no-prefetch
+            to="/shop"
+            class="sec-more"
+            style="text-decoration: none"
+            aria-label="查看更多熱門商品"
+          >
+            查看商店 &rarr;
+          </NuxtLink>
+        </div>
       </div>
-
       <div v-if="loading && hotList.length === 0" class="hot-skeleton-wrapper">
         <SkeletonCard
           v-for="n in 5"
@@ -304,6 +326,8 @@ watch(
             :items="row"
             :image-error-ids="hotImgErrorIds"
             :duration="44"
+            :paused="showcasePaused"
+            :reverse="rowIndex === 1"
             :row-key="`boutique-${rowIndex}`"
             :row-label="`熱門精選個體第 ${rowIndex + 1} 列`"
             @image-load="onHotImgLoad"
@@ -313,6 +337,9 @@ watch(
       </div>
       <div v-else class="empty-state-text">暫無熱門精選商品</div>
     </section>
+
+    <HomeReveal><HomeBrandBridge /></HomeReveal>
+    <HomeReveal><HomeToolShowcase /></HomeReveal>
 
     <!-- Latest Articles Section -->
     <section class="home-section articles-section" aria-labelledby="latest-articles-title">
@@ -386,26 +413,22 @@ watch(
     <section class="home-section home-trust" aria-labelledby="home-trust-title">
       <div class="home-trust__intro">
         <h2 id="home-trust-title" class="sec-title">品牌與購買</h2>
-        <p class="home-trust__lede">先知道為什麼GENCKO值得信任。</p>
       </div>
       <div class="home-trust__grid">
         <NuxtLink no-prefetch to="/about" class="home-trust__card home-trust__card--scene">
           <span class="home-trust__index">01</span>
           <span class="home-trust__scene-cue" aria-hidden="true"><span></span></span>
           <h3>認識工作室</h3>
-          <p>進入品牌場景，認識 Gencko Studio。</p>
           <span class="home-trust__link">查看動畫 →</span>
         </NuxtLink>
         <NuxtLink no-prefetch to="/why-gencko" class="home-trust__card">
           <span class="home-trust__index">02</span>
           <h3>品牌與服務</h3>
-          <p>先了解Gencko的品牌方向與現有服務入口。</p>
           <span class="home-trust__link">了解更多 →</span>
         </NuxtLink>
         <NuxtLink no-prefetch to="/buying-guide" class="home-trust__card">
           <span class="home-trust__index">03</span>
           <h3>購買流程</h3>
-          <p>從挑選、詢問到確認，準備迎接心儀的守宮。</p>
           <span class="home-trust__link">查看流程 →</span>
         </NuxtLink>
       </div>
@@ -2652,3 +2675,5 @@ watch(
   }
 }
 </style>
+
+<style scoped src="~/assets/css/home-experience.css"></style>

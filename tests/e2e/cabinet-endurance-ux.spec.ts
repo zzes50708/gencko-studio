@@ -1,7 +1,8 @@
 import { test, expect } from '@playwright/test'
 
 test('反覆切換大量壓克力配置，GPU 資源數保持穩定', async ({ page }, testInfo) => {
-  test.setTimeout(120000)
+  // 十輪大型壓克力配置共三十次重建，軟體 WebGL 環境需保留足夠時間；資源斷言不放寬。
+  test.setTimeout(240000)
   await page.addInitScript(() => {
     const records = new Map<any, { buffers: Set<any>; textures: Set<any> }>()
     ;(window as any).__cabinetGpu = records

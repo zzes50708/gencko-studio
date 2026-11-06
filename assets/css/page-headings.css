@@ -677,7 +677,7 @@
     font-size: 11px;
   }
   #main-content .q-tag {
-    min-height: 36px !important;
+    min-height: var(--control-min-height) !important;
     padding: 4px 6px !important;
     font-size: 12px !important;
   }

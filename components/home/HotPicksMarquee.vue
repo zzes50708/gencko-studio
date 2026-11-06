@@ -6,6 +6,7 @@ const props = defineProps({
   imageErrorIds: { type: Object, default: () => new Set() },
   duration: { type: Number, default: 48 },
   reverse: { type: Boolean, default: false },
+  paused: { type: Boolean, default: false },
   rowLabel: { type: String, required: true },
   rowKey: { type: String, required: true }
 })
@@ -22,16 +23,18 @@ const onImageError = (id) => emit('image-error', id)
     :duration="props.duration"
     :gap-px="14"
     :reverse="props.reverse"
+    :paused="props.paused"
     seam-offset="calc(var(--hot-card-overlap, 44px) / 2)"
     :aria-label="props.rowLabel"
   >
     <template #default="{ groupIndex }">
       <div
         class="hot-card-wrap"
-        v-for="(item, idx) in [...props.items, props.items[0]]"
+        v-for="(item, idx) in props.items"
         :key="`${props.rowKey}-${item?.ID ?? 'seam'}-${groupIndex}-${idx}`"
         :style="{
-          '--hot-i': String(Number(idx) + Number(groupIndex) * (props.items.length + 1))
+          '--hot-i': String(Number(idx) + Number(groupIndex) * (props.items.length + 1)),
+          '--specimen-angle': `${[-2.5, 1.8, -1.2, 2.6, -1.8][Number(idx) % 5]}deg`
         }"
       >
         <div class="hot-card-back" aria-hidden="true"></div>
@@ -40,6 +43,7 @@ const onImageError = (id) => emit('image-error', id)
             no-prefetch
             :to="item?.ID ? `/product/${item.ID}` : '/shop'"
             class="hot-card-link"
+            :tabindex="groupIndex === 1 ? -1 : undefined"
           >
             <div class="hot-card-layer">
               <div class="hot-card-media">
@@ -57,8 +61,10 @@ const onImageError = (id) => emit('image-error', id)
               </div>
             </div>
             <div class="hot-card-body-overlay">
+              <span class="specimen-id">{{ item.ID }}</span>
               <h3 class="hot-card-title">{{ item.Morph }}</h3>
             </div>
+            <span class="hot-card-turncue" aria-hidden="true">↗</span>
           </NuxtLink>
         </div>
       </div>

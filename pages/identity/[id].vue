@@ -1,5 +1,6 @@
 <script setup>
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onMounted, onBeforeUnmount, ref, watch } from 'vue'
+import { waitForPrintReady } from '~/utils/print-readiness'
 import { useRoute } from 'vue-router'
 import { useHead, useAsyncData, useSupabaseClient } from '#imports'
 import { getCleanUrl } from '~/utils/image'
@@ -7,7 +8,10 @@ import { formatAnimalSex } from '~/utils/incubation-sex'
 
 const route = useRoute()
 const supabase = useSupabaseClient()
-const identityId = route.params.id
+const identityId = String(route.params.id || '')
+  .normalize('NFKC')
+  .trim()
+  .toUpperCase()
 
 //[SEO] 透過 SSR 抓取電子身分證資料，確保分享連結能直接預覽
 const {
@@ -16,9 +20,10 @@ const {
   error,
   refresh
 } = await useAsyncData(`identity-${identityId}`, async () => {
+  if (!/^[A-Z0-9][A-Z0-9_-]{0,63}$/.test(identityId)) return null
   const { data, error: fetchError } = await supabase
-    .from('animals')
-    .select('*')
+    .from('site_public_animals')
+    .select('id,morph,gender_type,gender_value,birthday,species,image_url')
     .eq('id', identityId)
     .maybeSingle()
 
@@ -147,10 +152,23 @@ useHead({
   link: [{ rel: 'canonical', href: computed(() => siteData.value.url) }]
 })
 
-const triggerPrint = () => {
-  if (import.meta.client) {
-    window.print()
-  }
+const printBusy = ref(false)
+const printStatus = ref('')
+const printController = new AbortController()
+onBeforeUnmount(() => printController.abort())
+const triggerPrint = async () => {
+  if (!import.meta.client || printBusy.value) return
+  printBusy.value = true
+  printStatus.value = '正在準備照片與字型…'
+  const ready = await waitForPrintReady(
+    () => (identityImageSrc.value ? identityImageEl.value : null),
+    document.fonts.ready,
+    printController.signal
+  )
+  if (printController.signal.aborted) return
+  printBusy.value = false
+  printStatus.value = ready ? '' : '照片或字型尚未載入完成，請稍後再試。'
+  if (ready) window.print()
 }
 </script>
 
@@ -168,11 +186,19 @@ const triggerPrint = () => {
     <div v-else-if="item" class="id-content-wrap">
       <nav class="identity-navigation" aria-label="證書操作">
         <NuxtLink to="/certificates" class="certificate-back">← 個體證書</NuxtLink>
-        <button type="button" class="act-btn" aria-label="儲存個體證書為 PDF" @click="triggerPrint">
-          儲存證書 PDF
+        <button
+          type="button"
+          class="act-btn"
+          :disabled="printBusy"
+          :aria-busy="printBusy"
+          aria-label="儲存個體證書為 PDF"
+          @click="triggerPrint"
+        >
+          {{ printBusy ? '準備列印中' : '儲存證書 PDF' }}
           <span aria-hidden="true">↗</span>
         </button>
       </nav>
+      <p v-if="printStatus" role="status">{{ printStatus }}</p>
       <article
         class="identity-certificate id-card print-target"
         data-phase3-surface="identity"

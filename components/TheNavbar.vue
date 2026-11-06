@@ -709,4 +709,26 @@ const navLogoUrl = computed(() => (store.logoUrl ? getCleanUrl(store.logoUrl, 72
     min-width: 44px;
   }
 }
+/* 導覽與首頁共用收尾曲線，避免開合有突然停止的感覺。 */
+.dt-dropdown {
+  transition:
+    opacity var(--motion-duration-fast) var(--motion-ease-out),
+    transform var(--motion-duration-ui) var(--motion-ease-out),
+    visibility var(--motion-duration-ui);
+}
+.dt-dropdown a,
+.nav-disclosure span {
+  transition:
+    color var(--motion-duration-fast) var(--motion-ease-out),
+    background-color var(--motion-duration-fast) var(--motion-ease-out),
+    transform var(--motion-duration-ui) var(--motion-ease-out);
+}
+@media (prefers-reduced-motion: reduce) {
+  .sticky-nav,
+  .dt-dropdown,
+  .dt-dropdown a,
+  .nav-disclosure span {
+    transition: none;
+  }
+}
 </style>

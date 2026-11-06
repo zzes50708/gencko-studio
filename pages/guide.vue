@@ -6,6 +6,13 @@ const guideImageErrors = reactive({ hero: false, leopard: false, fatTail: false 
 const heroImage = ref<HTMLImageElement | null>(null)
 const leopardImage = ref<HTMLImageElement | null>(null)
 const fatTailImage = ref<HTMLImageElement | null>(null)
+const guideRoot = ref<HTMLElement | null>(null)
+const guideChapters = [
+  { id: 'guide-basics', label: '認識守宮' },
+  { id: 'guide-ready', label: '飼養前準備' },
+  { id: 'guide-species', label: '物種比較' },
+  { id: 'guide-faq', label: '常見問題' }
+]
 // SSR 圖片可能在事件掛載前失敗，掛載時補查已完成但無像素的圖片。
 onMounted(() => {
   for (const [key, image] of [
@@ -143,17 +150,12 @@ useHead({
 </script>
 
 <template>
-  <div class="site-document-page guide-page">
+  <div ref="guideRoot" class="site-document-page guide-page">
     <div class="guide-document-meta" aria-label="頁面摘要">
       <span>GENCKO FIELD NOTES</span>
       <span>01 / GECKOS</span>
     </div>
-    <PageHero
-      layout="split"
-      kicker="守宮介紹"
-      title="守宮是什麼？認識豹紋守宮與肥尾守宮"
-      lead="兩種常見寵物守宮的差異，先正確認識，再決定是否適合開始飼養。"
-    >
+    <PageHero layout="split" kicker="守宮介紹" title="守宮是什麼？認識豹紋守宮與肥尾守宮">
       <figure class="hero-visual">
         <img
           v-if="!guideImageErrors.hero"
@@ -175,15 +177,13 @@ useHead({
       data-testid="guide-orientation-map"
       aria-label="入門閱讀方向"
     >
-      <div class="orientation-copy">
-        <span>START WITH CONTEXT</span>
-        <strong>看完介紹，依你的下一個問題繼續</strong>
-      </div>
       <NuxtLink no-prefetch to="/start-here">新手入門</NuxtLink>
       <NuxtLink no-prefetch to="/care">飼養指南</NuxtLink>
       <NuxtLink no-prefetch to="/qs">飼養前評估</NuxtLink>
       <NuxtLink no-prefetch to="/shop">選購個體</NuxtLink>
     </nav>
+
+    <ContentChapterTrail :host="guideRoot" :chapters="guideChapters" label="守宮介紹章節" />
 
     <section id="guide-basics" class="guide-sec">
       <h2 class="sec-title">什麼是守宮</h2>
@@ -216,38 +216,60 @@ useHead({
 
     <section id="guide-species" class="guide-sec">
       <h2 class="sec-title">豹紋守宮 vs 肥尾守宮</h2>
-      <div class="species-portraits">
-        <div class="species-portrait">
-          <img
-            v-if="!guideImageErrors.leopard"
-            ref="leopardImage"
-            @error="guideImageErrors.leopard = true"
-            src="/images/guide/leopard-gecko.webp"
-            alt="豹紋守宮外觀"
-            width="1200"
-            height="1200"
-            loading="lazy"
-          />
-          <div v-else class="guide-image-unavailable" role="status">照片暫時無法載入</div>
-          <strong>豹紋守宮</strong>
-          <i lang="la">Eublepharis macularius</i>
-        </div>
-        <div class="species-portrait">
-          <img
-            v-if="!guideImageErrors.fatTail"
-            ref="fatTailImage"
-            @error="guideImageErrors.fatTail = true"
-            src="/images/guide/fat-tailed-gecko.webp"
-            alt="肥尾守宮外觀"
-            width="1200"
-            height="1200"
-            loading="lazy"
-          />
-          <div v-else class="guide-image-unavailable" role="status">照片暫時無法載入</div>
-          <strong>肥尾守宮</strong>
-          <i lang="la">Hemitheconyx caudicinctus</i>
-        </div>
-      </div>
+      <ContentSpeciesCompare :rows="compareRows">
+        <template #default="{ feature }">
+          <div class="species-portraits">
+            <div class="species-portrait">
+              <div class="species-photo-frame leopard-photo">
+                <img
+                  v-if="!guideImageErrors.leopard"
+                  ref="leopardImage"
+                  @error="guideImageErrors.leopard = true"
+                  src="/images/guide/leopard-gecko.webp"
+                  alt="豹紋守宮外觀"
+                  width="1200"
+                  height="1200"
+                  loading="lazy"
+                />
+                <div v-else class="guide-image-unavailable" role="status">照片暫時無法載入</div>
+                <span
+                  v-if="!guideImageErrors.leopard && ['眼睛特徵', '尾巴形狀'].includes(feature)"
+                  :key="feature"
+                  class="photo-feature-marker"
+                  :class="{ 'is-eye': feature === '眼睛特徵', 'is-tail': feature === '尾巴形狀' }"
+                  aria-hidden="true"
+                />
+              </div>
+              <strong>豹紋守宮</strong>
+              <i lang="la">Eublepharis macularius</i>
+            </div>
+            <div class="species-portrait">
+              <div class="species-photo-frame fat-tail-photo">
+                <img
+                  v-if="!guideImageErrors.fatTail"
+                  ref="fatTailImage"
+                  @error="guideImageErrors.fatTail = true"
+                  src="/images/guide/fat-tailed-gecko.webp"
+                  alt="肥尾守宮外觀"
+                  width="1200"
+                  height="1200"
+                  loading="lazy"
+                />
+                <div v-else class="guide-image-unavailable" role="status">照片暫時無法載入</div>
+                <span
+                  v-if="!guideImageErrors.fatTail && ['眼睛特徵', '尾巴形狀'].includes(feature)"
+                  :key="feature"
+                  class="photo-feature-marker"
+                  :class="{ 'is-eye': feature === '眼睛特徵', 'is-tail': feature === '尾巴形狀' }"
+                  aria-hidden="true"
+                />
+              </div>
+              <strong>肥尾守宮</strong>
+              <i lang="la">Hemitheconyx caudicinctus</i>
+            </div>
+          </div>
+        </template>
+      </ContentSpeciesCompare>
       <table class="species-comparison cmp-desktop" aria-label="豹紋守宮與肥尾守宮差異">
         <thead>
           <tr>
@@ -301,6 +323,14 @@ useHead({
 </template>
 
 <style scoped>
+.guide-sec {
+  scroll-margin-top: 140px;
+}
+@media (max-width: 767px) {
+  .guide-sec {
+    scroll-margin-top: 80px;
+  }
+}
 .guide-page {
   width: min(1120px, calc(100% - 36px));
   margin-inline: auto;
@@ -371,7 +401,7 @@ useHead({
 
 .guide-orientation-map {
   display: grid;
-  grid-template-columns: minmax(230px, 1.25fr) repeat(4, minmax(118px, 0.75fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   align-items: stretch;
   margin: 12px 0 0;
   border-bottom: 1px solid var(--bd);
@@ -590,10 +620,60 @@ useHead({
 .species-portrait img {
   display: block;
   width: 100%;
-  height: auto;
+  height: 100%;
   aspect-ratio: 1;
   margin-bottom: 7px;
-  object-fit: cover;
+  object-fit: contain;
+  background: var(--card-bg-solid);
+}
+
+.species-photo-frame {
+  position: relative;
+  width: min(100%, 320px);
+  aspect-ratio: 1;
+  margin-inline: auto;
+}
+.photo-feature-marker {
+  position: absolute;
+  width: 26px;
+  height: 26px;
+  border: 2px solid white;
+  border-radius: 50%;
+  box-shadow: 0 0 0 2px var(--pri);
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+  animation: photo-observation-in 240ms ease both;
+}
+.leopard-photo .is-eye {
+  left: 66%;
+  top: 14%;
+}
+.leopard-photo .is-tail {
+  left: 51%;
+  top: 85%;
+}
+.fat-tail-photo .is-eye {
+  left: 70%;
+  top: 16%;
+}
+.fat-tail-photo .is-tail {
+  left: 25%;
+  top: 65%;
+}
+@keyframes photo-observation-in {
+  from {
+    opacity: 0.3;
+    transform: translate(-50%, -50%) scale(0.8);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .photo-feature-marker {
+    animation: none;
+  }
 }
 
 .species-portrait strong {

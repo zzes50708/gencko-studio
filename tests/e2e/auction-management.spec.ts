@@ -236,7 +236,8 @@ test('管理出價超過一千筆仍列出末頁會員與完整出價次數', as
   await page.getByRole('button', { name: /大量出價測試/ }).click()
   await expect(page.getByText('2 位 · 1201 筆出價', { exact: true })).toBeVisible()
   await expect(page.getByRole('heading', { name: '末頁測試會員', exact: true })).toBeVisible()
-  expect(offsets).toEqual([0, 500, 1000])
+  // 定時更新可能已開始下一輪；首次完整分頁必須讀到末頁，不能只取前千筆。
+  expect(offsets.slice(0, 3)).toEqual([0, 500, 1000])
 })
 
 test('管理列表放著不動也會在預約開標與截止時更新篩選', async ({ page }) => {

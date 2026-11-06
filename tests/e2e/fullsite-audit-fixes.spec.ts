@@ -122,7 +122,7 @@ test('資料讀取失敗不冒充不存在，重試成功後恢復正常索引',
     genes: []
   }
   let failed = true
-  await page.route('**/rest/v1/animals**', (r) =>
+  await page.route('**/rest/v1/*animals**', (r) =>
     r.fulfill({
       status: r.request().url().includes('id=eq.') && failed ? 500 : 200,
       json: r.request().url().includes('id=eq.')

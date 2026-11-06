@@ -11,7 +11,7 @@ const animal = {
   image_url: ''
 }
 async function fixtures(page: any, options: any = {}) {
-  await page.route('**/rest/v1/animals**', (r) =>
+  await page.route('**/rest/v1/*animals**', (r) =>
     r.fulfill({
       status: options.fail ? 400 : 200,
       json: options.fail
@@ -99,11 +99,11 @@ test('資料失敗可重試且不冒充未選擇或不存在', async ({ page }) 
   await page.goto('/compare?ids=UX-P')
   await expect(page.getByRole('alert')).toContainText('資料載入失敗')
   await expect(page.locator('.empty-compare')).toHaveCount(0)
-  await page.unroute('**/rest/v1/animals**')
+  await page.unroute('**/rest/v1/*animals**')
   await fixtures(page)
   await page.getByRole('button', { name: '重試資料' }).click()
   await expect(page.locator('.item-heading')).toHaveCount(1)
-  await page.unroute('**/rest/v1/animals**')
+  await page.unroute('**/rest/v1/*animals**')
   await fixtures(page, { fail: true })
   await page.locator('.item-link').click()
   await expect(page.locator('.product-read-error')).toBeVisible()

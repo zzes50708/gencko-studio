@@ -787,7 +787,6 @@ const formatPercent = (probability) => {
       <div class="calc-heading-block">
         <span class="calc-kicker">BREEDING PROBABILITY CONSOLE</span>
         <h1>基因配對工作台</h1>
-        <p>依序設定物種與雙親基因，系統會沿用既有遺傳規則即時計算所有可能子代。</p>
       </div>
 
       <section class="calc-stage calc-stage--species" aria-labelledby="calc-stage-species-title">

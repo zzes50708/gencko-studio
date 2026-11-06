@@ -5,7 +5,7 @@ test.use({
   serviceWorkers: 'block'
 })
 test('未快取詞條載入失敗可重試，破圖有替代資訊', async ({ page }) => {
-  await page.route('**/rest/v1/genetic_pages*', (r) =>
+  await page.route('**/rest/v1/*genetic_pages*', (r) =>
     r.fulfill({ status: 503, contentType: 'application/json', body: '{"message":"模擬暫時失敗"}' })
   )
   await page.goto('/certificates')
@@ -23,8 +23,8 @@ test('未快取詞條載入失敗可重試，破圖有替代資訊', async ({ pa
     timeout: 15000
   })
   await expect(page.getByRole('heading', { name: /找不到/ })).toHaveCount(0)
-  await page.unroute('**/rest/v1/genetic_pages*')
-  await page.route('**/rest/v1/genetic_pages*', (r) =>
+  await page.unroute('**/rest/v1/*genetic_pages*')
+  await page.route('**/rest/v1/*genetic_pages*', (r) =>
     r.fulfill({
       status: 200,
       contentType: 'application/json',

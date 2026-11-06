@@ -30,7 +30,7 @@ const supabase = useSupabaseClient()
 const { data: ssrForSale } = await useAsyncData('shop-forsale-seo-v1', async () => {
   try {
     const { data, error } = await supabase
-      .from('animals')
+      .from('site_public_animals')
       .select(
         'id, species, morph, genes, gender_type, gender_value, listing_price, image_url, status'
       )
@@ -214,7 +214,12 @@ const selectionDialog = selectionModal.dialog
 const editingFilters = ref(cloneShopFilters(fil.value))
 const hydrated = ref(false)
 const priceError = computed(() => getPriceRangeError(editingFilters.value))
-const wishlistLink = computed(() => getWishlistInquiryLink(store.lineLink, store.wishlist || []))
+const wishlistLink = computed(() =>
+  getWishlistInquiryLink(store.lineLink, store.wishlist || [], {
+    items: store.inv,
+    hidePrice: store.isExhibitionMode
+  })
+)
 const compareItems = computed(() =>
   (store.compareList || []).map((id) => store.inv.find((item) => item.ID === id)).filter(Boolean)
 )
@@ -441,7 +446,6 @@ const showFavorites = async () => {
           <p class="shop-intro__eyebrow">AVAILABLE GECKOS</p>
           <h1 class="shop-intro__title">選購守宮</h1>
         </div>
-        <p class="shop-intro__copy">每一隻守宮皆保證健康無疑才上架販售。</p>
       </header>
       <p class="shop-photo-notice">
         <span class="notice-icon">PHOTO NOTE</span>

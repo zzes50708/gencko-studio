@@ -16,7 +16,7 @@ async function seed(page: any, count = 12) {
     note: index === 0 ? '完整備註第一行\n完整備註第二行：不可截斷的個體資訊。' : '',
     image_url: ''
   }))
-  await page.route('**/rest/v1/animals*', (route: any) =>
+  await page.route('**/rest/v1/*animals*', (route: any) =>
     route.fulfill({
       status: 200,
       contentType: 'application/json',

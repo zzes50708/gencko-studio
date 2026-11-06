@@ -1,4 +1,6 @@
 import { defineStore } from 'pinia'
+import { recentArticles } from '~/utils/recent-articles'
+import { publicTable, readPublicAnimals, shouldRefreshCatalog } from '~/utils/site-public-data'
 import { pageDataNeeds } from '~/utils/site-data-policy'
 import { isAuctionListed, auctionState, readAuctionCatalog } from '~/utils/auction-presentation'
 import { ref, computed, watch } from 'vue'
@@ -58,6 +60,8 @@ export const useMainStore = defineStore('main', () => {
   const articlesLoaded = ref(false)
   const articlesLoading = ref(false)
   const articlesError = ref(null)
+  const articlesLoadedAt = useState('site-articles-loaded-at', () => 0)
+  const inventoryLoadedAt = useState('site-inventory-loaded-at', () => 0)
   const genePages = ref([])
   const marqueeList = ref([])
   const hotList = ref([])
@@ -164,16 +168,7 @@ export const useMainStore = defineStore('main', () => {
     try {
       // 只選官網所需欄位，省略後台專用的 cost_price
       const [invRes, settingsRes] = await Promise.all([
-        withRetry(
-          () =>
-            supabase
-              .from('animals')
-              .select(
-                'id, source, species, morph, genes, gender_type, gender_value, birthday, listing_price, sold_price, status, note, image_url, is_hot, created_at, photo_updated_at'
-              )
-              .order('created_at', { ascending: false }),
-          { label: 'animals' }
-        ),
+        withRetry(() => readPublicAnimals(supabase), { label: 'animals' }),
         // site_settings 為選用表；不存在／出錯時靜默維持非展場模式
         withRetry(() => supabase.from('site_settings').select('*').limit(1).maybeSingle(), {
           label: 'site_settings'
@@ -186,30 +181,36 @@ export const useMainStore = defineStore('main', () => {
       const { data: invData, error: invErr } = invRes
       if (invErr) throw invErr
 
-      inv.value = invData.map((i) => ({
-        ID: String(i.id || '').trim(),
-        Source: i.source,
-        Species: i.species,
-        Morph: i.morph,
-        // genes 是 JSONB array，不需要 JSON.parse（CLAUDE.md 確認）
-        Genes: Array.isArray(i.genes) ? i.genes : [],
-        GenderType: i.gender_type,
-        GenderValue: i.gender_value,
-        Birthday: i.birthday,
-        ListingPrice: i.listing_price,
-        SoldPrice: i.sold_price,
-        Status: i.status,
-        Note: i.note,
-        Tags: Array.isArray(i.tags) ? i.tags : [],
-        ImageURL: i.image_url,
-        // is_hot 是純 boolean（CLAUDE.md 確認）
-        IsHot: i.is_hot === true,
-        CreatedDate: i.created_at || new Date().toISOString(),
-        PhotoUpdatedAt: i.photo_updated_at || i.created_at || null
-      }))
+      inv.value = invData
+        .sort(
+          (a, b) =>
+            String(b.created_at || '').localeCompare(String(a.created_at || '')) ||
+            String(a.id).localeCompare(String(b.id))
+        )
+        .map((i) => ({
+          ID: String(i.id || '').trim(),
+          Source: i.source,
+          Species: i.species,
+          Morph: i.morph,
+          // genes 是 JSONB array，不需要 JSON.parse（CLAUDE.md 確認）
+          Genes: Array.isArray(i.genes) ? i.genes : [],
+          GenderType: i.gender_type,
+          GenderValue: i.gender_value,
+          Birthday: i.birthday,
+          ListingPrice: i.listing_price,
+          Status: i.status,
+          Note: i.note,
+          Tags: Array.isArray(i.tags) ? i.tags : [],
+          ImageURL: i.image_url,
+          // is_hot 是純 boolean（CLAUDE.md 確認）
+          IsHot: i.is_hot === true,
+          CreatedDate: i.created_at || new Date().toISOString(),
+          PhotoUpdatedAt: i.photo_updated_at || i.created_at || null
+        }))
 
       hotList.value = inv.value.filter((i) => i.IsHot === true)
       inventoryLoaded.value = true
+      inventoryLoadedAt.value = Date.now()
     } catch (e) {
       console.error('讀取個體資料失敗:', e)
       dataError.value = e?.message || '商品資料載入失敗'
@@ -220,37 +221,54 @@ export const useMainStore = defineStore('main', () => {
   }
 
   let articlesLoadPromise = null
-  function loadArticles() {
+  function loadArticles({ force = false } = {}) {
     if (articlesLoadPromise) return articlesLoadPromise
-    if (articlesLoaded.value && !articlesError.value) return Promise.resolve()
+    if (
+      !force &&
+      articlesLoaded.value &&
+      !articlesError.value &&
+      !shouldRefreshCatalog(articlesLoadedAt.value, Date.now(), 60000)
+    )
+      return Promise.resolve()
     articlesLoading.value = true
     articlesError.value = null
     articlesLoadPromise = (async () => {
       try {
         const { data, error } = await withRetry(
-          () =>
-            supabase
-              .from('articles')
-              .select('id,title,summary,category,image_url,publish_date,author,keywords,status')
-              .in('status', articleStatuses(articlePreview)),
+          async () => {
+            const read = (table) =>
+              supabase
+                .from(table)
+                .select(
+                  'id,title,summary,category,image_url,publish_date,author,keywords,status,updated_at'
+                )
+                .in('status', articleStatuses(articlePreview))
+            let result = await read(articlePreview ? 'articles' : publicTable('articles'))
+            if (articlePreview && result.error?.code === '42501')
+              result = await read(publicTable('articles'))
+            return result
+          },
           { label: 'articles' }
         )
         if (error) throw error
-        articlesList.value = (data || [])
-          .filter((a) => articleIsVisible(a.status, articlePreview))
-          .map((a) => ({
-            ID: a.id,
-            Status: a.status,
-            Title: a.title,
-            Category: a.category,
-            Summary: a.summary,
-            ImageURL: a.image_url,
-            Author: a.author || 'Gencko Studio',
-            PublishDate: a.publish_date || '',
-            Keywords: a.keywords || ''
-          }))
-          .reverse()
+        articlesList.value = recentArticles(
+          (data || [])
+            .filter((a) => articleIsVisible(a.status, articlePreview))
+            .map((a) => ({
+              ID: a.id,
+              Status: a.status,
+              Title: a.title,
+              Category: a.category,
+              Summary: a.summary,
+              ImageURL: a.image_url,
+              Author: a.author || 'Gencko Studio',
+              UpdatedAt: a.updated_at || null,
+              PublishDate: a.publish_date || '',
+              Keywords: a.keywords || ''
+            }))
+        )
         articlesLoaded.value = true
+        articlesLoadedAt.value = Date.now()
       } catch (error) {
         articlesError.value = '文章暫時無法載入，請稍後重試。'
       } finally {
@@ -261,12 +279,25 @@ export const useMainStore = defineStore('main', () => {
     return articlesLoadPromise
   }
 
+  watch(
+    () => currentUser.value?.auctionAdmin,
+    () => {
+      if (articlePreview) {
+        articlesList.value = articlesList.value.filter((a) => a.Status === 'Published')
+        readingArticle.value = null
+        articlesLoadedAt.value = 0
+        articlesLoaded.value = false
+        void loadArticles({ force: true })
+      }
+    }
+  )
+
   const tableTasks = new Map()
   const tableReady = new Set()
   function loadSecondaryTable(table) {
     if (tableTasks.has(table)) return tableTasks.get(table)
     if (tableReady.has(table)) return Promise.resolve()
-    const task = withRetry(() => supabase.from(table).select('*'), { label: table })
+    const task = withRetry(() => supabase.from(publicTable(table)).select('*'), { label: table })
       .then(({ data, error }) => {
         if (error || !Array.isArray(data)) throw error || new Error('資料回應不完整')
         if (table === 'merchandise')
@@ -327,7 +358,12 @@ export const useMainStore = defineStore('main', () => {
   }
 
   function ensureInventoryLoaded() {
-    if (inventoryLoaded.value && !dataError.value) return Promise.resolve()
+    if (
+      inventoryLoaded.value &&
+      !dataError.value &&
+      !shouldRefreshCatalog(inventoryLoadedAt.value, Date.now())
+    )
+      return Promise.resolve()
     return loadInventory()
   }
 

@@ -1,7 +1,7 @@
 <script setup>
 import { TAXON_LEOPARD_GECKO, TAXON_FAT_TAIL_GECKO } from '~/utils/seo-schemas'
 import { serializeJsonLd } from '~/utils/structured-data'
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useHead } from '#imports'
 import { useMainStore } from '~/stores/useMainStore'
 import { GENES_DB } from '~/utils/genes-db'
@@ -17,11 +17,21 @@ const geneSpecies = computed({
 })
 
 const geneQuery = useState('gene-library-query', () => '')
+const geneType = ref('全部')
+const geneTypes = computed(() => Object.keys(GENES_DB[geneSpecies.value]))
+watch(geneSpecies, () => {
+  geneType.value = '全部'
+})
+function resetGeneFilters() {
+  geneQuery.value = ''
+  geneType.value = '全部'
+}
 const normalizedGeneQuery = computed(() => geneQuery.value.trim().toLocaleLowerCase('zh-TW'))
 const filteredGeneGroups = computed(() => {
   const query = normalizedGeneQuery.value
   return Object.fromEntries(
     Object.entries(GENES_DB[geneSpecies.value])
+      .filter(([category]) => geneType.value === '全部' || category === geneType.value)
       .map(([category, names]) => [
         category,
         query ? names.filter((name) => name.toLocaleLowerCase('zh-TW').includes(query)) : names
@@ -197,7 +207,6 @@ useHead({
     <header class="genes-hero">
       <span class="genes-kicker">GENETICS INDEX / 遺傳資料庫</span>
       <h1>守宮基因圖鑑</h1>
-      <p>根據物種，提供相對應的基因資料，內容均為網路整理，若有錯誤請多包涵。</p>
     </header>
 
     <nav class="tool-hub" aria-label="基因與工具快速入口">
@@ -247,6 +256,26 @@ useHead({
       <div class="gene-result-count" aria-live="polite">
         {{ geneSpecies }} · {{ filteredGeneCount }} 筆
       </div>
+      <div class="gene-type-filters" role="group" aria-label="遺傳類型">
+        <button
+          v-for="type in ['全部', ...geneTypes]"
+          :key="type"
+          type="button"
+          :aria-pressed="geneType === type"
+          @click="geneType = type"
+        >
+          {{ type }}
+        </button>
+        <button
+          v-if="geneQuery || geneType !== '全部'"
+          type="button"
+          class="gene-reset"
+          aria-label="重設圖鑑篩選"
+          @click="resetGeneFilters"
+        >
+          重設
+        </button>
+      </div>
     </section>
 
     <div class="genes-content">
@@ -257,7 +286,7 @@ useHead({
           </h2>
         </div>
 
-        <div class="gene-btn-grid">
+        <TransitionGroup tag="div" name="gene-index" class="gene-btn-grid">
           <NuxtLink
             no-prefetch
             v-for="g in list"
@@ -268,7 +297,7 @@ useHead({
             <span class="g-name">{{ g }}</span>
             <span class="g-cta">查看說明 ➜</span>
           </NuxtLink>
-        </div>
+        </TransitionGroup>
       </div>
       <div v-if="filteredGeneCount === 0" class="gene-empty">
         <strong>找不到符合的基因詞條</strong>
@@ -279,6 +308,72 @@ useHead({
 </template>
 
 <style scoped>
+.gene-type-filters {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.gene-type-filters button {
+  min-height: 44px;
+  padding: 6px 14px;
+  border: 1px solid var(--bd);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--txt-muted);
+  font: inherit;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition:
+    background-color 180ms ease,
+    color 180ms ease;
+}
+.gene-type-filters button[aria-pressed='true'] {
+  background: var(--pri);
+  color: var(--on-primary, #fff);
+  border-color: var(--pri);
+}
+.gene-type-filters button:focus-visible {
+  outline: 2px solid var(--pri);
+  outline-offset: 2px;
+}
+.gene-type-filters .gene-reset {
+  margin-left: auto;
+  border-color: transparent;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+@media (min-width: 768px) and (hover: hover) and (pointer: fine) {
+  .gene-type-filters button:not([aria-pressed='true']):hover {
+    color: var(--pri);
+    border-color: var(--pri);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .gene-type-filters button {
+    transition: none;
+  }
+}
+.gene-index-enter-active,
+.gene-index-move {
+  transition:
+    opacity 180ms ease,
+    transform 240ms var(--motion-ease-out);
+}
+.gene-index-enter-from {
+  opacity: 0;
+  transform: translateY(6px);
+}
+@media (prefers-reduced-motion: reduce) {
+  .gene-index-enter-active,
+  .gene-index-move {
+    transition: none;
+  }
+  .gene-index-enter-from {
+    opacity: 1;
+    transform: none;
+  }
+}
 .genes-page-wrapper {
   max-width: 1080px;
   margin: 0 auto;

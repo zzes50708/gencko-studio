@@ -330,7 +330,7 @@ const formatPrice = (value, fallback) => {
             :key="item.id"
             no-prefetch
             :to="`/auction/${item.id}`"
-            class="auction-card"
+            class="auction-card interactive-card"
             :aria-label="`查看 ${item.morph} 競標詳情`"
           >
             <div class="card-img-box">
@@ -463,6 +463,7 @@ const formatPrice = (value, fallback) => {
                   </div>
                 </template>
               </ClientOnly>
+              <HoverAction class="auction-card-action">查看場次</HoverAction>
             </div>
           </NuxtLink>
         </div>
@@ -470,7 +471,6 @@ const formatPrice = (value, fallback) => {
         <div v-else-if="!store.auctionError" class="empty-state">
           <p class="empty-state__eyebrow">NO LIVE AUCTIONS</p>
           <h3>目前沒有進行中的競標</h3>
-          <p>新場次開放後會在此顯示；你可以先瀏覽目前在售的守宮個體。</p>
           <NuxtLink no-prefetch to="/shop" class="btn-app btn-app--primary btn-app--md">
             瀏覽在售個體
           </NuxtLink>
@@ -481,6 +481,9 @@ const formatPrice = (value, fallback) => {
 </template>
 
 <style scoped>
+.auction-card-action {
+  margin-top: 12px;
+}
 .auction-page {
   max-width: 1200px;
   margin: 0 auto;

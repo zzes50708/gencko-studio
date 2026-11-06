@@ -735,9 +735,14 @@ const placeBid = async () => {
     if (rejected) clearPendingBid(intent, intentOwners)
     if (disposed || !memberOwnerKeys(store.currentUser).includes(intent.owner)) return
     if (rejected || status === 401) {
+      track('bid_failed', {
+        surface: 'auction',
+        outcome: status === 401 ? 'login_required' : 'rejected'
+      })
       if (status === 401) needsLogin.value = true
       bidNotice.value = err?.data?.message || '此筆出價未成立，請確認最新資料。'
     } else {
+      track('bid_failed', { surface: 'auction', outcome: 'pending' })
       bidNotice.value = `出價 ${formatPrice(intent.amount)} 的結果待確認，請重試同一筆出價；不會重複成立。`
     }
     alert(bidNotice.value)

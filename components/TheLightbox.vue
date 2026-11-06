@@ -1,5 +1,6 @@
 ﻿<script setup>
-import { ref } from 'vue'
+import { computed, ref, watch } from 'vue'
+import { useMediaQuery } from '@vueuse/core'
 import { getCleanUrl } from '~/utils/image'
 
 const props = defineProps({
@@ -10,8 +11,11 @@ const props = defineProps({
 const emit = defineEmits(['close'])
 
 const dialog = useNativeModal(() => Boolean(props.item))
-
-// --- ?? PWA ?皛?餈質馱 ---
+const reduceMotion = useMediaQuery('(prefers-reduced-motion: reduce)')
+const imageFailed = ref(false)
+const imageLoading = ref(false)
+const imageAttempt = ref(0)
+// 單指向下滑動關閉預覽。
 const touchStartY = ref(0)
 const touchStartX = ref(0)
 const touchDeltaY = ref(0)
@@ -66,6 +70,27 @@ const getImgSrc = (item) => {
   const rawUrl = item.ImageURL || item.image_url || ''
   return getCleanUrl(rawUrl)
 }
+const imageSrc = computed(() => getImgSrc(props.item))
+watch(
+  [() => props.item, imageSrc],
+  () => {
+    imageFailed.value = false
+    imageLoading.value = Boolean(imageSrc.value)
+    imageAttempt.value = 0
+  },
+  { immediate: true }
+)
+
+function retryImage() {
+  imageLoading.value = true
+  imageFailed.value = false
+  imageAttempt.value += 1
+}
+
+function onImageError() {
+  imageLoading.value = false
+  imageFailed.value = true
+}
 </script>
 
 <template>
@@ -81,7 +106,10 @@ const getImgSrc = (item) => {
       class="lightbox-content-wrapper"
       :style="{
         transform: `translateY(${touchDeltaY}px)`,
-        transition: isDragging ? 'none' : 'transform 0.2s ease-out, opacity 0.2s ease-out',
+        transition:
+          isDragging || reduceMotion
+            ? 'none'
+            : 'transform var(--motion-duration-ui) var(--motion-ease-out), opacity var(--motion-duration-fast) var(--motion-ease-out)',
         opacity: Math.max(0, 1 - Math.abs(touchDeltaY) / 250),
         willChange: isDragging ? 'transform, opacity' : 'auto'
       }"
@@ -101,18 +129,33 @@ const getImgSrc = (item) => {
       </div>
 
       <!-- ?? 雿輻?? img 隞亦Ⅱ靽?GitHub ?湧?雯???擃帘摰改?銝???Nuxt Image ?? -->
+      <p v-if="imageLoading" class="lightbox-image-status" role="status">正在載入照片</p>
       <img
-        v-if="getImgSrc(item)"
-        :src="getImgSrc(item)"
+        v-if="imageSrc && !imageFailed"
+        :key="imageAttempt"
+        :src="imageSrc"
         :alt="item.Morph || item.Name || 'Gencko Showcase'"
         class="lightbox-img"
-        loading="lazy"
+        loading="eager"
         decoding="async"
         draggable="false"
+        @load="imageLoading = false"
+        @error="onImageError"
       />
+      <div v-else class="lightbox-image-placeholder">
+        <p role="status">{{ imageFailed ? '照片暫時無法載入' : '尚未提供照片' }}</p>
+        <button
+          v-if="imageFailed"
+          type="button"
+          class="btn-app btn-app--secondary btn-app--md"
+          @click="retryImage"
+        >
+          重新載入圖片
+        </button>
+      </div>
 
       <div class="lightbox-info">
-        <h2 class="lightbox-title">{{ item.Morph || item.Name }}</h2>
+        <h2 class="lightbox-title">{{ item.Morph || item.Name || '圖片預覽' }}</h2>
         <a
           v-if="item.Status === 'ForSale' || (item.Available && item.Available !== 'No')"
           :href="item.ExternalLink || lineLink"
@@ -200,6 +243,31 @@ const getImgSrc = (item) => {
   justify-content: center;
   width: 100%;
   touch-action: none;
+}
+.lightbox-image-status {
+  margin: 8px 0;
+  font-size: 0.85rem;
+  color: var(--txt-muted);
+}
+.lightbox-image-placeholder {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 16px;
+  width: min(90vw, 640px);
+  min-height: min(240px, 40dvh);
+  padding: 24px;
+  border: 1px solid var(--bd);
+  background: var(--card-bg-solid);
+  text-align: center;
+}
+.lightbox-image-placeholder p {
+  margin: 0;
+}
+.lightbox-title {
+  overflow-wrap: anywhere;
+  padding-inline: 16px;
 }
 
 .swipe-hint-container {

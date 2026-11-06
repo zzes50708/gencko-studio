@@ -2,6 +2,7 @@ import { useMainStore } from '~/stores/useMainStore'
 import { readOAuthFailure } from '~/utils/line-login'
 
 export default defineNuxtPlugin((nuxtApp) => {
+  const router = useRouter()
   const failure = readOAuthFailure(window.location.href)
   const store = useMainStore()
   let reading = false
@@ -13,8 +14,8 @@ export default defineNuxtPlugin((nuxtApp) => {
     reading = true
     try {
       const completed = await store.resumeLineLogin()
-      if (completed && nuxtApp.$router.currentRoute.value.path === '/line-login-return')
-        await nuxtApp.$router.replace(completed.returnTo)
+      if (completed && router.currentRoute.value.path === '/line-login-return')
+        await router.replace(completed.returnTo)
       await store.checkAuthStatus()
     } finally {
       reading = false
@@ -35,7 +36,7 @@ export default defineNuxtPlugin((nuxtApp) => {
     document.addEventListener('visibilitychange', resume)
     if (failure) {
       const url = new URL(failure.url)
-      await nuxtApp.$router.replace(url.pathname + url.search + url.hash)
+      await router.replace(url.pathname + url.search + url.hash)
       window.alert(failure.message)
     }
   })

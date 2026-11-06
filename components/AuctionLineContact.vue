@@ -154,9 +154,13 @@ async function create() {
     )
       throw Error()
     challenge.value = data
+    track('line_verification_started', { surface: 'auction' })
     void poll()
   } catch {
-    if (request === revision) message.value = '暫時無法建立綁定碼，請稍後重試。'
+    if (request === revision) {
+      track('line_verification_failed', { surface: 'auction', outcome: 'unavailable' })
+      message.value = '暫時無法建立綁定碼，請稍後重試。'
+    }
   } finally {
     if (request === revision) busy.value = false
   }

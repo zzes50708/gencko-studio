@@ -2,13 +2,17 @@ import { expect, test } from '@playwright/test'
 
 async function getStore(page: any, action: string) {
   await page.waitForFunction(
-    () => !!(document.querySelector('.sticky-nav') as any)?.__vueParentComponent
+    () =>
+      !!(
+        document.querySelector('#__nuxt') as any
+      )?.__vue_app__?.config.globalProperties.$pinia?._s.get('main')
   )
   await page.evaluate((code: string) => {
-    let component = (document.querySelector('.sticky-nav') as any).__vueParentComponent
-    while (component && !component.setupState.store) component = component.parent
-    ;(window as any).uxStore = component.setupState.store
-    new Function('store', code)(component.setupState.store)
+    const store = (
+      document.querySelector('#__nuxt') as any
+    ).__vue_app__.config.globalProperties.$pinia._s.get('main')
+    ;(window as any).uxStore = store
+    new Function('store', code)(store)
   }, action)
 }
 
@@ -67,7 +71,10 @@ test('手機導覽隔離背景，返回先關閉，第二次才退頁', async ({
   await page.getByRole('link', { name: '選購個體', exact: true }).tap()
   await expect(page).toHaveURL(/\/shop$/)
   await page.waitForFunction(
-    () => !!(document.querySelector('.bottom-nav') as any)?.__vueParentComponent
+    () =>
+      !!(
+        document.querySelector('#__nuxt') as any
+      )?.__vue_app__?.config.globalProperties.$pinia?._s.get('main')
   )
   await page.locator('.bottom-nav button').filter({ hasText: '工具' }).tap()
   await expect(page.getByRole('dialog', { name: '工具導覽選單' })).toBeVisible()
@@ -102,7 +109,7 @@ test('圖片預覽向上或多指不關閉，單指向下才關閉', async ({ br
   await page.goto('/home')
   await getStore(
     page,
-    "store.openLightbox({ImageURL:document.querySelector('#main-content img').src,Name:'共用手勢測試'})"
+    "store.openLightbox({ImageURL:'/images/guide/leopard-gecko.webp',Name:'共用手勢測試'})"
   )
   const image = page.locator('.lightbox-img')
   await expect(image).toBeVisible()

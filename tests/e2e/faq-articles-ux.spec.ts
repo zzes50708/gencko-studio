@@ -30,12 +30,16 @@ for (const width of [320, 390, 768, 1440]) {
         const select = p.getByRole('combobox', { name: '跳至文章章節' })
         await expect(select).toBeVisible()
         const value = await select.locator('option').nth(1).getAttribute('value')
+        const chapterLabel = (await select.locator('option').nth(1).textContent())!.trim()
+        const heading = p
+          .locator('.reader-content')
+          .getByRole('heading', { name: chapterLabel, exact: true })
+          .first()
         await select.selectOption(value!)
         await expect
-          .poll(() =>
-            p.locator(`[id="${value}"]`).evaluate((e) => Math.round(e.getBoundingClientRect().top))
-          )
+          .poll(() => heading.evaluate((e) => Math.round(e.getBoundingClientRect().top)))
           .toBeLessThan(width < 768 ? 30 : 110)
+        await expect(heading).toBeFocused()
       }
     }
     await c.close()
@@ -107,7 +111,7 @@ test('文章暫時載入失敗可重試，沒有當成下架', async ({ page }) 
     return app && !app.isHydrating
   })
   let fail = true
-  await page.route('**/rest/v1/articles?**', (r) =>
+  await page.route('**/rest/v1/*articles?**', (r) =>
     new URL(r.request().url()).searchParams.has('id') && fail
       ? r.fulfill({
           status: 503,
@@ -150,7 +154,7 @@ test('FAQ只指定問題即可直達，連續輸入不丟焦點或增加歷史',
 test('短文章不顯示多餘章節操作，真正不存在的文章仍可返回', async ({ page }) => {
   await page.goto('/articles')
   await page.waitForTimeout(500)
-  await page.route('**/rest/v1/articles?**', (r) => {
+  await page.route('**/rest/v1/*articles?**', (r) => {
     if (!new URL(r.request().url()).searchParams.has('id')) return r.continue()
     return r.fulfill({
       status: 200,

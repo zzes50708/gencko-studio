@@ -3,6 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "prebuild": "node scripts/verify-release-check.mjs && npm test && npm run typecheck",
     "build": "nuxt build",
     "dev": "nuxt dev",
     "generate": "nuxt generate",
@@ -30,7 +31,7 @@
   },
   "dependencies": {
     "@mapbox/vector-tile": "^3.0.0",
-    "@nuxt/image": "^2.0.0",
+    "@nuxt/image": "2.1.0",
     "@nuxtjs/robots": "^6.0.7",
     "@nuxtjs/sitemap": "^8.0.13",
     "@nuxtjs/supabase": "^1.4.0",
@@ -52,7 +53,8 @@
     "pinia": "^2.3.0",
     "qrcode": "1.5.4",
     "sanitize-html": "^2.18.1",
-    "vue-chartjs": "^5.3.3"
+    "vue-chartjs": "^5.3.3",
+    "web-vitals": "6.2.3"
   },
   "devDependencies": {
     "@playwright/test": "^1.61.1",
@@ -63,6 +65,27 @@
     "typescript": "^6.0.3",
     "vitest": "^4.1.9",
     "vue-tsc": "^3.3.6"
+  },
+  "overrides": {
+    "@nuxt/ui": {
+      "@tiptap/core": "3.32.2",
+      "@tiptap/pm": "3.32.2",
+      "@tiptap/vue-3": "3.32.2",
+      "@tiptap/starter-kit": "3.32.2",
+      "@tiptap/extension-bubble-menu": "3.32.2",
+      "@tiptap/extension-code": "3.32.2",
+      "@tiptap/extension-collaboration": "3.32.2",
+      "@tiptap/extension-drag-handle": "3.32.2",
+      "@tiptap/extension-drag-handle-vue-3": "3.32.2",
+      "@tiptap/extension-floating-menu": "3.32.2",
+      "@tiptap/extension-horizontal-rule": "3.32.2",
+      "@tiptap/extension-image": "3.32.2",
+      "@tiptap/extension-mention": "3.32.2",
+      "@tiptap/extension-node-range": "3.32.2",
+      "@tiptap/extension-placeholder": "3.32.2",
+      "@tiptap/markdown": "3.32.2",
+      "@tiptap/suggestion": "3.32.2"
+    }
   },
   "lint-staged": {
     "*.{js,ts,vue,json,css,md}": "prettier --write"

@@ -4,8 +4,11 @@ import { FEED_FREQ, SUPPLEMENTS } from '../../utils/care'
 if (process.env.UX_BASE_URL) test.use({ baseURL: process.env.UX_BASE_URL })
 for (const width of [320, 390, 768, 1440]) {
   test(`介紹與飼養 ${width}px 保留完整資料並可閱讀`, async ({ browser, baseURL }) => {
+    // 同一案例檢查兩頁及大量欄位；保留逐項斷言期限，另給瀏覽器關閉資源的時間。
+    test.setTimeout(90000)
     const c = await browser.newContext({
         baseURL,
+        serviceWorkers: 'block',
         viewport: { width, height: 844 },
         hasTouch: width < 1000,
         isMobile: width < 768,
@@ -31,10 +34,12 @@ for (const width of [320, 390, 768, 1440]) {
       await expect(p.getByRole('table', { name: '餵食頻率與份量' })).toBeVisible()
       await expect(p.getByRole('columnheader', { name: '頻率', exact: true })).toBeVisible()
     }
-    await p.locator('.care-reading-index-links button').nth(1).click()
+    const trail = p.getByRole('navigation', { name: '飼養章節導覽' })
+    await trail.getByRole('link', { name: /餵食營養/ }).click()
     const y = await p.locator('#food').evaluate((e) => e.getBoundingClientRect().top)
-    expect(y).toBeGreaterThanOrEqual(8)
-    expect(y).toBeLessThan(width < 768 ? 30 : 100)
+    const navBottom = await trail.evaluate((e) => e.getBoundingClientRect().bottom)
+    expect(y).toBeGreaterThanOrEqual(Math.max(0, navBottom) - 2)
+    expect(y).toBeLessThan(Math.max(160, navBottom + 80))
     const start = await p.evaluate(() => scrollY)
     await p.waitForTimeout(160)
     expect(await p.evaluate(() => scrollY)).toBe(start)

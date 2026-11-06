@@ -17,6 +17,7 @@ export default <RouterConfig>{
     if (to.path === from.path && !to.hash) return false
 
     const nuxtApp = useNuxtApp()
+    const articleListContext = useArticleListContext()
 
     return new Promise((resolve) => {
       let done = false
@@ -68,7 +69,7 @@ export default <RouterConfig>{
         } else if (savedPosition) {
           top = savedPosition.top
         } else if (to.path === '/articles' && from.path.startsWith('/articles/')) {
-          top = nuxtApp.runWithContext(() => useArticleListContext().value.scrollY)
+          top = articleListContext.value.scrollY
         }
 
         if (lenis) {

@@ -99,6 +99,7 @@ test.beforeEach(async ({ page, context }, testInfo) => {
     return nuxt && !nuxt.isHydrating
   })
   await page.getByRole('link', { name: '查找特寵醫院', exact: true }).click()
+  await page.locator('.unified-map-body').waitFor({ state: 'attached' })
   await page.waitForFunction(() => !!(document.querySelector('#__nuxt') as any)?.__vue_app__)
   // 確認預載資料也經過此瀏覽器的隔離回應，不沿用伺服器名錄快取。
   await page.evaluate(async () => {

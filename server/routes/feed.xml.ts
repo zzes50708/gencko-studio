@@ -5,8 +5,8 @@ export default defineEventHandler(async (event) => {
   const supabase = await serverSupabaseClient(event)
 
   const { data: articles, error } = await supabase
-    .from('articles')
-    .select('id, title, summary, image_url, publish_date, author, category')
+    .from('site_public_articles')
+    .select('id, title, summary, image_url, publish_date, updated_at, author, category')
     .eq('status', 'Published')
     .order('publish_date', { ascending: false })
     .limit(20)

@@ -228,14 +228,20 @@ function updateHospitals() {
     void source.setData(data)
   }
 }
-function cameraSnapshot() {
+function cameraSnapshot(): HospitalMapCameraSnapshot | undefined {
+  const padding = map?.getPadding()
   return map
     ? {
         center: map.getCenter().toArray() as [number, number],
         zoom: map.getZoom(),
         pitch: map.getPitch(),
         bearing: map.getBearing(),
-        padding: map.getPadding()
+        padding: {
+          top: padding?.top ?? 0,
+          bottom: padding?.bottom ?? 0,
+          left: padding?.left ?? 0,
+          right: padding?.right ?? 0
+        }
       }
     : undefined
 }
@@ -253,7 +259,16 @@ function fitCamera(bounds: LngLatBoundsLike, options: FitBoundsOptions) {
 // 離開畫面時完成明確的定位操作，避免只保存動畫中途的視角。
 // 手動拖曳已由 userInteraction 清除目標，因此仍保留使用者選定的位置。
 function settleNavigation() {
-  if (map?.isMoving() && navigationTarget) map.jumpTo(navigationTarget)
+  if (map?.isMoving() && navigationTarget) {
+    const padding = navigationTarget.padding
+    map.jumpTo({
+      ...navigationTarget,
+      padding:
+        typeof padding === 'number'
+          ? { top: padding, bottom: padding, left: padding, right: padding }
+          : padding
+    })
+  }
 }
 function currentPixelRatio() {
   return hospitalPixelRatio(
@@ -686,8 +701,8 @@ function updateMetrics(force = false) {
     pitch: map.getPitch(),
     longitude: map.getCenter().lng,
     latitude: map.getCenter().lat,
-    paddingLeft: padding.left,
-    paddingRight: padding.right,
+    paddingLeft: padding.left ?? 0,
+    paddingRight: padding.right ?? 0,
     buildings,
     roads: roadLayerCount,
     loaded: map.areTilesLoaded()

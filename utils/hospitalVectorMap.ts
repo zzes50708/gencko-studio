@@ -1,4 +1,4 @@
-import type { StyleSpecification } from 'maplibre-gl'
+import type { StyleSpecification, ExpressionSpecification } from 'maplibre-gl'
 import { preciseMapHospitals, type MapHospital } from './hospitalMap'
 
 export const HOSPITAL_MAP_STYLE = 'https://tiles.openfreemap.org/styles/liberty'
@@ -35,6 +35,7 @@ export function hospitalVectorStyle(original: StyleSpecification): StyleSpecific
     ) {
       // 使用同一套圖示集的停車圖示與中性標記；文字與實際地點類型保持原資料。
       const originalIcon = layer.layout['icon-image']
+      if (typeof originalIcon !== 'string' && !Array.isArray(originalIcon)) continue
       layer.layout['icon-image'] = [
         'coalesce',
         ['image', originalIcon],
@@ -51,7 +52,7 @@ export function hospitalVectorStyle(original: StyleSpecification): StyleSpecific
           ]
         ],
         ['image', 'circle_stroked']
-      ]
+      ] as ExpressionSpecification
     }
     // 暖灰與霧藍的低彩度底圖；保留原圖徵、道路層級與文字佈局。
     if (layer.type === 'background') layer.paint = { ...layer.paint, 'background-color': '#e9e5df' }

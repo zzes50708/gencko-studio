@@ -39,7 +39,7 @@ const {
   }
 
   const { data, error } = await supabase
-    .from('genetic_pages')
+    .from('site_public_genetic_pages')
     .select('*')
     .eq('name', geneName)
     .maybeSingle()
@@ -326,15 +326,26 @@ useContentResponse(viewingGene, pending, geneError)
         </div>
 
         <div class="gene-layout" :class="{ 'gene-layout--text-only': !viewingGene.ImageURL }">
-          <!-- 🌟 核心修正：將 NuxtImg 替換為原生 img -->
-          <ArticleImage
-            v-if="viewingGene.ImageURL"
-            :src="getCleanUrl(viewingGene.ImageURL)"
-            :alt="`${viewingGene.Name} 守宮基因外觀範例｜豹紋守宮 Eublepharis macularius`"
-            class="gene-img"
-            loading="eager"
-            decoding="async"
-          />
+          <figure v-if="viewingGene.ImageURL" class="gene-observation">
+            <button
+              type="button"
+              class="gene-image-button"
+              :aria-label="`放大檢視${viewingGene.Name}外觀範例`"
+              @click="
+                store.openLightbox({ Name: viewingGene.Name, ImageURL: viewingGene.ImageURL })
+              "
+            >
+              <ArticleImage
+                :src="getCleanUrl(viewingGene.ImageURL)"
+                :alt="`${viewingGene.Name} 守宮基因外觀範例｜豹紋守宮 Eublepharis macularius`"
+                class="gene-img"
+                loading="eager"
+                decoding="async"
+              />
+              <span class="gene-zoom-label" aria-hidden="true">放大檢視 ↗</span>
+            </button>
+            <figcaption>外觀範例 · 可放大對照文字說明</figcaption>
+          </figure>
 
           <div class="gene-text-content">
             <h2 class="gene-section-title">📖 基因簡介</h2>
@@ -365,6 +376,76 @@ useContentResponse(viewingGene, pending, geneError)
 </template>
 
 <style scoped>
+.gene-observation {
+  min-width: 0;
+  margin: 0;
+  align-self: start;
+  flex: 0 0 42%;
+  width: 42%;
+}
+.gene-image-button {
+  position: relative;
+  display: block;
+  width: 100%;
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  background: var(--card-bg-solid);
+  cursor: zoom-in;
+}
+.gene-image-button .gene-img {
+  display: block;
+  width: 100%;
+  margin: 0;
+  max-height: 65vh;
+  object-fit: contain;
+}
+.gene-image-button:focus-visible {
+  outline: 2px solid var(--pri);
+  outline-offset: 4px;
+}
+.gene-zoom-label {
+  position: absolute;
+  bottom: 10px;
+  right: 10px;
+  padding: 8px 10px;
+  background: var(--card-bg-solid);
+  color: var(--txt);
+  border: 1px solid var(--bd);
+  font-size: 0.75rem;
+}
+.gene-observation figcaption {
+  margin-top: 8px;
+  color: var(--txt-muted);
+  font-size: 0.75rem;
+  line-height: 1.6;
+}
+@media (max-width: 768px) {
+  .gene-observation {
+    flex-basis: auto;
+    width: 100%;
+  }
+}
+@media (min-width: 769px) and (hover: hover) and (pointer: fine) {
+  .gene-observation {
+    position: sticky;
+    top: calc(var(--site-nav-height, 64px) + 16px);
+  }
+  .gene-zoom-label {
+    transition: transform 200ms var(--motion-ease-out);
+  }
+  .gene-image-button:hover .gene-zoom-label {
+    transform: translateY(-3px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .gene-zoom-label {
+    transition: none;
+  }
+  .gene-image-button:hover .gene-zoom-label {
+    transform: none;
+  }
+}
 .gene-detail-wrapper {
   max-width: 1080px;
   margin: 0 auto;

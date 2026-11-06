@@ -311,6 +311,7 @@ const informationRows = computed(() => [
 .card-photo {
   position: relative;
   aspect-ratio: 1;
+  background: #efede8;
 }
 .card-photo img,
 .card-image-placeholder {
@@ -318,7 +319,7 @@ const informationRows = computed(() => [
   width: 100%;
   height: 100%;
   aspect-ratio: 1;
-  object-fit: cover;
+  object-fit: contain;
 }
 .card-image-placeholder {
   display: grid;
@@ -559,7 +560,8 @@ const informationRows = computed(() => [
 }
 @media (pointer: coarse) and (min-width: 768px) {
   .card-action-btn {
-    min-height: 40px;
+    min-height: 44px;
+    min-width: 44px;
   }
 }
 </style>

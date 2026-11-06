@@ -1,5 +1,11 @@
 <script setup>
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
+import { useDocumentVisibility, useElementVisibility } from '@vueuse/core'
+
+const root = ref(null)
+const inViewport = useElementVisibility(root)
+const documentVisibility = useDocumentVisibility()
+const inactive = computed(() => !inViewport.value || documentVisibility.value === 'hidden')
 
 const props = defineProps({
   // 秒數越小越快
@@ -8,6 +14,8 @@ const props = defineProps({
   gapPx: { type: Number, default: 14 },
   // 是否在桌機 hover 時暫停
   pauseOnHover: { type: Boolean, default: true },
+  // 讓觸控及鍵盤使用者也能主動停止展示。
+  paused: { type: Boolean, default: false },
   // 是否反向跑（第二行可用來做交錯效果）
   reverse: { type: Boolean, default: false },
   // 無縫循環接縫修正（可用 calc(...)；預設 0px）
@@ -25,12 +33,23 @@ const styleVars = computed(() => ({
 </script>
 
 <template>
-  <div class="app-marquee" :style="styleVars" :aria-label="ariaLabel || undefined">
+  <div
+    ref="root"
+    class="app-marquee"
+    :class="{
+      'is-paused': paused || inactive,
+      'is-offscreen': inactive,
+      'can-pause-on-hover': pauseOnHover
+    }"
+    :style="styleVars"
+    :aria-label="ariaLabel || undefined"
+  >
     <div class="app-marquee__track">
       <div class="app-marquee__group">
         <slot :group-index="0" />
       </div>
-      <div class="app-marquee__group" aria-hidden="true" inert>
+      <!-- 副本仍會移入可視範圍，不能使用 inert 停用滑鼠互動；插槽負責排除重複 Tab 順序。 -->
+      <div class="app-marquee__group" aria-hidden="true">
         <slot :group-index="1" />
       </div>
     </div>
@@ -56,6 +75,10 @@ const styleVars = computed(() => ({
 .app-marquee:focus-within .app-marquee__track {
   animation-play-state: paused;
 }
+.app-marquee.is-paused .app-marquee__track {
+  animation-play-state: paused;
+  will-change: auto;
+}
 
 .app-marquee__group {
   display: flex;
@@ -63,7 +86,7 @@ const styleVars = computed(() => ({
 }
 
 @media (hover: hover) and (pointer: fine) {
-  .app-marquee:hover .app-marquee__track {
+  .app-marquee.can-pause-on-hover:hover .app-marquee__track {
     animation-play-state: paused;
   }
 }
@@ -75,7 +98,7 @@ const styleVars = computed(() => ({
   to {
     /* 注意：track 內包含兩份內容，正常情況下 -50% 可以無縫接續
        若兩份內容之間有 gap 或負重疊（例如卡片覆蓋 1/4），就需要修正接縫位移。 */
-    transform: translateX(calc(-50% + var(--marquee-seam-offset, 0px)));
+    transform: translateX(calc(-50% - var(--marquee-gap) / 2 + var(--marquee-seam-offset, 0px)));
   }
 }
 

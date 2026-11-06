@@ -14,7 +14,7 @@ const animal = {
 }
 async function fixtures(page: any, exhibition = false, listingPrice: number | null = 8000) {
   const record = { ...animal, listing_price: listingPrice }
-  await page.route('**/rest/v1/animals**', (route: any) =>
+  await page.route('**/rest/v1/*animals**', (route: any) =>
     route.fulfill({
       json: route.request().url().includes('id=eq.')
         ? record

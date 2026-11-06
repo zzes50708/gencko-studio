@@ -18,7 +18,7 @@ defineProps({
       <h1 class="page-title">{{ title }}</h1>
       <p v-if="lead" class="hero-lead">{{ lead }}</p>
     </div>
-    <div class="hero-aux">
+    <div v-if="$slots.default" class="hero-aux">
       <slot />
     </div>
   </section>

@@ -8,8 +8,52 @@ import { getCleanUrl } from '~/utils/image'
 import { readMemberAuctionHistory } from '~/utils/auction-member-history'
 import { auctionState } from '~/utils/auction-presentation'
 import { createRequestDeadline } from '~/utils/request-deadline'
+import { favoritesBackup, parseFavoritesBackup } from '~/utils/favorites-backup'
 
 const store = useMainStore()
+const backupStatus = ref('')
+function exportFavorites() {
+  try {
+    const url = URL.createObjectURL(
+      new Blob([favoritesBackup(store.wishlist, store.hospWishlist.map(String))], {
+        type: 'application/json'
+      })
+    )
+    const link = document.createElement('a')
+    link.href = url
+    link.download = 'Gencko-收藏備份.json'
+    link.click()
+    setTimeout(() => URL.revokeObjectURL(url), 1000)
+    backupStatus.value = '已匯出收藏；可在另一台裝置的「我的專區」匯入。'
+  } catch {
+    backupStatus.value = '目前收藏資料無法匯出，請先重新整理後再試。'
+  }
+}
+async function importFavorites(event) {
+  const file = event.target.files?.[0]
+  event.target.value = ''
+  if (!file) return
+  try {
+    if (file.size > 300000) throw new Error('收藏檔案太大。')
+    const backup = parseFavoritesBackup(await file.text())
+    const animals = [...new Set([...store.wishlist, ...backup.animals])]
+    const hospitals = [...new Set([...store.hospWishlist.map(String), ...backup.hospitals])]
+    // 先檢查合併後上限，避免多次匯入造成無限成長。
+    favoritesBackup(animals, hospitals)
+    store.wishlist = animals
+    store.hospWishlist = hospitals
+    try {
+      localStorage.setItem('gencko_wishlist', JSON.stringify(animals))
+      localStorage.setItem('gencko_hosp_wishlist', JSON.stringify(hospitals))
+      backupStatus.value = '已合併收藏，原有收藏會保留。'
+    } catch {
+      backupStatus.value = '已合併本次收藏；裝置無法儲存，請再匯出備份。'
+    }
+  } catch (error) {
+    backupStatus.value =
+      error instanceof SyntaxError ? '檔案無法讀取，請選擇 Gencko 匯出的收藏檔案。' : error.message
+  }
+}
 const router = useRouter()
 const supabase = useSupabaseClient()
 
@@ -29,6 +73,25 @@ useHead({
 
 // 狀態管理
 const activeTab = useState('member-dashboard-tab', () => 'wishlist')
+const memberTabs = ref(null)
+const memberTabKeys = ['wishlist', 'history', 'hospitals', 'bids']
+const memberTabIndex = computed(() => Math.max(0, memberTabKeys.indexOf(activeTab.value)))
+function onMemberTabKey(event) {
+  const current = Array.from(memberTabs.value?.querySelectorAll('button') || []).indexOf(
+    event.target
+  )
+  if (current < 0) return
+  let next = current
+  if (event.key === 'ArrowRight') next = (current + 1) % memberTabKeys.length
+  else if (event.key === 'ArrowLeft')
+    next = (current - 1 + memberTabKeys.length) % memberTabKeys.length
+  else if (event.key === 'Home') next = 0
+  else if (event.key === 'End') next = memberTabKeys.length - 1
+  else return
+  event.preventDefault()
+  activeTab.value = memberTabKeys[next]
+  memberTabs.value?.querySelectorAll('button')[next]?.focus()
+}
 const bidsError = ref('')
 const {
   data: hospitalDirectory,
@@ -193,7 +256,6 @@ const getMapLink = (h) => {
         <div class="profile-kicker">PERSONAL FIELD DESK</div>
         <h1>我的專區</h1>
       </div>
-      <p>收藏、瀏覽、醫院與競標紀錄集中在同一處；登入後可查看帳號專屬資料。</p>
     </header>
 
     <!-- 🌟 App-like 使用者資訊卡片 (包含訪客狀態) -->
@@ -288,8 +350,29 @@ const getMapLink = (h) => {
       </div>
     </div>
 
+    <div class="favorites-backup">
+      <button type="button" class="btn-outline" @click="exportFavorites">匯出收藏</button>
+      <label class="btn-outline">
+        匯入收藏
+        <input
+          type="file"
+          accept=".json,application/json"
+          aria-label="匯入 Gencko 收藏備份"
+          @change="importFavorites"
+        />
+      </label>
+      <span>換裝置可匯入，會保留原有收藏。</span>
+      <p v-if="backupStatus" role="status">{{ backupStatus }}</p>
+    </div>
     <!-- 🌟 App-like 分段切換器 (新增歷史紀錄) -->
-    <div class="segmented-tabs" role="group" aria-label="會員資料分類">
+    <div
+      ref="memberTabs"
+      class="segmented-tabs"
+      role="group"
+      aria-label="會員資料分類"
+      :style="{ '--profile-tab': memberTabIndex }"
+      @keydown="onMemberTabKey"
+    >
       <button
         type="button"
         class="seg-tab"
@@ -339,7 +422,7 @@ const getMapLink = (h) => {
       <div v-show="activeTab === 'wishlist'">
         <div v-if="wishlistItems.length === 0" class="empty-state">
           <div class="empty-icon">❤</div>
-          <p>您的收藏清單空空如也，趕快去商城逛逛吧！</p>
+          <p>尚無收藏個體。</p>
           <button
             type="button"
             class="btn-hero"
@@ -412,14 +495,14 @@ const getMapLink = (h) => {
       <div v-show="activeTab === 'history'">
         <div v-if="historyItems.length === 0" class="empty-state">
           <div class="empty-icon">👀</div>
-          <p>您還沒有看過任何守宮喔！</p>
+          <p>尚無瀏覽紀錄。</p>
           <button
             type="button"
             class="btn-hero"
             @click="router.push('/shop')"
             style="margin-top: 15px"
           >
-            前往商城探索
+            前往商城
           </button>
         </div>
 
@@ -706,6 +789,81 @@ const getMapLink = (h) => {
 </template>
 
 <style scoped>
+.segmented-tabs {
+  position: relative;
+}
+.segmented-tabs::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: calc((100% - 9px) / 4);
+  height: 2px;
+  background: var(--pri);
+  pointer-events: none;
+  transform: translateX(calc(var(--profile-tab, 0) * (100% + 3px)));
+  transition: transform 260ms var(--motion-ease-out);
+}
+.segmented-tabs .seg-tab.active {
+  border-bottom-color: transparent;
+}
+.tab-content-area > div {
+  animation: member-panel-enter 180ms ease both;
+}
+@keyframes member-panel-enter {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .segmented-tabs::after {
+    transition: none;
+  }
+  .tab-content-area > div {
+    animation: none;
+  }
+}
+.favorites-backup {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-block: 12px;
+  font-size: 0.85rem;
+}
+.favorites-backup .btn-outline {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 8px 12px;
+  border: 1px solid #ccc;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+.favorites-backup input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  opacity: 0;
+  cursor: pointer;
+}
+.favorites-backup label:focus-within {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+}
+.favorites-backup p {
+  flex-basis: 100%;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
 /*[局部樣式修復] 
   已清除所有重複的宣告與不必要的 :global(body.day-mode) 覆寫。
 */

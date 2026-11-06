@@ -394,7 +394,6 @@ useHead({
         </div>
         <span>EXOTIC CARE DIRECTORY / 全台資源</span>
         <h1>特寵醫院查詢</h1>
-        <p>以縣市、行政區或關鍵字縮小既有名單；展開後可直接撥號或前往真實 Google Maps 連結。</p>
       </header>
     </div>
 

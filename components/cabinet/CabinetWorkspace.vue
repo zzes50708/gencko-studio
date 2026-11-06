@@ -47,6 +47,7 @@ import type {
   Lighting
 } from '~/utils/cabinet/config'
 import { cabinetTextExport } from '~/utils/cabinet/export'
+import { cabinetShareLink, readCabinetShare } from '~/utils/cabinet/share'
 import { createCabinetModel } from '~/utils/cabinet/model'
 import type { CabinetModel } from '~/utils/cabinet/model'
 import CabinetSelect from './CabinetSelect.vue'
@@ -118,6 +119,11 @@ function saveDraft() {
   }
 }
 onMounted(() => {
+  const shared = readCabinetShare(location.hash)
+  if (shared) {
+    Object.assign(input, shared)
+    return
+  }
   try {
     const saved = JSON.parse(sessionStorage.getItem(draftKey) || 'null')
     if (saved && Object.hasOwn(customerBoxes, saved.boxVariant)) {
@@ -353,15 +359,21 @@ const rebuildModel = async () => {
       model.value.measurements.children.forEach((object) => {
         if (object.type === 'Sprite') object.scale.multiplyScalar(1.15)
       })
+    await nextTick()
+    if (disposed || serial !== buildSerial || !render3d.value) return
+    await prepareModel?.()
+    if (disposed || serial !== buildSerial || !render3d.value) return
+    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()))
   } catch (error) {
-    console.warn('[cabinet] 模型建立失敗', error)
-    failed.value = true
+    if (!disposed && serial === buildSerial) {
+      console.warn('[cabinet] 模型建立失敗', error)
+      failed.value = true
+    }
+  } finally {
+    // 建立失敗時保留仍在使用的舊模型；切頁或後續重建後釋放被取代的資源。
+    if (previous && previous !== model.value) previous.dispose()
+    if (!disposed && serial === buildSerial && failed.value) modelUpdating.value = false
   }
-  await nextTick()
-  await prepareModel?.()
-  previous?.dispose()
-  await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()))
-  if (serial === buildSerial && failed.value) modelUpdating.value = false
 }
 let buildSerial = 0
 let buildTimer: ReturnType<typeof setTimeout> | null = null
@@ -994,8 +1006,21 @@ const Controller = defineComponent({
   }
 })
 const downloadStatus = ref('')
+const shareFallback = ref('')
+async function copyShare() {
+  const link = cabinetShareLink(input, location.origin)
+  try {
+    await navigator.clipboard.writeText(link)
+    shareFallback.value = ''
+    downloadStatus.value = '已複製配置連結，開啟後可還原配置'
+  } catch {
+    shareFallback.value = link
+    downloadStatus.value = '請複製下方配置連結'
+  }
+}
 watch(configuration, () => {
   downloadStatus.value = ''
+  shareFallback.value = ''
 })
 async function copyExport() {
   try {
@@ -1068,6 +1093,7 @@ defineExpose({ reset, configuration, download })
         <button v-if="!touchMode || !mobileSetup" type="button" @click="copyExport">
           複製清單
         </button>
+        <button v-if="!touchMode || !mobileSetup" type="button" @click="copyShare">分享配置</button>
         <button v-if="!touchMode || !mobileSetup" type="button" @click="download()">
           匯出清單
         </button>
@@ -1560,6 +1586,13 @@ defineExpose({ reset, configuration, download })
       </span>
       <span role="status">{{ downloadStatus || '硬體外型與材質為示意，非正式加工圖。' }}</span>
     </div>
+    <input
+      v-if="shareFallback"
+      :value="shareFallback"
+      readonly
+      aria-label="配置分享連結"
+      style="width: 100%; min-width: 0"
+    />
   </div>
 </template>
 
@@ -1847,6 +1880,10 @@ input[type='number'] {
   display: flex;
   justify-content: flex-end;
   gap: 0.3rem;
+}
+.workspace-view button {
+  min-width: 44px;
+  flex-shrink: 0;
 }
 .workspace-light-control {
   display: grid;

@@ -251,9 +251,9 @@ describe('Phase 1 共用互動元件 contract', () => {
 
   it('Auction 列表使用可鍵盤操作的 no-prefetch 連結卡片，並限制 hover 動畫於 fine pointer', () => {
     expect(auctionIndex).toMatch(
-      /<NuxtLink[\s\S]*?no-prefetch[\s\S]*?:to="`\/auction\/\$\{item\.id\}`"[\s\S]*?class="auction-card"/
+      /<NuxtLink[\s\S]*?no-prefetch[\s\S]*?:to="`\/auction\/\$\{item\.id\}`"[\s\S]*?class="auction-card(?:\s+[^\"]*)?"/
     )
-    expect(auctionIndex).not.toMatch(/class="auction-card"\s+@click=/)
+    expect(auctionIndex).not.toMatch(/class="auction-card(?:\s+[^\"]*)?"\s+@click=/)
     expect(auctionIndex).toMatch(
       /@media\s*\(hover:\s*hover\)\s*and\s*\(pointer:\s*fine\)\s*\{[\s\S]*?\.auction-card:hover/
     )
@@ -372,7 +372,7 @@ describe('Phase 1 共用互動元件 contract', () => {
 
   it('Product 詳情照片不再導向證書，操作按鈕明確避免送出', () => {
     expect(productDetail).toMatch(
-      /\.from\('animals'\)[\s\S]*?\.eq\('id', productId\)[\s\S]*?\.maybeSingle\(\)/
+      /\.from\('site_public_animals'\)[\s\S]*?\.eq\('id', productId\)[\s\S]*?\.maybeSingle\(\)/
     )
     expect(productDetail).toMatch(/const isHydrated = ref\(false\)/)
     expect(productDetail).toContain('v-if="isHydrated && pending"')
@@ -483,7 +483,7 @@ describe('Phase 1 共用互動元件 contract', () => {
 
   it('Gene 詳情缺資料不觸發 406，loading 分支具備 hydration gate', () => {
     expect(genesDetail).toMatch(
-      /\.from\('genetic_pages'\)[\s\S]*?\.eq\('name', geneName\)[\s\S]*?\.maybeSingle\(\)/
+      /\.from\('site_public_genetic_pages'\)[\s\S]*?\.eq\('name', geneName\)[\s\S]*?\.maybeSingle\(\)/
     )
     expect(genesDetail).toMatch(/const isHydrated = ref\(false\)/)
     expect(genesDetail).toContain('v-if="isHydrated && pending"')
@@ -614,7 +614,7 @@ describe('Phase 1 共用互動元件 contract', () => {
       /<div\s+v-if="hero3dEnabled"\s+class="hero-canvas-shell"[\s\S]*?<TresCanvas[\s\S]*?<\/TresCanvas>/
     )
     expect(heroDnaGecko).toMatch(
-      /<div\s+v-else\s+class="hero-mobile-fallback"[\s\S]*?hero-accessible-nav/
+      /<div\s+v-else\s+class="hero-mobile-fallback"[\s\S]*?hero-mobile-fallback__links/
     )
     expect(heroDnaGecko).toMatch(
       /<HeroLogoDisc\s+v-if="hero3dEnabled"[\s\S]*?\/>[\s\S]*?<img\s+v-else\s+class="band-logo-static"/

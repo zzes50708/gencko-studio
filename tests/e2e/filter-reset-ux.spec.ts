@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test'
 
 test('已選品系可重置，網址不保留舊條件', async ({ page }) => {
-  await page.route('**/rest/v1/animals**', (route) =>
+  await page.route('**/rest/v1/*animals**', (route) =>
     route.fulfill({
       json: [
         {

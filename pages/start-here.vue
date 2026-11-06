@@ -23,15 +23,13 @@ const lanes = [
   {
     no: '01',
     icon: icons.assess,
-    title: '確認自己準備好了嗎',
-    caption: '評估時間、空間與照顧準備；個體健康問題請使用上方健康評估。',
+    title: '飼養前評估',
     actions: [{ label: '飼養前自我評估', to: '/qs' }]
   },
   {
     no: '02',
     icon: icons.pick,
-    title: '準備好，再挑選個體',
-    caption: '查看適合新手的個體，並了解購買流程。',
+    title: '選購與購買流程',
     actions: [
       { label: '新手推薦個體', to: '/shop?beginner=true' },
       { label: '購買流程', to: '/buying-guide' }
@@ -58,12 +56,12 @@ const prepNotes = [
 ]
 
 const knowledgeRoutes = [
-  { label: '認識守宮', body: '豹紋守宮跟肥尾守宮是什麼', to: '/guide' },
-  { label: '飼養指南', body: '從環境設置、餌料，建立完整飼養基礎', to: '/care' },
-  { label: '飼養前評估', body: '用簡短問答確認時間、空間與日常準備', to: '/qs' },
-  { label: '健康評估', body: '依外觀與行為整理觀察重點及就醫時機', to: '/health' },
-  { label: '常見問題', body: '快速找到新手最常遇到的飼養與選購解答', to: '/faq' },
-  { label: '知識文章', body: '需要深入理解時，繼續閱讀完整專欄內容', to: '/articles' }
+  { label: '認識守宮', to: '/guide' },
+  { label: '飼養指南', to: '/care' },
+  { label: '飼養前評估', to: '/qs' },
+  { label: '健康評估', to: '/health' },
+  { label: '常見問題', to: '/faq' },
+  { label: '知識文章', to: '/articles' }
 ]
 
 useHead({
@@ -71,12 +69,12 @@ useHead({
   meta: [
     {
       name: 'description',
-      content: '第一次養守宮別著急。先學習怎麼養、評估自己準備好了沒，再來看看漂亮的守宮吧。'
+      content: '守宮入門知識、飼養前評估與到家用品清單。'
     },
     { property: 'og:title', content: '守宮新手｜第一次養守宮，該從哪開始' },
     {
       property: 'og:description',
-      content: '先了解怎麼養，才能讓守宮健康快樂地長大。準備好再開始挑選守宮。'
+      content: '守宮入門知識、飼養前評估與到家用品清單。'
     },
     { property: 'og:url', content: pageUrl }
   ],
@@ -90,11 +88,7 @@ useHead({
       <span>GENCKO STARTER COURSE</span>
       <span>01 / FOUNDATION</span>
     </div>
-    <PageHero
-      kicker="START HERE"
-      title="第一次養守宮，先別急著帶回家"
-      lead="先了解怎麼養，才能讓守宮健康快樂地長大。準備好再開始挑選守宮"
-    >
+    <PageHero kicker="START HERE" title="守宮新手入門">
       <ol class="hero-flow">
         <li v-for="item in flowSteps" :key="item.no" class="flow-node">
           <span class="flow-dot">{{ item.no }}</span>
@@ -117,7 +111,7 @@ useHead({
     >
       <div class="hub-heading">
         <span>了解飼養</span>
-        <h2 id="knowledge-hub-title">這些問題都了解了嗎?選一個開始</h2>
+        <h2 id="knowledge-hub-title">飼養知識</h2>
       </div>
       <div class="knowledge-grid">
         <NuxtLink
@@ -128,7 +122,6 @@ useHead({
           class="knowledge-card"
         >
           <h3>{{ item.label }}</h3>
-          <p>{{ item.body }}</p>
           <span aria-hidden="true">前往 →</span>
         </NuxtLink>
       </div>
@@ -137,7 +130,7 @@ useHead({
     <section id="starter-checklist" class="prep-panel">
       <div class="panel-head">
         <div class="panel-kicker">CHECK</div>
-        <h2 class="sec-title">準備好把守宮帶回家了嗎?</h2>
+        <h2 class="sec-title">到家準備</h2>
       </div>
 
       <div class="prep-grid">
@@ -164,6 +157,7 @@ useHead({
           </NuxtLink>
         </article>
       </div>
+      <ContentPreparationChecklist />
     </section>
 
     <section id="starter-paths" class="lane-board">
@@ -185,7 +179,6 @@ useHead({
           </div>
           <div class="lane-copy">
             <h2 class="lane-title">{{ lane.title }}</h2>
-            <p class="lane-caption">{{ lane.caption }}</p>
           </div>
         </div>
 

@@ -403,6 +403,12 @@ onBeforeUnmount(() => {
     <p v-if="connectionReady && !online" class="connection-notice" role="status" aria-live="polite">
       目前沒有網路連線，已載入的內容仍可瀏覽；連線恢復後請重試。
     </p>
+    <p v-else-if="store.dataError && store.inv.length" class="connection-notice" role="status">
+      個體資料暫時無法更新，目前顯示先前載入的紀錄。
+      <button type="button" :disabled="store.loading" @click="store.loadDataFromAPI()">
+        重新確認售價與狀態
+      </button>
+    </p>
     <span
       v-if="pageLoading"
       :class="slowLoading && online ? 'slow-loading-notice' : 'sr-only'"
@@ -475,7 +481,12 @@ onBeforeUnmount(() => {
 
     <a
       v-if="store.wishlist.length > 0 && route.path !== '/shop'"
-      :href="getWishlistInquiryLink(store.lineLink, store.wishlist)"
+      :href="
+        getWishlistInquiryLink(store.lineLink, store.wishlist, {
+          items: store.inv,
+          hidePrice: store.isExhibitionMode
+        })
+      "
       target="_blank"
       class="btn-app btn-app--primary btn-app--md btn-app--pill floating-inquire-btn"
       :class="{

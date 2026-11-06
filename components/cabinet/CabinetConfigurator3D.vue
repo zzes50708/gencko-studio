@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import type { Component } from 'vue'
+import { shallowRef, type Component, type ShallowRef } from 'vue'
 import type { CabinetConfiguration, CabinetTemplate } from '~/utils/cabinet/config'
 const props = withDefaults(defineProps<{ modelValue?: string; active?: boolean }>(), {
   modelValue: 'a4',
   active: true
 })
-const Workspace = shallowRef<Component | null>(null)
+const Workspace: ShallowRef<Component | null> = shallowRef(null)
 const loading = ref(false)
 const loadFailed = ref(false)
 async function loadWorkspace() {
@@ -23,7 +23,7 @@ async function loadWorkspace() {
 onMounted(() => {
   watch(
     () => props.active,
-    (active) => {
+    (active: boolean) => {
       if (active) void loadWorkspace()
     },
     { immediate: true }

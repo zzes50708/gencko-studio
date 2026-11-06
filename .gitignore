@@ -55,3 +55,6 @@ supabase/.temp
 # Playwright CLI 除錯輸出（日誌/截圖，勿追蹤）
 .playwright-cli/
 test-results/
+
+# 本機版本保險備份，不上傳或部署
+.local-backups/

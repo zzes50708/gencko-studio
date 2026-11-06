@@ -29,7 +29,7 @@ for (const width of [320, 360, 390, 430, 1440]) {
         listing_price: index === 0 ? 108000 : 6980
       }))
     ]
-    await page.route('**/rest/v1/animals**', (route) =>
+    await page.route('**/rest/v1/*animals**', (route) =>
       route.fulfill({
         json: route.request().url().includes('id=eq.') ? animal : inventory
       })

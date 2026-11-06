@@ -26,7 +26,7 @@ for (const surface of ['shop', 'product']) {
         genes: [],
         image_url: 'https://example.invalid/photo.jpg'
       }
-      await page.route('**/rest/v1/animals**', (route) =>
+      await page.route('**/rest/v1/*animals**', (route) =>
         route.fulfill({
           json: new URL(route.request().url()).searchParams.has('id') ? animal : [animal]
         })
@@ -76,7 +76,7 @@ test('個體頁收藏儲存被拒絕時仍可切換收藏，不顯示全頁錯�
     genes: [],
     image_url: ''
   }
-  await page.route('**/rest/v1/animals**', (route) =>
+  await page.route('**/rest/v1/*animals**', (route) =>
     route.fulfill({
       json: new URL(route.request().url()).searchParams.has('id') ? animal : [animal]
     })
@@ -103,7 +103,7 @@ test('個體頁收藏儲存被拒絕時仍可切換收藏，不顯示全頁錯�
 
 for (const surface of ['animal', 'hospital']) {
   test(`會員頁 ${surface} 收藏儲存被拒絕時仍能取消收藏`, async ({ page }) => {
-    await page.route('**/rest/v1/animals**', (route) =>
+    await page.route('**/rest/v1/*animals**', (route) =>
       route.fulfill({
         json: [
           {
@@ -205,7 +205,7 @@ test('直接進入指南也能看到知識庫並開啟繁殖延伸閱讀', async
 })
 
 test('直接進入比較頁也會核對競標資料並提供有效場次入口', async ({ page }) => {
-  await page.route('**/rest/v1/animals**', (route) =>
+  await page.route('**/rest/v1/*animals**', (route) =>
     route.fulfill({
       json: [
         {
@@ -247,7 +247,7 @@ test('直接進入比較頁也會核對競標資料並提供有效場次入口',
 test('比較頁重新查詢會重讀庫存，不沿用之前查無個體的快取', async ({ page }) => {
   let rows: any[] = []
   let reads = 0
-  await page.route('**/rest/v1/animals**', (route) => {
+  await page.route('**/rest/v1/*animals**', (route) => {
     reads++
     return route.fulfill({ json: rows })
   })
@@ -278,7 +278,7 @@ for (const [price, exhibition, expected] of [
   [8000, true, 'NT$ 8000']
 ] as const) {
   test(`已售出比較售價 ${price} 展場 ${exhibition} 與商城一致`, async ({ page }) => {
-    await page.route('**/rest/v1/animals**', (route) =>
+    await page.route('**/rest/v1/*animals**', (route) =>
       route.fulfill({
         json: [
           {
@@ -304,7 +304,8 @@ for (const [price, exhibition, expected] of [
   })
 }
 async function articleFixture(page: Page, image = '') {
-  await page.route('**/rest/v1/articles**', (route) => {
+  await page.route('**/rest/v1/*genetic_pages**', (route) => route.fulfill({ json: [] }))
+  await page.route('**/rest/v1/*articles**', (route) => {
     const article = {
       id: 'REGRESSION-HTML',
       title: 'HTML 滿版回歸',
@@ -318,6 +319,17 @@ async function articleFixture(page: Page, image = '') {
     })
   })
 }
+
+test('基因輔助資料故障仍能顯示文章正文', async ({ page }) => {
+  await articleFixture(page)
+  await page.route('**/rest/v1/*genetic_pages**', (route) =>
+    route.fulfill({ status: 503, json: {} })
+  )
+  await page.goto('/certificates')
+  await ready(page)
+  await navigate(page, '/articles/REGRESSION-HTML')
+  await expect(page.locator('.reader-content p')).toHaveText(text)
+})
 
 test('同一候選圖片的重複錯誤事件不會隱藏尚未失敗的原尺寸圖片', async ({ page }) => {
   await page.route('https://wsrv.nl/**', (route) =>
@@ -399,7 +411,7 @@ for (const width of [390, 1440, 1920]) {
 
   test(`${width}px 無圖基因詳情保持單欄滿版`, async ({ page }) => {
     await page.setViewportSize({ width, height: 900 })
-    await page.route('**/rest/v1/genetic_pages**', (route) => {
+    await page.route('**/rest/v1/*genetic_pages**', (route) => {
       const gene = {
         name: 'WY',
         brief: '基因簡介',

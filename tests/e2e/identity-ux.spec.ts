@@ -18,7 +18,7 @@ async function enter(page: any) {
 }
 
 test('身分證手機可讀、圖片失敗降級與列印隔離', async ({ page }) => {
-  await page.route('**/rest/v1/animals?**', (r) =>
+  await page.route('**/rest/v1/*animals?**', (r) =>
     r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(record) })
   )
   await page.route('https://example.com/**', (r) => r.abort())
@@ -40,7 +40,7 @@ test('身分證手機可讀、圖片失敗降級與列印隔離', async ({ page 
     }
   })
   await page.getByRole('button', { name: '儲存個體證書為 PDF', exact: true }).click()
-  expect(await page.evaluate(() => (window as any).__printed)).toBe(true)
+  await expect.poll(() => page.evaluate(() => (window as any).__printed)).toBe(true)
   await page.emulateMedia({ media: 'print' })
   await expect(page.locator('.id-card')).toBeVisible()
   await expect(page.locator('.site-footer')).toBeHidden()
@@ -55,7 +55,7 @@ test('身分證手機可讀、圖片失敗降級與列印隔離', async ({ page 
 })
 test('身分證載入失敗可原頁重試', async ({ page }) => {
   let fail = true
-  await page.route('**/rest/v1/animals?**', (r) =>
+  await page.route('**/rest/v1/*animals?**', (r) =>
     r.fulfill({
       status: fail ? 400 : 200,
       contentType: 'application/json',
@@ -81,7 +81,7 @@ test('證書搜尋限定完整 ID 並保留可辨識的錯誤', async ({ page })
   await expect(page.getByRole('alert')).toContainText('完整個體 ID')
   await expect(input).toHaveAttribute('aria-invalid', 'true')
   await expect(page).toHaveURL(/\/certificates$/)
-  await page.route('**/rest/v1/animals?**', (r) =>
+  await page.route('**/rest/v1/*animals?**', (r) =>
     r.fulfill({
       contentType: 'application/json',
       body: JSON.stringify({ ...record, id: 'S-53518', image_url: null })
@@ -96,7 +96,7 @@ test('證書搜尋限定完整 ID 並保留可辨識的錯誤', async ({ page })
 })
 
 test('證書不呈現親本或錯誤品牌名稱且以單頁列印', async ({ page }) => {
-  await page.route('**/rest/v1/animals?**', (route) => {
+  await page.route('**/rest/v1/*animals?**', (route) => {
     const parents = route.request().url().includes('id=in.')
     return route.fulfill({
       contentType: 'application/json',

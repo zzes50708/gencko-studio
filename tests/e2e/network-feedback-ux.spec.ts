@@ -21,7 +21,7 @@ test('換頁等待過久顯示提示，完成後清除', async ({ page }) => {
   const gate = new Promise<void>((r) => {
     release = r
   })
-  await page.route('**/rest/v1/animals?**', async (r) => {
+  await page.route('**/rest/v1/*animals?**', async (r) => {
     await gate
     await r.fulfill({ json: { id: 'UX-WAIT', morph: '等待測試', image_url: null } })
   })

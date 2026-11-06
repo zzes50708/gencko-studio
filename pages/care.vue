@@ -1,11 +1,10 @@
 <script setup>
 import { TAXON_LEOPARD_GECKO, TAXON_FAT_TAIL_GECKO } from '~/utils/seo-schemas'
 import { serializeJsonLd } from '~/utils/structured-data'
-import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
+import { ref, computed } from 'vue'
 import { useHead, useAsyncData } from '#imports'
 import { useMainStore } from '~/stores/useMainStore'
 import {
-  ANCHORS,
   ENV_ITEMS,
   TEMP_GRADIENT,
   FEED_FREQ,
@@ -102,7 +101,7 @@ const webPageLd = computed(() => {
     isPartOf: { '@type': 'WebSite', '@id': 'https://www.genckobreeding.com/#website' },
     speakable: {
       '@type': 'SpeakableSpecification',
-      cssSelector: ['.care-hero-title', '.care-env-card', '.care-temp-bar', '.care-howto-title']
+      cssSelector: ['.care-hero-title', '.care-env-card', '.temperature-study', '.care-howto-title']
     },
     primaryImageOfPage: {
       '@type': 'ImageObject',
@@ -156,14 +155,13 @@ useHead({
     {
       name: 'description',
       content:
-        '豹紋守宮與肥尾守宮完整新手飼養教學：環境配置、溫度梯度、濕度配置、餵食頻率、餌料對照、補充品劑量、致命地雷與新手常見問題一站收錄。'
+        '豹紋守宮與肥尾守宮飼養資料：環境配置、溫度梯度、濕度、餵食頻率、餌料、補充品與照護警示。'
     },
     // Open Graph
     { property: 'og:title', content: '豹紋與肥尾守宮飼養指南｜環境、溫濕度、餵食、地雷一次看' },
     {
       property: 'og:description',
-      content:
-        '環境、溫濕度、餌料對照、補充品、致命地雷、FAQ 全收錄。新手飼養豹紋守宮與肥尾守宮的一站式指南。'
+      content: '豹紋守宮與肥尾守宮的環境、溫濕度、餌料、補充品與照護警示。'
     },
     {
       property: 'og:image',
@@ -183,8 +181,7 @@ useHead({
     { name: 'twitter:title', content: '豹紋與肥尾守宮飼養指南｜環境、溫濕度、餵食、地雷一次看' },
     {
       name: 'twitter:description',
-      content:
-        '環境、溫濕度、餌料對照、補充品、致命地雷、FAQ 全收錄。新手飼養豹紋守宮與肥尾守宮的一站式指南。'
+      content: '豹紋守宮與肥尾守宮的環境、溫濕度、餌料、補充品與照護警示。'
     },
     {
       name: 'twitter:image',
@@ -215,62 +212,23 @@ const relatedByCategory = computed(() => {
   return groups
 })
 
-const sidebarAnchors = computed(() => {
-  const order = ['env', 'food', 'breeding', 'faq']
-  return [...ANCHORS].sort((a, b) => order.indexOf(a.id) - order.indexOf(b.id))
-})
+const careRoot = ref(null)
+const careChapters = [
+  { id: 'env', label: '環境配置' },
+  { id: 'food', label: '餵食營養' },
+  { id: 'breeding', label: '繁殖預備' },
+  { id: 'related', label: '延伸閱讀' }
+]
 
 const environmentWarnings = DANGERS.filter((item) => item.id === 'cohab')
 const temperatureWarnings = DANGERS.filter((item) => item.id === 'noTherm')
 const feedingWarnings = DANGERS.filter((item) => item.id === 'monoDiet')
-const scrollProgress = ref(0)
-
-const handleScroll = () => {
-  if (typeof window === 'undefined') return
-  const doc = document.documentElement
-  const total = doc.scrollHeight - doc.clientHeight
-  scrollProgress.value = total > 0 ? Math.min(100, (window.scrollY / total) * 100) : 0
-}
-
-onMounted(() => {
-  window.addEventListener('scroll', handleScroll, { passive: true })
-  handleScroll()
-})
-
-onBeforeUnmount(() => {
-  if (typeof window !== 'undefined') window.removeEventListener('scroll', handleScroll)
-})
-
-const scrollTo = (id) => {
-  if (typeof window === 'undefined') return
-  const el = document.getElementById(id)
-  if (!el) return
-  // 使用全站導覽尺寸；手機沒有頂部導覽，不沿用桌面預留空間。
-  const rootStyle = getComputedStyle(document.documentElement)
-  const offset =
-    window.innerWidth < 768
-      ? 12
-      : (parseFloat(rootStyle.getPropertyValue('--site-nav-height')) || 64) + 12
-  const top = el.getBoundingClientRect().top + window.scrollY - offset
-  window.scrollTo({
-    top,
-    behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth'
-  })
-}
-
-const handlePersona = (p) => {
-  if (p.href) {
-    router.push(p.href)
-    return
-  }
-  scrollTo(p.target || p.id)
-}
 </script>
 
 <template>
-  <div class="site-document-page care-page">
-    <div class="care-progress-bar">
-      <div class="care-progress-fill" :style="{ width: `${scrollProgress}%` }"></div>
+  <div ref="careRoot" class="site-document-page care-page">
+    <div class="care-progress-bar" aria-hidden="true">
+      <div class="care-progress-fill"></div>
     </div>
 
     <section class="care-hero">
@@ -281,7 +239,6 @@ const handlePersona = (p) => {
       <div class="care-hero-copy">
         <div class="care-hero-kicker">CARE MANUAL · 日常照護手冊</div>
         <h1 class="care-hero-title">守宮飼養指南</h1>
-        <p class="care-hero-lead">守宮怎麼養，先把環境與餵食做對</p>
       </div>
     </section>
 
@@ -294,18 +251,12 @@ const handlePersona = (p) => {
 
     <div class="care-body">
       <div class="care-main">
-        <section class="care-reading-index" aria-labelledby="care-reading-index-title">
-          <div>
-            <span>READING INDEX</span>
-            <h2 id="care-reading-index-title">從環境開始，讓守宮每天都開心</h2>
-          </div>
-          <div class="care-reading-index-links">
-            <button v-for="a in sidebarAnchors" :key="a.id" type="button" @click="handlePersona(a)">
-              <span>{{ a.icon }}</span>
-              {{ a.label }}
-            </button>
-          </div>
-        </section>
+        <ContentChapterTrail
+          :host="careRoot"
+          :chapters="careChapters"
+          label="飼養章節導覽"
+          follow-nav
+        />
         <section id="env" class="care-section">
           <h2 class="care-h">環境配置</h2>
           <div class="care-env-grid">
@@ -334,20 +285,7 @@ const handlePersona = (p) => {
           <div id="temp" class="care-subsection">
             <h3 class="care-subh">溫度梯度</h3>
 
-            <div class="care-temp-bar">
-              <div class="care-temp-zone" :style="{ background: TEMP_GRADIENT.cold.color }">
-                <span class="care-temp-zone-range">{{ TEMP_GRADIENT.cold.range }}</span>
-                <span class="care-temp-zone-label">{{ TEMP_GRADIENT.cold.label }}</span>
-              </div>
-              <div class="care-temp-zone" :style="{ background: TEMP_GRADIENT.middle.color }">
-                <span class="care-temp-zone-range">{{ TEMP_GRADIENT.middle.range }}</span>
-                <span class="care-temp-zone-label">{{ TEMP_GRADIENT.middle.label }}</span>
-              </div>
-              <div class="care-temp-zone" :style="{ background: TEMP_GRADIENT.hot.color }">
-                <span class="care-temp-zone-range">{{ TEMP_GRADIENT.hot.range }}</span>
-                <span class="care-temp-zone-label">{{ TEMP_GRADIENT.hot.label }}</span>
-              </div>
-            </div>
+            <ContentTemperatureExplorer />
 
             <div class="care-temp-notes">
               <div class="care-temp-note">🌙 {{ TEMP_GRADIENT.nightMin }}</div>
@@ -568,16 +506,43 @@ const handlePersona = (p) => {
             </div>
           </div>
         </section>
-
-        <div class="care-quote">
-          我們將守宮視為需被妥善照護的生命，而非一般商品。本頁旨在協助飼主以正確、全面的知識理解守宮的行為與需求，並依其生理特性提供安全、穩定且適宜的環境。每個個體的性格、反應與適應能力皆有差異，照護方式並無絕對標準，請依個體狀況彈性調整。
-        </div>
       </div>
     </div>
   </div>
 </template>
 
 <style scoped>
+.care-progress-bar {
+  display: none;
+}
+@supports (animation-timeline: view()) and (timeline-scope: --care-reading) {
+  .care-page {
+    timeline-scope: --care-reading;
+  }
+  .care-main {
+    view-timeline-name: --care-reading;
+    view-timeline-axis: block;
+  }
+  .care-progress-bar {
+    display: block;
+  }
+  .care-progress-fill {
+    width: 100%;
+    transform-origin: left;
+    animation: care-reading-progress linear both;
+    animation-timeline: --care-reading;
+    animation-range: contain 0% contain 100%;
+    transition: none;
+  }
+  @keyframes care-reading-progress {
+    from {
+      transform: scaleX(0);
+    }
+    to {
+      transform: scaleX(1);
+    }
+  }
+}
 .care-page {
   margin: 0 auto;
   max-width: 1300px;

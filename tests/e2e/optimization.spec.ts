@@ -23,7 +23,7 @@ test('文章 SSR 可讀，hydration 不重複抓取摘要，正文進頁才載�
 test('文章失敗可重試、並行載入去重且不等待其他資料表', async ({ page }) => {
   let fail = true,
     calls = 0
-  await page.route('**/rest/v1/articles*', async (r) => {
+  await page.route('**/rest/v1/*articles*', async (r) => {
     calls++
     await r.fulfill(
       fail
@@ -33,7 +33,7 @@ test('文章失敗可重試、並行載入去重且不等待其他資料表', as
   })
   let release!: () => void
   const hold = new Promise<void>((r) => (release = r))
-  await page.route('**/rest/v1/merchandise*', async (r) => {
+  await page.route('**/rest/v1/*merchandise*', async (r) => {
     await hold
     await r.fulfill({ json: [] })
   })

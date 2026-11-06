@@ -169,12 +169,12 @@ const FRAG = /* glsl */ `
     glow *= scan;
 
     // ── 顏色：琥珀為主，右側偏白，資料閃爍帶青色電子感 ──
-    vec3 amber = vec3(0.95, 0.25, 0.03);
-    vec3 core = vec3(1.0, 0.42, 0.11);
-    vec3 cyan = vec3(1.0, 0.55, 0.16);
+    vec3 amber = vec3(0.76, 0.28, 0.08);
+    vec3 core = vec3(0.96, 0.53, 0.20);
+    vec3 cyan = vec3(1.0, 0.77, 0.44);
     vec3 col = mix(amber, core, smoothstep(0.45, 1.0, x));
     col = mix(col, cyan, flick * 0.12);
-    col += core * focusWide * 0.7;
+    col += core * focusWide * 0.35;
 
     // 指示點：一條隨脈動的亮線 + 局部提亮
     float mark = smoothstep(0.010, 0.0, abs(dp));

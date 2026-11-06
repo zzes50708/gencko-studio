@@ -1,6 +1,6 @@
 <script setup>
 import { GECKO_TAXONS } from '~/utils/seo-schemas'
-import { computed, onMounted, ref, watch, nextTick } from 'vue'
+import { computed, onMounted, onBeforeUnmount, ref, watch, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useHead, useAsyncData, useSupabaseClient } from '#imports'
 import { useMainStore } from '~/stores/useMainStore'
@@ -8,6 +8,7 @@ import { getCleanUrl } from '~/utils/image'
 import { serializeJsonLd } from '~/utils/structured-data'
 import { seoDate } from '~/utils/seo-head'
 import { autoLinkGenes } from '~/utils/auto-link'
+import { readOptionalGeneNames } from '~/utils/optional-gene-names'
 import { articleIsVisible, articleStatuses } from '~/utils/article-visibility'
 
 // 🌟 強制每個不同 URL 建立獨立元件實例，防止 CSR 元件複用導致 useAsyncData 不重新抓取
@@ -26,39 +27,48 @@ const outline = ref([])
 const selectedChapter = ref('')
 const buildOutline = () => {
   if (!content.value) return
-  const seen = new Set()
   outline.value = Array.from(content.value.querySelectorAll('h2, h3'))
-    .map((element, index) => {
-      let id = element.id || `article-section-${index + 1}`
-      let suffix = 1
-      while (seen.has(id)) id = `article-section-${index + 1}-${suffix++}`
-      seen.add(id)
-      element.id = id
-      return { id, label: element.textContent.trim(), element }
-    })
+    // v-html 重新渲染會移除事後加上的 id；以正文標題順序定位，不改寫原始 HTML。
+    .map((element, index) => ({ id: String(index), label: element.textContent.trim() }))
     .filter((item) => item.label)
 }
 onMounted(buildOutline)
-const goToChapter = () => {
-  const target = outline.value.find((item) => item.id === selectedChapter.value)?.element
-  if (!target) return
-  const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches
-  const offset =
-    window.innerWidth < 768
-      ? 12
-      : (parseFloat(
-          getComputedStyle(document.documentElement).getPropertyValue('--site-nav-height')
-        ) || 64) + 12
-  const lenis = window.__lenis
-  if (lenis) {
-    // 站內切換後正文高度可能尚未被平滑捲動更新，先同步尺寸以免章節定位過早停止。
-    lenis.resize()
-    lenis.scrollTo(target, { offset: -offset, immediate: reduce })
-  } else
-    window.scrollTo({
-      top: target.getBoundingClientRect().top + window.scrollY - offset,
-      behavior: reduce ? 'instant' : 'smooth'
+let chapterFrame = 0
+let chapterDisposed = false
+onBeforeUnmount(() => {
+  chapterDisposed = true
+  cancelAnimationFrame(chapterFrame)
+})
+const goToChapter = async () => {
+  const id = selectedChapter.value
+  // 這是跳轉操作，清回提示後才能再次選同一章，而非只有換選項才觸發。
+  selectedChapter.value = ''
+  await nextTick()
+  if (chapterDisposed) return
+  cancelAnimationFrame(chapterFrame)
+  chapterFrame = requestAnimationFrame(() => {
+    chapterFrame = requestAnimationFrame(() => {
+      chapterFrame = 0
+      // 每次從目前正文找標題，避免重讀文章後使用已移除的 DOM 參照。
+      if (id === '') return
+      const target = content.value?.querySelectorAll('h2, h3')[Number(id)]
+      if (!target) return
+      const offset =
+        window.innerWidth < 768
+          ? 12
+          : (parseFloat(
+              getComputedStyle(document.documentElement).getPropertyValue('--site-nav-height')
+            ) || 64) + 12
+      const top = Math.max(0, target.getBoundingClientRect().top + window.scrollY - offset)
+      target.tabIndex = -1
+      target.focus({ preventScroll: true })
+      const lenis = window.__lenis
+      if (lenis) {
+        lenis.resize()
+        lenis.scrollTo(top, { immediate: true, force: true })
+      } else window.scrollTo({ top, behavior: 'instant' })
     })
+  })
 }
 
 // [SEO] 為了在伺服器端渲染 (SSR) 期間就能拿到該文章資料以產生正確的 Meta，
@@ -83,12 +93,19 @@ const {
   }
 
   // 若 Store 沒有 (SSR 場景或直接進入內頁)，則直接去資料庫撈
-  const { data, error } = await supabase
-    .from('articles')
-    .select('*')
-    .eq('id', articleId)
-    .in('status', articleStatuses(articlePreview))
-    .maybeSingle()
+  const read = (table) =>
+    supabase
+      .from(table)
+      .select(
+        'id,title,category,summary,content,image_url,author,status,publish_date,keywords,faq,updated_at'
+      )
+      .eq('id', articleId)
+      .in('status', articleStatuses(articlePreview))
+      .maybeSingle()
+  let result = await read(articlePreview ? 'articles' : 'site_public_articles')
+  // 草稿保密後，本機匿名讀取不繞過權限；已發布內容仍可正常閱讀。
+  if (articlePreview && result.error?.code === '42501') result = await read('site_public_articles')
+  const { data, error } = result
 
   if (error) throw new Error('文章暫時無法載入，請稍後重試。')
   if (!data || !articleIsVisible(data.status, articlePreview)) return null
@@ -98,8 +115,7 @@ const {
   if (store.genePages && store.genePages.length > 0) {
     geneNames = store.genePages.map((g) => g.Name).filter(Boolean)
   } else {
-    const { data: geneRows } = await supabase.from('genetic_pages').select('name')
-    if (geneRows) geneNames = geneRows.map((g) => g.name).filter(Boolean)
+    geneNames = await readOptionalGeneNames(supabase)
   }
   const linkedContent = autoLinkGenes(data.content, geneNames)
 
@@ -113,6 +129,7 @@ const {
     ImageURL: data.image_url,
     Author: data.author || 'Gencko Studio',
     PublishDate: data.publish_date || data.created_at,
+    UpdatedAt: data.updated_at || null,
     Keywords: data.keywords || '',
     // 後台填 faq JSONB 後自動產生 FAQPage JSON-LD（AEO snippet 命中關鍵）
     // 格式：[{"q":"問題","a":"答案"}, ...]
@@ -138,6 +155,34 @@ const fmtDate = (d) => {
     return ''
   }
 }
+
+if (articlePreview)
+  watch(
+    () => store.currentUser?.auctionAdmin,
+    () => {
+      readingArticle.value = null
+      void retryArticle()
+    }
+  )
+
+// 清單背景更新後同步已開啟的正文；下架時不能繼續顯示舊內容。
+watch(
+  () => store.articlesList,
+  (rows) => {
+    if (!store.articlesLoaded || store.articlesError || pending.value || !readingArticle.value)
+      return
+    const latest = rows.find((article) => article.ID === articleId)
+    if (!latest) {
+      readingArticle.value = null
+      return
+    }
+    if (
+      latest.UpdatedAt !== readingArticle.value.UpdatedAt ||
+      latest.Status !== readingArticle.value.Status
+    )
+      void retryArticle()
+  }
+)
 
 // HTML → 純文字（給 articleBody / wordCount 用，AI 可直接吃）
 const htmlToText = (html) => {
@@ -182,6 +227,7 @@ const siteData = computed(() => {
       headline: art.Title,
       image: [imgUrl],
       datePublished: isoDate,
+      dateModified: seoDate(art.UpdatedAt) || undefined,
       author: [
         {
           '@type': !art.Author || /gencko/i.test(art.Author) ? 'Organization' : 'Person',
@@ -231,6 +277,7 @@ const siteData = computed(() => {
       isPartOf: { '@type': 'WebSite', '@id': 'https://www.genckobreeding.com/#website' },
       primaryImageOfPage: { '@type': 'ImageObject', url: imgUrl },
       datePublished: isoDate,
+      dateModified: seoDate(art.UpdatedAt) || undefined,
       mainEntity: blogPosting
     }
 
@@ -434,6 +481,7 @@ useHead(() => ({
             loading="eager"
           />
         </div>
+        <div class="reader-reading-track" aria-hidden="true"><span /></div>
         <label v-if="outline.length > 1" class="reader-outline">
           <span>文章章節</span>
           <select v-model="selectedChapter" aria-label="跳至文章章節" @change="goToChapter">
@@ -1175,14 +1223,20 @@ useHead(() => ({
   gap: 8px;
 }
 .reader-outline {
-  display: flex;
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
   align-items: center;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  padding: 2px;
   gap: 10px;
   margin-block: 12px;
   font-size: 0.86rem;
 }
 .reader-outline select {
-  flex: 1;
+  width: 100%;
+  max-width: 100%;
   min-width: 0;
   min-height: 44px;
   padding: 6px 10px;
@@ -1193,6 +1247,13 @@ useHead(() => ({
   font: inherit;
   font-size: 16px;
 }
+.reader-outline > span {
+  white-space: nowrap;
+}
+.reader-outline select:focus-visible {
+  outline: 2px solid var(--pri);
+  outline-offset: -2px;
+}
 .article-hero-image {
   aspect-ratio: 16 / 9;
   max-height: 460px;
@@ -1201,6 +1262,53 @@ useHead(() => ({
 .article-hero-image img {
   height: 100% !important;
   object-fit: cover;
+}
+</style>
+
+<style scoped>
+/* 正文自己的時間軸：封面、頁尾與延伸閱讀不會灌入閱讀進度。 */
+.reader-reading-track {
+  display: none;
+}
+@supports (animation-timeline: view()) and (timeline-scope: --reading-body) {
+  .reader-container {
+    timeline-scope: --reading-body;
+    overflow: clip;
+  }
+  .reader-content {
+    view-timeline-name: --reading-body;
+    view-timeline-axis: block;
+  }
+  .reader-reading-track {
+    display: block;
+    position: sticky;
+    top: calc(var(--site-nav-height, 64px) + 4px);
+    z-index: 7;
+    height: 3px;
+    background: var(--bd);
+  }
+  .reader-reading-track > span {
+    display: block;
+    height: 100%;
+    background: var(--pri);
+    transform-origin: left;
+    animation: reading-body-progress linear both;
+    animation-timeline: --reading-body;
+    animation-range: contain 0% contain 100%;
+  }
+  @keyframes reading-body-progress {
+    from {
+      transform: scaleX(0);
+    }
+    to {
+      transform: scaleX(1);
+    }
+  }
+  @media (max-width: 767px) {
+    .reader-reading-track {
+      top: 0;
+    }
+  }
 }
 </style>
 

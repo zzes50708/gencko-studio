@@ -1,0 +1,460 @@
+/* 品牌體驗層：沿用既有標題契約，以細線、照片框及一致微互動整合首頁。 */
+.home-page-wrapper {
+  --specimen-mat: #efede8;
+}
+.home-hero__eyebrow {
+  display: flex !important;
+  align-items: center;
+  gap: 10px;
+}
+.home-hero__dna {
+  flex: 0 0 18px;
+  width: 18px;
+  height: 36px;
+  color: var(--pri);
+}
+.home-journey-link {
+  display: inline-flex;
+  gap: 16px;
+  align-items: center;
+  min-height: 44px;
+  margin-top: 8px;
+  color: var(--txt-muted);
+  font-size: 0.74rem;
+  text-decoration: none;
+}
+.home-journey-link span {
+  color: var(--pri);
+}
+.home-hero__visual {
+  display: block;
+  aspect-ratio: auto;
+  padding: 12px;
+  border: 1px solid var(--bd);
+  background: var(--specimen-mat);
+  overflow: hidden;
+}
+.home-hero__visual::after {
+  display: none;
+}
+.home-hero__visual img {
+  display: block;
+  position: static;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 1;
+  object-fit: contain;
+  filter: none;
+  transition: transform var(--motion-duration-scene) var(--motion-ease-out);
+}
+.home-hero__caption {
+  position: static;
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  padding-top: 12px;
+  color: #48433e;
+  text-shadow: none;
+  font-size: 0.62rem;
+  letter-spacing: 0.12em;
+}
+.home-scenario-grid {
+  gap: 0;
+  border: 1px solid var(--bd);
+}
+.home-scenario-grid .scenario-card {
+  box-shadow: none;
+}
+.home-scenario-grid .scenario-card:active {
+  transform: translateY(1px);
+}
+.home-scenario-grid .scenario-card:hover:not(:active) {
+  transform: none;
+}
+.scenario-card {
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: flex-start;
+  gap: 10px;
+  min-height: 112px;
+  padding: 16px 12px;
+  box-shadow: none;
+  background: transparent;
+  border: 0;
+  border-right: 1px solid var(--bd);
+  border-radius: 0;
+  text-align: left;
+  transition: background-color var(--motion-duration-ui) var(--motion-ease-out);
+}
+.scenario-card:last-child {
+  border-right: 0;
+}
+.scenario-body {
+  justify-content: flex-start;
+  gap: 8px;
+  transform: none !important;
+  opacity: 1 !important;
+}
+.scenario-title {
+  font-size: 0.88rem;
+}
+.scenario-hint {
+  position: static;
+  display: block;
+  inset: auto;
+  margin: 0;
+  padding: 0;
+  color: var(--txt-muted);
+  background: transparent;
+  font-size: 0.72rem;
+  font-weight: 400;
+  line-height: 1.6;
+  text-align: left;
+  opacity: 1 !important;
+  transform: none !important;
+}
+.hot-picks-actions {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--txt-muted);
+}
+.home-hot-picks .hot-picks-head {
+  margin-bottom: 0;
+  align-items: center;
+}
+.hot-picks-actions button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 8px 12px;
+  border: 1px solid var(--bd);
+  background: var(--card-bg-solid);
+  color: var(--txt);
+  font: inherit;
+  cursor: pointer;
+  transition:
+    border-color var(--motion-duration-fast) var(--motion-ease-out),
+    transform var(--motion-duration-fast) var(--motion-ease-out);
+}
+.hot-picks-actions button[aria-pressed='true'] {
+  border-color: var(--pri);
+  color: var(--pri);
+}
+.home-product-marquee {
+  --hot-card-w: 220px;
+  --hot-card-h: 278px;
+}
+.home-product-marquee :deep(.app-marquee__track),
+.home-product-marquee :deep(.app-marquee__group) {
+  gap: var(--marquee-gap);
+}
+.home-product-marquee :deep(.hot-card-item) {
+  height: var(--hot-card-h);
+  background: var(--card-bg-solid);
+  border-radius: 0;
+  overflow: visible;
+}
+.home-product-marquee :deep(.hot-card-link) {
+  display: flex;
+  flex-direction: column;
+  padding: 10px;
+  border: 1px solid var(--bd);
+  position: relative;
+  border-radius: 6px;
+  background: var(--card-bg-solid);
+}
+.home-product-marquee :deep(.hot-card-turncue) {
+  position: absolute;
+  display: grid;
+  place-items: center;
+  right: 10px;
+  bottom: 12px;
+  width: 26px;
+  height: 26px;
+  border: 1px solid var(--bd);
+  border-radius: 50%;
+  color: var(--pri);
+  background: var(--card-bg-solid);
+  font-size: 1rem;
+}
+.home-product-marquee :deep(.hot-card-layer) {
+  flex: 0 0 auto;
+  height: auto;
+  aspect-ratio: 1;
+  background: var(--specimen-mat);
+}
+.home-product-marquee :deep(.hot-card-media) {
+  padding: 6px;
+}
+.home-product-marquee :deep(.hot-card-img) {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  border-radius: 0;
+  transition: transform var(--motion-duration-scene) var(--motion-ease-out);
+}
+.home-product-marquee :deep(.hot-card-body-overlay) {
+  position: static;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  justify-content: center;
+  gap: 6px;
+  padding: 9px 32px 0 2px;
+  background: none;
+  text-align: left;
+}
+.home-product-marquee :deep(.specimen-id) {
+  color: var(--txt-muted);
+  font-size: 0.6rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+}
+.home-product-marquee :deep(.hot-card-title) {
+  margin: 0;
+  color: var(--txt);
+  font-family: var(--font-body-zh);
+  font-size: 0.8rem;
+  line-height: 1.45;
+}
+.home-product-marquee :deep(.hot-card-link:focus-visible),
+.home-journey-link:focus-visible,
+.hot-picks-actions button:focus-visible,
+.scenario-card:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: -3px;
+}
+.home-hero__action,
+.home-trust__card,
+.article-card,
+.home-journey-link {
+  transition:
+    transform var(--motion-duration-ui) var(--motion-ease-out),
+    border-color var(--motion-duration-ui) var(--motion-ease-out),
+    color var(--motion-duration-fast) var(--motion-ease-out);
+}
+.home-trust__card {
+  min-height: 0;
+  padding: 16px 20px;
+  border: 1px solid var(--bd);
+  border-radius: 0;
+  background: var(--card-bg-solid);
+  box-shadow: none;
+}
+.home-trust__card h3 {
+  margin-top: 12px;
+}
+.home-trust__grid {
+  gap: 16px;
+}
+.home-trust__scene-cue span {
+  animation: none;
+  transform: translateX(14px);
+  opacity: 1;
+}
+.article-card {
+  border-bottom: 1px solid var(--bd);
+  padding-bottom: 16px;
+}
+.article-card .card-img {
+  object-fit: cover;
+}
+.live-badge {
+  animation: none;
+}
+.hot-picks-actions button:active,
+.home-hero__action:active {
+  transform: scale(0.98);
+}
+@media (min-width: 768px) and (hover: hover) and (pointer: fine) {
+  .home-product-marquee :deep(.app-marquee__track) {
+    padding-block: 20px;
+  }
+  .home-product-marquee :deep(.hot-card-link) {
+    transform: rotate(var(--specimen-angle, -2deg));
+    transform-origin: center 70%;
+    transition:
+      transform 400ms var(--motion-ease-out),
+      box-shadow 320ms ease,
+      border-color 200ms ease;
+    box-shadow: 0 3px 9px #0000000a;
+  }
+  .home-product-marquee :deep(.hot-card-wrap) {
+    isolation: isolate;
+  }
+  .home-product-marquee :deep(.hot-card-back) {
+    display: block;
+    position: absolute;
+    inset: 5px -3px -3px 5px;
+    border: 1px solid var(--bd);
+    border-radius: 6px;
+    background: color-mix(in srgb, var(--pri) 12%, var(--card-bg-solid));
+    transform: rotate(calc(var(--specimen-angle, -2deg) + 3deg));
+    transition: transform 400ms var(--motion-ease-out);
+    z-index: -1;
+  }
+  .home-product-marquee :deep(.hot-card-wrap:is(:hover, :focus-within) .hot-card-link) {
+    transform: rotate(0deg) translateY(-8px);
+    border-color: var(--pri);
+    box-shadow: 0 14px 24px #0000001c;
+  }
+  .home-product-marquee :deep(.hot-card-wrap:is(:hover, :focus-within) .hot-card-back) {
+    transform: rotate(-3deg) translate(3px, 1px);
+  }
+  .home-product-marquee :deep(.hot-card-wrap:is(:hover, :focus-within) .hot-card-turncue) {
+    background: var(--pri-btn);
+    color: white;
+    border-color: var(--pri-btn);
+    transform: rotate(45deg);
+  }
+  .home-product-marquee :deep(.hot-card-turncue) {
+    transition:
+      transform 320ms var(--motion-ease-out),
+      background-color 180ms ease,
+      color 180ms ease;
+  }
+  .home-hero__visual:hover img {
+    transform: scale(1.015);
+  }
+  .scenario-card:hover,
+  .scenario-card:focus-visible {
+    background: color-mix(in srgb, var(--pri) 5%, transparent);
+  }
+  .home-scenario-grid .scenario-card:is(:hover, :focus-visible) .scenario-title,
+  .home-scenario-grid .scenario-card:is(:hover, :focus-visible) .scenario-index {
+    color: var(--pri);
+  }
+  .home-product-marquee :deep(.hot-card-link:hover .hot-card-img) {
+    transform: scale(1.025);
+  }
+  .home-trust__card:hover,
+  .article-card:hover {
+    transform: translateY(-3px);
+    box-shadow: none;
+    border-color: var(--pri);
+  }
+  .hot-picks-actions button:hover {
+    border-color: var(--pri);
+  }
+}
+@media (min-width: 768px) and (max-width: 1100px) {
+  .home-scenario-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .scenario-card:nth-child(2) {
+    border-right: 0;
+  }
+  .scenario-card:nth-child(-n + 2) {
+    border-bottom: 1px solid var(--bd);
+  }
+}
+@media (max-width: 767px) {
+  .home-journey-link {
+    order: 7;
+    margin-top: 8px;
+    width: 100%;
+  }
+  .home-hero__visual {
+    padding: 8px;
+    aspect-ratio: auto;
+  }
+  .home-hero__caption {
+    font-size: 0.58rem;
+    padding-top: 8px;
+  }
+  .home-scenario-grid {
+    gap: 0;
+  }
+  .scenario-card {
+    min-height: 108px;
+    padding: 14px 12px;
+  }
+  .scenario-card:nth-child(2) {
+    border-right: 0;
+  }
+  .scenario-card:nth-child(-n + 2) {
+    border-bottom: 1px solid var(--bd);
+  }
+  .scenario-hint {
+    font-size: 0.74rem;
+  }
+  .home-product-marquee {
+    --hot-card-w: 164px;
+    --hot-card-h: 220px;
+  }
+  .home-product-marquee :deep(.hot-card-link) {
+    padding: 7px;
+  }
+  .home-product-marquee :deep(.hot-card-title) {
+    font-size: 0.76rem;
+  }
+  .home-product-marquee :deep(.hot-card-body-overlay) {
+    padding: 8px 30px 0 1px;
+  }
+  .home-product-marquee :deep(.hot-card-media) {
+    padding: 4px;
+  }
+  .hot-picks-actions {
+    display: contents;
+  }
+  .home-hot-picks {
+    position: relative;
+  }
+  .home-hot-picks .hot-picks-head {
+    display: contents;
+  }
+  .hot-picks-head h2,
+  .hot-picks-actions .sec-more {
+    display: none;
+  }
+  .hot-picks-actions .showcase-pause-label {
+    display: none;
+  }
+  .hot-picks-actions button {
+    position: absolute;
+    top: 24px;
+    right: 0;
+    z-index: 6;
+    width: 44px;
+    min-width: 44px;
+    padding: 8px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .home-product-marquee :deep(.hot-card-link),
+  .home-product-marquee :deep(.hot-card-back),
+  .home-product-marquee :deep(.hot-card-turncue) {
+    transform: none !important;
+    transition: none !important;
+  }
+  .home-hero__action,
+  .home-hero__visual img,
+  .home-trust__card,
+  .scenario-card,
+  .article-card,
+  .home-journey-link,
+  .hot-picks-actions button,
+  .home-product-marquee :deep(.hot-card-img) {
+    transition: none;
+    transform: none !important;
+  }
+  .home-product-marquee {
+    overflow: visible;
+  }
+  .home-product-marquee :deep(.app-marquee) {
+    overflow-x: auto;
+  }
+  .home-product-marquee :deep(.app-marquee__track) {
+    width: max-content;
+  }
+  .home-product-marquee :deep(.app-marquee__group[aria-hidden='true']) {
+    display: none;
+  }
+}

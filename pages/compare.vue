@@ -1,6 +1,6 @@
 <script setup>
 import { serializeJsonLd } from '~/utils/structured-data'
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useHead } from '#imports'
 import { useMainStore } from '~/stores/useMainStore'
@@ -233,6 +233,25 @@ const fmtPrice = (i) => {
   if (i.ListingPrice) return `NT$ ${i.ListingPrice}`
   return '-'
 }
+const onlyDifferences = ref(false)
+const comparisonValue = (item, field) => {
+  if (field === 'Genes') return [...new Set(item.Genes || [])].sort().join('\u001f')
+  if (field === 'Sex') return fmtSex(item)
+  if (field === 'Price') return fmtPrice(item)
+  if (field === 'Status') return fmtStatus(item)
+  return item[field] || '未登錄'
+}
+const rowDiffers = (field) =>
+  new Set(items.value.map((item) => comparisonValue(item, field))).size > 1
+const hasDifferences = computed(() =>
+  ['Species', 'Sex', 'Birthday', 'Genes', 'Status', 'Price'].some(rowDiffers)
+)
+watch(
+  () => items.value.length,
+  (count) => {
+    if (count < 2) onlyDifferences.value = false
+  }
+)
 
 // 🌟 加入 (store.auctionList || []) 保護
 const hasActiveAuction = (id) =>
@@ -263,7 +282,6 @@ const removeItem = (id) => {
       <div class="compare-header__copy">
         <p class="compare-eyebrow">Decision table</p>
         <h1 class="page-title">個體比較</h1>
-        <p>相似個體挑選，看看喜歡哪個。</p>
       </div>
       <div v-if="ids.length > 0" class="compare-header__actions">
         <span class="compare-count">已選擇 {{ ids.length }} / 3 隻</span>
@@ -315,6 +333,15 @@ const removeItem = (id) => {
 
     <template v-if="items.length">
       <div class="compare-toolbar">
+        <button
+          type="button"
+          class="btn-app btn-app--ghost btn-app--sm compare-differences"
+          :aria-pressed="onlyDifferences"
+          :disabled="items.length < 2"
+          @click="onlyDifferences = !onlyDifferences"
+        >
+          只看差異
+        </button>
         <div v-if="items.length > 1" class="gene-legend" aria-label="基因標記說明">
           <span>
             <i class="legend-dot shared" aria-hidden="true"></i>
@@ -347,6 +374,7 @@ const removeItem = (id) => {
         />
       </div>
 
+      <p v-if="onlyDifferences && !hasDifferences" role="status">比較欄位皆相同。</p>
       <section class="compare-scroll" role="region" aria-label="個體比較表" tabindex="0">
         <table class="compare-table" :class="`cols-${items.length}`">
           <caption class="sr-only">
@@ -392,21 +420,21 @@ const removeItem = (id) => {
             </tr>
           </thead>
           <tbody>
-            <tr>
+            <tr v-show="!onlyDifferences || rowDiffers('Species')">
               <th scope="row" class="row-label">物種</th>
               <td v-for="item in items" :key="item.ID">{{ item.Species || '未登錄' }}</td>
             </tr>
-            <tr>
+            <tr v-show="!onlyDifferences || rowDiffers('Sex')">
               <th scope="row" class="row-label">性別</th>
               <td v-for="item in items" :key="item.ID">{{ fmtSex(item) }}</td>
             </tr>
-            <tr>
+            <tr v-show="!onlyDifferences || rowDiffers('Birthday')">
               <th scope="row" class="row-label">出生日期</th>
               <td v-for="item in items" :key="item.ID" class="numeric-cell">
                 {{ item.Birthday || '未登錄' }}
               </td>
             </tr>
-            <tr>
+            <tr v-show="!onlyDifferences || rowDiffers('Genes')">
               <th scope="row" class="row-label">基因</th>
               <td v-for="item in items" :key="item.ID">
                 <div class="gene-cell">
@@ -428,7 +456,7 @@ const removeItem = (id) => {
                 </div>
               </td>
             </tr>
-            <tr>
+            <tr v-show="!onlyDifferences || rowDiffers('Status')">
               <th scope="row" class="row-label">狀態</th>
               <td v-for="item in items" :key="item.ID">
                 <span
@@ -443,7 +471,7 @@ const removeItem = (id) => {
                 </span>
               </td>
             </tr>
-            <tr class="compare-price-row">
+            <tr class="compare-price-row" v-show="!onlyDifferences || rowDiffers('Price')">
               <th scope="row" class="row-label">售價</th>
               <td v-for="item in items" :key="item.ID" class="price-cell">
                 {{ fmtPrice(item) }}
@@ -456,7 +484,11 @@ const removeItem = (id) => {
                   <NuxtLink
                     no-prefetch
                     v-if="item.Status === 'ForSale'"
-                    :href="getAnimalInquiryLink(store.lineLink, item)"
+                    :href="
+                      getAnimalInquiryLink(store.lineLink, item, {
+                        hidePrice: store.isExhibitionMode
+                      })
+                    "
                     target="_blank"
                     class="btn-app btn-app--primary btn-app--sm btn-action"
                     rel="noopener noreferrer"
@@ -489,6 +521,21 @@ const removeItem = (id) => {
 </template>
 
 <style scoped>
+.compare-differences[aria-pressed='true'] {
+  background: var(--pri);
+  border-color: var(--pri);
+  color: var(--on-primary, #fff);
+}
+.compare-differences:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+@media (min-width: 768px) and (hover: hover) and (pointer: fine) {
+  .compare-table tbody tr:has(td:hover) > :is(th, td),
+  .compare-table tbody tr:focus-within > :is(th, td) {
+    background: var(--pri-glow-soft);
+  }
+}
 .compare-page {
   max-width: 1100px;
   margin: 0 auto;

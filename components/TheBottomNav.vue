@@ -345,7 +345,7 @@ onUnmounted(() => window.removeEventListener('popstate', handlePopState))
 
 .sheet-fade-enter-active,
 .sheet-fade-leave-active {
-  transition: opacity 220ms ease;
+  transition: opacity var(--motion-duration-fast) var(--motion-ease-out);
 }
 
 .sheet-fade-enter-from,
@@ -356,8 +356,8 @@ onUnmounted(() => window.removeEventListener('popstate', handlePopState))
 .sheet-slide-enter-active,
 .sheet-slide-leave-active {
   transition:
-    transform 260ms cubic-bezier(0.16, 1, 0.3, 1),
-    opacity 220ms ease;
+    transform var(--motion-duration-ui) var(--motion-ease-out),
+    opacity var(--motion-duration-fast) var(--motion-ease-out);
 }
 
 .sheet-slide-enter-from,

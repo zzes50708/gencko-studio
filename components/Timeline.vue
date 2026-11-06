@@ -24,7 +24,13 @@ defineProps({
   <section class="poster card">
     <div class="poster-kicker">{{ kicker }}</div>
 
-    <article v-for="node in nodes" :key="node.no" class="poster-node">
+    <article
+      v-for="node in nodes"
+      :key="node.no"
+      :id="`purchase-step-${node.no}`"
+      class="poster-node"
+      tabindex="-1"
+    >
       <div class="node-pin">
         <div class="node-no">{{ node.no }}</div>
       </div>
@@ -65,6 +71,13 @@ defineProps({
 </template>
 
 <style scoped>
+.poster-node {
+  scroll-margin-top: calc(var(--site-nav-height, 64px) + 32px);
+}
+.poster-node:focus-visible {
+  outline: 2px solid var(--pri);
+  outline-offset: 4px;
+}
 .poster {
   position: relative;
   padding: 20px;
@@ -261,6 +274,45 @@ defineProps({
 
   .node-card:hover {
     transform: none;
+  }
+}
+
+/* 參考 Inspira 的沿閱讀路徑推進，改用原生時間軸，保留原有流程內容。 */
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .poster-node {
+      view-timeline-name: --flow-step;
+      view-timeline-axis: block;
+    }
+    .node-card {
+      animation: flow-step-entry linear both;
+      animation-timeline: --flow-step;
+      animation-range: entry 0% entry 80%;
+    }
+    .poster-node:not(:last-child) .node-pin::after {
+      transform-origin: top;
+      animation: flow-line-entry linear both;
+      animation-timeline: --flow-step;
+      animation-range: entry 20% cover 45%;
+    }
+    @keyframes flow-step-entry {
+      from {
+        opacity: 0.45;
+        transform: translateY(12px);
+      }
+      to {
+        opacity: 1;
+        transform: none;
+      }
+    }
+    @keyframes flow-line-entry {
+      from {
+        transform: scaleY(0);
+      }
+      to {
+        transform: scaleY(1);
+      }
+    }
   }
 }
 </style>

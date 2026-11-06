@@ -1,8 +1,28 @@
 <script setup lang="ts">
 import { useHead } from '#imports'
 import { useMainStore } from '~/stores/useMainStore'
+import { ref } from 'vue'
 
 const store = useMainStore()
+const flowRoot = ref<HTMLElement | null>(null)
+function jumpToStep(event: MouseEvent, index: number) {
+  const target = flowRoot.value?.querySelector<HTMLElement>(
+    `#purchase-step-${String(index + 1).padStart(2, '0')}`
+  )
+  if (!target) return
+  event.preventDefault()
+  const top = Math.max(
+    0,
+    target.getBoundingClientRect().top + window.scrollY - (window.innerWidth < 768 ? 12 : 100)
+  )
+  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  const lenis = (window as any).__lenis
+  if (lenis) {
+    lenis.resize()
+    lenis.scrollTo(top, { immediate: reduced, force: true, duration: 0.65 })
+  } else window.scrollTo({ top, behavior: reduced ? 'instant' : 'smooth' })
+  target.focus({ preventScroll: true })
+}
 
 const pageUrl = 'https://www.genckobreeding.com/buying-guide'
 
@@ -99,25 +119,26 @@ useHead({
 </script>
 
 <template>
-  <div class="site-document-page flow-page">
+  <div ref="flowRoot" class="site-document-page flow-page">
     <div class="flow-document-meta" aria-label="購買流程說明">
       <span>GENCKO PURCHASE NOTES</span>
       <span>PREPARE / REVIEW / DECIDE</span>
     </div>
-    <PageHero
-      layout="stack"
-      kicker="BUYING FLOW"
-      title="買守宮，流程長這樣"
-      lead="第一次買沒經驗很正常。這邊把守宮到家前後的每一步拆開說明。"
-    >
-      <div class="hero-strip" aria-hidden="true">
+    <PageHero layout="stack" kicker="BUYING FLOW" title="買守宮，流程長這樣">
+      <nav class="hero-strip" aria-label="購買流程步驟">
         <template v-for="(item, idx) in flowLabels" :key="item">
-          <span class="hero-strip-item">{{ item }}</span>
+          <a
+            class="hero-strip-item"
+            :href="`#purchase-step-${String(idx + 1).padStart(2, '0')}`"
+            @click="jumpToStep($event, idx)"
+          >
+            {{ item }}
+          </a>
           <span v-if="idx < flowLabels.length - 1" class="hero-strip-line">
             <span class="hero-strip-arrow">→</span>
           </span>
         </template>
-      </div>
+      </nav>
     </PageHero>
 
     <nav
@@ -125,10 +146,6 @@ useHead({
       data-testid="purchase-decision-path"
       aria-label="購買決策入口"
     >
-      <div class="decision-path-copy">
-        <span>BEFORE YOU DECIDE</span>
-        <strong>先確認資訊，再進入交易</strong>
-      </div>
       <NuxtLink no-prefetch to="/why-gencko">了解品牌與資料</NuxtLink>
       <NuxtLink no-prefetch to="/faq?category=purchase">閱讀購買問答</NuxtLink>
       <NuxtLink no-prefetch to="/care">準備飼養環境</NuxtLink>
@@ -172,6 +189,20 @@ useHead({
 </template>
 
 <style scoped>
+.hero-strip a {
+  text-decoration: none;
+}
+.hero-strip a:focus-visible {
+  outline: 2px solid var(--pri);
+  outline-offset: 3px;
+}
+@media (min-width: 768px) and (hover: hover) and (pointer: fine) {
+  .hero-strip a:hover {
+    color: var(--pri);
+    text-decoration: underline;
+    text-underline-offset: 5px;
+  }
+}
 .flow-page {
   max-width: 1120px;
   margin: 0 auto;
@@ -201,7 +232,7 @@ useHead({
 
 .purchase-decision-path {
   display: grid;
-  grid-template-columns: minmax(220px, 1.35fr) repeat(4, minmax(130px, 0.65fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 1px;
   overflow: hidden;
   margin-bottom: 18px;

@@ -30,11 +30,11 @@ const article = {
   content: '<h2>第一章</h2><p>' + '正文測試。'.repeat(120) + '</p><h2>第二章</h2><p>章節內容。</p>'
 }
 async function fixtures(page: Page) {
-  await page.route('**/rest/v1/animals**', (route) => route.fulfill({ json: animals }))
-  await page.route('**/rest/v1/genetic_pages**', (route) =>
+  await page.route('**/rest/v1/*animals**', (route) => route.fulfill({ json: animals }))
+  await page.route('**/rest/v1/*genetic_pages**', (route) =>
     route.fulfill({ json: new URL(route.request().url()).searchParams.has('name') ? gene : [gene] })
   )
-  await page.route('**/rest/v1/articles**', (route) =>
+  await page.route('**/rest/v1/*articles**', (route) =>
     route.fulfill({
       json: new URL(route.request().url()).searchParams.has('id') ? article : [article]
     })

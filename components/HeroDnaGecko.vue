@@ -19,14 +19,20 @@ interface HeroGalleryCard {
 }
 
 const bottomRenderMode = ref<'always' | 'manual'>('always')
+const animationRoot = ref<HTMLElement | null>(null)
 // 進站動畫是使用者指定保留的手機核心體驗；使用下方 compactViewport 效能設定，不能以裝置類型整段停用。
 const hero3dEnabled = ref(true)
 const compactViewport = ref(false)
 const canvasDpr = computed<[number, number]>(() => (compactViewport.value ? [1, 1] : [1, 1.5]))
-const ambientLightIntensity = computed(() => (compactViewport.value ? 0.68 : 0.5))
-const keyLightIntensity = computed(() => (compactViewport.value ? 1.22 : 1.05))
-const fillLightIntensity = computed(() => (compactViewport.value ? 0.82 : 0.68))
-const particlesRef = ref<{ scrubTo: (progress: number, immediate?: boolean) => void } | null>(null)
+const ambientLightIntensity = computed(() => (compactViewport.value ? 0.5 : 0.36))
+const keyLightIntensity = computed(() => (compactViewport.value ? 1.45 : 1.35))
+const fillLightIntensity = computed(() => (compactViewport.value ? 0.72 : 0.58))
+const particlesRef = ref<{
+  scrubTo: (progress: number, immediate?: boolean) => void
+  scanScene: () => boolean
+  focusFinale: (to: string) => void
+} | null>(null)
+const focusedCard = ref<HeroGalleryCard | null>(null)
 const journeyProgress = ref(0)
 const finaleExposureReveal = ref(0)
 // 終章揭露進度：白實驗室 + 玻璃蛋易觸發 Bloom，終章時把 Bloom 平滑壓下來（其他場景不動）。
@@ -42,24 +48,75 @@ const canvasColorFilter = computed(() => {
 
   // 前段保留手機補亮；終章沿房間 wipe 漸進還原，避免白色材質被 1.14 倍亮度剪白。
   const reveal = Math.min(1, Math.max(0, finaleExposureReveal.value))
-  const brightness = 1.14 + (1 - 1.14) * reveal
-  const saturation = 1.1 + (1 - 1.1) * reveal
-  const contrast = 1.02 + (1 - 1.02) * reveal
+  const brightness = 1.06 + (1 - 1.06) * reveal
+  const saturation = 1
+  const contrast = 1.025 + (1 - 1.025) * reveal
   return `brightness(${brightness}) saturate(${saturation}) contrast(${contrast})`
 })
 const bloomStrength = computed(
-  () => (compactViewport.value ? 0.08 : 0.18) * (1 - 0.88 * finaleReveal.value)
+  () => (compactViewport.value ? 0.06 : 0.1) * (1 - 0.88 * finaleReveal.value)
 ) // 手機降低 Bloom，避免窄畫面高亮溢出；桌面維持原值。
 const bloomThreshold = computed(
-  () => (compactViewport.value ? 1.08 : 0.9) + 0.1 * finaleReveal.value
+  () => (compactViewport.value ? 1.12 : 1.06) + 0.1 * finaleReveal.value
 ) // 手機只保留高亮邊緣，桌面維持原本閾值。
 const journeySegments = ref<{ key: string; end: number }[]>([])
+const interactionStage = computed(() => {
+  const end = (key: string, fallback: number) =>
+    journeySegments.value.find((segment) => segment.key === key)?.end ?? fallback
+  const p = journeyProgress.value
+  if (p < end('scene01', 0.26)) return 'model'
+  if (p < end('scene03', 0.4)) return 'transition'
+  if (p <= end('cards', 0.66)) return 'cards'
+  if (p < 0.94) return 'embryo'
+  return 'finale'
+})
+const cardIndex = computed(() => {
+  const start = journeySegments.value.find((segment) => segment.key === 'scene03')?.end ?? 0.4
+  const end = journeySegments.value.find((segment) => segment.key === 'cards')?.end ?? 0.66
+  return Math.max(
+    0,
+    Math.min(7, Math.round(((journeyProgress.value - start) / Math.max(0.001, end - start)) * 7))
+  )
+})
+const finaleDestinations = [
+  { title: '新手入門', to: '/start-here' },
+  { title: '選購守宮', to: '/shop' },
+  { title: '特寵醫院', to: '/hospital' },
+  { title: '基因計算', to: '/calculator' }
+]
+let finaleFocusIndex = 0
+function onSceneKeydown(event: KeyboardEvent) {
+  if (selectedCard.value || event.target !== event.currentTarget) return
+  if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
+    const direction = event.key === 'ArrowRight' ? 1 : -1
+    if (interactionStage.value === 'cards') stepCard(direction)
+    else if (interactionStage.value === 'finale') {
+      finaleFocusIndex =
+        (finaleFocusIndex + direction + finaleDestinations.length) % finaleDestinations.length
+      particlesRef.value?.focusFinale(finaleDestinations[finaleFocusIndex].to)
+    } else return
+    event.preventDefault()
+  } else if (event.key === 'Enter') {
+    if (interactionStage.value === 'cards' && focusedCard.value) selectHeroCard(focusedCard.value)
+    else if (interactionStage.value === 'finale')
+      void goFinaleAction(finaleDestinations[finaleFocusIndex].to)
+    else if (interactionStage.value !== 'transition') particlesRef.value?.scanScene()
+    else return
+    event.preventDefault()
+  }
+}
+function stepCard(direction: number) {
+  const start = journeySegments.value.find((segment) => segment.key === 'scene03')?.end
+  const end = journeySegments.value.find((segment) => segment.key === 'cards')?.end
+  if (start === undefined || end === undefined) return
+  const next = Math.max(0, Math.min(7, cardIndex.value + direction))
+  onScrub(start + ((end - start) * next) / 7)
+}
 const selectedCard = ref<HeroGalleryCard | null>(null)
 const isGalleryExiting = ref(false)
 const galleryTransitionKey = ref(0)
 const galleryDialogRef = ref<HTMLElement | null>(null)
 const galleryCloseRef = ref<HTMLButtonElement | null>(null)
-const heroAccessibleNavRef = ref<HTMLElement | null>(null)
 let closeGalleryTimer: ReturnType<typeof setTimeout> | null = null
 let galleryFocusFrame = 0
 let nativeScrollFrame = 0
@@ -248,7 +305,7 @@ function closeGalleryScene(lockReverse = true) {
     closeGalleryTimer = null
     void nextTick(() => {
       if (galleryReturnFocus?.isConnected) galleryReturnFocus.focus()
-      else heroAccessibleNavRef.value?.focus()
+      else animationRoot.value?.focus({ preventScroll: true })
       galleryReturnFocus = null
     })
   }, 820)
@@ -332,26 +389,33 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <section class="hero-composite">
+  <section
+    ref="animationRoot"
+    class="hero-composite"
+    tabindex="0"
+    aria-label="互動展示，方向鍵切換卡片，Enter 操作"
+    @keydown="onSceneKeydown"
+  >
     <div class="hero-underlay">
       <div class="intro-backdrop" aria-hidden="true" />
 
       <div class="intro-copy">
         <p class="intro-eyebrow">ABOUT US</p>
         <h2 class="intro-title">
-          <span>SCIENTIFIC BREEDING &amp;</span>
-          <span>PREMIUM GECKO</span>
+          <span>Scientific breeding</span>
+          <span>&amp; premium gecko</span>
         </h2>
       </div>
 
       <div class="intro-meta">
         <p class="intro-meta__label">FOUNDED IN 2025</p>
-        <p>
-          We are a professional leopard gecko breeding team. Taking a scientific approach, we record
-          the genetic data of each generation, and through precise daily nutritional management,
-          select and breed gecko individuals with clear genetic profiles and robust builds. We are
-          committed to providing comprehensive husbandry plans, offering keepers trustworthy,
-          healthy geckos and long-term, professional care and breeding consultation services.
+        <p class="intro-meta__lead">We are a professional leopard gecko breeding team.</p>
+        <p class="intro-meta__body">
+          Taking a scientific approach, we record the genetic data of each generation, and through
+          precise daily nutritional management, select and breed gecko individuals with clear
+          genetic profiles and robust builds. We are committed to providing comprehensive husbandry
+          plans, offering keepers trustworthy, healthy geckos and long-term, professional care and
+          breeding consultation services.
         </p>
       </div>
 
@@ -379,18 +443,20 @@ onBeforeUnmount(() => {
         <TresDirectionalLight
           :position="[2.2, 3.6, 4.4]"
           :intensity="keyLightIntensity"
-          color="#ffd2a2"
+          color="#fff1d9"
         />
         <TresDirectionalLight
           :position="[0, 5.8, 6.8]"
           :intensity="fillLightIntensity"
-          color="#ffe2bd"
+          color="#d8e5ed"
         />
 
         <DnaGeckoParticles
           ref="particlesRef"
+          :animation-root="animationRoot"
           @bottom-render-mode="setBottomRenderMode"
           @card-select="selectHeroCard"
+          @card-focus="focusedCard = $event"
           @journey-progress="setJourneyProgress"
           @journey-segments="setJourneySegments"
           @finale-reveal="setFinaleReveal"
@@ -436,23 +502,6 @@ onBeforeUnmount(() => {
       :segments="journeySegments"
       @scrub="onScrub"
     />
-
-    <nav
-      v-if="!selectedCard"
-      ref="heroAccessibleNavRef"
-      class="hero-accessible-nav"
-      tabindex="-1"
-      aria-label="Hero Lab 快速導覽"
-    >
-      <span>Hero Lab 快速導覽</span>
-      <a
-        v-for="destination in heroAccessibleDestinations"
-        :key="destination.to"
-        :href="destination.to"
-      >
-        {{ destination.title }}
-      </a>
-    </nav>
 
     <Transition name="gallery">
       <div
@@ -514,8 +563,15 @@ onBeforeUnmount(() => {
                 playsinline
                 controls
               />
-              <img v-else class="gallery-screen__video" :src="selectedCard.poster" :alt="`${selectedCard.title} 新版頁面預覽`" />
-              <span class="gallery-screen__live">{{ compactViewport ? 'PAGE PREVIEW' : 'VIDEO PREVIEW' }}</span>
+              <img
+                v-else
+                class="gallery-screen__video"
+                :src="selectedCard.poster"
+                :alt="`${selectedCard.title} 新版頁面預覽`"
+              />
+              <span class="gallery-screen__live">
+                {{ compactViewport ? 'PAGE PREVIEW' : 'VIDEO PREVIEW' }}
+              </span>
               <span class="gallery-screen__label">{{ selectedCard.title }}</span>
               <span class="gallery-screen__code">{{ selectedCard.kind }}</span>
             </div>
@@ -536,6 +592,13 @@ onBeforeUnmount(() => {
   background: #07080a;
   /* 手機觸控可捲動（canvas 為最上層觸控目標，需明確允許垂直平移）。 */
   touch-action: pan-y;
+}
+.hero-composite:focus {
+  outline: none;
+}
+.hero-composite:focus-visible {
+  outline: 2px solid #e79046;
+  outline-offset: -2px;
 }
 
 .hero-underlay,
@@ -582,7 +645,6 @@ onBeforeUnmount(() => {
 
 .hero-underlay::after {
   background: var(--hero-underlay-shade-hi, none);
-  filter: blur(1.2px);
   mix-blend-mode: screen;
   transform: translateZ(0);
 }
@@ -716,61 +778,6 @@ onBeforeUnmount(() => {
   font-family: 'Courier New', Courier, monospace;
   font-size: 1rem;
   letter-spacing: 0.34em;
-}
-
-.hero-accessible-nav {
-  position: fixed;
-  top: 1rem;
-  left: 1rem;
-  z-index: 7000;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.45rem;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip: rect(0 0 0 0);
-  white-space: nowrap;
-}
-
-.hero-accessible-nav:focus-within,
-.hero-accessible-nav:focus {
-  width: min(28rem, calc(100vw - 2rem));
-  height: auto;
-  padding: 0.7rem;
-  overflow: visible;
-  clip: auto;
-  white-space: normal;
-  background: rgba(7, 8, 10, 0.94);
-  border: 1px solid rgba(255, 196, 128, 0.72);
-  border-radius: 0.45rem;
-}
-
-.hero-accessible-nav span {
-  width: 100%;
-  color: rgba(255, 214, 166, 0.92);
-  font:
-    0.72rem/1.4 'Courier New',
-    Courier,
-    monospace;
-  letter-spacing: 0.08em;
-}
-
-.hero-accessible-nav a {
-  color: #fff;
-  font-size: 0.8rem;
-  line-height: 1.4;
-  text-decoration: underline;
-  text-underline-offset: 0.18em;
-}
-
-.hero-accessible-nav:not(:focus-within):not(:focus) span,
-.hero-accessible-nav:not(:focus-within):not(:focus) a {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip: rect(0 0 0 0);
 }
 
 .finale-action-grid {
@@ -1060,13 +1067,10 @@ onBeforeUnmount(() => {
   cursor: pointer;
 }
 
-.gallery-close:focus-visible,
-.hero-accessible-nav a:focus-visible,
-.hero-accessible-nav:focus-visible {
-  outline: 2px solid #ffc480;
+.gallery-close:focus-visible {
+  outline: 2px solid #ffb567;
   outline-offset: 4px;
 }
-
 @media (prefers-reduced-motion: reduce) {
   .hero-mobile-fallback__links a {
     transition: none;
@@ -1422,14 +1426,13 @@ onBeforeUnmount(() => {
 }
 
 .intro-eyebrow,
-.intro-meta__label,
-.intro-meta p {
-  font-family: 'Courier New', Courier, monospace;
+.intro-meta__label {
+  font-family: var(--font-body-zh);
+  font-weight: 500;
 }
 
 .intro-copy,
 .intro-meta {
-  filter: drop-shadow(0 14px 34px rgba(0, 0, 0, 0.5));
   opacity: var(--hero-initial-copy-opacity, 0);
   transform-origin: center;
   transition: none;
@@ -1439,39 +1442,44 @@ onBeforeUnmount(() => {
   display: inline-flex;
   align-items: center;
   gap: 0.6rem;
-  margin: 0 0 1.1rem;
-  color: rgba(255, 178, 120, 0.9);
-  font-size: 0.76rem;
-  letter-spacing: 0.34em;
+  margin: 0 0 1.25rem;
+  color: #c99b76;
+  font-size: 0.66rem;
+  letter-spacing: 0.22em;
 }
 
 .intro-eyebrow::before {
   content: '';
   width: 1.8rem;
   height: 1px;
-  background: linear-gradient(90deg, rgba(255, 138, 66, 0), rgba(255, 138, 66, 0.9));
+  background: currentColor;
 }
 
 .intro-title {
   margin: 0;
-  font-size: clamp(2.5rem, 4.65vw, 5.05rem);
-  line-height: 0.96;
-  letter-spacing: -0.035em;
+  font-family: Georgia, 'Times New Roman', serif;
+  font-weight: 400;
+  font-size: clamp(2.35rem, 3.3vw, 4.4rem);
+  line-height: 1.12;
+  letter-spacing: -0.025em;
+  text-wrap: balance;
 }
 
 .intro-title span {
   display: block;
-  color: transparent;
-  -webkit-text-stroke: 1.35px rgba(252, 247, 240, 0.88);
-  text-shadow:
-    0 0 8px rgba(255, 244, 231, 0.14),
-    0 0 18px rgba(255, 157, 96, 0.08);
+  color: #f0eae0;
+  text-shadow: 0 2px 2px rgba(0, 0, 0, 0.22);
+}
+
+.intro-title span + span {
+  color: #c9bca9;
+  font-style: italic;
 }
 
 .intro-copy {
   justify-self: start;
-  max-width: 40rem;
-  transform: translate(6vw, -11vh);
+  max-width: min(29vw, 32rem);
+  transform: translate(2vw, -11vh);
 }
 
 .intro-logo-stage {
@@ -1517,8 +1525,7 @@ onBeforeUnmount(() => {
   aspect-ratio: 1 / 1;
   transform: scale(1.2);
   transform-origin: center;
-  filter: brightness(0.9) saturate(0.98) drop-shadow(0 24px 58px rgba(255, 122, 40, 0.3))
-    drop-shadow(0 10px 30px rgba(255, 90, 30, 0.2));
+  filter: brightness(0.96) saturate(0.98) drop-shadow(0 12px 24px rgba(255, 122, 40, 0.16));
 }
 
 .band-logo-static {
@@ -1532,28 +1539,48 @@ onBeforeUnmount(() => {
   justify-self: end;
   display: flex;
   flex-direction: column;
-  gap: 1.15rem;
-  max-width: 24rem;
-  color: rgba(243, 240, 235, 0.8);
-  text-shadow:
-    0 0 18px rgba(255, 180, 120, 0.08),
-    0 10px 30px rgba(0, 0, 0, 0.5);
+  gap: 0.85rem;
+  max-width: 23rem;
+  min-width: 0;
+  color: #bcbab5;
+  text-align: left;
 }
 
 .intro-meta__label {
-  margin: 0 0 0.2rem;
-  padding-bottom: 0.7rem;
-  border-bottom: 1px solid rgba(255, 170, 110, 0.16);
-  font-size: 0.9rem;
-  letter-spacing: 0.12em;
-  color: #f7efe4;
+  margin: 0 0 0.25rem;
+  padding-bottom: 0.9rem;
+  border-bottom: 1px solid rgba(201, 155, 118, 0.28);
+  font-size: 0.65rem;
+  letter-spacing: 0.18em;
+  color: #c99b76;
 }
 
 .intro-meta p {
   margin: 0;
-  font-size: 0.94rem;
+  font-family: var(--font-body-zh);
+  font-size: 0.86rem;
   line-height: 1.75;
-  letter-spacing: 0.04em;
+  letter-spacing: normal;
+  overflow-wrap: break-word;
+  text-wrap: pretty;
+}
+
+.intro-meta .intro-meta__label {
+  font-size: 0.65rem;
+  letter-spacing: 0.18em;
+}
+
+.intro-meta .intro-meta__lead {
+  font-size: 1rem;
+  line-height: 1.6;
+  color: #ece5da;
+}
+
+.intro-copy,
+.intro-title,
+.intro-meta {
+  min-width: 0;
+  overflow-wrap: break-word;
 }
 
 @media (max-width: 1024px) {
@@ -1565,6 +1592,13 @@ onBeforeUnmount(() => {
 
   .intro-meta {
     align-items: center;
+    align-self: end;
+    max-width: 32rem;
+    text-align: center;
+  }
+
+  .intro-copy {
+    max-width: min(100%, 30rem);
   }
 
   .intro-copy,
@@ -1573,7 +1607,7 @@ onBeforeUnmount(() => {
   }
 }
 
-@media (hover: none), (pointer: coarse) {
+@media (max-width: 767px), (hover: none), (pointer: coarse) {
   .hero-composite {
     height: 100svh;
     height: 100dvh;
@@ -1600,14 +1634,18 @@ onBeforeUnmount(() => {
   .intro-title {
     /* 手機窄寬度會讓第一行自動折行，保留足夠行高避免字框互相覆蓋。 */
     width: min(100%, 20rem);
-    font-size: clamp(1.55rem, 7.2vw, 2.55rem);
-    line-height: 1.1;
-    letter-spacing: -0.045em;
+    font-size: clamp(1.65rem, 7.2vw, 2.4rem);
+    line-height: 1.14;
+    letter-spacing: -0.025em;
   }
 
   .intro-meta p {
-    font-size: 0.86rem;
+    font-size: 0.78rem;
     line-height: 1.7;
+  }
+
+  .intro-meta .intro-meta__lead {
+    font-size: 0.88rem;
   }
 
   .intro-logo-rig {
@@ -1641,11 +1679,11 @@ onBeforeUnmount(() => {
   }
 
   .band-logo-stage {
-    top: 46%;
+    top: 40%;
   }
 
   .band-logo-rig {
-    width: min(56vw, 248px);
+    width: min(48vw, 200px);
     transform: scale(1.06);
   }
 

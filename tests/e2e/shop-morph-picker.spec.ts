@@ -22,7 +22,7 @@ const animals = [
   makeAnimal('H', '幽靈', '肥尾守宮')
 ]
 async function fixtures(page: any, path = '/shop') {
-  await page.route('**/rest/v1/animals**', (route: any) => route.fulfill({ json: animals }))
+  await page.route('**/rest/v1/*animals**', (route: any) => route.fulfill({ json: animals }))
   await page.goto(path)
   await expect(page.getByRole('combobox', { name: '選擇品系' })).toBeEnabled()
   await expect(page.locator('.catalog-search option[value="黑夜"]')).toHaveText('黑夜（2 隻）')

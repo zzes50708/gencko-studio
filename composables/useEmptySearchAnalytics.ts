@@ -2,7 +2,7 @@
 export function useEmptySearchAnalytics(empty: () => boolean, surface: string) {
   const track = useAnalytics()
   let timer: ReturnType<typeof setTimeout> | undefined
-  watch(empty, (value) => {
+  watch(empty, (value: boolean) => {
     clearTimeout(timer)
     if (value)
       timer = setTimeout(() => {

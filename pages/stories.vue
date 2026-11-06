@@ -4,9 +4,9 @@ import { useHead } from '#imports'
 const pageUrl = 'https://www.genckobreeding.com/stories'
 
 const currentActions = [
-  { label: '先看新手入門', to: '/start-here' },
-  { label: '先看信任保證', to: '/why-gencko' },
-  { label: '先去選購守宮', to: '/shop' }
+  { label: '新手入門', to: '/start-here' },
+  { label: '品牌與服務', to: '/why-gencko' },
+  { label: '選購守宮', to: '/shop' }
 ]
 
 useHead({
@@ -38,17 +38,13 @@ useHead({
       <div>
         <div class="eyebrow">STORIES</div>
         <h1 class="page-title">真實故事，內容整理中</h1>
-        <p class="lead">
-          我們只會在取得可公開的真實照片與紀錄後發布案例。整理完成前，先從現有飼養內容與個體資料認識
-          Gencko。
-        </p>
       </div>
     </header>
 
     <section class="content-section">
       <article class="card content-card">
         <div class="section-head">
-          <h2 class="sec-title">先看看這些內容</h2>
+          <h2 class="sec-title">相關頁面</h2>
         </div>
         <div class="action-grid">
           <NuxtLink

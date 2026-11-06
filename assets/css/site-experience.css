@@ -1,0 +1,24 @@
+/* 全站互動層：延續既有版面規格，不更動資料、標題尺寸或功能流程。 */
+@media (max-width: 767px), (hover: none), (pointer: coarse) {
+  /* 觸控欄位保持可讀；避免小字輸入在手機上觸發額外放大。 */
+  #main-content
+    .site-document-page
+    :is(
+      input:not(
+        [type='checkbox'],
+        [type='radio'],
+        [type='range'],
+        [type='color'],
+        [type='file'],
+        [type='hidden']
+      ),
+      select,
+      textarea
+    ) {
+    font-size: 16px !important;
+    min-height: var(--control-min-height) !important;
+  }
+  #main-content .catalog-options select {
+    min-width: 128px;
+  }
+}

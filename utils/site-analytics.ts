@@ -19,7 +19,11 @@ const events = new Set([
   'search_no_results',
   'login_success',
   'line_verified',
+  'line_verification_started',
+  'line_verification_failed',
   'bid_success',
+  'bid_failed',
+  'claim_copy',
   'certificate_search'
 ])
 export function analyticsEvent(name: string, input: Record<string, unknown> = {}) {
@@ -34,6 +38,8 @@ export function analyticsEvent(name: string, input: Record<string, unknown> = {}
   )
     parameters.surface = String(input.surface)
   if (typeof input.extended === 'boolean') parameters.extended = input.extended
+  if (['rejected', 'pending', 'login_required', 'unavailable'].includes(String(input.outcome)))
+    parameters.outcome = String(input.outcome)
   if (typeof input.destination === 'string' && /^\/[a-z/-]*$/.test(input.destination))
     parameters.destination = input.destination
   return { name, parameters }

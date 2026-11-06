@@ -36,7 +36,7 @@ const instance = ref(null)
 
 const isFineHover = useMediaQuery('(min-width: 768px) and (hover: hover) and (pointer: fine)')
 const prefersReducedMotion = useMediaQuery('(prefers-reduced-motion: reduce)')
-const canRun = computed(() => props.enabled && isFineHover.value)
+const canRun = computed(() => props.enabled && isFineHover.value && !prefersReducedMotion.value)
 const isMounted = ref(false)
 
 const destroy = () => {
@@ -126,6 +126,7 @@ onUnmounted(() => {
 @media (prefers-reduced-motion: reduce) {
   .atropos-base {
     transition: none;
+    transform: none;
   }
 }
 </style>

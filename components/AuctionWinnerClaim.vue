@@ -11,6 +11,7 @@ const props = defineProps({
 })
 const supabase = useSupabaseClient()
 const store = useMainStore()
+const track = useAnalytics()
 const outcome = ref(props.initialOutcome)
 const text = ref('')
 const message = ref('')
@@ -98,8 +99,10 @@ async function copyText(value, request) {
   try {
     await scope.run(() => navigator.clipboard.writeText(value))
     if (request === revision) checkClaimExpiry()
-    if (request === revision && text.value === value)
+    if (request === revision && text.value === value) {
       message.value = '已複製，請貼到官方 LINE 並傳送，完成領標。'
+      track('claim_copy', { surface: 'auction' })
+    }
   } catch {
     if (request === revision) checkClaimExpiry()
     if (request === revision && text.value === value)

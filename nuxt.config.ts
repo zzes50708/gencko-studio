@@ -192,14 +192,9 @@ export default defineNuxtConfig({
           }
         },
         {
+          // 售價、售出狀態及下架內容不使用舊 API 快取冒充最新資料。
           urlPattern: /^https:\/\/sfndneptcwhblvrxykcy\.supabase\.co\/rest\/v1\/.*/i,
-          handler: 'NetworkFirst',
-          options: {
-            cacheName: 'supabase-api-cache',
-            expiration: { maxEntries: 100, maxAgeSeconds: 60 * 60 * 24 },
-            networkTimeoutSeconds: 5,
-            cacheableResponse: { statuses: [0, 200] }
-          }
+          handler: 'NetworkOnly'
         }
       ]
     },
@@ -334,7 +329,12 @@ export default defineNuxtConfig({
     redirect: false
   },
 
-  css: ['~/assets/css/style.css', '~/assets/css/page-headings.css', '~/assets/css/reading.css'],
+  css: [
+    '~/assets/css/style.css',
+    '~/assets/css/page-headings.css',
+    '~/assets/css/reading.css',
+    '~/assets/css/site-experience.css'
+  ],
 
   // 🌟 全站應用程式設定
   app: {

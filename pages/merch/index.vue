@@ -3,6 +3,13 @@ import { computed, ref, watch } from 'vue'
 import { useHead } from '#imports'
 import { SOCIAL_LINKS } from '~/utils/site-constants'
 import { MERCH_AVAILABILITY } from '~/utils/merch-availability'
+const cabinetRoot = ref<HTMLElement | null>(null)
+const cabinetChapters = [
+  { id: 'cabinet-configurator', label: '3D 配置' },
+  { id: 'cabinet-systems', label: '標準配置' },
+  { id: 'cabinet-process', label: '規劃流程' },
+  { id: 'cabinet-inquiry', label: '訂製需求' }
+]
 
 const selectedTemplateId = ref('a4')
 const mobileCabinet = useMediaQuery('(max-width: 767px), (pointer: coarse), (hover: none)')
@@ -183,7 +190,7 @@ useHead({
 </script>
 
 <template>
-  <div class="site-document-page cabinet-page">
+  <div ref="cabinetRoot" class="site-document-page cabinet-page">
     <div class="common-document-meta" aria-label="客製化爬蟲設備說明">
       <span>GENCKO CUSTOM HABITAT</span>
       <span>PLAN / BUILD / CARE</span>
@@ -200,6 +207,7 @@ useHead({
       <span>未來開放後僅限台灣地區購買。</span>
     </aside>
 
+    <ContentChapterTrail :host="cabinetRoot" :chapters="cabinetChapters" label="客製設備章節導覽" />
     <section id="cabinet-configurator" class="cabinet-3d-slot" aria-labelledby="cabinet-3d-title">
       <div class="cabinet-section-head">
         <span>01 / CONFIGURE IN 3D</span>
@@ -293,10 +301,9 @@ useHead({
         <span>03 / BUILT EXAMPLES</span>
         <h2 id="cabinet-cases-title">實際案例</h2>
       </div>
-      <p class="cabinet-cases__intro">成品照片、尺寸與設備清單將在取得授權後陸續更新。</p>
     </section>
 
-    <section class="cabinet-process" aria-labelledby="cabinet-process-title">
+    <section id="cabinet-process" class="cabinet-process" aria-labelledby="cabinet-process-title">
       <div class="cabinet-section-head">
         <span>04 / HOW WE PLAN</span>
         <h2 id="cabinet-process-title">預計規劃流程</h2>

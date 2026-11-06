@@ -188,7 +188,6 @@ const onCategoryKeydown = async (event: KeyboardEvent, index: number) => {
         <div class="faq-intro-copy">
           <p class="site-page-kicker">QUESTIONS / ANSWERS</p>
           <h1>常見問題</h1>
-          <p>展開後直接閱讀完整答案；需要更深入時，可前往對應的頁面。</p>
         </div>
         <nav class="faq-route-map" aria-label="FAQ 延伸入口">
           <NuxtLink no-prefetch to="/start-here">新手入門</NuxtLink>

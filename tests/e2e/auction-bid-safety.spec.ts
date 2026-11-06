@@ -1,5 +1,5 @@
 // @ts-nocheck
-import { test } from '@playwright/test'
+import { test, expect } from '@playwright/test'
 import assert from 'node:assert/strict'
 import { chromium } from 'playwright'
 const id = 'TEST-AUCTION-20261016-01'
@@ -146,18 +146,17 @@ test('競標出價故障回歸：同步、斷線重試、登入及輸入', async
     await page.getByLabel('出價金額', { exact: true }).fill('500')
     const vm = (name) =>
       page.evaluate((n) => {
-        let c = document.querySelector('.btn-bid,.auction-page').__vueParentComponent
-        while (c && !c.setupState.currentAuction) c = c.parent
-        if (!c) throw Error('找不到本地測試元件')
-        window.auditVM = c.setupState
         if (n === 'refresh') {
-          window.auditRefresh = c.setupState.refreshAuction()
+          // 使用重新連線的正式入口，不依賴只存在開發版的 Vue 元件內部資料。
+          window.dispatchEvent(new Event('online'))
           return
         }
         return {
-          highest: c.setupState.highestBidAmount,
-          end: c.setupState.currentAuction?.end_time,
-          minimum: c.setupState.minNextBid
+          highest: Number(
+            document.querySelector('.highest-price')?.textContent.replace(/[^0-9]/g, '')
+          ),
+          end: document.querySelector('meta[name="twitter:data2"]')?.content,
+          minimum: Number(document.querySelector('#bid-amount')?.min || 0)
         }
       }, name)
     const snapshot = async () => ({
@@ -231,7 +230,14 @@ test('競標出價故障回歸：同步、斷線重試、登入及輸入', async
         await settle(t)
         gate.release()
         await wait(100)
-        assert.equal((await t.vm('read')).end, end)
+        const formattedEnd = await t.page.evaluate(
+          (value) => new Date(value).toLocaleString('zh-TW', { hour12: false }),
+          end
+        )
+        await expect(t.page.locator('meta[name="twitter:data2"]')).toHaveAttribute(
+          'content',
+          formattedEnd
+        )
         return { pass: true }
       } finally {
         await t.context.close()
@@ -262,14 +268,25 @@ test('競標出價故障回歸：同步、斷線重試、登入及輸入', async
         t.state.bids.push({ id: 'LATER-BIDDER', auction_id: id, amount: 600 })
         await t.vm('refresh')
         await t.page.waitForFunction(
-          (end) => window.auditVM.currentAuction.end_time === end,
+          (end) =>
+            document.querySelector('meta[name="twitter:data2"]')?.content ===
+            new Date(end).toLocaleString('zh-TW', { hour12: false }),
           latestEnd
         )
         t.state.holdMeta = gate
         await t.page.getByRole('button', { name: '重試同一筆出價', exact: true }).click()
-        await t.page.waitForFunction(() => !window.auditVM.isPlacingBid)
+        await t.page.waitForFunction(
+          () => document.querySelector('.btn-bid')?.textContent !== '處理中...'
+        )
         while (!gate.started) await wait(20)
-        assert.equal((await t.vm('read')).end, latestEnd)
+        const formattedEnd = await t.page.evaluate(
+          (value) => new Date(value).toLocaleString('zh-TW', { hour12: false }),
+          latestEnd
+        )
+        await expect(t.page.locator('meta[name="twitter:data2"]')).toHaveAttribute(
+          'content',
+          formattedEnd
+        )
         assert.match(await t.page.locator('.highest-price').innerText(), /600/)
         return { pass: true }
       } finally {
@@ -482,6 +499,20 @@ test('競標出價故障回歸：同步、斷線重試、登入及輸入', async
               ?.__vue_app__?.config.globalProperties.$pinia?._s.get('main')
         )
         await t.page.evaluate(() => {
+          // 重新整理後同步還原模擬登入來源，避免只改畫面狀態卻仍回傳登出。
+          const app = document.querySelector('#__nuxt').__vue_app__.config.globalProperties
+          app.$supabase.client.auth.getSession = async () => ({
+            data: {
+              session: {
+                user: {
+                  id: 'auction-audit@example.invalid',
+                  app_metadata: { provider: 'custom:line-oauth' },
+                  user_metadata: {}
+                }
+              }
+            },
+            error: null
+          })
           document
             .querySelector('#__nuxt')
             .__vue_app__.config.globalProperties.$pinia._s.get('main').currentUser = {
@@ -697,7 +728,6 @@ test('競標出價故障回歸：同步、斷線重試、登入及輸入', async
       try {
         t.state.auction.buy_now_price = 600
         await t.vm('refresh')
-        await t.page.evaluate(() => window.auditRefresh)
         await t.page.evaluate(() => {
           window.auditOpenedLinks = []
           window.open = (url) => {
@@ -718,7 +748,9 @@ test('競標出價故障回歸：同步、斷線重試、登入及輸入', async
         assert.ok(decodeURIComponent(links[0]).includes('請協助確認是否仍可直購'))
         t.state.bids.push({ id: 'OTHER-HIGHER', auction_id: id, amount: 600 })
         await t.vm('refresh')
-        await t.page.evaluate(() => window.auditRefresh)
+        await t.page.waitForFunction(() =>
+          document.querySelector('.highest-price')?.textContent.includes('600')
+        )
         assert.equal(await button.isDisabled(), true)
         await t.page.getByText('目前出價已達直購價，請依競標出價。', { exact: true }).waitFor()
         assert.equal(t.state.auction.status, 'active')

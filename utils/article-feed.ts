@@ -7,6 +7,7 @@ interface FeedArticle {
   summary?: string
   image_url?: string
   publish_date?: string
+  updated_at?: string
   author?: string
   category?: string
 }
@@ -23,7 +24,7 @@ const feedDate = (value: unknown) => {
 /** RSS 與文章採同一來源；缺少日期時省略，不以抓取當下日期冒充新文章。 */
 export function buildArticleFeed(articles: FeedArticle[]) {
   const dated = articles
-    .map((article) => seoDate(article.publish_date))
+    .flatMap((article) => [seoDate(article.publish_date), seoDate(article.updated_at)])
     .filter((value): value is string => !!value)
   const lastBuild = dated.length
     ? new Date(Math.max(...dated.map(Date.parse))).toUTCString()
@@ -32,6 +33,7 @@ export function buildArticleFeed(articles: FeedArticle[]) {
     .map((article) => {
       const url = `${SITE_URL}/articles/${encodeURIComponent(article.id)}`
       const date = feedDate(article.publish_date)
+      const updated = seoDate(article.updated_at)
       const summary = String(article.summary || '')
         .replace(/<[^>]+>/g, ' ')
         .replace(/\s+/g, ' ')
@@ -40,7 +42,7 @@ export function buildArticleFeed(articles: FeedArticle[]) {
         (article.image_url
           ? `<img src="${xmlEscape(article.image_url)}" alt="${xmlEscape(article.title)}" />`
           : '') + (summary ? `<p>${xmlEscape(summary)}</p>` : '')
-      return `<item><title>${xmlEscape(article.title)}</title><link>${xmlEscape(url)}</link><guid isPermaLink="true">${xmlEscape(url)}</guid>${date ? `<pubDate>${date}</pubDate>` : ''}${article.category ? `<category>${xmlEscape(article.category)}</category>` : ''}${article.author ? `<dc:creator>${xmlEscape(article.author)}</dc:creator>` : ''}<description>${xmlEscape(description)}</description></item>`
+      return `<item><title>${xmlEscape(article.title)}</title><link>${xmlEscape(url)}</link><guid isPermaLink="true">${xmlEscape(url)}</guid>${date ? `<pubDate>${date}</pubDate>` : ''}${updated ? `<atom:updated>${new Date(updated).toISOString()}</atom:updated>` : ''}${article.category ? `<category>${xmlEscape(article.category)}</category>` : ''}${article.author ? `<dc:creator>${xmlEscape(article.author)}</dc:creator>` : ''}<description>${xmlEscape(description)}</description></item>`
     })
     .join('\n')
   return `<?xml version="1.0" encoding="UTF-8"?>

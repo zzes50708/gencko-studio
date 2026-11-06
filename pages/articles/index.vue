@@ -246,8 +246,7 @@ useHead({
   meta: [
     {
       name: 'description',
-      content:
-        '豹紋守宮與肥尾守宮完整知識庫：新手必看、環境佈置、健康照護、行為互動、餵食與營養指南。Gencko Breeding Studio 飼養教學文章一站收錄。'
+      content: '豹紋守宮與肥尾守宮的環境佈置、健康照護、行為互動、餵食與營養文章。'
     },
     {
       name: 'keywords',
@@ -310,7 +309,6 @@ const fmtDate = (d) => {
       <div class="masthead-copy">
         <div class="masthead-kicker">GENCKO FIELD NOTES · 守宮知識</div>
         <h1>守宮文章知識庫</h1>
-        <p>對於守宮知識進行更詳細的說明。</p>
       </div>
       <nav class="masthead-routes" aria-label="文章閱讀入口">
         <NuxtLink no-prefetch to="/start-here">
@@ -433,12 +431,12 @@ const fmtDate = (d) => {
           <div class="article-group-cat">{{ cat }}</div>
           <span>{{ items.length }} 篇</span>
         </div>
-        <div class="article-group-grid">
+        <TransitionGroup tag="div" name="article-layout" class="article-group-grid">
           <NuxtLink
             no-prefetch
             v-for="item in items"
             :key="item.ID"
-            class="article-entry"
+            class="article-entry interactive-card"
             :to="`/articles/${item.ID}`"
           >
             <div class="article-thumb-wrap">
@@ -456,15 +454,36 @@ const fmtDate = (d) => {
               </time>
               <h3 class="article-title">{{ item.Title }}</h3>
               <p class="art-summary">{{ item.Summary }}</p>
+              <HoverAction class="article-read-action">閱讀文章</HoverAction>
             </div>
           </NuxtLink>
-        </div>
+        </TransitionGroup>
       </div>
     </div>
   </div>
 </template>
 
 <style scoped>
+.article-layout-enter-active,
+.article-layout-move {
+  transition:
+    opacity 240ms var(--motion-ease-out),
+    transform 320ms var(--motion-ease-out);
+}
+.article-layout-enter-from {
+  opacity: 0;
+  transform: translateY(10px);
+}
+@media (prefers-reduced-motion: reduce) {
+  .article-layout-enter-active,
+  .article-layout-move {
+    transition: none;
+  }
+  .article-layout-enter-from {
+    opacity: 1;
+    transform: none;
+  }
+}
 /* 使用文章專屬類名，避免商品卡與首篇跨欄的全域規則互相覆蓋。 */
 .articles-page-wrapper {
   max-width: 1300px;
@@ -741,9 +760,55 @@ a:focus-visible {
   overflow-wrap: anywhere;
 }
 .article-title::after {
-  content: ' →';
+  content: none;
   color: var(--pri);
   white-space: nowrap;
+}
+.article-read-action {
+  margin-top: 16px;
+}
+.article-image {
+  transition: transform 500ms var(--motion-ease-out);
+}
+.article-category-badge {
+  border-radius: 999px;
+  transition:
+    transform 320ms var(--motion-ease-out),
+    background-color 180ms ease,
+    color 180ms ease;
+}
+.article-title {
+  text-decoration: underline;
+  text-decoration-color: transparent;
+  text-underline-offset: 5px;
+  transition:
+    text-decoration-color 200ms ease,
+    color 200ms ease;
+}
+@media (min-width: 768px) and (hover: hover) and (pointer: fine) {
+  .article-entry:is(:hover, :focus-visible) .article-image {
+    transform: scale(1.045);
+  }
+  .article-entry:is(:hover, :focus-visible) .article-category-badge {
+    transform: translateY(-4px);
+    background: var(--pri-btn);
+    color: white;
+  }
+  .article-entry:is(:hover, :focus-visible) .article-title {
+    color: var(--pri);
+    text-decoration-color: currentColor;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .article-image,
+  .article-category-badge,
+  .article-title {
+    transition: none;
+  }
+  .article-entry:is(:hover, :focus-visible) .article-image,
+  .article-entry:is(:hover, :focus-visible) .article-category-badge {
+    transform: none;
+  }
 }
 .art-summary {
   margin: 0;

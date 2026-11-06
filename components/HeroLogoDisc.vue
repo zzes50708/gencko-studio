@@ -134,14 +134,14 @@ onMounted(() => {
       disposables.push(bodyGeo)
 
       const bodyMat = compact
-        ? new THREE.MeshBasicMaterial({ color: '#140f11', side: THREE.DoubleSide })
+        ? new THREE.MeshBasicMaterial({ color: '#38221b', side: THREE.DoubleSide })
         : new THREE.MeshPhysicalMaterial({
-            color: new THREE.Color('#140f11'),
-            metalness: 0.0,
-            roughness: 0.4,
-            clearcoat: 1.0,
-            clearcoatRoughness: 0.12,
-            envMapIntensity: 0.65,
+            color: new THREE.Color('#8c4627'),
+            metalness: 0.72,
+            roughness: 0.32,
+            clearcoat: 0.28,
+            clearcoatRoughness: 0.24,
+            envMapIntensity: 0.8,
             side: THREE.DoubleSide
           })
       disposables.push(bodyMat)
@@ -166,13 +166,13 @@ onMounted(() => {
             transparent: true,
             alphaTest: 0.01,
             metalness: 0.0,
-            roughness: 0.3,
-            clearcoat: 1.0,
-            clearcoatRoughness: 0.06,
+            roughness: 0.4,
+            clearcoat: 0.32,
+            clearcoatRoughness: 0.22,
             emissive: new THREE.Color('#ffffff'),
             emissiveMap: tex,
-            emissiveIntensity: 0.4,
-            envMapIntensity: 1.15
+            emissiveIntensity: 0.12,
+            envMapIntensity: 0.75
           })
       disposables.push(faceMat)
 
@@ -181,17 +181,19 @@ onMounted(() => {
       if (props.flip) face.rotation.y = Math.PI
       face.renderOrder = 1
       group.add(face)
+      needsRender = true
       requestRender()
     },
     undefined,
     () => console.warn('[HeroLogoDisc] 無法載入 logo PNG:', props.src)
   )
 
-  const root = document.documentElement
+  const root = el.closest<HTMLElement>('.hero-composite') ?? document.documentElement
   let currentSpin = 0
   let lastExitProgress = Number.NaN
   let lastRotateProgress = Number.NaN
   let lastSpinRad = Number.NaN
+  let needsRender = true
 
   const requestRender = () => {
     if (!raf) raf = requestAnimationFrame(renderOnce)
@@ -207,6 +209,13 @@ onMounted(() => {
     const hasLinkedSpin = Number.isFinite(rawSpinRad)
     if (exitProgress < -1) return
 
+    const progressStable =
+      exitProgress === lastExitProgress &&
+      rotateProgress === lastRotateProgress &&
+      Object.is(rawSpinRad, lastSpinRad)
+    // 其他場景參數變動不代表 Logo 有變化；保留上一張完全相同的畫面。
+    if (!needsRender && progressStable) return
+
     // rotate 0=面向左、0.5=正面、1=面向右（單調連續，對應 T1 左→正、T2 正→右）
     const targetSpinBase = hasLinkedSpin
       ? rawSpinRad
@@ -217,17 +226,12 @@ onMounted(() => {
     group.rotation.y = currentSpin
     group.rotation.x = 0.05
     renderer?.render(scene, camera)
-
-    const spinSettled = Math.abs(targetSpin - currentSpin) < 0.0008
-    const progressStable =
-      Math.abs(exitProgress - lastExitProgress) < 0.0002 &&
-      Math.abs(rotateProgress - lastRotateProgress) < 0.0002 &&
-      (hasLinkedSpin ? Math.abs(rawSpinRad - lastSpinRad) < 0.0002 : !Number.isFinite(lastSpinRad))
+    needsRender = false
     lastExitProgress = exitProgress
     lastRotateProgress = rotateProgress
     lastSpinRad = hasLinkedSpin ? rawSpinRad : Number.NaN
 
-    if (!spinSettled || !progressStable) requestRender()
+    // 旋轉已直接對齊目標，下一次參數變化由 observer 排程，無須重畫第二幀。
   }
 
   styleObserver = new MutationObserver(requestRender)
@@ -241,6 +245,7 @@ onMounted(() => {
     renderer.setSize(w, h, false)
     camera.aspect = w / h
     camera.updateProjectionMatrix()
+    needsRender = true
     requestRender()
   }
   window.addEventListener('resize', onResize)

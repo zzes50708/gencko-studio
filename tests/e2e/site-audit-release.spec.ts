@@ -144,7 +144,7 @@ test('不安全文章被清理，長網址及寬表格不撐破頁面', async ({
       '很長資料'.repeat(100) +
       '</td></tr></table><img src="/logo.png" onerror="window.auditInjected=1"><script>window.auditInjected=1</script>'
   }
-  await page.route('**/rest/v1/articles**', (route) =>
+  await page.route('**/rest/v1/*articles**', (route) =>
     route.fulfill({
       json: new URL(route.request().url()).searchParams.has('id') ? article : [article]
     })

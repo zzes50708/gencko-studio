@@ -29,7 +29,12 @@ async function seedAuction(page: any) {
   await setup(page)
   await page.evaluate((a) => {
     ;(window as any).uxStore.auctionList = [a]
-    ;(window as any).uxStore.currentUser = { type: 'google', email: 'test@example.invalid' }
+    ;(window as any).uxStore.currentUser = {
+      id: 'fixture-line-member',
+      type: 'line',
+      authSource: 'supabase',
+      email: 'test@example.invalid'
+    }
   }, auction)
 }
 test('種群手機兩欄、搜尋編號、失敗重試且不新增放大', async ({ browser, baseURL }) => {
@@ -51,7 +56,7 @@ test('種群手機兩欄、搜尋編號、失敗重試且不新增放大', async
         })
   })
   // 固定背景資料回應，避免初始載入稍後蓋掉本測試注入的種群。
-  await page.route('**/rest/v1/animals**', (r) =>
+  await page.route('**/rest/v1/*animals**', (r) =>
     r.fulfill({
       json: Array.from({ length: 4 }, (_, i) => ({
         id: `B-${i}`,
@@ -119,8 +124,14 @@ test('競標錯誤不冒充空狀態；詳情同步延長與結標、缺價隱�
   await expect(page.locator('.empty-state')).toHaveCount(0)
   await seedAuction(page)
   await page.locator('.auction-card').click()
-  await expect(page.locator('.btn-bid')).toBeEnabled()
+  await expect(page.locator('.status-badge').first()).toContainText('競標中')
+  await expect(page.locator('.btn-bid')).toBeVisible()
+  // 測試帳號尚未完成 LINE 聯絡綁定，不能把「競標中」當成已可送出出價。
+  await expect(page.locator('.btn-bid')).toBeDisabled()
   await expect(page.locator('.btn-buy-now')).toHaveCount(0)
+  const initialDays = Number(
+    (await page.locator('.timer-value').first().innerText()).match(/\d+/)?.[0]
+  )
   serverAuction = { ...serverAuction, end_time: '2031-01-01T00:00:00Z' }
   await page.evaluate(() => {
     const s = (window as any).uxStore
@@ -128,13 +139,13 @@ test('競標錯誤不冒充空狀態；詳情同步延長與結標、缺價隱�
   })
   await expect
     .poll(() =>
-      page.locator('.timer-box').evaluate((e) => {
-        let c = (e as any).__vueParentComponent
-        while (c && !c.setupState.currentAuction) c = c.parent
-        return c.setupState.currentAuction.end_time
-      })
+      page
+        .locator('.timer-value')
+        .first()
+        .innerText()
+        .then((text) => Number(text.match(/\d+/)?.[0]))
     )
-    .toBe('2031-01-01T00:00:00Z')
+    .toBeGreaterThan(initialDays + 300)
   serverAuction = { ...serverAuction, status: 'ended' }
   await page.evaluate(() => {
     const s = (window as any).uxStore
@@ -165,13 +176,7 @@ test('出價讀取失敗顯示重試；分享失敗提供手動連結；圖卡�
   await page.locator('.btn-share').click()
   await expect(page.getByLabel('手動複製競標連結')).toBeVisible()
   await page.locator('.btn-promo').focus()
-  await page.evaluate(() => {
-    let c = (document.querySelector('.btn-promo') as any).__vueParentComponent
-    while (c && !c.setupState.promoModal) c = c.parent
-    c.setupState.generatedImage =
-      'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="1" height="1"/>'
-    c.setupState.promoModal.open()
-  })
+  await page.locator('.btn-promo').click()
   await expect(page.locator('dialog.promo-modal-overlay')).toBeVisible()
   expect(await page.evaluate(() => document.body.style.overflow)).toBe('hidden')
   await page.evaluate(() => (document.querySelector('.btn-share') as HTMLElement).focus())

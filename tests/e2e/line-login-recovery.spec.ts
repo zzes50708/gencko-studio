@@ -86,11 +86,15 @@ test('接續碼暫時讀取失敗，可在原頁重試，不必重新授權', as
   await expect(page.getByRole('textbox', { name: '可手動複製的登入接續碼' })).toHaveValue(transfer)
 })
 test('接續頁放到過期後，立即隱藏舊碼並禁止複製', async ({ page }) => {
+  // 固定瀏覽器時鐘，避免高負載下 1.5 秒測試碼在斷言前已正確過期。
+  await page.clock.install({ time: new Date('2026-11-04T00:00:00Z') })
+  await page.clock.pauseAt(new Date('2026-11-04T00:01:00Z'))
   await page.route('**/api/auth/line/transfer', (r) =>
     r.fulfill({ json: { transfer, serverTime: Date.now(), expiresAt: Date.now() + 1500 } })
   )
   await ready(page, `/line-login-return?flow=${flow}&status=ready`)
   await expect(page.getByRole('button', { name: '複製登入接續碼' })).toBeVisible()
+  await page.clock.runFor(2000)
   await expect(page.getByRole('button', { name: '複製登入接續碼' })).toBeHidden({ timeout: 5000 })
   await expect(page.getByRole('heading', { level: 1 })).toContainText('逾時')
 })

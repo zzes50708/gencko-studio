@@ -102,9 +102,7 @@ test('三張照片可點選、鍵盤切換，背景更新保留選擇', async ({
   await page.keyboard.press('ArrowRight')
   await expect(page.locator('.main-img img')).toHaveAttribute('src', /photo3/)
   await page.evaluate(async () => {
-    let c = (document.querySelector('.main-img') as any).__vueParentComponent
-    while (c && !c.setupState.refreshAuction) c = c.parent
-    await c.setupState.refreshAuction()
+    window.dispatchEvent(new Event('online'))
   })
   await expect(page.getByRole('button', { name: '查看第 3 張照片' })).toHaveAttribute(
     'aria-pressed',
@@ -149,10 +147,9 @@ test('圖卡使用所選照片且暫停狀態不冒充進行中', async ({ page 
   const state = await fixture(page, { auction: { status: 'paused' } })
   await expect(page).toHaveTitle(/暫停競標/)
   await expect(page.locator('meta[name="robots"]')).toHaveAttribute('content', /noindex/)
-  await expect(page.locator('meta[property="product:availability"]')).toHaveAttribute(
-    'content',
-    'out of stock'
-  )
+  expect(
+    (await page.locator('script[type="application/ld+json"]').allTextContents()).join('')
+  ).not.toContain('https://schema.org/InStock')
   await page.getByRole('button', { name: '查看第 2 張照片' }).click()
   await page.getByRole('button', { name: '產生圖卡', exact: true }).click()
   await expect(page.locator('dialog.promo-modal-overlay')).toBeVisible()

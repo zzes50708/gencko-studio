@@ -1,0 +1,60 @@
+name: Release validation
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-validation-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  public-site:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      SUPABASE_URL: ${{ vars.SUPABASE_URL }}
+      SUPABASE_KEY: ${{ vars.SUPABASE_ANON_KEY }}
+      NUXT_PUBLIC_ENABLE_GA: 'false'
+      AUDIT_URL: http://127.0.0.1:3001
+      UX_BASE_URL: http://127.0.0.1:3001
+      ARTICLE_PREVIEW_EXPECTED: 'false'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - name: Check public configuration
+        run: node -e "if (!process.env.SUPABASE_URL || !process.env.SUPABASE_KEY) process.exit(1)"
+      - run: npm ci
+      - name: Dependency security audit
+        run: npm audit --omit=dev --audit-level=high
+      - run: npx playwright install --with-deps chromium
+      # prebuild 先驗證單元測試，避免測試失敗仍繼續打包。
+      - run: npm run build
+      - name: Start production server
+        run: |
+          PORT=3001 HOST=127.0.0.1 node --no-experimental-require-module .output/server/index.mjs > /tmp/gencko-release-server.log 2>&1 &
+          node scripts/wait-for-release.mjs
+      - name: Desktop and mobile regression
+        run: npx playwright test --config playwright.release.config.ts
+      - name: Shopping, content and hospital interactions
+        run: npx playwright test --config playwright.ui.config.ts
+      - name: Full-page layout and inline images
+        run: node scripts/audit-layout.mjs
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: release-validation-failure
+          path: |
+            output/release-validation-results
+            output/layout-validation-results
+            output/ui-validation-results
+            /tmp/gencko-release-server.log
+          retention-days: 7

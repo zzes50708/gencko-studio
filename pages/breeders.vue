@@ -15,7 +15,7 @@ const supabase = useSupabaseClient()
 const { data: ssrBreeders } = await useAsyncData('breeders-list-seo-v1', async () => {
   try {
     const { data, error } = await supabase
-      .from('animals')
+      .from('site_public_animals')
       .select('id, species, morph, genes, gender_type, gender_value, birthday, image_url, status')
       .eq('status', 'SelfKeep')
     if (error || !data) return []
@@ -211,7 +211,6 @@ useHead({
     <header class="breeders-intro">
       <p class="breeders-eyebrow">SELECTED BREEDERS</p>
       <h1 class="breeders-mobile-heading">核心種群</h1>
-      <p>精選 Gencko 自留繁育個體，從品系與基因看見每一代的選育方向。</p>
     </header>
 
     <div class="tabs" role="group" aria-label="選擇展示物種">
@@ -249,7 +248,7 @@ useHead({
       </div>
 
       <div
-        v-if="store.loading && !store.inventoryLoaded && breedersList.length === 0"
+        v-if="!store.inventoryLoaded && !store.dataError && breedersList.length === 0"
         class="breeders-empty-state"
       >
         <span>LOADING COLLECTION</span>
@@ -276,10 +275,9 @@ useHead({
         <span>ARCHIVE UPDATING</span>
         <h3>{{ breederKeyword ? '沒有符合搜尋的種群' : '此物種目前尚無公開種群。' }}</h3>
         <button v-if="breederKeyword" type="button" @click="breederKeyword = ''">清除搜尋</button>
-        <p>完成個體資料整理後會陸續更新；你可以先瀏覽在售個體或探索基因圖鑑。</p>
         <div>
           <NuxtLink no-prefetch to="/shop">瀏覽在售個體</NuxtLink>
-          <NuxtLink no-prefetch to="/genes">探索基因圖鑑</NuxtLink>
+          <NuxtLink no-prefetch to="/genes">基因圖鑑</NuxtLink>
         </div>
       </div>
 
@@ -290,16 +288,19 @@ useHead({
           :id="`breeder-${i.ID}`"
           class="breeder-photo-card"
         >
-          <img
-            v-if="i.ImageURL && !failedPhotos.has(i.ID)"
-            :src="getCleanUrl(i.ImageURL, 600)"
-            :alt="`${i.Morph} 種群（${i.ID}）`"
-            class="breeder-photo"
-            @error="markPhotoFailed(i.ID)"
-            :loading="index < 4 ? 'eager' : 'lazy'"
-            :fetchpriority="index === 0 ? 'high' : 'auto'"
-            decoding="async"
-          />
+          <div v-if="i.ImageURL && !failedPhotos.has(i.ID)" class="breeder-photo-observation">
+            <PhotoLens :src="getCleanUrl(i.ImageURL, 1600)">
+              <img
+                :src="getCleanUrl(i.ImageURL, 600)"
+                :alt="`${i.Morph} 種群（${i.ID}）`"
+                class="breeder-photo"
+                @error="markPhotoFailed(i.ID)"
+                :loading="index < 4 ? 'eager' : 'lazy'"
+                :fetchpriority="index === 0 ? 'high' : 'auto'"
+                decoding="async"
+              />
+            </PhotoLens>
+          </div>
           <div
             v-else
             class="breeder-photo breeder-photo--empty"

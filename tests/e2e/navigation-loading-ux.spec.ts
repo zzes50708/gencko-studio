@@ -7,7 +7,7 @@ test('慢速換頁有載入回饋、完成清除並可返回', async ({ page }) 
   const gate = new Promise<void>((r) => {
     release = r
   })
-  await page.route('**/rest/v1/animals?**', async (r) => {
+  await page.route('**/rest/v1/*animals?**', async (r) => {
     await gate
     await r.fulfill({
       status: 200,

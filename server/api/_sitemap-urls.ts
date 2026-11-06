@@ -30,7 +30,7 @@ export default defineEventHandler(async (event) => {
   // 1. 抓取商品與電子身分證 (Inventory)
   // 嚴格還原舊版寫法：只抓 id 與 status，把過濾邏輯放回 JS 處理
   const { data: products, error: err1 } = await readSitemapRows((from, to) =>
-    supabase.from('animals').select('id, status, image_url').order('id').range(from, to)
+    supabase.from('site_public_animals').select('id, status, image_url').order('id').range(from, to)
   )
 
   if (err1) console.error('Sitemap 抓取 animals 失敗:', err1)
@@ -53,8 +53,8 @@ export default defineEventHandler(async (event) => {
   // 2. 抓取文章 (Articles)
   const { data: articles, error: err2 } = await readSitemapRows((from, to) =>
     supabase
-      .from('articles')
-      .select('id, publish_date, status, image_url')
+      .from('site_public_articles')
+      .select('id, publish_date, updated_at, status, image_url')
       .eq('status', 'Published')
       .order('id')
       .range(from, to)
@@ -68,7 +68,7 @@ export default defineEventHandler(async (event) => {
         loc: `/articles/${encodeURIComponent(a.id)}`,
         changefreq: 'monthly',
         priority: 0.7,
-        lastmod: seoDate(a.publish_date),
+        lastmod: seoDate(a.updated_at) || seoDate(a.publish_date),
         ...(images ? { images } : {})
       })
     })
@@ -77,7 +77,11 @@ export default defineEventHandler(async (event) => {
   // 3. 抓取基因圖鑑 (Genes)
   // 嚴格還原舊版寫法：只抓 name
   const { data: genes, error: err3 } = await readSitemapRows((from, to) =>
-    supabase.from('genetic_pages').select('name, image_url').order('name').range(from, to)
+    supabase
+      .from('site_public_genetic_pages')
+      .select('name, image_url')
+      .order('name')
+      .range(from, to)
   )
 
   if (err3) console.error('Sitemap 抓取 genetic_pages 失敗:', err3)

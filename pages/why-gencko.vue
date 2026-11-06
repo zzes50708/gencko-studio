@@ -3,72 +3,64 @@ import { useHead } from '#imports'
 
 const pageUrl = 'https://www.genckobreeding.com/why-gencko'
 
-const trustRows = [
-  { title: '資料透明', body: '性別、生日、基因都在頁面中' },
-  { title: '飼養教學', body: '該怎麼養，該注意什麼，都幫你們整理好了' },
-  { title: '專業繁殖工具', body: '專業爬蟲的基因計算機' },
-  { title: '特寵醫院名單', body: '不怕找不到最近的特寵醫院' }
-]
-
 // 連結地圖：四張卡整張可點，各對到一個真實頁面。
 // 個體證書以 ID 搜尋，連向專用查詢頁。
 const overviewBlocks = [
   {
     tag: '個體證書',
-    title: '每隻都有自己的紀錄',
-    body: '輸入個體 ID，查看品系、性別與生日，並保存專屬證書',
+    title: '個體證書',
     to: '/certificates',
     image: '/previews/identity-card.png',
-    alt: 'Gencko 個體證書畫面'
+    alt: 'Gencko 個體證書畫面',
+    action: '查看個體證書'
   },
   {
     tag: '飼養',
-    title: '第一次養也不怕',
-    body: '熱區冷區、濕度、餵食頻率，飼養指南幫你準備好了',
+    title: '飼養指南',
     to: '/care',
     image: '/previews/care-guide.png',
-    alt: 'Gencko 飼養指南頁面畫面'
+    alt: 'Gencko 飼養指南頁面畫面',
+    action: '閱讀飼養指南'
   },
   {
     tag: '基因計算機',
-    title: '工作室都在用的基因計算機',
-    body: '依已知遺傳規則推算可能結果，多遺傳表現仍需搭配選育紀錄判斷',
+    title: '基因計算機',
     to: '/calculator',
     image: '/previews/calculator-tool.png',
-    alt: 'Gencko 基因計算機頁面畫面'
+    alt: 'Gencko 基因計算機頁面畫面',
+    action: '開啟基因計算'
   },
   {
     tag: '特寵醫院',
-    title: '輕鬆收藏特寵醫院名單',
-    body: '搜尋離家最近的特寵醫院資訊，不怕需要時找不到',
+    title: '特寵醫院',
     to: '/hospital',
     image: '/previews/hospital-tool.png',
-    alt: 'Gencko 特寵醫院頁面畫面'
+    alt: 'Gencko 特寵醫院頁面畫面',
+    action: '尋找特寵醫院'
   }
 ]
 
 const purchasePaths = [
   {
-    label: '了解購買流程',
-    body: '先看挑選、詢問、確認與交付的現有流程說明。',
+    label: '購買流程',
     to: '/buying-guide'
   },
-  { label: '認識 Gencko', body: '了解工作室的品牌理念、服務與專業背景。', to: '/about' },
-  { label: '查看可選個體', body: '回到現有商品頁確認個體資料與頁面所列條件。', to: '/shop' },
-  { label: '聯絡與常見問題', body: '從常見問題找到客服方式與購買前常見解答。', to: '/faq' }
+  { label: '關於工作室', to: '/about' },
+  { label: '選購守宮', to: '/shop' },
+  { label: '常見問題', to: '/faq' }
 ]
 
 useHead({
-  title: '品牌與購買｜選擇 Gencko 前先了解',
+  title: '品牌與服務｜Gencko',
   meta: [
     {
       name: 'description',
-      content: 'Gencko 有完整的個體資料、飼養教學、特寵醫院資訊乃至繁殖說明，讓你看完再決定。'
+      content: '個體證書、飼養指南、基因計算與特寵醫院查詢。'
     },
-    { property: 'og:title', content: '品牌與購買｜選擇 Gencko 前先了解' },
+    { property: 'og:title', content: '品牌與服務｜Gencko' },
     {
       property: 'og:description',
-      content: '個體資料、飼養教學、特寵醫院資訊乃至繁殖說明，讓你看完再決定。'
+      content: '個體證書、飼養指南、基因計算與特寵醫院查詢。'
     },
     { property: 'og:url', content: pageUrl }
   ],
@@ -82,37 +74,12 @@ useHead({
       <span>GENCKO BRAND FILE</span>
       <span>DATA / CARE / CONTINUITY</span>
     </div>
-    <PageHero
-      kicker="WHY GENCKO"
-      title="買之前該知道的，我們都先給你看"
-      lead="個體資料、飼養教學、特寵醫院資訊乃至繁殖說明，一站搞定。"
-    >
-      <div class="hero-reasons">
-        <div v-for="item in trustRows" :key="item.title" class="reason-row">
-          <div class="reason-head">
-            <span class="reason-check" aria-hidden="true">
-              <svg
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="3"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              >
-                <path d="M5 12l5 5L20 6" />
-              </svg>
-            </span>
-            {{ item.title }}
-          </div>
-          <p class="reason-body">{{ item.body }}</p>
-        </div>
-      </div>
-    </PageHero>
+    <PageHero layout="stack" kicker="WHY GENCKO" title="品牌與服務" />
 
     <section class="purchase-hub" aria-labelledby="purchase-hub-title">
       <div class="hub-heading">
         <span>PURCHASE PATH</span>
-        <h2 id="purchase-hub-title">從品牌、流程到個體資料，一次找到入口</h2>
+        <h2 id="purchase-hub-title">相關頁面</h2>
       </div>
       <div class="purchase-grid">
         <NuxtLink
@@ -123,7 +90,6 @@ useHead({
           class="purchase-card card"
         >
           <h3>{{ item.label }}</h3>
-          <p>{{ item.body }}</p>
           <span aria-hidden="true">前往 →</span>
         </NuxtLink>
       </div>
@@ -135,22 +101,62 @@ useHead({
         v-for="item in overviewBlocks"
         :key="item.tag"
         :to="item.to"
-        class="overview-card card"
+        class="overview-card card interactive-card"
       >
         <div class="overview-head">
           <span class="overview-tag">{{ item.tag }}</span>
-          <span class="overview-cta" aria-hidden="true">前往網頁→</span>
+          <span class="overview-direction" aria-hidden="true">↗</span>
         </div>
         <h2 class="overview-title">{{ item.title }}</h2>
-        <p class="overview-body">{{ item.body }}</p>
 
         <div class="preview-shell">
           <ArticleImage :src="item.image" :alt="item.alt" class="preview-image" loading="lazy" />
         </div>
+        <HoverAction class="overview-action">{{ item.action }}</HoverAction>
       </NuxtLink>
     </section>
   </div>
 </template>
+
+<style scoped>
+.overview-action {
+  justify-self: start;
+  margin-top: 8px;
+}
+.overview-direction {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  flex: 0 0 32px;
+  color: var(--pri);
+  border: 1px solid var(--bd);
+  border-radius: 50%;
+  transition:
+    transform 320ms var(--motion-ease-out),
+    background-color 180ms ease,
+    color 180ms ease;
+}
+@media (min-width: 768px) and (hover: hover) and (pointer: fine) {
+  .overview-card:is(:hover, :focus-visible) .overview-direction {
+    transform: rotate(45deg);
+    background: var(--pri-btn);
+    color: white;
+    border-color: var(--pri-btn);
+    text-decoration: none;
+  }
+  .overview-card:is(:hover, :focus-visible) .overview-title {
+    text-decoration: underline;
+    text-underline-offset: 5px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .overview-direction {
+    transition: none;
+    transform: none !important;
+  }
+}
+</style>
 
 <style scoped>
 .trust-page {
@@ -683,6 +689,36 @@ useHead({
 }
 :deep(.app-back-btn) {
   border: 1px solid var(--txt);
+}
+</style>
+
+<style scoped>
+/* 證據照片隨卡片進入視野呈現，文案和前往連結維持可讀可用。 */
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .overview-card {
+      view-timeline-name: --brand-evidence;
+      view-timeline-axis: block;
+    }
+    .overview-card .preview-shell {
+      animation: brand-evidence-entry linear both;
+      animation-timeline: --brand-evidence;
+      animation-range: entry 0% entry 80%;
+    }
+    @keyframes brand-evidence-entry {
+      from {
+        opacity: 0.55;
+        transform: translateY(12px);
+      }
+      to {
+        opacity: 1;
+        transform: none;
+      }
+    }
+    .overview-card:focus-visible .preview-shell {
+      animation: none;
+    }
+  }
 }
 </style>
 

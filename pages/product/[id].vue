@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref, onMounted } from 'vue'
+import { computed, ref, onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { useHead, useAsyncData, useSupabaseClient } from '#imports'
 import { useMainStore } from '~/stores/useMainStore'
@@ -43,9 +43,9 @@ const {
   if (!productId) return null
   try {
     const { data, error } = await supabase
-      .from('animals')
+      .from('site_public_animals')
       .select(
-        'id, species, morph, genes, gender_type, gender_value, birthday, listing_price, sold_price, status, note, image_url, created_at, photo_updated_at'
+        'id, species, morph, genes, gender_type, gender_value, birthday, listing_price, status, note, image_url, created_at, photo_updated_at'
       )
       .eq('id', productId)
       .maybeSingle()
@@ -65,7 +65,6 @@ const {
       GenderValue: data.gender_value,
       Birthday: data.birthday,
       ListingPrice: data.listing_price,
-      SoldPrice: data.sold_price,
       Status: data.status,
       Note: data.note,
       ImageURL: data.image_url,
@@ -77,6 +76,15 @@ const {
     throw e
   }
 })
+
+// 目錄在返回頁面或重新連線後更新時，詳情的售價與售出狀態也同步更新。
+watch(
+  () => store.inv,
+  (rows) => {
+    if (!store.inventoryLoaded || store.dataError || productError.value || pending.value) return
+    currentProduct.value = rows.find((item) => item.ID === productId) || null
+  }
+)
 
 // 將日期／時間字串統一顯示為 YYYY-MM-DD（取不到則回傳空字串）
 const fmtDate = (v) => {
@@ -482,7 +490,9 @@ const inquiryCopyStatus = ref('')
 const copyInquiry = async () => {
   if (!currentProduct.value) return
   try {
-    await navigator.clipboard.writeText(getAnimalInquiryText(currentProduct.value))
+    await navigator.clipboard.writeText(
+      getAnimalInquiryText(currentProduct.value, { hidePrice: store.isExhibitionMode })
+    )
     inquiryCopyStatus.value = '已複製個體 ID 與連結，可貼到私訊。'
   } catch {
     inquiryCopyStatus.value = '無法自動複製，請複製上方 ID 與網址。'
@@ -642,20 +652,25 @@ useContentResponse(currentProduct, pending, productError)
               SOLD OUT
             </div>
             <div class="prod-img-link" v-if="productModules.visuals.list.length && !photoFailed">
-              <img
+              <PhotoLens
                 v-for="(img, idx) in productModules.visuals.list"
-                :key="`${idx}-${responsivePhoto ? 'responsive' : 'original'}`"
-                ref="mainPhotoRefs"
-                :src="getCleanUrl(img)"
-                :srcset="responsivePhoto ? getImageSrcset(img) : undefined"
-                sizes="(max-width: 767px) calc(100vw - 24px), 55vw"
-                :alt="`${productModules.identity.morph}（${productModules.identity.id}）`"
-                @error="onMainPhotoError($event.target)"
-                class="prod-main-img"
-                :loading="idx === 0 ? 'eager' : 'lazy'"
-                :fetchpriority="idx === 0 ? 'high' : 'auto'"
-                decoding="async"
-              />
+                :key="idx"
+                :src="getCleanUrl(img, 1600)"
+              >
+                <img
+                  :key="`${idx}-${responsivePhoto ? 'responsive' : 'original'}`"
+                  ref="mainPhotoRefs"
+                  :src="getCleanUrl(img)"
+                  :srcset="responsivePhoto ? getImageSrcset(img) : undefined"
+                  sizes="(max-width: 767px) calc(100vw - 24px), 55vw"
+                  :alt="`${productModules.identity.morph}（${productModules.identity.id}）`"
+                  @error="onMainPhotoError($event.target)"
+                  class="prod-main-img"
+                  :loading="idx === 0 ? 'eager' : 'lazy'"
+                  :fetchpriority="idx === 0 ? 'high' : 'auto'"
+                  decoding="async"
+                />
+              </PhotoLens>
             </div>
             <div v-else class="product-photo-fallback">
               {{ photoFailed ? '照片載入失敗' : '尚無照片' }}
@@ -744,7 +759,11 @@ useContentResponse(currentProduct, pending, productError)
                   productModules.transaction.status === 'ForSale' ||
                   productModules.transaction.status === 'Auction'
                 "
-                :href="getAnimalInquiryLink(store.lineLink, currentProduct)"
+                :href="
+                  getAnimalInquiryLink(store.lineLink, currentProduct, {
+                    hidePrice: store.isExhibitionMode
+                  })
+                "
                 target="_blank"
                 class="btn-app btn-app--primary btn-app--lg btn-buy-lg"
                 rel="noopener noreferrer"

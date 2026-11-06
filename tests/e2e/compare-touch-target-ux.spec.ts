@@ -18,7 +18,7 @@ for (const width of [320, 390])
       image_url: '',
       genes: []
     }))
-    await page.route('**/rest/v1/animals**', (r) => r.fulfill({ json: animals }))
+    await page.route('**/rest/v1/*animals**', (r) => r.fulfill({ json: animals }))
     await page.goto('/compare?ids=UX-A,UX-B')
     await expect(page.locator('.item-heading')).toHaveCount(2)
     const remove = page.getByRole('button', { name: '移除 較長品系名稱測試 比較項目', exact: true })
