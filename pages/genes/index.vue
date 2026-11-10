@@ -58,8 +58,8 @@ const genesImg =
   'https://wsrv.nl/?url=raw.githubusercontent.com%2Fzzes50708%2Fgencko-assets%2Fmain%2Fimg%2F11.png&w=1200&h=630&fit=contain&bg=e6e3e3&output=webp&q=85'
 
 const toolHubLinks = [
-  { label: '基因計算機', body: '選擇親代基因，查看可能的繁殖結果。', to: '/calculator' },
-  { label: '找特寵醫院', body: '依地區搜尋並收藏可先聯絡確認的醫院。', to: '/hospital' }
+  { label: '基因計算機', to: '/calculator' },
+  { label: '找特寵醫院', to: '/hospital' }
 ]
 const genesPublisher = {
   '@type': 'Organization',
@@ -204,24 +204,25 @@ useHead({
       <span>GENCKO REFERENCE LIBRARY</span>
       <span>SPECIES / INHERITANCE / NOTES</span>
     </div>
-    <header class="genes-hero">
-      <span class="genes-kicker">GENETICS INDEX / 遺傳資料庫</span>
-      <h1>守宮基因圖鑑</h1>
-    </header>
+    <header class="genes-hero compact-title-row">
+      <div>
+        <span class="genes-kicker">GENETICS INDEX / 遺傳資料庫</span>
+        <h1>守宮基因圖鑑</h1>
+      </div>
 
-    <nav class="tool-hub" aria-label="基因與工具快速入口">
-      <NuxtLink
-        no-prefetch
-        v-for="item in toolHubLinks"
-        :key="item.to"
-        :to="item.to"
-        class="tool-hub-card"
-      >
-        <strong>{{ item.label }}</strong>
-        <span>{{ item.body }}</span>
-        <small aria-hidden="true">前往 →</small>
-      </NuxtLink>
-    </nav>
+      <nav class="tool-hub compact-title-links" aria-label="基因與工具快速入口">
+        <NuxtLink
+          no-prefetch
+          v-for="item in toolHubLinks"
+          :key="item.to"
+          :to="item.to"
+          class="tool-hub-card"
+        >
+          {{ item.label }}
+          <span aria-hidden="true">↗</span>
+        </NuxtLink>
+      </nav>
+    </header>
 
     <section id="gene-library" class="gene-library-controls" aria-label="基因詞條篩選">
       <div class="segmented-control">
@@ -284,6 +285,7 @@ useHead({
           <h2 class="gene-cat-title">
             <span class="cat-badge" :class="`cat-${cat}`">{{ cat }}</span>
           </h2>
+          <span class="gene-group-count">{{ list.length }} 筆</span>
         </div>
 
         <TransitionGroup tag="div" name="gene-index" class="gene-btn-grid">
@@ -308,6 +310,36 @@ useHead({
 </template>
 
 <style scoped>
+.gene-btn-grid .gene-btn-item {
+  border: 1px solid var(--bd);
+  border-radius: 6px;
+  background: var(--card-bg-solid);
+  padding-inline: 12px;
+}
+.gene-btn-grid .gene-btn-item:focus-visible {
+  outline: 2px solid var(--pri);
+  outline-offset: -2px;
+}
+@media (min-width: 768px) and (hover: hover) and (pointer: fine) {
+  .gene-btn-grid .gene-btn-item:hover {
+    border-color: var(--pri);
+  }
+  .gene-btn-grid .gene-btn-item:hover .g-cta {
+    color: var(--pri);
+  }
+}
+.gene-section .section-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+.gene-group-count {
+  flex: none;
+  color: var(--txt-muted);
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+}
 .gene-type-filters {
   grid-column: 1 / -1;
   display: flex;

@@ -98,7 +98,6 @@ useHead({
     </PageHero>
 
     <nav class="starter-reading-index" aria-label="新手入門">
-      <span>STARTING POINT</span>
       <a href="#knowledge-hub-title">了解飼養</a>
       <a href="#starter-checklist">到家準備</a>
       <a href="#starter-paths">下一步</a>
@@ -200,6 +199,35 @@ useHead({
 </template>
 
 <style scoped>
+.knowledge-grid .knowledge-card {
+  border: 1px solid var(--bd);
+  border-radius: 8px;
+  background: var(--card-bg-solid);
+}
+.knowledge-grid .knowledge-card > span {
+  justify-self: start;
+  border: 1px solid var(--bd);
+  border-radius: 999px;
+  padding: 3px 9px;
+  transition: transform 160ms ease-out;
+}
+@media (min-width: 768px) and (hover: hover) and (pointer: fine) {
+  .knowledge-grid .knowledge-card:is(:hover, :focus-visible) {
+    border-color: var(--pri);
+  }
+  .knowledge-grid .knowledge-card:is(:hover, :focus-visible) > span {
+    transform: translateX(3px);
+    background: var(--pri-btn);
+    border-color: var(--pri-btn);
+    color: white;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .knowledge-grid .knowledge-card > span {
+    transition: none;
+    transform: none !important;
+  }
+}
 .starter-page {
   width: min(1180px, calc(100% - 36px));
   margin-inline: auto;

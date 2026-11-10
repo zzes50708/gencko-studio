@@ -196,16 +196,20 @@ useHead({
       <span>PLAN / BUILD / CARE</span>
     </div>
 
-    <header class="cabinet-hero">
+    <header class="cabinet-hero compact-title-row">
       <div class="cabinet-hero__copy">
         <p class="cabinet-kicker">CUSTOM HABITAT SYSTEM</p>
         <h1>客製化爬蟲設備</h1>
       </div>
+      <aside
+        class="cabinet-availability compact-title-note"
+        role="note"
+        aria-label="販售狀態與購買地區"
+      >
+        <strong>規劃中・尚未開始販售</strong>
+        <span>未來開放後僅限台灣地區購買。</span>
+      </aside>
     </header>
-    <aside class="cabinet-availability" role="note" aria-label="販售狀態與購買地區">
-      <strong>規劃中・尚未開始販售</strong>
-      <span>未來開放後僅限台灣地區購買。</span>
-    </aside>
 
     <ContentChapterTrail :host="cabinetRoot" :chapters="cabinetChapters" label="客製設備章節導覽" />
     <section id="cabinet-configurator" class="cabinet-3d-slot" aria-labelledby="cabinet-3d-title">

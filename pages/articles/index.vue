@@ -395,6 +395,13 @@ const fmtDate = (d) => {
             : categoryOptions.find((category) => category.value === artCat)?.label
         }}
       </h2>
+      <span
+        v-if="!store.articlesLoading && !store.articlesError"
+        class="article-filter-count"
+        role="status"
+      >
+        {{ filteredArticles.length }} 篇
+      </span>
     </div>
 
     <div v-if="store.articlesLoading && !filteredArticles.length" class="article-group-grid">
@@ -464,6 +471,36 @@ const fmtDate = (d) => {
 </template>
 
 <style scoped>
+.article-group-grid .article-entry {
+  border: 1px solid var(--bd);
+  border-radius: 8px;
+  padding: 8px;
+  background: var(--card-bg-solid);
+}
+.article-group-grid .article-entry .article-thumb-wrap {
+  border-radius: 4px;
+  overflow: hidden;
+}
+.article-group-grid .article-entry:focus-visible {
+  outline: 2px solid var(--pri);
+  outline-offset: 2px;
+}
+@media (min-width: 768px) and (hover: hover) and (pointer: fine) {
+  .article-group-grid .article-entry:hover {
+    border-color: var(--pri);
+    box-shadow: 0 4px 12px rgb(0 0 0 / 9%);
+  }
+}
+.main-list-head .list-title {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.article-filter-count {
+  flex: none;
+  color: var(--txt-muted);
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+}
 .article-layout-enter-active,
 .article-layout-move {
   transition:
@@ -508,7 +545,7 @@ const fmtDate = (d) => {
 }
 .articles-masthead {
   display: grid;
-  grid-template-columns: minmax(0, 1.5fr) minmax(240px, 0.65fr);
+  grid-template-columns: minmax(0, 1fr) auto;
   gap: 24px;
   padding-block: 22px;
 }
@@ -538,7 +575,9 @@ const fmtDate = (d) => {
 }
 .masthead-routes {
   display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   align-content: end;
+  gap: clamp(10px, 2vw, 28px);
 }
 .masthead-routes a {
   display: flex;

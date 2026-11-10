@@ -255,11 +255,7 @@ const navLogoUrl = computed(() => (store.logoUrl ? getCleanUrl(store.logoUrl, 72
     </div>
 
     <!-- Reading Progress Bar -->
-    <div
-      v-if="curTab === 'articles' && readingArticle"
-      class="reading-progress-bar"
-      :class="{ 'reading-progress-bar--nav-hidden': navIsHidden }"
-    >
+    <div v-if="curTab === 'articles' && readingArticle" class="reading-progress-bar">
       <div class="progress-fill" :style="{ width: readingProgress + '%' }"></div>
     </div>
   </div>
@@ -478,16 +474,14 @@ const navLogoUrl = computed(() => (store.logoUrl ? getCleanUrl(store.logoUrl, 72
 /* Reading Progress Bar */
 .reading-progress-bar {
   position: fixed;
-  top: calc(40px + env(safe-area-inset-top, 0px) + 50px);
+  top: auto;
+  bottom: var(--page-dock-bottom);
   left: 0;
   width: 100%;
   height: 2px;
   background: var(--bd);
   z-index: 999;
   transition: transform 0.2s ease-out;
-}
-.reading-progress-bar--nav-hidden {
-  transform: translateY(calc(-1 * var(--site-nav-height, 64px)));
 }
 .progress-fill {
   height: 100%;
@@ -658,7 +652,6 @@ const navLogoUrl = computed(() => (store.logoUrl ? getCleanUrl(store.logoUrl, 72
 }
 
 .reading-progress-bar {
-  top: calc(env(safe-area-inset-top, 0px) + var(--site-nav-height, 64px));
   height: 1px;
 }
 
@@ -690,11 +683,6 @@ const navLogoUrl = computed(() => (store.logoUrl ? getCleanUrl(store.logoUrl, 72
 @media (max-width: 767px) {
   .sticky-nav {
     display: none;
-  }
-  .reading-progress-bar,
-  .reading-progress-bar--nav-hidden {
-    top: env(safe-area-inset-top, 0px);
-    transform: none;
   }
 }
 .nav-item-dt-link {

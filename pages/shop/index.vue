@@ -499,6 +499,12 @@ const showFavorites = async () => {
               <span v-if="activeFilterCount">（{{ activeFilterCount }}）</span>
             </button>
           </div>
+          <div v-if="fil.morph" class="catalog-selection">
+            <span>{{ fil.morph }}</span>
+            <button type="button" aria-label="清除品系篩選" @click="selectMorph('')">
+              清除品系
+            </button>
+          </div>
           <div class="catalog-options">
             <select v-model="sortOrder" aria-label="排序方式">
               <option value="price_desc">價格高至低</option>
@@ -565,6 +571,7 @@ const showFavorites = async () => {
           <ShopFlipCard
             v-for="(item, index) in shopList"
             :key="item.ID"
+            class="catalog-specimen"
             :item="item"
             :index="index"
             :is-wishlisted="store.wishlist.includes(item.ID)"
@@ -691,6 +698,41 @@ const showFavorites = async () => {
   </div>
 </template>
 <style scoped>
+.photo-grid :deep(.catalog-specimen.flip-card) {
+  border-radius: 8px;
+  background: var(--card-bg-solid);
+  box-shadow: 0 2px 6px rgb(0 0 0 / 7%);
+}
+.photo-grid :deep(.catalog-specimen .card-photo) {
+  border-bottom: 1px solid var(--bd);
+}
+.photo-grid :deep(.catalog-specimen .card-id) {
+  font-variant-numeric: tabular-nums;
+}
+@media (min-width: 768px) and (hover: hover) and (pointer: fine) {
+  .photo-grid :deep(.catalog-specimen:is(:hover, :focus-within)) {
+    outline: 1px solid var(--pri);
+    outline-offset: -1px;
+  }
+}
+.catalog-selection {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0 8px 0 12px;
+  border-inline-start: 2px solid var(--pri);
+  background: var(--card-bg-solid);
+  font-size: 0.85rem;
+}
+.catalog-selection span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.catalog-selection button {
+  flex: none;
+  min-height: 44px;
+}
 .shop-page-wrapper {
   width: 100%;
   margin: auto;

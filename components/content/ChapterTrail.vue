@@ -5,7 +5,6 @@ const props = defineProps<{
   host: HTMLElement | null
   chapters: { id: string; label: string }[]
   label: string
-  followNav?: boolean
 }>()
 const active = ref(0)
 let observer: IntersectionObserver | undefined
@@ -16,7 +15,7 @@ const go = (event: MouseEvent, index: number) => {
   active.value = index
   const top = Math.max(
     0,
-    target.getBoundingClientRect().top + window.scrollY - (window.innerWidth < 768 ? 80 : 140)
+    target.getBoundingClientRect().top + window.scrollY - (window.innerWidth < 768 ? 20 : 88)
   )
   const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
   const lenis = (window as any).__lenis
@@ -46,7 +45,7 @@ watch(
         }
         if (visible.size) active.value = Math.min(...visible)
       },
-      { rootMargin: '-160px 0px -35% 0px', threshold: 0 }
+      { rootMargin: '-12% 0px -35% 0px', threshold: 0 }
     )
     targets.forEach((target) => {
       if (target) observer!.observe(target)
@@ -58,11 +57,7 @@ onBeforeUnmount(() => observer?.disconnect())
 </script>
 
 <template>
-  <nav
-    class="chapter-trail"
-    :class="{ 'chapter-trail--follow-nav': followNav }"
-    :aria-label="label"
-  >
+  <nav class="chapter-trail" :aria-label="label">
     <a
       v-for="(chapter, index) in chapters"
       :key="chapter.id"
@@ -79,23 +74,15 @@ onBeforeUnmount(() => observer?.disconnect())
 
 <style scoped>
 .chapter-trail {
-  position: sticky;
-  top: calc(var(--site-nav-height, 64px) + 8px);
-  z-index: 8;
+  position: fixed;
+  inset-inline: 0;
+  bottom: calc(var(--page-dock-bottom) + 3px);
+  z-index: 900;
+  padding-inline: var(--site-content-gutter, 16px);
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   background: var(--card-bg-solid);
   border-block: 1px solid var(--bd);
-  margin-block: 16px;
-}
-.chapter-trail--follow-nav {
-  transition: transform 200ms ease-out;
-}
-@media (min-width: 768px) {
-  :global(body:has(.sticky-nav.nav-hidden) .chapter-trail--follow-nav:not(:focus-within)) {
-    transform: translateY(calc(-100% - var(--site-nav-height, 64px) - 8px));
-    pointer-events: none;
-  }
 }
 .chapter-trail a {
   position: relative;
@@ -133,9 +120,6 @@ onBeforeUnmount(() => observer?.disconnect())
   outline-offset: -3px;
 }
 @media (max-width: 767px) {
-  .chapter-trail {
-    top: 0;
-  }
   .chapter-trail a {
     flex-direction: column;
     justify-content: center;
@@ -145,7 +129,6 @@ onBeforeUnmount(() => observer?.disconnect())
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .chapter-trail--follow-nav,
   .chapter-line {
     transition: none;
   }

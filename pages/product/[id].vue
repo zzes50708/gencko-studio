@@ -859,7 +859,10 @@ useContentResponse(currentProduct, pending, productError)
                 </span>
               </div>
               <div class="related-info">
-                <div class="related-morph" :title="item.Morph">{{ item.Morph }}</div>
+                <div class="related-card-heading">
+                  <div class="related-morph" :title="item.Morph">{{ item.Morph }}</div>
+                  <span class="related-card-arrow" aria-hidden="true">↗</span>
+                </div>
                 <div class="related-meta">
                   <span aria-label="生日">{{ item.Birthday || '未登錄' }}</span>
                   <span aria-label="性別或孵化溫度">{{ formatAnimalPreviewSex(item) }}</span>
@@ -940,6 +943,37 @@ useContentResponse(currentProduct, pending, productError)
 </template>
 
 <style scoped>
+.related-grid .related-card {
+  border-radius: 8px;
+  padding: 5px;
+  background: var(--card-bg-solid);
+}
+.related-grid .related-img-wrap {
+  border-radius: 4px;
+}
+.related-grid .related-card-arrow {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border: 1px solid var(--bd);
+  border-radius: 50%;
+  transition: transform 160ms ease-out;
+}
+@media (min-width: 768px) and (hover: hover) and (pointer: fine) {
+  .related-grid .related-card:is(:hover, :focus-visible) .related-card-arrow {
+    transform: translate(1px, -1px);
+    background: var(--pri-btn);
+    border-color: var(--pri-btn);
+    color: white;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .related-grid .related-card-arrow {
+    transition: none;
+    transform: none !important;
+  }
+}
 .product-page-wrapper {
   width: 100%;
 }
@@ -1494,6 +1528,24 @@ useContentResponse(currentProduct, pending, productError)
 }
 .related-info {
   padding: 8px 10px;
+}
+.related-card-heading {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 4px;
+}
+.related-card-heading .related-morph {
+  min-width: 0;
+}
+.related-card-arrow {
+  flex: none;
+  color: var(--pri);
+  font-size: 0.8rem;
+  line-height: 1.25;
+}
+.related-card:focus-visible .related-card-arrow {
+  color: var(--txt);
 }
 .related-meta {
   display: none;

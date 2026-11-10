@@ -244,7 +244,18 @@ useHead({
           aria-label="搜尋種群品系、基因或編號"
           placeholder="搜尋品系、基因或編號"
         />
-        <span aria-live="polite">{{ breedersList.length }} 隻</span>
+        <button
+          v-if="breederKeyword"
+          type="button"
+          class="breeder-clear-search"
+          aria-label="清除搜尋"
+          @click="breederKeyword = ''"
+        >
+          清除
+        </button>
+        <span v-if="store.inventoryLoaded || breedersList.length" aria-live="polite">
+          {{ breedersList.length }} 隻
+        </span>
       </div>
 
       <div
@@ -274,7 +285,6 @@ useHead({
       <div v-else-if="breedersList.length === 0" class="breeders-empty-state">
         <span>ARCHIVE UPDATING</span>
         <h3>{{ breederKeyword ? '沒有符合搜尋的種群' : '此物種目前尚無公開種群。' }}</h3>
-        <button v-if="breederKeyword" type="button" @click="breederKeyword = ''">清除搜尋</button>
         <div>
           <NuxtLink no-prefetch to="/shop">瀏覽在售個體</NuxtLink>
           <NuxtLink no-prefetch to="/genes">基因圖鑑</NuxtLink>
@@ -313,8 +323,8 @@ useHead({
             </button>
           </div>
           <div class="breeder-caption">
-            <h3 class="breeder-morph">{{ i.Morph }}</h3>
             <small>{{ i.ID }}</small>
+            <h3 class="breeder-morph">{{ i.Morph }}</h3>
           </div>
         </article>
       </div>
@@ -323,6 +333,27 @@ useHead({
 </template>
 
 <style scoped>
+.photo-grid .breeder-photo-card {
+  border-radius: 8px;
+  box-shadow: 0 2px 6px rgb(0 0 0 / 6%);
+}
+.breeder-photo-card .breeder-photo-observation {
+  overflow: hidden;
+  border-radius: 4px;
+  background: var(--card-bg-solid);
+}
+.breeder-photo-card .breeder-caption {
+  border-top: 1px solid var(--bd);
+  margin-top: 6px;
+}
+@media (min-width: 768px) and (hover: hover) and (pointer: fine) {
+  .photo-grid .breeder-photo-card:has(.breeder-photo-observation:hover) {
+    border-color: var(--pri);
+  }
+  .breeder-photo-card:has(.breeder-photo-observation:hover) .breeder-caption small {
+    color: var(--pri);
+  }
+}
 /* 
   [局部樣式修復] 
   已清除錯誤貼上的 .calc-warn 樣式與多餘的 .card 全域定義。
@@ -834,7 +865,7 @@ useHead({
 .breeders-catalog-tools input {
   min-width: 0;
   flex: 1;
-  min-height: 40px;
+  min-height: 44px;
   padding: 6px 10px;
   border: 1px solid var(--bd);
   background: var(--card-bg-solid);
@@ -845,6 +876,21 @@ useHead({
   font-size: 12px;
   color: var(--txt-muted);
   white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.breeder-clear-search {
+  min-height: 44px;
+  min-width: 44px;
+  padding: 4px 8px;
+  border: 1px solid var(--bd);
+  background: var(--card-bg-solid);
+  color: var(--pri);
+  font: inherit;
+  font-size: 0.8rem;
+}
+.breeder-clear-search:focus-visible {
+  outline: 2px solid var(--pri);
+  outline-offset: 2px;
 }
 .breeders-directory-stage {
   margin-top: 8px;
@@ -855,6 +901,9 @@ useHead({
   display: flex;
   flex-direction: column;
   background: var(--card-bg-solid);
+  border: 1px solid var(--bd);
+  border-radius: 6px;
+  padding: 6px;
 }
 .breeder-photo {
   position: relative;
@@ -874,7 +923,9 @@ useHead({
   padding: 4px 8px;
 }
 .breeder-caption {
-  padding: 6px;
+  padding: 9px 4px 5px;
+  display: grid;
+  gap: 4px;
 }
 .breeder-caption .breeder-morph {
   position: static;
@@ -888,9 +939,10 @@ useHead({
 }
 .breeder-caption small {
   display: block;
-  font-size: 10px;
+  font-size: 11px;
   color: var(--txt-muted);
-  margin-top: 3px;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
 }
 @media (max-width: 767px) {
   .grid.photo-grid {

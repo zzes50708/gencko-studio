@@ -31,21 +31,23 @@ test('原有觸控按鈕與即時結果，不增加操作層級', async ({ page 
     /active/
   )
 })
-test('基因說明捲動仍可關閉並返回原按鈕', async ({ page }) => {
+test('基因說明在頁內切換與收合', async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 600 })
-  for (const name of ['基因觀念', '多遺傳說明']) {
-    const trigger = page.getByRole('button', { name, exact: true })
-    await trigger.tap()
-    const dialog = page.getByRole('dialog')
-    const close = page.getByRole('button', { name: '關閉基因說明' })
-    await expect(close).toBeFocused()
-    const before = (await close.boundingBox())!
-    await page.locator('.calc-info-body').evaluate((el) => (el.scrollTop = el.scrollHeight))
-    expect((await close.boundingBox())!.y).toBe(before.y)
-    await page.keyboard.press('Escape')
-    await expect(dialog).toHaveCount(0)
-    await expect(trigger).toBeFocused()
-  }
+  const types = page.getByRole('button', { name: '基因觀念', exact: true })
+  const poly = page.getByRole('button', { name: '多遺傳說明', exact: true })
+  const info = page.locator('#calc-inline-info')
+  await expect(info).toBeHidden()
+  await types.tap()
+  await expect(types).toHaveAttribute('aria-expanded', 'true')
+  await expect(info).toContainText('完全顯性')
+  await poly.tap()
+  await expect(types).toHaveAttribute('aria-expanded', 'false')
+  await expect(poly).toHaveAttribute('aria-expanded', 'true')
+  await expect(info).toContainText('體色強化')
+  await expect(page.getByRole('dialog')).toHaveCount(0)
+  await expect(page.locator('.calc-mobile-parents button').first()).toBeEnabled()
+  await poly.tap()
+  await expect(info).toBeHidden()
 })
 test('反向匹配角色標籤與套用返回保留原設定', async ({ page }) => {
   const cards = page.locator('.calc-parent-card')

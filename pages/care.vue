@@ -231,7 +231,7 @@ const feedingWarnings = DANGERS.filter((item) => item.id === 'monoDiet')
       <div class="care-progress-fill"></div>
     </div>
 
-    <section class="care-hero">
+    <section class="care-hero compact-title-row">
       <div class="care-document-meta">
         <span>GENCKO FIELD MANUAL</span>
         <span>REV. 01 · 日常照護</span>
@@ -240,23 +240,22 @@ const feedingWarnings = DANGERS.filter((item) => item.id === 'monoDiet')
         <div class="care-hero-kicker">CARE MANUAL · 日常照護手冊</div>
         <h1 class="care-hero-title">守宮飼養指南</h1>
       </div>
-    </section>
 
-    <nav class="care-decision-map" data-testid="care-decision-map" aria-label="照護決策入口">
-      <NuxtLink no-prefetch to="/start-here">新手入門</NuxtLink>
-      <NuxtLink no-prefetch to="/health">健康評估</NuxtLink>
-      <NuxtLink no-prefetch to="/hospital">特寵醫院</NuxtLink>
-      <NuxtLink no-prefetch to="/articles">知識文章</NuxtLink>
-    </nav>
+      <nav
+        class="care-decision-map compact-title-links"
+        data-testid="care-decision-map"
+        aria-label="照護決策入口"
+      >
+        <NuxtLink no-prefetch to="/start-here">新手入門</NuxtLink>
+        <NuxtLink no-prefetch to="/health">健康評估</NuxtLink>
+        <NuxtLink no-prefetch to="/hospital">特寵醫院</NuxtLink>
+        <NuxtLink no-prefetch to="/articles">知識文章</NuxtLink>
+      </nav>
+    </section>
 
     <div class="care-body">
       <div class="care-main">
-        <ContentChapterTrail
-          :host="careRoot"
-          :chapters="careChapters"
-          label="飼養章節導覽"
-          follow-nav
-        />
+        <ContentChapterTrail :host="careRoot" :chapters="careChapters" label="飼養章節導覽" />
         <section id="env" class="care-section">
           <h2 class="care-h">環境配置</h2>
           <div class="care-env-grid">
@@ -499,7 +498,10 @@ const feedingWarnings = DANGERS.filter((item) => item.id === 'monoDiet')
                 :to="`/articles/${a.ID}`"
                 class="care-related-card"
               >
-                <div class="care-related-title">{{ a.Title }}</div>
+                <div class="care-related-title editorial-card-title">
+                  <span>{{ a.Title }}</span>
+                  <span class="editorial-card-arrow" aria-hidden="true">↗</span>
+                </div>
                 <span v-if="a.Status === 'Draft'" class="article-draft-badge">草稿預覽</span>
                 <div class="care-related-summary">{{ a.Summary }}</div>
               </NuxtLink>
@@ -625,8 +627,8 @@ const feedingWarnings = DANGERS.filter((item) => item.id === 'monoDiet')
   left: 0;
   position: fixed;
   right: 0;
-  top: 0;
-  z-index: 100;
+  bottom: var(--page-dock-bottom);
+  z-index: 901;
 }
 
 .care-progress-fill {

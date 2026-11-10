@@ -553,7 +553,10 @@ useHead(() => ({
             <div class="related-art-info">
               <span v-if="art.Status === 'Draft'" class="article-draft-badge">草稿預覽</span>
               <span class="related-art-cat">{{ art.Category }}</span>
-              <div class="related-art-title">{{ art.Title }}</div>
+              <div class="related-art-title editorial-card-title">
+                <span>{{ art.Title }}</span>
+                <span class="editorial-card-arrow" aria-hidden="true">↗</span>
+              </div>
             </div>
           </NuxtLink>
         </div>
@@ -1281,9 +1284,10 @@ useHead(() => ({
   }
   .reader-reading-track {
     display: block;
-    position: sticky;
-    top: calc(var(--site-nav-height, 64px) + 4px);
-    z-index: 7;
+    position: fixed;
+    inset-inline: 0;
+    bottom: var(--page-dock-bottom);
+    z-index: 1000;
     height: 3px;
     background: var(--bd);
   }
@@ -1302,11 +1306,6 @@ useHead(() => ({
     }
     to {
       transform: scaleX(1);
-    }
-  }
-  @media (max-width: 767px) {
-    .reader-reading-track {
-      top: 0;
     }
   }
 }

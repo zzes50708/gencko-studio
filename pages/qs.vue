@@ -547,18 +547,13 @@ onBeforeUnmount(() => {
         <span>18 QUESTIONS / ONE CLEAR NEXT STEP</span>
       </div>
       <p class="site-page-kicker">READINESS ASSESSMENT CONSOLE</p>
-      <h1 class="page-title">飼養前自我評估</h1>
-
-      <nav class="qs-tool-nav" aria-label="評估後續工具">
-        <div>
-          <span>READINESS CHECK / 18 題</span>
-          <strong>這裡評估飼養準備度，不判斷疾病。</strong>
-        </div>
-        <div class="qs-tool-links">
+      <div class="compact-title-row">
+        <h1 class="page-title">飼養前自我評估</h1>
+        <nav class="qs-tool-links compact-title-links" aria-label="評估後續工具">
           <NuxtLink no-prefetch to="/health">進行健康評估</NuxtLink>
           <NuxtLink no-prefetch to="/hospital">查找特寵醫院</NuxtLink>
-        </div>
-      </nav>
+        </nav>
+      </div>
 
       <!-- 單題表單：每次只呈現目前題目，避免側卡與水平位移干擾閱讀。 -->
       <ClientOnly>
@@ -1689,7 +1684,7 @@ onBeforeUnmount(() => {
 
 .qs-quiz-toolbar {
   position: fixed;
-  top: var(--qs-sticky-top);
+  bottom: var(--page-dock-bottom);
   left: 0;
   z-index: 900;
   width: 100%;
@@ -1700,15 +1695,13 @@ onBeforeUnmount(() => {
   column-gap: 12px;
   padding: 6px 20px;
   padding-inline: var(--site-content-gutter, 16px) !important;
-  border-bottom: 1px solid var(--bd-solid);
+  border-top: 1px solid var(--bd-solid);
   background: var(--card-bg-solid);
-  transform: translateY(var(--qs-toolbar-shift));
-  transition: transform 0.2s ease-out;
 }
 
 .qs-questionnaire {
   /* 固定進度列預留實際高度，避免共用標題留白覆寫後內容被壓住。 */
-  padding-top: var(--qs-toolbar-height);
+  padding-bottom: var(--qs-toolbar-height);
 }
 
 .qs-quiz-head {

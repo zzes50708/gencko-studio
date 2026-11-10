@@ -184,12 +184,12 @@ const onCategoryKeydown = async (event: KeyboardEvent, index: number) => {
         <span>GENCKO ANSWER DESK</span>
         <span>依分類閱讀 / 展開完整回答</span>
       </div>
-      <header class="faq-intro" data-testid="faq-route-map">
+      <header class="faq-intro compact-title-row" data-testid="faq-route-map">
         <div class="faq-intro-copy">
           <p class="site-page-kicker">QUESTIONS / ANSWERS</p>
           <h1>常見問題</h1>
         </div>
-        <nav class="faq-route-map" aria-label="FAQ 延伸入口">
+        <nav class="faq-route-map compact-title-links" aria-label="FAQ 延伸入口">
           <NuxtLink no-prefetch to="/start-here">新手入門</NuxtLink>
           <NuxtLink no-prefetch to="/care">飼養指南</NuxtLink>
           <NuxtLink no-prefetch to="/health">健康評估</NuxtLink>
@@ -221,7 +221,6 @@ const onCategoryKeydown = async (event: KeyboardEvent, index: number) => {
       <p v-if="searching" class="faq-result-count" role="status">找到 {{ resultCount }} 個問題</p>
       <div v-if="searching && !resultCount" class="faq-no-results">
         <p>沒有符合的問題，請試試其他關鍵字。</p>
-        <button type="button" class="btn-app" @click="searchQuery = ''">清除搜尋</button>
       </div>
       <!-- 分類 Tab -->
       <div v-if="!searching" class="cat-tabs" role="tablist" aria-label="常見問題分類">
@@ -295,6 +294,49 @@ const onCategoryKeydown = async (event: KeyboardEvent, index: number) => {
 </template>
 
 <style scoped>
+.faq-list .faq-item {
+  border-inline-start: 2px solid transparent;
+}
+.faq-list .faq-item.active {
+  border-inline-start-color: var(--pri);
+  background: var(--card-bg-solid);
+}
+@media (min-width: 768px) and (hover: hover) and (pointer: fine) {
+  .faq-list .faq-q:hover .q-text {
+    color: var(--pri);
+  }
+}
+.faq-reveal-enter-active .faq-a,
+.faq-reveal-leave-active .faq-a {
+  transition:
+    opacity 160ms ease-out,
+    transform 160ms ease-out;
+}
+.faq-reveal-enter-from .faq-a,
+.faq-reveal-leave-to .faq-a {
+  opacity: 0;
+  transform: translateY(-4px);
+}
+@media (prefers-reduced-motion: reduce) {
+  .faq-reveal-enter-active .faq-a,
+  .faq-reveal-leave-active .faq-a {
+    transition: none;
+    transform: none;
+    opacity: 1;
+  }
+}
+.faq-search button {
+  flex: none;
+  min-height: 44px;
+}
+.faq-no-results {
+  padding: 12px;
+  border-inline-start: 2px solid var(--pri);
+  background: var(--card-bg-solid);
+}
+.faq-no-results p {
+  margin: 0;
+}
 .faq-page-wrapper {
   max-width: 1080px;
   margin: 0 auto;

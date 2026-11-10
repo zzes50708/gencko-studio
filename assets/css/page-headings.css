@@ -785,8 +785,8 @@
     font-size: 18px !important;
   }
   #main-content .calc-stage--species :is(.calc-selector-chip, .calc-help-btn) {
-    min-height: 40px !important;
-    height: 40px !important;
+    min-height: 44px !important;
+    height: 44px !important;
     padding-block: 4px !important;
     font-size: 13px !important;
   }

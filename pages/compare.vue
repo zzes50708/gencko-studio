@@ -352,7 +352,7 @@ const removeItem = (id) => {
             單一個體獨有
           </span>
         </div>
-        <p class="compare-scroll-hint">
+        <p v-if="items.length !== 2" class="compare-scroll-hint">
           {{
             items.length > 2
               ? '目前先顯示兩隻，向左滑動查看第三隻'
@@ -374,7 +374,9 @@ const removeItem = (id) => {
         />
       </div>
 
-      <p v-if="onlyDifferences && !hasDifferences" role="status">比較欄位皆相同。</p>
+      <p v-if="onlyDifferences && !hasDifferences" class="compare-match-status" role="status">
+        比較欄位皆相同。
+      </p>
       <section class="compare-scroll" role="region" aria-label="個體比較表" tabindex="0">
         <table class="compare-table" :class="`cols-${items.length}`">
           <caption class="sr-only">
@@ -521,6 +523,39 @@ const removeItem = (id) => {
 </template>
 
 <style scoped>
+.compare-table .item-heading .item-link {
+  display: grid;
+  gap: 5px;
+  padding: 6px;
+  border: 1px solid var(--bd);
+  border-radius: 6px;
+  background: var(--card-bg-solid);
+  transition: transform 160ms ease-out;
+}
+.compare-table .item-heading .item-link:focus-visible {
+  outline: 2px solid var(--pri);
+  outline-offset: 2px;
+}
+@media (min-width: 768px) and (hover: hover) and (pointer: fine) {
+  .compare-table .item-heading .item-link:hover {
+    border-color: var(--pri);
+    transform: translateY(-2px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .compare-table .item-heading .item-link {
+    transition: none;
+    transform: none !important;
+  }
+}
+.compare-match-status {
+  margin-block: 8px;
+  padding: 10px 12px;
+  border-inline-start: 2px solid var(--pri);
+  background: var(--card-bg-solid);
+  color: var(--txt);
+  font-size: 0.875rem;
+}
 .compare-differences[aria-pressed='true'] {
   background: var(--pri);
   border-color: var(--pri);

@@ -74,14 +74,8 @@ useHead({
       <span>GENCKO BRAND FILE</span>
       <span>DATA / CARE / CONTINUITY</span>
     </div>
-    <PageHero layout="stack" kicker="WHY GENCKO" title="品牌與服務" />
-
-    <section class="purchase-hub" aria-labelledby="purchase-hub-title">
-      <div class="hub-heading">
-        <span>PURCHASE PATH</span>
-        <h2 id="purchase-hub-title">相關頁面</h2>
-      </div>
-      <div class="purchase-grid">
+    <PageHero class="compact-title-row" kicker="WHY GENCKO" title="品牌與服務">
+      <nav class="purchase-grid compact-title-links" aria-label="相關頁面">
         <NuxtLink
           no-prefetch
           v-for="item in purchasePaths"
@@ -89,11 +83,11 @@ useHead({
           :to="item.to"
           class="purchase-card card"
         >
-          <h3>{{ item.label }}</h3>
-          <span aria-hidden="true">前往 →</span>
+          {{ item.label }}
+          <span aria-hidden="true">↗</span>
         </NuxtLink>
-      </div>
-    </section>
+      </nav>
+    </PageHero>
 
     <section class="overview-grid">
       <NuxtLink
@@ -119,6 +113,30 @@ useHead({
 </template>
 
 <style scoped>
+.overview-grid .overview-card {
+  border: 1px solid var(--bd);
+  border-radius: 8px;
+  background: var(--card-bg-solid);
+}
+.overview-grid .overview-card .preview-shell {
+  border: 1px solid var(--bd);
+  border-radius: 6px;
+  padding: 6px;
+}
+@media (min-width: 768px) {
+  .overview-grid .overview-card .preview-shell {
+    aspect-ratio: 16 / 9;
+  }
+}
+@media (min-width: 768px) and (hover: hover) and (pointer: fine) {
+  .overview-grid .overview-card:is(:hover, :focus-visible) {
+    border-color: var(--pri);
+    box-shadow: 0 4px 12px rgb(0 0 0 / 9%);
+  }
+  .overview-grid .overview-card:is(:hover, :focus-visible) .preview-shell {
+    border-color: var(--pri);
+  }
+}
 .overview-action {
   justify-self: start;
   margin-top: 8px;

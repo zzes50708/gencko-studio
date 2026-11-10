@@ -703,17 +703,13 @@ const copied = ref(false)
         <span>OBSERVE / ASSESS / ACT</span>
       </div>
       <p class="site-page-kicker">HEALTH ASSESSMENT CONSOLE</p>
-      <h1 class="page-title">健康評估系統</h1>
-      <p class="h-entry-sub">緊急判斷、完整檢查或購入前評估。</p>
-      <nav class="health-tool-nav" aria-label="健康工具導覽">
-        <div class="health-tool-nav-copy">
-          <strong>還沒飼養先評估適不適合飼養；守宮已有症狀就直接找醫院。</strong>
-        </div>
-        <div class="health-tool-nav-links">
+      <div class="compact-title-row">
+        <h1 class="page-title">健康評估系統</h1>
+        <nav class="health-tool-nav-links compact-title-links" aria-label="健康工具導覽">
           <NuxtLink no-prefetch to="/qs">飼養前自評</NuxtLink>
           <NuxtLink no-prefetch to="/hospital">查找特寵醫院</NuxtLink>
-        </div>
-      </nav>
+        </nav>
+      </div>
       <div class="h-entry-foot">
         <p>⚠️ 本工具僅供觀察參考，無法取代獸醫診斷。若守宮狀態急速惡化，請直接就醫。</p>
       </div>
@@ -3226,23 +3222,22 @@ const copied = ref(false)
   display: none;
 }
 
-/* 問卷置頂列：把返回、模式名稱與進度整合成單一緊湊工具列。 */
+/* 問卷底部列：把返回、模式名稱與進度整合成單一緊湊工具列。 */
 .health-container {
   --health-quiz-toolbar-height: 94px;
 }
 
 .health-container--quiz .h-quiz-toolbar {
   position: fixed;
-  top: var(--health-sticky-top);
+  bottom: var(--page-dock-bottom);
   left: 50%;
   z-index: 900;
   width: 100%;
   padding: 8px 20px 10px;
   box-sizing: border-box;
-  border-bottom: 1px solid var(--bd);
+  border-top: 1px solid var(--bd);
   background: var(--card-bg-solid);
-  transform: translate(-50%, var(--health-nav-shift));
-  transition: transform 0.2s ease-out;
+  transform: translateX(-50%);
 }
 
 .health-container--quiz .h-quiz-head {
@@ -3290,11 +3285,12 @@ const copied = ref(false)
 }
 
 .health-container--quiz .h-q-list {
-  padding-top: calc(var(--health-quiz-toolbar-height) + 10px);
+  padding-top: 10px;
+  padding-bottom: calc(var(--health-quiz-toolbar-height) + 10px);
 }
 
 .health-container--quiz .h-q-card {
-  scroll-margin-top: calc(var(--health-sticky-top) + var(--health-quiz-toolbar-height) + 12px);
+  scroll-margin-top: calc(var(--health-sticky-top) + 12px);
 }
 
 .h-entry-sub {
@@ -3373,5 +3369,11 @@ const copied = ref(false)
   .h-quiz-toolbar {
     transition: none;
   }
+}
+</style>
+
+<style scoped>
+.health-container--quiz .h-quiz-foot {
+  bottom: calc(var(--page-dock-bottom) + var(--health-quiz-toolbar-height));
 }
 </style>

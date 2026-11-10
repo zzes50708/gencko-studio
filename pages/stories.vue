@@ -34,31 +34,23 @@ useHead({
       <span>GENCKO STORY ARCHIVE</span>
       <span>REAL RECORDS IN PREPARATION</span>
     </div>
-    <header class="hero card">
+    <header class="hero card compact-title-row">
       <div>
         <div class="eyebrow">STORIES</div>
         <h1 class="page-title">真實故事，內容整理中</h1>
       </div>
+      <nav class="action-grid compact-title-links" aria-label="相關頁面">
+        <NuxtLink
+          no-prefetch
+          v-for="item in currentActions"
+          :key="item.to"
+          :to="item.to"
+          class="link-chip"
+        >
+          {{ item.label }}
+        </NuxtLink>
+      </nav>
     </header>
-
-    <section class="content-section">
-      <article class="card content-card">
-        <div class="section-head">
-          <h2 class="sec-title">相關頁面</h2>
-        </div>
-        <div class="action-grid">
-          <NuxtLink
-            no-prefetch
-            v-for="item in currentActions"
-            :key="item.to"
-            :to="item.to"
-            class="link-chip"
-          >
-            {{ item.label }}
-          </NuxtLink>
-        </div>
-      </article>
-    </section>
   </div>
 </template>
 

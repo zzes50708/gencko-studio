@@ -312,7 +312,6 @@ useContentResponse(viewingGene, pending, geneError)
         </dl>
       </header>
       <nav class="gene-tool-nav" aria-label="基因詞條工具">
-        <span>GENE WORKFLOW</span>
         <div class="gene-tools-actions">
           <TheBackButton fallback="/genes" text="返回圖鑑" />
           <NuxtLink no-prefetch to="/calculator" class="gene-tool-link">前往基因計算機</NuxtLink>

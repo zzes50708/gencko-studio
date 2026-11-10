@@ -189,6 +189,23 @@ useHead({
 </template>
 
 <style scoped>
+.flow-page :deep(.poster-node .node-card) {
+  border: 1px solid var(--bd);
+  border-radius: 8px;
+  background: var(--card-bg-solid);
+}
+.flow-page :deep(.poster-node:focus .node-card),
+.flow-page :deep(.poster-node:focus-within .node-card) {
+  border-color: var(--pri);
+}
+.flow-page :deep(.poster-node:focus .node-no) {
+  color: var(--pri);
+}
+@media (min-width: 768px) and (hover: hover) and (pointer: fine) {
+  .flow-page :deep(.node-card:has(.node-link:hover)) {
+    border-color: var(--pri);
+  }
+}
 .hero-strip a {
   text-decoration: none;
 }
