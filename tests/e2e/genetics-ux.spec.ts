@@ -58,8 +58,13 @@ test('手機親代全寬切換、物種恢復與即時結果', async ({ page }) 
   await page.locator('.calc-mobile-parents').getByRole('button', { name: /母/ }).click()
   await expect(female).toBeVisible()
   await expect(male).toBeHidden()
-  await page.getByRole('combobox', { name: '物種', exact: true }).selectOption('肥尾守宮')
-  await page.getByRole('combobox', { name: '物種', exact: true }).selectOption('豹紋守宮')
+  for (const species of ['肥尾守宮', '豹紋守宮']) {
+    await page.getByRole('button', { name: /^物種：/ }).click()
+    await page
+      .locator('#calc-menu-species')
+      .getByRole('button', { name: species, exact: true })
+      .click()
+  }
   await expect(page.locator('.calc-mobile-parents')).toContainText('川普白化')
   await expect(page.getByRole('button', { name: /查看配對結果/ })).toHaveCount(0)
   await expect(page.getByRole('region', { name: '配對結果' })).toBeVisible()
