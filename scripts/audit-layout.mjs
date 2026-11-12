@@ -2,7 +2,7 @@ import { chromium } from '@playwright/test'
 import { mkdir, writeFile } from 'node:fs/promises'
 
 const base = process.env.AUDIT_URL || 'http://127.0.0.1:3001'
-const routes = ['/', '/home', '/shop', '/articles', '/articles/ART-007', '/genes', '/genes/' + encodeURIComponent('檸檬霜'), '/breeders', '/care', '/start-here', '/guide', '/health', '/qs', '/faq', '/calculator', '/hospital', '/buying-guide', '/why-gencko', '/about', '/stories', '/merch', '/certificates', '/compare', '/profile', '/auction', '/auction-management', '/line-login-return', '/hero-lab']
+const routes = ['/', '/home', '/shop', '/shop/all', '/articles', '/articles/ART-007', '/genes', '/genes/' + encodeURIComponent('檸檬霜'), '/breeders', '/care', '/start-here', '/guide', '/health', '/qs', '/faq', '/calculator', '/hospital', '/buying-guide', '/why-gencko', '/about', '/stories', '/merch', '/certificates', '/compare', '/profile', '/auction', '/auction-management', '/line-login-return', '/hero-lab']
 // 動態頁挑選目前仍公開的實際個體，避免只驗證空白／錯誤頁。
 const sitemap = await fetch(new URL('/api/_sitemap-urls', base), { signal: AbortSignal.timeout(20000) })
 if (!sitemap.ok) throw new Error('無法取得公開頁面清單，停止版面驗證。')

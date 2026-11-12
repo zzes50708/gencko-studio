@@ -27,8 +27,8 @@ async function fixtures(page: any, options: any = {}) {
   await page.route('**/rest/v1/auctions**', (r) => r.fulfill({ json: options.auctions || [] }))
 }
 async function openProduct(page: any) {
-  await page.goto('/shop')
-  await page.locator('.flip-card a[href="/product/UX-P"]').first().click()
+  await page.goto('/shop/all')
+  await page.locator('.catalog-card a[href="/product/UX-P"]').first().click()
   await page.locator('.prod-title').waitFor()
 }
 test('手機個體加入比較、分享失敗、缺圖及原生圖卡返回隔離', async ({ browser, baseURL }) => {

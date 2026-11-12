@@ -33,7 +33,7 @@ async function fixtures(page: any, exhibition = false, listingPrice: number | nu
     })
   )
   await page.goto('/shop?sold=true')
-  await expect(page.locator('.flip-card')).toHaveCount(2)
+  await expect(page.locator('.catalog-card')).toHaveCount(2)
 }
 
 for (const width of [320, 390, 1440]) {
@@ -41,23 +41,21 @@ for (const width of [320, 390, 1440]) {
     await page.setViewportSize({ width, height: 900 })
     await fixtures(page)
     const card = page
-      .locator('.flip-card')
+      .locator('.catalog-card')
       .filter({ has: page.locator('a[href="/product/SOLD-PREVIEW"]') })
-    const stamp = card.locator('.card-sold-stamp')
+    const stamp = card.locator('.catalog-card-status')
     await expect(stamp).toBeVisible()
     await expect(stamp).toHaveText('已售出')
-    const price = card.locator(
-      width < 768 ? '.card-purchase-row .slim-price' : '.desktop-front-price'
-    )
-    await expect(price).toContainText('8000')
+    const price = card.locator('.catalog-card-price')
+    await expect(price).toContainText('8,000')
     await expect(card).not.toContainText('9999')
     await expect(
       page
-        .locator('.flip-card')
+        .locator('.catalog-card')
         .filter({ has: page.locator('a[href="/product/AVAILABLE-PREVIEW"]') })
-        .locator('.card-sold-stamp')
+        .locator('.catalog-card-status')
     ).toHaveCount(0)
-    const photoBounds = (await card.locator('.card-photo').boundingBox())!
+    const photoBounds = (await card.locator('.catalog-card-photo').boundingBox())!
     const stampBounds = (await stamp.boundingBox())!
     expect(stampBounds.x).toBeGreaterThanOrEqual(photoBounds.x)
     expect(stampBounds.y).toBeGreaterThanOrEqual(photoBounds.y)
@@ -67,7 +65,7 @@ for (const width of [320, 390, 1440]) {
     )
     await card.scrollIntoViewIfNeeded()
     await page.screenshot({ path: `output/shop-sold-price-${width}.png` })
-    await card.locator('.flip-card-link').click()
+    await card.locator('.catalog-card-photo').click()
     await expect(page.locator('.prod-title')).toHaveText('黑夜')
     await expect(page.locator('.prod-price-area')).toContainText('NT$ 8000')
     await expect(page.locator('.prod-price-area')).toContainText('已售出')
@@ -80,23 +78,23 @@ test('展場模式下已售出個體仍保留原標示售價', async ({ page }) 
   await page.setViewportSize({ width: 390, height: 900 })
   await fixtures(page, true)
   const available = page
-    .locator('.flip-card')
+    .locator('.catalog-card')
     .filter({ has: page.locator('a[href="/product/AVAILABLE-PREVIEW"]') })
-  await expect(available.locator('.exhibition-note')).toHaveText('展場請詢價')
+  await expect(available.locator('.catalog-card-price')).toHaveText('展場請詢價')
   const sold = page
-    .locator('.flip-card')
+    .locator('.catalog-card')
     .filter({ has: page.locator('a[href="/product/SOLD-PREVIEW"]') })
-  await expect(sold.locator('.card-purchase-row .slim-price')).toHaveText('$8000')
-  await expect(sold.locator('.card-sold-stamp')).toBeVisible()
+  await expect(sold.locator('.catalog-card-price')).toHaveText('NT$ 8,000')
+  await expect(sold.locator('.catalog-card-status')).toBeVisible()
 })
 
 test('售價缺值時明示未登錄，不顯示空金額或改用內部成交紀錄', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 900 })
   await fixtures(page, false, null)
   const card = page
-    .locator('.flip-card')
+    .locator('.catalog-card')
     .filter({ has: page.locator('a[href="/product/SOLD-PREVIEW"]') })
-  await expect(card.locator('.card-purchase-row .slim-price')).toHaveText('售價未登錄')
-  await card.locator('.flip-card-link').click()
+  await expect(card.locator('.catalog-card-price')).toHaveText('售價未登錄')
+  await card.locator('.catalog-card-photo').click()
   await expect(page.locator('.prod-price-area .price')).toHaveText('售價未登錄')
 })

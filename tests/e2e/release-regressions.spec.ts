@@ -34,7 +34,7 @@ for (const surface of ['shop', 'product']) {
       await page.route('**/rest/v1/site_settings**', (route) => route.fulfill({ json: null }))
       await page.route('**/rest/v1/auctions**', (route) => route.fulfill({ json: [] }))
       const widths: string[] = []
-      const originalWidth = surface === 'shop' ? '400' : '800'
+      const originalWidth = '800'
       await page.route('https://wsrv.nl/**', (route) => {
         const url = new URL(route.request().url())
         if (!url.searchParams.get('url')?.includes('example.invalid')) return route.continue()
@@ -49,10 +49,10 @@ for (const surface of ['shop', 'product']) {
             : { status: 404, body: '' }
         )
       })
-      await page.goto('/shop')
+      await page.goto('/shop/all')
       await ready(page)
       if (surface === 'product') await navigate(page, '/product/PHOTO-FOLLOWUP')
-      const img = page.locator(surface === 'shop' ? '.flip-card img' : '.prod-main-img').first()
+      const img = page.locator(surface === 'shop' ? '.catalog-card img' : '.prod-main-img').first()
       await expect(img).toBeVisible()
       await expect
         .poll(() => img.evaluate((el: HTMLImageElement) => el.naturalWidth))
@@ -83,7 +83,7 @@ test('個體頁收藏儲存被拒絕時仍可切換收藏，不顯示全頁錯�
   )
   await page.route('**/rest/v1/site_settings**', (route) => route.fulfill({ json: null }))
   await page.route('**/rest/v1/auctions**', (route) => route.fulfill({ json: [] }))
-  await page.goto('/shop')
+  await page.goto('/shop/all')
   await ready(page)
   await navigate(page, '/product/STORAGE-FOLLOWUP')
   await expect(page.locator('.prod-title')).toBeVisible()
@@ -134,9 +134,9 @@ for (const surface of ['animal', 'hospital']) {
         ]
       })
     )
-    await page.goto('/shop')
+    await page.goto('/shop/all')
     await ready(page)
-    await expect(page.locator('.flip-card')).toHaveCount(1)
+    await expect(page.locator('.catalog-card')).toHaveCount(1)
     await page.evaluate(() => {
       const store = (
         document.querySelector('#__nuxt') as any

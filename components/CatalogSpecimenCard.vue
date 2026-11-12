@@ -23,7 +23,7 @@ const status = computed(
     ] || ''
 )
 const price = computed(() => {
-  if (store.isExhibitionMode) return store.exhibitionNote
+  if (store.isExhibitionMode && props.item.Status !== 'Sold') return store.exhibitionNote
   if (props.item.Status === 'Auction' && props.hasAuction) return '查看競標'
   const amount = props.item.ListingPrice
   return amount === null || amount === undefined || amount === ''

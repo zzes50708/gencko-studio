@@ -3,7 +3,7 @@ import { defineConfig, devices } from '@playwright/test'
 export default defineConfig({
   testDir: './tests/e2e',
   testMatch:
-    /(?:article-outline-ux|guide-care-ux|shopping-ux|shop-desktop-flip-ux|shop-morph-picker|shop-sold-price|product-mobile-layout|product-compare-ux|identity-ux|genetics-ux|calculator-experience|faq-articles-ux|filter-reset-ux|assessment-ux|starter-buying-ux|hospital-sidebar)\.spec\.ts/,
+    /(?:article-outline-ux|guide-care-ux|shopping-ux|shop-collections|shop-desktop-flip-ux|shop-morph-picker|shop-sold-price|product-mobile-layout|product-compare-ux|identity-ux|genetics-ux|calculator-experience|faq-articles-ux|filter-reset-ux|assessment-ux|starter-buying-ux|hospital-sidebar)\.spec\.ts/,
   timeout: 45000,
   workers: 1,
   retries: process.env.CI ? 1 : 0,

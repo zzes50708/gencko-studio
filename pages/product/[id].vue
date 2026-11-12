@@ -735,7 +735,9 @@ useContentResponse(currentProduct, pending, productError)
                 </div>
                 <div>
                   <dt>性別</dt>
-                  <dd class="sex-val">{{ fmtSex(currentProduct) }}</dd>
+                  <dd class="sex-val" :class="getSexCls(currentProduct)">
+                    {{ fmtSex(currentProduct) }}
+                  </dd>
                 </div>
                 <div>
                   <dt>出生日期</dt>

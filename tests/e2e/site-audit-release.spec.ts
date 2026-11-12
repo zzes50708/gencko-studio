@@ -194,9 +194,9 @@ for (const path of [
 for (const width of [375, 430, 768]) {
   test(`${width}px 商城、閱讀入口及篩選不水平溢出`, async ({ page }) => {
     await page.setViewportSize({ width, height: 900 })
-    await page.goto('/shop')
+    await page.goto('/shop/all')
     await ready(page)
-    await expect(page.locator('.flip-card').first()).toBeVisible()
+    await expect(page.locator('.catalog-card').first()).toBeVisible()
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(
       true
     )

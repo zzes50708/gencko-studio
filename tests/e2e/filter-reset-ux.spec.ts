@@ -17,17 +17,17 @@ test('已選品系可重置，網址不保留舊條件', async ({ page }) => {
   )
   await page.goto('/shop?morph=' + encodeURIComponent('黑夜'))
   await expect(page.getByRole('combobox', { name: '選擇品系' })).toHaveValue('黑夜')
-  await expect(page.locator('.flip-card')).toHaveCount(1)
+  await expect(page.locator('.catalog-card')).toHaveCount(1)
   await page.getByRole('button', { name: /展開篩選/ }).click()
   await page.getByRole('button', { name: '重置全部篩選', exact: true }).click()
   await expect(page.locator('.catalog-search')).toHaveValue('')
   await expect(page).not.toHaveURL(/morph=/)
-  await expect(page.locator('.flip-card')).toHaveCount(1)
+  await expect(page.locator('.catalog-card')).toHaveCount(1)
 })
 
 test('手機篩選清除同步清掉基因搜尋文字', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 850 })
-  await page.goto('/shop')
+  await page.goto('/shop/all')
   await page.waitForFunction(() => {
     const app = (document.querySelector('#__nuxt') as any)?.__vue_app__?.config.globalProperties
       .$nuxt
