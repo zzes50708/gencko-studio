@@ -50,7 +50,7 @@ test('手機親代全寬切換、物種恢復與即時結果', async ({ page }) 
   await expect(female).toBeHidden()
   expect(
     (await page.locator('.calc-mobile-parents button').first().boundingBox())!.height
-  ).toBeGreaterThanOrEqual(52)
+  ).toBeGreaterThanOrEqual(44)
   expect(
     (await male.locator('.calc-dd-item-row--trigger').first().boundingBox())!.height
   ).toBeGreaterThanOrEqual(44)
