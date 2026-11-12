@@ -16,7 +16,8 @@ interface TimelineNode {
 // 節點含可選 to / linkLabel：有 to 才在內文後渲染 inline 連結（純流程節點維持純文字）。
 defineProps({
   kicker: { type: String, default: 'FLOW' },
-  nodes: { type: Array as PropType<TimelineNode[]>, default: () => [] }
+  nodes: { type: Array as PropType<TimelineNode[]>, default: () => [] },
+  activeStep: { type: Number, default: 0 }
 })
 </script>
 
@@ -29,6 +30,7 @@ defineProps({
       :key="node.no"
       :id="`purchase-step-${node.no}`"
       class="poster-node"
+      :class="{ 'is-current': activeStep === Number(node.no) }"
       tabindex="-1"
     >
       <div class="node-pin">

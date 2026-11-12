@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { onBeforeUnmount, ref, watch } from 'vue'
+import { useMediaQuery } from '@vueuse/core'
 
 const props = defineProps<{
   host: HTMLElement | null
@@ -7,6 +8,7 @@ const props = defineProps<{
   label: string
 }>()
 const active = ref(0)
+const mobile = useMediaQuery('(max-width: 767px)')
 let observer: IntersectionObserver | undefined
 const go = (event: MouseEvent, index: number) => {
   const target = props.host?.querySelector<HTMLElement>(`[id="${props.chapters[index]?.id}"]`)
@@ -28,8 +30,8 @@ const go = (event: MouseEvent, index: number) => {
 }
 // 以章節進出閱讀區域更新狀態，避免每次捲動逐一量測整頁。
 watch(
-  () => props.host,
-  (host) => {
+  [() => props.host, mobile],
+  ([host]) => {
     observer?.disconnect()
     if (!import.meta.client || !host) return
     const visible = new Set<number>()
@@ -43,9 +45,30 @@ watch(
           if (entry.isIntersecting) visible.add(index)
           else visible.delete(index)
         }
-        if (visible.size) active.value = Math.min(...visible)
+        if (visible.size) {
+          const readingTop = mobile.value ? 22 : 90
+          const readingBottom = window.innerHeight * 0.65
+          let best = active.value
+          let largest = -1
+          for (const index of visible) {
+            const rect = targets[index]?.getBoundingClientRect()
+            if (!rect) continue
+            const coverage = Math.max(
+              0,
+              Math.min(rect.bottom, readingBottom) - Math.max(rect.top, readingTop)
+            )
+            if (coverage > largest) {
+              largest = coverage
+              best = index
+            }
+          }
+          active.value = best
+        }
       },
-      { rootMargin: '-12% 0px -35% 0px', threshold: 0 }
+      {
+        rootMargin: `${mobile.value ? '-22px' : '-90px'} 0px -35% 0px`,
+        threshold: [0, 0.01, 0.1, 0.25, 0.5, 0.75, 1]
+      }
     )
     targets.forEach((target) => {
       if (target) observer!.observe(target)

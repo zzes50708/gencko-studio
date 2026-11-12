@@ -946,6 +946,7 @@ const formatPercent = (probability) => {
                   'calc-role-chip',
                   { active: calcCardRoles[parent.key] === parent.defaultRole }
                 ]"
+                :aria-pressed="calcCardRoles[parent.key] === parent.defaultRole"
                 @click="calcSetRole(parent.key, parent.defaultRole)"
               >
                 {{ parent.label }}
@@ -953,6 +954,7 @@ const formatPercent = (probability) => {
               <button
                 type="button"
                 :class="['calc-role-chip', { active: calcCardRoles[parent.key] === 'child' }]"
+                :aria-pressed="calcCardRoles[parent.key] === 'child'"
                 @click="calcSetRole(parent.key, 'child')"
               >
                 子代
@@ -973,6 +975,7 @@ const formatPercent = (probability) => {
                     'calc-category-chip',
                     { active: calcExpandedCategories[parent.key] === category.id }
                   ]"
+                  :aria-pressed="calcExpandedCategories[parent.key] === category.id"
                   @click="calcToggleCategory(parent.key, category.id)"
                 >
                   {{ category.label }}
@@ -1542,10 +1545,6 @@ const formatPercent = (probability) => {
   transition: 0.3s;
   box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
 }
-.calc-parent-card:hover {
-  transform: translateY(-3px);
-}
-
 .calc-p-header {
   padding: 12px;
   display: flex;
@@ -1985,19 +1984,6 @@ const formatPercent = (probability) => {
   overflow: visible;
   transition: 0.3s;
   position: relative;
-}
-.calc-res-card::after {
-  content: '';
-  position: absolute;
-  bottom: 0;
-  right: 0;
-  width: 0;
-  height: 0;
-  border-left: 15px solid transparent;
-  border-top: 15px solid transparent;
-  border-right: 15px solid var(--pri);
-  border-bottom: 15px solid var(--pri);
-  border-radius: 0 0 8px 0;
 }
 .calc-reverse-card {
   background: var(--card-bg);
@@ -3549,6 +3535,20 @@ const formatPercent = (probability) => {
 .calc-selector-arrow {
   color: var(--pri);
   font-size: 1rem;
+  display: inline-block;
+  transition: transform var(--motion-duration-ui) var(--motion-ease-out);
+}
+.calc-selector-chip[aria-expanded='true'] .calc-selector-arrow {
+  transform: rotate(180deg);
+}
+.calc-container .calc-res-card:not(.lethal) .calc-prob-box {
+  background: var(--calc-tint);
+  border-radius: var(--calc-panel-radius) 0 0 var(--calc-panel-radius);
+}
+@media (prefers-reduced-motion: reduce) {
+  .calc-selector-arrow {
+    transition: none;
+  }
 }
 .calc-species-group-col,
 .calc-species-item-col {

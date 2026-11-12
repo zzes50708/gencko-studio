@@ -751,7 +751,7 @@ const copied = ref(false)
       <div class="h-card-grid">
         <button
           type="button"
-          class="h-entry-card h-entry-card--urgent"
+          class="h-entry-card interactive-card h-entry-card--urgent"
           @click="startMode('triage')"
         >
           <div class="h-entry-corner">
@@ -769,13 +769,14 @@ const copied = ref(false)
           <div class="h-entry-desc">
             聚焦急性警訊、拒食、呼吸、外傷與環境異常，快速判斷是否要立即就醫。
           </div>
-          <div class="h-entry-cta">
-            開始快篩
-            <span class="h-entry-cta-arrow">→</span>
-          </div>
+          <HoverAction class="h-entry-cta">開始快篩</HoverAction>
         </button>
 
-        <button type="button" class="h-entry-card h-entry-card--full" @click="startMode('checkup')">
+        <button
+          type="button"
+          class="h-entry-card interactive-card h-entry-card--full"
+          @click="startMode('checkup')"
+        >
           <div class="h-entry-corner">
             <span class="h-entry-num">02</span>
             <span class="h-entry-tag h-tag--full">CHECKUP</span>
@@ -791,15 +792,12 @@ const copied = ref(false)
           <div class="h-entry-desc">
             涵蓋五官、體表、體態、排泄、活動與環境紀錄，適合做完整健康檢查。
           </div>
-          <div class="h-entry-cta">
-            開始檢查
-            <span class="h-entry-cta-arrow">→</span>
-          </div>
+          <HoverAction class="h-entry-cta">開始檢查</HoverAction>
         </button>
 
         <button
           type="button"
-          class="h-entry-card h-entry-card--purchase"
+          class="h-entry-card interactive-card h-entry-card--purchase"
           @click="startMode('purchase')"
         >
           <div class="h-entry-corner">
@@ -817,10 +815,7 @@ const copied = ref(false)
           <div class="h-entry-desc">
             只看購入前能確認的眼睛、體態、皮膚與精神反應，快速排除明顯風險。
           </div>
-          <div class="h-entry-cta">
-            開始評估
-            <span class="h-entry-cta-arrow">→</span>
-          </div>
+          <HoverAction class="h-entry-cta">開始評估</HoverAction>
         </button>
       </div>
     </div>
@@ -3375,5 +3370,37 @@ const copied = ref(false)
 <style scoped>
 .health-container--quiz .h-quiz-foot {
   bottom: calc(var(--page-dock-bottom) + var(--health-quiz-toolbar-height));
+}
+</style>
+
+<style scoped>
+/* 閱讀與服務操作的回饋，保留原有資料及判斷規則。 */
+
+.h-entry-card.interactive-card {
+  padding: 20px;
+  border-radius: 2px;
+  transition:
+    border-color 180ms ease,
+    background-color 180ms ease;
+}
+.h-entry-cta {
+  border-color: var(--pri);
+  color: var(--pri);
+  margin-top: auto;
+  align-self: flex-start;
+}
+.h-entry-card:focus-visible {
+  outline: 2px solid var(--pri);
+  outline-offset: 3px;
+}
+@media (min-width: 768px) and (hover: hover) and (pointer: fine) {
+  .h-entry-card.interactive-card:hover {
+    background: color-mix(in srgb, var(--pri) 3%, var(--card-bg-solid));
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .h-entry-card.interactive-card {
+    transition: none;
+  }
 }
 </style>

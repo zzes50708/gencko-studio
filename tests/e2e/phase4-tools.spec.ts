@@ -1,4 +1,9 @@
 import { test, expect } from '@playwright/test'
+const ready = (page) =>
+  page.waitForFunction(() => {
+    const app = (document.querySelector('#__nuxt') as any)?.__vue_app__
+    return app && !app.config.globalProperties.$nuxt.isHydrating
+  })
 
 test.describe('Phase 4 專業工具資訊架構', () => {
   test('Calculator 以雙親工作台與結果區呈現既有控制', async ({ page }) => {
@@ -95,9 +100,10 @@ test.describe('Phase 4 專業工具資訊架構', () => {
     )
   })
 
-  test('Health 手機導覽與問卷置頂進度維持緊湊且不遮題目', async ({ page }) => {
+  test('Health 手機底部進度維持緊湊且不遮主導覽', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 })
     await page.goto('/health')
+    await ready(page)
 
     const healthNav = page.getByRole('navigation', { name: '健康工具導覽' })
     const navLinks = healthNav.getByRole('link')
@@ -119,11 +125,7 @@ test.describe('Phase 4 專業工具資訊架構', () => {
     const firstQuestion = page.locator('.h-q-card').first()
     await expect(toolbar).toBeVisible()
     await expect(firstQuestion).toBeVisible()
-    const [navbarBox, toolbarBox, questionBox] = await Promise.all([
-      page.locator('.sticky-nav').evaluate((element) => {
-        const rect = element.getBoundingClientRect()
-        return { bottom: rect.bottom }
-      }),
+    const [toolbarBox, questionBox] = await Promise.all([
       toolbar.evaluate((element) => {
         const rect = element.getBoundingClientRect()
         return { top: rect.top, bottom: rect.bottom, right: rect.right }
@@ -134,8 +136,10 @@ test.describe('Phase 4 專業工具資訊架構', () => {
       })
     ])
     expect(toolbarBox.top).toBeGreaterThanOrEqual(0)
-    expect(Math.abs(toolbarBox.top - navbarBox.bottom)).toBeLessThanOrEqual(1)
-    expect(toolbarBox.bottom).toBeLessThanOrEqual(questionBox.top + 1)
+    const bottomNavTop = await page
+      .locator('.bottom-nav')
+      .evaluate((el) => el.getBoundingClientRect().top)
+    expect(toolbarBox.bottom).toBeLessThanOrEqual(bottomNavTop + 1)
     expect(Math.max(toolbarBox.right, questionBox.right)).toBeLessThanOrEqual(390)
 
     const firstOption = firstQuestion.locator('.h-q-opt').first()
@@ -144,9 +148,10 @@ test.describe('Phase 4 專業工具資訊架構', () => {
     await expect(progress).toHaveAttribute('aria-valuenow', '13')
   })
 
-  test('QS 手機問卷以單題表單呈現，進度貼齊導覽且不產生水平溢位', async ({ page }) => {
+  test('QS 手機單題表單與底部進度不產生水平溢位', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 })
     await page.goto('/qs')
+    await ready(page)
 
     const progress = page.getByRole('progressbar', { name: '評估作答進度' })
     const toolbar = page.locator('.qs-quiz-toolbar')
@@ -154,11 +159,13 @@ test.describe('Phase 4 專業工具資訊架構', () => {
     await expect(progress).toHaveAttribute('aria-valuenow', '0')
     await expect(question).toHaveCount(1)
 
-    const [navbarBottom, toolbarTop] = await Promise.all([
-      page.locator('.sticky-nav').evaluate((element) => element.getBoundingClientRect().bottom),
-      toolbar.evaluate((element) => element.getBoundingClientRect().top)
-    ])
-    expect(Math.abs(toolbarTop - navbarBottom)).toBeLessThanOrEqual(1)
+    const toolbarTop = await toolbar.evaluate((element) => element.getBoundingClientRect().top)
+    const bottomNavTop = await page
+      .locator('.bottom-nav')
+      .evaluate((el) => el.getBoundingClientRect().top)
+    const toolbarBottom = await toolbar.evaluate((el) => el.getBoundingClientRect().bottom)
+    expect(toolbarTop).toBeGreaterThanOrEqual(0)
+    expect(toolbarBottom).toBeLessThanOrEqual(bottomNavTop + 1)
     await expect
       .poll(() =>
         page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 2)
@@ -167,8 +174,8 @@ test.describe('Phase 4 專業工具資訊架構', () => {
 
     const firstOption = question.locator('.qs-option-btn').first()
     await firstOption.click()
-    await expect(firstOption).toHaveAttribute('aria-pressed', 'true')
     await expect(progress).toHaveAttribute('aria-valuenow', '6')
+    await expect(page.locator('.qs-step-count')).toContainText('02')
   })
 })
 

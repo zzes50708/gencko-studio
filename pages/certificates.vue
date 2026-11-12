@@ -2,6 +2,7 @@
 import { ref } from 'vue'
 
 const certificateId = ref('')
+const certificateField = ref(null)
 const searchError = ref('')
 const navigating = ref(false)
 useHead({
@@ -15,6 +16,7 @@ const openCertificate = async () => {
   const id = certificateId.value.normalize('NFKC').trim().toUpperCase()
   if (!/^[A-Z0-9][A-Z0-9_-]{0,63}$/.test(id)) {
     searchError.value = '請輸入完整個體 ID，例如 S-53518。'
+    certificateField.value?.focus({ preventScroll: true })
     return
   }
   searchError.value = ''
@@ -35,9 +37,10 @@ const openCertificate = async () => {
     <h1 id="certificate-search-title">個體證書</h1>
     <form :aria-busy="navigating" class="certificate-search-form" @submit.prevent="openCertificate">
       <label for="certificate-id">個體 ID</label>
-      <div class="certificate-search-field">
+      <div class="certificate-search-field" :class="{ 'is-invalid': Boolean(searchError) }">
         <input
           id="certificate-id"
+          ref="certificateField"
           v-model="certificateId"
           type="search"
           maxlength="64"
@@ -46,7 +49,9 @@ const openCertificate = async () => {
           autocapitalize="characters"
           :spellcheck="false"
           :aria-invalid="Boolean(searchError)"
-          :aria-describedby="searchError ? 'certificate-search-error' : undefined"
+          :aria-describedby="
+            searchError ? 'certificate-id-hint certificate-search-error' : 'certificate-id-hint'
+          "
           :disabled="navigating"
           @input="searchError = ''"
         />
@@ -55,6 +60,7 @@ const openCertificate = async () => {
           <span aria-hidden="true">↗</span>
         </button>
       </div>
+      <p id="certificate-id-hint" class="certificate-id-hint">例如 S-53518，可貼上完整個體 ID。</p>
       <p
         v-if="searchError"
         id="certificate-search-error"
@@ -190,5 +196,36 @@ body #main-content .certificate-search-page #certificate-search-title {
   text-shadow:
     0 -0.5px 0.3px rgb(51 36 14 / 20%),
     0 1px 0.3px rgb(255 255 255 / 85%);
+}
+</style>
+
+<style scoped>
+/* 閱讀與服務操作的回饋，保留原有資料及判斷規則。 */
+
+.certificate-id-hint {
+  color: #515b63;
+  margin: 12px 0 0;
+  font-size: 12px;
+  line-height: 1.6;
+}
+.certificate-search-field.is-invalid {
+  border-color: #a12b20;
+}
+.certificate-search-field button > [aria-hidden] {
+  transition: transform 180ms ease;
+}
+.certificate-search-field button:focus-visible {
+  outline: 2px solid #71552a;
+  outline-offset: 3px;
+}
+@media (min-width: 768px) and (hover: hover) and (pointer: fine) {
+  .certificate-search-field button:hover > [aria-hidden] {
+    transform: translate(2px, -2px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .certificate-search-field button > [aria-hidden] {
+    transition: none;
+  }
 }
 </style>

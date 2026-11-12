@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test'
 
-test('循環副本在兩個方向都能懸停、點擊，鍵盤不重複走訪', async ({ page }) => {
+test('循環副本在兩個方向都能懸停、點擊，鍵盤不重複走訪', async ({ page, isMobile }) => {
+  test.skip(isMobile, '此案例驗證精確游標的懸停效果')
   await page.setViewportSize({ width: 1440, height: 1000 })
   await page.route('**/rest/v1/*animals**', (route) =>
     route.fulfill({
@@ -61,7 +62,29 @@ async function open(page, route = '/home') {
   })
 }
 
-test('桌機工具卡：框架回正、操作底色填入，連結保留', async ({ page }) => {
+test('首屏照片框可用鍵盤聚焦回正，觸控及減少動態時保持平放', async ({ page }) => {
+  await open(page)
+  const visual = page.locator('.home-hero__visual')
+  const frame = visual.locator('.home-hero__print')
+  await expect(visual).toHaveAttribute('href', '/shop')
+  const transform = () => frame.evaluate((el) => getComputedStyle(el).transform)
+  const desktop = await page.evaluate(
+    () => matchMedia('(min-width: 768px) and (hover: hover) and (pointer: fine)').matches
+  )
+  if (desktop) {
+    expect(await transform()).not.toBe('none')
+    await visual.focus()
+    await expect.poll(transform).not.toBe('none')
+    await expect.poll(async () => (await transform()).startsWith('matrix(1, 0, 0, 1,')).toBe(true)
+  } else {
+    await expect.poll(transform).toBe('none')
+  }
+  await page.emulateMedia({ reducedMotion: 'reduce' })
+  await expect.poll(transform).toBe('none')
+})
+
+test('桌機工具卡：框架回正、操作底色填入，連結保留', async ({ page, isMobile }) => {
+  test.skip(isMobile, '觸控裝置使用平面工具卡')
   await page.setViewportSize({ width: 1440, height: 1000 })
   await open(page)
   const card = page.locator('.tool-preview').first()
@@ -102,7 +125,8 @@ test('桌機文章卡：圖片與閱讀入口一起回應，鍵盤同樣可用',
   await card.screenshot({ path: 'output/ek-cards/article-focus.png', animations: 'disabled' })
 })
 
-test('桌機展示卡：紙卡有角度，hover 回正並暫停移動', async ({ page }) => {
+test('桌機展示卡：紙卡有角度，hover 回正並暫停移動', async ({ page, isMobile }) => {
+  test.skip(isMobile, '此案例驗證精確游標的懸停效果')
   await page.setViewportSize({ width: 1440, height: 1000 })
   await open(page)
   await page.locator('.app-marquee').first().scrollIntoViewIfNeeded()
@@ -158,7 +182,7 @@ test('品牌服務卡把展示與真實入口連在一起', async ({ page }) => 
   await open(page, '/why-gencko')
   const card = page.locator('.overview-card').first()
   await expect(card.locator('.hover-action')).toContainText('查看個體證書')
-  await card.hover()
+  await card.focus()
   await expect
     .poll(() =>
       card

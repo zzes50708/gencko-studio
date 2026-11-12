@@ -30,7 +30,8 @@ async function seed(page: any, count = 12) {
 }
 test.use({ serviceWorkers: 'block' })
 
-test('桌面六欄、翻卡完整資訊與收藏操作', async ({ page }) => {
+test('桌面六欄、翻卡完整資訊與收藏操作', async ({ page, isMobile }) => {
+  test.skip(isMobile, '翻卡只在精確游標裝置啟用')
   await page.setViewportSize({ width: 1440, height: 1100 })
   await seed(page)
   const grid = page.locator('.grid.photo-grid').last()
@@ -44,6 +45,11 @@ test('桌面六欄、翻卡完整資訊與收藏操作', async ({ page }) => {
   await expect(card.locator('.flip-front .card-genes')).toBeHidden()
   await expect(card.locator('.desktop-front-price')).toContainText('8000')
   await card.hover()
+  expect(
+    await card
+      .locator('.flip-inner')
+      .evaluate((element) => getComputedStyle(element).transitionTimingFunction)
+  ).toMatch(/^linear\(/)
   await expect
     .poll(() =>
       card.locator('.flip-inner').evaluate((element) => getComputedStyle(element).transform)
@@ -71,6 +77,12 @@ test('桌面六欄、翻卡完整資訊與收藏操作', async ({ page }) => {
   )
   await card.locator('.flip-card-link').focus()
   await expect(card.locator('.flip-card-link')).toBeFocused()
+  await page.emulateMedia({ reducedMotion: 'reduce' })
+  expect(
+    await card
+      .locator('.flip-inner')
+      .evaluate((element) => parseFloat(getComputedStyle(element).transitionDuration))
+  ).toBeLessThan(0.001)
 })
 
 test('手機三欄不顯示基本資訊下拉，收藏與比較可操作', async ({ page }) => {

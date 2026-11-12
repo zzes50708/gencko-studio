@@ -14,6 +14,9 @@ import { readStoredJson } from '~/utils/browser-storage'
 const store = useMainStore()
 const hospitalFavoriteStorageError = useState('hospital-favorite-storage-error', () => false)
 const route = useRoute()
+const inlineWishlistInquiry = computed(
+  () => route.path.startsWith('/product/') || route.path.startsWith('/articles/')
+)
 const track = useAnalytics()
 watch(
   () => store.currentUser,
@@ -480,7 +483,7 @@ onBeforeUnmount(() => {
     </main>
 
     <a
-      v-if="store.wishlist.length > 0 && route.path !== '/shop'"
+      v-if="store.wishlist.length > 0 && !route.path.startsWith('/shop')"
       :href="
         getWishlistInquiryLink(store.lineLink, store.wishlist, {
           items: store.inv,
@@ -488,12 +491,12 @@ onBeforeUnmount(() => {
         })
       "
       target="_blank"
+      rel="noopener noreferrer"
       class="btn-app btn-app--primary btn-app--md btn-app--pill floating-inquire-btn"
-      :class="{
-        'floating-inquire-btn--with-compare': route.path === '/shop' && store.compareList.length > 0
-      }"
+      :class="{ 'floating-inquire-btn--inline': inlineWishlistInquiry }"
     >
       <span>收藏 {{ store.wishlist.length }} 隻｜一次詢問</span>
+      <span class="inquiry-direction" aria-hidden="true">↗</span>
     </a>
 
     <TheFooter />
@@ -515,10 +518,44 @@ onBeforeUnmount(() => {
   overflow-wrap: anywhere;
 }
 /* Skip to content：預設離屏，鍵盤聚焦時才顯示 */
-.floating-inquire-btn.floating-inquire-btn--with-compare {
-  top: calc(76px + env(safe-area-inset-top, 0px));
-  bottom: auto !important;
-  max-width: calc(100vw - 32px);
+.floating-inquire-btn {
+  max-width: calc(100% - 32px);
+  min-height: 44px;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.floating-inquire-btn--inline {
+  position: static;
+  width: fit-content;
+  margin: 16px auto 24px;
+}
+.inquiry-direction {
+  display: inline-grid;
+  place-items: center;
+  flex: 0 0 24px;
+  width: 24px;
+  height: 24px;
+  border: 1px solid currentColor;
+  border-radius: 50%;
+  transition: transform 180ms ease-out;
+}
+.floating-inquire-btn:focus-visible {
+  outline: 2px solid var(--pri);
+  outline-offset: 3px;
+}
+.floating-inquire-btn:focus-visible .inquiry-direction {
+  transform: translate(1px, -1px);
+}
+@media (min-width: 768px) and (hover: hover) and (pointer: fine) {
+  .floating-inquire-btn:hover .inquiry-direction {
+    transform: translate(1px, -1px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .inquiry-direction {
+    transition: none;
+    transform: none !important;
+  }
 }
 
 .skip-to-content {

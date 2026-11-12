@@ -16,6 +16,14 @@ export const cloneShopFilters = (filters) => ({
   years: [...filters.years],
   genes: [...filters.genes]
 })
+export function getShopGeneCategories(species, database) {
+  const result = {}
+  for (const name of Array.isArray(species) ? species : [species]) {
+    for (const [category, genes] of Object.entries(database[name] || {}))
+      result[category] = [...new Set([...(result[category] || []), ...genes])]
+  }
+  return result
+}
 export function getPriceRangeError({ minP = '', maxP = '' }) {
   const supplied = [minP, maxP].filter((value) => value !== '')
   if (supplied.some((value) => !Number.isFinite(Number(value)))) return '請輸入有效價格'
@@ -56,7 +64,11 @@ export function filterShopItems(
   const query = keyword.trim().toLowerCase()
   return inventory
     .filter((item) => {
-      if (item.Species !== species || ['Trash', 'SelfKeep'].includes(item.Status)) return false
+      if (
+        !(Array.isArray(species) ? species.includes(item.Species) : item.Species === species) ||
+        ['Trash', 'SelfKeep'].includes(item.Status)
+      )
+        return false
       if (filters.morph && item.Morph !== filters.morph) return false
       const status = item.Status === 'Auction' && !auctionIds.has(item.ID) ? 'ForSale' : item.Status
       if (!filters.sold && status === 'Sold') return false

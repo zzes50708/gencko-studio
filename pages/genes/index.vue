@@ -297,7 +297,8 @@ useHead({
             class="gene-btn-item"
           >
             <span class="g-name">{{ g }}</span>
-            <span class="g-cta">查看說明 ➜</span>
+            <span class="g-cta">查看說明</span>
+            <span class="g-arrow" aria-hidden="true">↗</span>
           </NuxtLink>
         </TransitionGroup>
       </div>
@@ -315,6 +316,43 @@ useHead({
   border-radius: 6px;
   background: var(--card-bg-solid);
   padding-inline: 12px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto 26px;
+  align-items: center;
+  column-gap: 10px;
+  text-align: left;
+}
+.gene-btn-grid .g-name {
+  text-align: left;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.gene-btn-grid .g-cta {
+  margin: 0;
+  color: var(--txt-muted);
+  font-weight: 400;
+  text-decoration: none;
+}
+.gene-btn-grid .g-arrow {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border: 1px solid var(--bd);
+  border-radius: 50%;
+  color: var(--pri);
+  font-size: 15px;
+  font-weight: 400;
+  line-height: 1;
+  transition:
+    border-color var(--motion-duration-fast) var(--motion-ease-out),
+    background-color var(--motion-duration-fast) var(--motion-ease-out),
+    color var(--motion-duration-fast) var(--motion-ease-out);
+}
+.gene-btn-item:focus-visible .g-arrow {
+  border-color: var(--pri-btn);
+  background: var(--pri-btn);
+  color: #fff;
 }
 .gene-btn-grid .gene-btn-item:focus-visible {
   outline: 2px solid var(--pri);
@@ -326,6 +364,38 @@ useHead({
   }
   .gene-btn-grid .gene-btn-item:hover .g-cta {
     color: var(--pri);
+  }
+  .gene-btn-item:hover .g-arrow {
+    border-color: var(--pri-btn);
+    background: var(--pri-btn);
+    color: #fff;
+  }
+}
+@media (min-width: 768px) and (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  .gene-btn-grid .g-arrow {
+    transition:
+      transform var(--motion-duration-ui) var(--motion-ease-out),
+      border-color var(--motion-duration-fast) var(--motion-ease-out),
+      background-color var(--motion-duration-fast) var(--motion-ease-out),
+      color var(--motion-duration-fast) var(--motion-ease-out);
+  }
+  .gene-btn-item:is(:hover, :focus-visible) .g-arrow {
+    transform: translate(1px, -1px);
+  }
+}
+@media (max-width: 1099px) {
+  .gene-btn-grid .gene-btn-item {
+    grid-template-columns: minmax(0, 1fr) 26px;
+    column-gap: 8px;
+    padding-inline: 8px;
+  }
+  .gene-btn-grid .g-cta {
+    display: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .gene-btn-grid .g-arrow {
+    transition: none;
   }
 }
 .gene-section .section-header {

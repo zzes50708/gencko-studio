@@ -34,6 +34,7 @@ export default <RouterConfig>{
         // page:finish 可能先於 Suspense 將新頁面插入 DOM；返回型錄必須等實際列表就緒。
         if (
           (to.path === '/shop' ||
+            to.path === '/shop/all' ||
             to.path === '/articles' ||
             to.path === '/hospital' ||
             to.path === '/genes') &&

@@ -1,6 +1,10 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref, watch } from 'vue'
 import { useIntersectionObserver, useMediaQuery } from '@vueuse/core'
+withDefaults(defineProps<{ as?: 'div' | 'section' | 'article' | 'figure'; lift?: boolean }>(), {
+  as: 'div',
+  lift: true
+})
 
 // 漸進增強：SSR、無 JS 及減少動態時內容預設可見。
 const root = ref<HTMLElement | null>(null)
@@ -14,7 +18,7 @@ const { stop } = useIntersectionObserver(
       stop()
     }
   },
-  { threshold: 0.08 }
+  { threshold: 0 }
 )
 
 onMounted(() => {
@@ -29,9 +33,15 @@ onUnmounted(stop)
 </script>
 
 <template>
-  <div ref="root" class="experience-reveal" :class="{ 'experience-reveal--pending': hidden }">
+  <component
+    :is="as"
+    ref="root"
+    class="experience-reveal"
+    :class="{ 'experience-reveal--pending': hidden }"
+    :style="{ '--reveal-distance': lift ? '12px' : '0px' }"
+  >
     <slot />
-  </div>
+  </component>
 </template>
 
 <style scoped>
@@ -45,7 +55,7 @@ onUnmounted(stop)
 }
 .experience-reveal--pending {
   opacity: 0;
-  transform: translateY(12px);
+  transform: translateY(var(--reveal-distance, 12px));
 }
 .experience-reveal:focus-within {
   opacity: 1;

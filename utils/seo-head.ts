@@ -41,7 +41,7 @@ export function completeSeoTags(tags: SeoTag[], path: string) {
   appendMeta('twitter:image:alt', value('og:image:alt') || value('og:title'))
   appendMeta(
     'robots',
-    /^(?:\/profile|\/compare|\/auction-management|\/line-login-return|\/identity)(?:\/|$)/.test(
+    /^(?:\/shop\/curate|\/profile|\/compare|\/auction-management|\/line-login-return|\/identity)(?:\/|$)/.test(
       path
     )
       ? 'noindex, nofollow'

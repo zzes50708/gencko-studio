@@ -177,7 +177,8 @@ const navLogoUrl = computed(() => (store.logoUrl ? getCleanUrl(store.logoUrl, 72
                 :to="link.to"
                 @click="dismissMenu"
               >
-                {{ link.label }}
+                <span>{{ link.label }}</span>
+                <span class="nav-menu-arrow" aria-hidden="true">↗</span>
               </NuxtLink>
             </div>
           </div>
@@ -591,7 +592,7 @@ const navLogoUrl = computed(() => (store.logoUrl ? getCleanUrl(store.logoUrl, 72
   border-bottom: 0;
 }
 
-.nav-item-dt.active::after {
+.nav-item-dt::after {
   content: '';
   position: absolute;
   right: 12px;
@@ -599,6 +600,12 @@ const navLogoUrl = computed(() => (store.logoUrl ? getCleanUrl(store.logoUrl, 72
   left: 12px;
   height: 1px;
   background: var(--pri);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform var(--motion-duration-ui) var(--motion-ease-out);
+}
+.nav-item-dt:is(.active, .open, :focus-within)::after {
+  transform: scaleX(1);
 }
 
 .dt-dropdown {
@@ -611,11 +618,48 @@ const navLogoUrl = computed(() => (store.logoUrl ? getCleanUrl(store.logoUrl, 72
 }
 
 .dt-dropdown a {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
   padding: 11px 12px;
   color: var(--txt-muted);
   font-size: 0.78rem;
   font-weight: 600;
   border: 0;
+  border-radius: 2px;
+}
+.dt-dropdown a[aria-current='page'],
+.dt-dropdown a:focus-visible {
+  opacity: 1;
+  color: var(--pri);
+  background: color-mix(in srgb, var(--pri) 7%, var(--card-bg-solid));
+}
+.nav-menu-arrow {
+  display: inline-block;
+  flex: none;
+  font-size: 0.95rem;
+  color: var(--pri);
+}
+@media (min-width: 768px) and (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  .dt-dropdown {
+    transform: translateY(8px) scale(0.98);
+    transform-origin: top left;
+  }
+  .dt-dropdown.visible {
+    transform: translateY(0) scale(1);
+  }
+  .nav-menu-arrow {
+    opacity: 0;
+    transform: translate(-4px, 4px);
+    transition:
+      opacity var(--motion-duration-fast) var(--motion-ease-out),
+      transform var(--motion-duration-ui) var(--motion-ease-out);
+  }
+  .dt-dropdown a:is(:hover, :focus-visible, [aria-current='page']) .nav-menu-arrow {
+    opacity: 1;
+    transform: translate(0, 0);
+  }
 }
 
 .nav-right {
@@ -716,6 +760,9 @@ const navLogoUrl = computed(() => (store.logoUrl ? getCleanUrl(store.logoUrl, 72
   .dt-dropdown,
   .dt-dropdown a,
   .nav-disclosure span {
+    transition: none;
+  }
+  .nav-item-dt::after {
     transition: none;
   }
 }

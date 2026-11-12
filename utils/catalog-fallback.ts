@@ -9,10 +9,14 @@ const escapeHtml = (value: unknown) =>
 /** 以既有公開 SSR 目錄提供無 JavaScript 的基本瀏覽，不改寫互動目錄狀態。 */
 export function catalogFallbackHtml(
   items: { ID: string; Morph: string; Species: string; ListingPrice: unknown }[],
-  species: string
+  species: string | string[]
 ) {
   const rows = items
-    .filter((item) => item.ID && item.Species === species)
+    .filter(
+      (item) =>
+        item.ID &&
+        (Array.isArray(species) ? species.includes(item.Species) : item.Species === species)
+    )
     .sort((a, b) => (seoPrice(b.ListingPrice) || 0) - (seoPrice(a.ListingPrice) || 0))
     .slice(0, 36)
   if (!rows.length) return ''

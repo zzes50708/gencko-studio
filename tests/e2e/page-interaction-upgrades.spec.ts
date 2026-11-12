@@ -191,12 +191,25 @@ test('購買步驟列能直接跳至對應內容，原有聯絡連結仍保留',
   await page.goto('/buying-guide')
   await ready(page)
   const steps = page.getByRole('navigation', { name: '購買流程步驟' })
+  for (const name of ['挑選', '詢問', '確認']) {
+    const link = steps.getByRole('link', { name, exact: true })
+    await link.click()
+    await page.evaluate(
+      () => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)))
+    )
+    await expect(link).toHaveAttribute('aria-current', 'step')
+  }
   await steps.getByRole('link', { name: '到家', exact: true }).click()
   await expect(steps.getByRole('link', { name: '到家', exact: true })).toHaveAttribute(
     'href',
     '#purchase-step-04'
   )
   const target = page.locator('#purchase-step-04')
+  await expect(steps.getByRole('link', { name: '到家', exact: true })).toHaveAttribute(
+    'aria-current',
+    'step'
+  )
+  await expect(target).toBeFocused()
   await expect(target).toContainText('到家')
   await expect.poll(() => target.evaluate((el) => el.getBoundingClientRect().top)).toBeLessThan(300)
 })
@@ -229,24 +242,29 @@ test('文章封面保持靜態圖片，正文與章節導覽保留', async ({ pa
   await expect(page.locator('.reader-content')).toContainText('第一章')
 })
 
-test('飼養章節列跟隨主導覽收起與出現', async ({ page }) => {
+test('飼養底部章節列在主導覽收起與出現時持續可用', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 950 })
   await page.goto('/care')
   await ready(page)
   const trail = page.getByRole('navigation', { name: '飼養章節導覽' })
+  const initialBottom = (await trail.boundingBox())!.y + (await trail.boundingBox())!.height
   await page.mouse.move(1300, 500)
   await page.mouse.wheel(0, 1000)
   await expect(page.locator('.sticky-nav')).toHaveClass(/nav-hidden/)
   await expect
     .poll(() => trail.evaluate((el) => el.getBoundingClientRect().bottom))
-    .toBeLessThanOrEqual(0)
+    .toBeCloseTo(initialBottom, 0)
   await expect.poll(() => page.evaluate(() => scrollY)).toBeGreaterThan(950)
   expect(await page.evaluate(() => getComputedStyle(document.body).transform)).toBe('none')
   await page.screenshot({ path: 'output/interaction-review/care-nav-hidden.png' })
   await page.mouse.wheel(0, -350)
   await expect(page.locator('.sticky-nav')).not.toHaveClass(/nav-hidden/)
-  await expect
-    .poll(() => trail.evaluate((el) => el.getBoundingClientRect().top))
-    .toBeGreaterThanOrEqual(0)
+  await expect(trail).toBeVisible()
+  expect((await trail.boundingBox())!.y + (await trail.boundingBox())!.height).toBeCloseTo(
+    initialBottom,
+    0
+  )
+  await trail.getByRole('link', { name: /餵食營養/ }).click()
+  await expect(page.locator('#food')).toBeFocused()
   await page.screenshot({ path: 'output/interaction-review/care-nav-visible.png' })
 })

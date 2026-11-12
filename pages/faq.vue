@@ -516,23 +516,21 @@ const onCategoryKeydown = async (event: KeyboardEvent, index: number) => {
 }
 
 .faq-body-wrapper {
-  display: block;
+  display: grid;
+  grid-template-rows: 1fr;
 }
 
 .faq-reveal-enter-active,
 .faq-reveal-leave-active {
-  transition:
-    opacity 160ms ease,
-    transform 160ms ease;
-  transform-origin: top;
+  transition: grid-template-rows 240ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-.faq-reveal-enter-from,
-.faq-reveal-leave-to {
-  opacity: 0;
-  transform: translateY(-5px);
+.faq-item .faq-body-wrapper.faq-reveal-enter-from,
+.faq-item .faq-body-wrapper.faq-reveal-leave-to {
+  grid-template-rows: 0fr;
 }
 .faq-body-inner {
+  min-height: 0;
   overflow: hidden;
 }
 .faq-a {

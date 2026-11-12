@@ -52,31 +52,28 @@ test('分享比較的移除更新網址，重新載入不復活', async ({ page 
   await expect(page.locator('.item-heading')).toHaveCount(1)
 })
 
-test('比較清單重新載入保留，桌面 hover 恢復翻卡', async ({ page }) => {
-  await page.goto('/shop', { waitUntil: 'domcontentloaded' })
+test('比較清單重新載入保留，卡片功能直接可操作', async ({ page }) => {
+  await page.goto('/shop/all', { waitUntil: 'domcontentloaded' })
   await seed(page)
   await page
-    .locator('.flip-card')
+    .locator('.catalog-card')
     .first()
     .getByRole('button', { name: '加入比較', exact: true })
     .click()
   await expect(
-    page.locator('.flip-card').first().getByRole('button', { name: '移出比較', exact: true })
+    page.locator('.catalog-card').first().getByRole('button', { name: '移出比較', exact: true })
   ).toHaveAttribute('aria-pressed', 'true')
   await page.reload()
   await seed(page)
   await expect(
-    page.locator('.flip-card').first().getByRole('button', { name: '移出比較', exact: true })
+    page.locator('.catalog-card').first().getByRole('button', { name: '移出比較', exact: true })
   ).toBeVisible()
-  await page.locator('.flip-card').first().hover()
-  await expect
-    .poll(() =>
-      page
-        .locator('.flip-card .flip-inner')
-        .first()
-        .evaluate((e) => getComputedStyle(e).transform)
-    )
-    .toMatch(/matrix3d\(-1/)
+  const control = page
+    .locator('.catalog-card')
+    .first()
+    .getByRole('button', { name: '移出比較', exact: true })
+  await control.focus()
+  await expect(control).toBeFocused()
 })
 
 test('手機篩選草稿、價格驗證、固定操作及返回隔離', async ({ browser, baseURL }) => {
@@ -87,7 +84,7 @@ test('手機篩選草稿、價格驗證、固定操作及返回隔離', async ({
     isMobile: true
   })
   const page = await context.newPage()
-  await page.goto('/shop')
+  await page.goto('/shop/all')
   await seed(page)
   await page.getByRole('button', { name: '篩選', exact: true }).tap()
   const dialog = page.getByRole('dialog', { name: '篩選條件', exact: true })
@@ -104,7 +101,7 @@ test('手機篩選草稿、價格驗證、固定操作及返回隔離', async ({
   await expect(dialog.getByRole('button', { name: /顯示.*隻/ })).toBeDisabled()
   await page.goBack()
   await expect(dialog).toBeHidden()
-  await expect(page).toHaveURL(/\/shop$/)
+  await expect(page).toHaveURL(/\/shop\/all$/)
   await page.getByRole('button', { name: '篩選', exact: true }).tap()
   await expect(dialog.getByLabel('最低價格')).toHaveValue('')
   const before = (await dialog.locator('.filter-dialog-actions').boundingBox())!.y
@@ -126,7 +123,7 @@ test('手機基因草稿提交與切物種清理，總數不只顯示載入數',
     isMobile: true
   })
   const page = await context.newPage()
-  await page.goto('/shop')
+  await page.goto('/shop/all')
   await seed(page)
   await expect(page.locator('.catalog-summary')).toContainText('共 45 隻')
   await page.getByRole('button', { name: '篩選', exact: true }).tap()
@@ -136,11 +133,11 @@ test('手機基因草稿提交與切物種清理，總數不只顯示載入數',
     .filter({ hasText: /^多遺傳/ })
     .tap()
   await dialog.getByLabel('土匪', { exact: true }).check()
-  await expect(page).toHaveURL(/\/shop$/)
+  await expect(page).toHaveURL(/\/shop\/all$/)
   await dialog.getByRole('button', { name: /顯示.*隻/ }).tap()
   await expect(page).toHaveURL(/genes=/)
   await page.getByRole('button', { name: '肥尾守宮', exact: true }).tap()
-  await expect(page.locator('.flip-card')).toHaveCount(1)
+  await expect(page.locator('.catalog-card')).toHaveCount(1)
   await expect(page).not.toHaveURL(/genes=/)
   await context.close()
 })
@@ -153,28 +150,28 @@ test('窄手機價格完整、工具列緊湊，兩隻比較同屏', async ({ br
     isMobile: true
   })
   const page = await context.newPage()
-  await page.goto('/shop')
+  await page.goto('/shop/all')
   await seed(page)
-  const price = page.locator('.flip-card .card-purchase-row .slim-price').first()
-  const card = page.locator('.flip-card').first()
+  const price = page.locator('.catalog-card .catalog-card-price').first()
+  const card = page.locator('.catalog-card').first()
   await expect(card.locator('.mobile-card-details-body')).toBeHidden()
   const compactHeight = (await card.boundingBox())!.height
-  const neighbor = page.locator('.flip-card').nth(1)
+  const neighbor = page.locator('.catalog-card').nth(1)
   const neighborHeight = (await neighbor.boundingBox())!.height
-  const neighborPriceY = (await neighbor.locator('.card-purchase-row .slim-price').boundingBox())!.y
+  const neighborPriceY = (await neighbor.locator('.catalog-card-price').boundingBox())!.y
   await expect(card.locator('summary')).toHaveCount(0)
   expect((await card.boundingBox())!.height).toBeCloseTo(compactHeight, 0)
   expect((await neighbor.boundingBox())!.height).toBeCloseTo(neighborHeight, 0)
-  expect((await neighbor.locator('.card-purchase-row .slim-price').boundingBox())!.y).toBeCloseTo(
+  expect((await neighbor.locator('.catalog-card-price').boundingBox())!.y).toBeCloseTo(
     neighborPriceY,
     0
   )
   expect(await price.evaluate((e) => e.scrollWidth <= e.clientWidth)).toBe(true)
   expect(
-    Math.round((await page.locator('.card-action-btn').first().boundingBox())!.height)
+    Math.round((await page.locator('.catalog-card-actions button').first().boundingBox())!.height)
   ).toBeGreaterThanOrEqual(44)
   await page
-    .locator('.flip-card')
+    .locator('.catalog-card')
     .first()
     .getByRole('button', { name: '加入比較', exact: true })
     .tap()
@@ -196,22 +193,22 @@ test('載入較多個體後返回列表保留位置，不跳到底部', async ({
     isMobile: true
   })
   const page = await context.newPage()
-  await page.goto('/shop', { waitUntil: 'domcontentloaded' })
+  await page.goto('/shop/all', { waitUntil: 'domcontentloaded' })
   await seed(page)
   await page.evaluate(() => {
     ;(window as any).uxStore.displayLimit = 45
   })
-  await expect(page.locator('.flip-card')).toHaveCount(45)
+  await expect(page.locator('.catalog-card')).toHaveCount(45)
   await page.evaluate(() => window.scrollTo({ top: 1600, behavior: 'instant' }))
   await expect.poll(() => page.evaluate(() => scrollY)).toBeGreaterThan(1500)
   const before = await page.evaluate(() => scrollY)
   await page
-    .locator('.flip-card-link')
+    .locator('.catalog-card-photo')
     .nth(8)
     .evaluate((e: HTMLElement) => e.click())
   await expect(page).toHaveURL(/\/product\/UX-/)
   await page.goBack()
-  await expect(page.locator('.flip-card')).toHaveCount(45)
+  await expect(page.locator('.catalog-card')).toHaveCount(45)
   await expect.poll(() => page.evaluate(() => scrollY)).toBeGreaterThan(before - 50)
   expect(await page.evaluate(() => scrollY)).toBeLessThan(before + 50)
   await context.close()

@@ -1,6 +1,7 @@
 import { SITE_URL } from './site-constants'
 
-const privateRoute = /^\/(?:api|profile|auction-management|line-login-return|identity)(?:\/|$)/
+const privateRoute =
+  /^\/(?:shop\/curate|api|profile|auction-management|line-login-return|identity)(?:\/|$)/
 /** 僅正式公開路徑，不傳查詢字詞、授權碼、雜湊或會員資料。 */
 export function analyticsPage(href: string) {
   try {

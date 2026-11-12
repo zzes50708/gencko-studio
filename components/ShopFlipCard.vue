@@ -214,9 +214,9 @@ const informationRows = computed(() => [
   min-width: 0;
   border: 1px solid var(--bd);
   background: var(--card-bg-solid);
-  border-radius: 0;
+  border-radius: 8px;
   overflow: hidden;
-  box-shadow: none;
+  box-shadow: 0 2px 6px rgb(0 0 0 / 7%);
   display: flex;
   flex-direction: column;
 }
@@ -241,11 +241,34 @@ const informationRows = computed(() => [
 @media (min-width: 768px) and (hover: hover) and (pointer: fine) {
   .flip-card {
     perspective: 1200px;
+    transition:
+      border-color 220ms var(--motion-ease-out),
+      box-shadow 320ms var(--motion-ease-out);
+  }
+  .flip-card:is(:hover, :focus-within) {
+    border-color: color-mix(in srgb, var(--pri) 56%, var(--bd));
+    box-shadow: 0 9px 22px rgb(18 14 9 / 14%);
   }
   .flip-inner {
     display: grid;
     transform-style: preserve-3d;
-    transition: transform 320ms cubic-bezier(0.2, 0.8, 0.2, 1);
+    transition: transform 450ms var(--motion-ease-out);
+    /* 取樣阻尼比 0.76 的彈簧響應，翻面略過終點後收束。 */
+    transition-timing-function: linear(
+      0,
+      0.157,
+      0.441,
+      0.695,
+      0.869,
+      0.968,
+      1.012,
+      1.025,
+      1.023,
+      1.016,
+      1.009,
+      1.004,
+      1
+    );
   }
   .flip-face {
     grid-area: 1 / 1;
@@ -256,12 +279,15 @@ const informationRows = computed(() => [
   .flip-card:hover .flip-inner,
   .flip-card:focus-within .flip-inner {
     transform: rotateY(180deg);
-    will-change: transform;
   }
   .flip-back {
     display: block;
     transform: rotateY(180deg);
-    background: var(--card-bg-solid);
+    background: linear-gradient(
+      155deg,
+      color-mix(in srgb, var(--pri) 6%, var(--card-bg-solid)),
+      var(--card-bg-solid) 70%
+    );
   }
   .flip-front .card-id,
   .flip-front .card-status,
@@ -280,9 +306,8 @@ const informationRows = computed(() => [
 }
 .flip-back-information {
   margin: 0;
-  padding: 12px;
+  padding: 12px 14px;
   display: grid;
-  gap: 7px;
   font-size: 12px;
   line-height: 1.5;
   color: var(--txt);
@@ -291,6 +316,22 @@ const informationRows = computed(() => [
   display: grid;
   grid-template-columns: 4em minmax(0, 1fr);
   gap: 6px;
+  padding-block: 4px;
+  border-bottom: 1px solid var(--bd);
+}
+.flip-back-row:first-child {
+  align-items: baseline;
+  padding: 0 0 7px;
+  margin-bottom: 3px;
+  border-bottom-color: color-mix(in srgb, var(--pri) 52%, var(--bd));
+}
+.flip-back-row:first-child dd {
+  font-size: 1.05rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.flip-back-row:last-child {
+  border-bottom: 0;
 }
 .flip-back-row dt {
   color: var(--txt-muted);
@@ -301,6 +342,7 @@ const informationRows = computed(() => [
   overflow-wrap: anywhere;
 }
 @media (prefers-reduced-motion: reduce) {
+  .flip-card,
   .flip-inner {
     transition: none;
   }
@@ -312,6 +354,7 @@ const informationRows = computed(() => [
   position: relative;
   aspect-ratio: 1;
   background: #efede8;
+  border-bottom: 1px solid var(--bd);
 }
 .card-photo img,
 .card-image-placeholder {
@@ -446,6 +489,12 @@ const informationRows = computed(() => [
 .card-action-btn:focus-visible {
   outline: 2px solid var(--pri);
   outline-offset: 2px;
+}
+@media (min-width: 768px) and (hover: hover) and (pointer: fine) {
+  .card-action-btn:hover:not(:disabled, .card-action-btn--active) {
+    border-color: var(--pri);
+    color: var(--pri);
+  }
 }
 .flip-img {
   opacity: 0;

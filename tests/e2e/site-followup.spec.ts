@@ -49,6 +49,47 @@ test('收藏匯入合併且損壞檔案不清空原有收藏', async ({ page }) 
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
 })
 
+test('收藏備份讀取中避免重複操作，失敗後可重新匯入', async ({ page }) => {
+  await page.goto('/profile')
+  await ready(page)
+  await page.evaluate(() => {
+    const original = File.prototype.text
+    File.prototype.text = function () {
+      const file = this
+      return new Promise((resolve, reject) => {
+        window.finishBackupRead = () => {
+          File.prototype.text = original
+          original.call(file).then(resolve, reject)
+        }
+      })
+    }
+  })
+  const upload = page.getByLabel('匯入 Gencko 收藏備份')
+  await upload.setInputFiles({
+    name: 'bad.json',
+    mimeType: 'application/json',
+    buffer: Buffer.from('{')
+  })
+  const status = page.locator('.backup-status')
+  await expect(status).toHaveAttribute('data-state', 'pending')
+  await expect(status).toContainText('讀取中')
+  await expect(upload).toBeDisabled()
+  await expect(page.getByRole('button', { name: '匯出收藏', exact: true })).toBeDisabled()
+  await page.evaluate(() => window.finishBackupRead())
+  await expect(status).toHaveAttribute('data-state', 'error')
+  await expect(upload).toBeEnabled()
+  await upload.setInputFiles({
+    name: 'valid.json',
+    mimeType: 'application/json',
+    buffer: Buffer.from(
+      JSON.stringify({ format: 'gencko-favorites', version: 1, animals: ['RETRY'], hospitals: [] })
+    )
+  })
+  await expect(status).toHaveAttribute('data-state', 'success')
+  await expect(status).toContainText('已合併收藏')
+  await expect(page.getByRole('button', { name: '匯出收藏', exact: true })).toBeEnabled()
+})
+
 test('證書列印等待照片完成，避免慢網路印出空白照片', async ({ page }) => {
   let release: () => void = () => {}
   const wait = new Promise<void>((resolve) => {

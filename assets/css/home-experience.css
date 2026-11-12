@@ -28,14 +28,26 @@
 }
 .home-hero__visual {
   display: block;
+  isolation: isolate;
   aspect-ratio: auto;
-  padding: 12px;
-  border: 1px solid var(--bd);
-  background: var(--specimen-mat);
-  overflow: hidden;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  overflow: visible;
 }
 .home-hero__visual::after {
   display: none;
+}
+.home-hero__print {
+  position: relative;
+  padding: clamp(8px, 1vw, 14px);
+  border: 1px solid var(--bd);
+  background: var(--specimen-mat);
+  box-shadow: 0 8px 24px rgb(22 15 8 / 10%);
+}
+.home-hero__photo {
+  overflow: hidden;
+  background: var(--specimen-mat);
 }
 .home-hero__visual img {
   display: block;
@@ -52,11 +64,26 @@
   display: flex;
   justify-content: space-between;
   gap: 8px;
-  padding-top: 12px;
+  align-items: center;
+  padding-top: 10px;
   color: #48433e;
   text-shadow: none;
   font-size: 0.62rem;
   letter-spacing: 0.12em;
+}
+.home-hero__collection {
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+}
+.home-hero__collection > span {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 1px solid currentColor;
+  font-size: 0.84rem;
 }
 .home-scenario-grid {
   gap: 0;
@@ -320,9 +347,6 @@
       background-color 180ms ease,
       color 180ms ease;
   }
-  .home-hero__visual:hover img {
-    transform: scale(1.015);
-  }
   .scenario-card:hover,
   .scenario-card:focus-visible {
     background: color-mix(in srgb, var(--pri) 5%, transparent);
@@ -362,7 +386,6 @@
     width: 100%;
   }
   .home-hero__visual {
-    padding: 8px;
     aspect-ratio: auto;
   }
   .home-hero__caption {
@@ -425,6 +448,41 @@
     width: 44px;
     min-width: 44px;
     padding: 8px;
+  }
+}
+
+@media (min-width: 768px) and (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  /* 兩層照片紙各自回正，連結的命中區域維持原位。 */
+  .home-hero__visual::before {
+    content: '';
+    position: absolute;
+    inset: 4px;
+    z-index: -1;
+    background: var(--card-bg-solid);
+    border: 1px solid var(--bd);
+    transform: translate(-6px, 3px) rotate(-2deg);
+    transition: transform 440ms var(--motion-ease-out);
+  }
+  .home-hero__print {
+    transform: rotate(1.25deg);
+    transition:
+      transform 480ms var(--motion-ease-out),
+      box-shadow 340ms var(--motion-ease-out);
+  }
+  .home-hero__visual:is(:hover, :focus-visible)::before {
+    transform: translate(-8px, 8px) rotate(-3deg);
+  }
+  .home-hero__visual:is(:hover, :focus-visible) .home-hero__print {
+    transform: translateY(-4px) rotate(0deg);
+    box-shadow: var(--shadow-hover);
+  }
+  .home-hero__visual:is(:hover, :focus-visible) img {
+    transform: scale(1.025);
+  }
+  .home-hero__visual:is(:hover, :focus-visible) .home-hero__collection > span {
+    border-color: var(--pri-btn);
+    background: var(--pri-btn);
+    color: #fff;
   }
 }
 @media (prefers-reduced-motion: reduce) {

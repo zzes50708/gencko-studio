@@ -35,53 +35,66 @@ for (const width of [375, 430, 1440, 1920]) {
           '/articles/OUTLINE-UX'
         )
       )
-      await expect(page.getByRole('combobox', { name: '跳至文章章節' })).toBeVisible()
+      await expect(page.getByRole('navigation', { name: '文章章節' })).toBeVisible()
     })
-    test('選單與焦點邊框留在閱讀器內，長標題不推寬', async ({ page }) => {
-      const select = page.getByRole('combobox', { name: '跳至文章章節' })
-      await select.focus()
-      const bounds = await select.evaluate((element) => {
-        const box = element.getBoundingClientRect(),
-          container = element.closest('.reader-container')!.getBoundingClientRect()
+    test('底部章節按鈕不遮住手機導覽，長標題不推寬', async ({ page }) => {
+      const navigation = page.getByRole('navigation', { name: '文章章節' })
+      await navigation.getByRole('button').nth(1).focus()
+      const bounds = await navigation.evaluate((element) => {
+        const box = element.getBoundingClientRect()
+        const dock = document.querySelector('.bottom-nav')?.getBoundingClientRect()
         return {
-          rightGap: container.right - box.right,
-          leftGap: box.left - container.left,
+          bottom: box.bottom,
+          viewport: innerHeight,
+          dockTop: dock && dock.height ? dock.top : innerHeight,
+          position: getComputedStyle(element).position,
           overflow: document.documentElement.scrollWidth > innerWidth
         }
       })
-      expect(bounds.rightGap).toBeGreaterThanOrEqual(2)
-      expect(bounds.leftGap).toBeGreaterThanOrEqual(2)
+      expect(bounds.position).toBe('fixed')
+      expect(bounds.bottom).toBeLessThanOrEqual(bounds.dockTop)
+      expect(bounds.viewport - bounds.bottom).toBeLessThan(110)
       expect(bounds.overflow).toBe(false)
+      expect(
+        await navigation.getByRole('button').evaluateAll((buttons) =>
+          buttons.every((button) => {
+            const box = button.getBoundingClientRect()
+            return box.left >= 0 && box.right <= innerWidth && box.height >= 44
+          })
+        )
+      ).toBe(true)
+      await expect(page.getByRole('combobox', { name: '跳至文章章節' })).toHaveCount(0)
     })
     test('可跳到章節，回頂端後可再次選相同章節', async ({ page }) => {
-      const select = page.getByRole('combobox', { name: '跳至文章章節' })
+      const button = page.getByRole('navigation', { name: '文章章節' }).getByRole('button').nth(1)
       const heading = page.locator('.reader-content h2').nth(1)
-      const option = (await select.locator('option').all()).at(2)!
-      const value = await option.getAttribute('value')
-      await select.selectOption(value!)
+      await button.click()
       await expect.poll(async () => (await heading.boundingBox())!.y).toBeGreaterThanOrEqual(0)
       await expect.poll(async () => (await heading.boundingBox())!.y).toBeLessThan(150)
       await expect(heading).toBeFocused()
+      await expect(page.locator('.reader-outline')).toBeInViewport()
+      expect(
+        await heading.evaluate((element) => {
+          const control = document.querySelector('.reader-outline')!
+          return element.getBoundingClientRect().top < control.getBoundingClientRect().top
+        })
+      ).toBe(true)
       await page.mouse.move(20, 300)
       await page.mouse.wheel(0, -10000)
       await expect.poll(() => page.evaluate(() => scrollY)).toBeLessThan(5)
-      await select.selectOption(value!)
+      await button.click()
       await expect.poll(async () => (await heading.boundingBox())!.y).toBeLessThan(150)
       await expect(heading).toBeFocused()
     })
     test('正文重新渲染且沒有標題 ID 時仍可跳轉第一章及後續章節', async ({ page }) => {
-      const select = page.getByRole('combobox', { name: '跳至文章章節' })
+      const buttons = page.getByRole('navigation', { name: '文章章節' }).getByRole('button')
       // 模擬 v-html 重建正文，不保留事後補上的 DOM 屬性。
       await page.locator('.reader-content').evaluate((element) => {
         element.querySelectorAll('h2, h3').forEach((heading) => heading.removeAttribute('id'))
         element.innerHTML = element.innerHTML
       })
       for (const index of [0, 2]) {
-        const value = await select
-          .locator('option')
-          .nth(index + 1)
-          .getAttribute('value')
-        await select.selectOption(value!)
+        await buttons.nth(index).click()
         const heading = page.locator('.reader-content :is(h2, h3)').nth(index)
         await expect.poll(async () => (await heading.boundingBox())!.y).toBeLessThan(150)
         await expect.poll(async () => (await heading.boundingBox())!.y).toBeGreaterThanOrEqual(0)

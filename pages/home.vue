@@ -227,16 +227,23 @@ watch(
           class="home-hero__visual"
           aria-label="瀏覽 Gencko 現有守宮個體"
         >
-          <img
-            :src="heroGeckoUrl"
-            alt="Gencko Studio 豹紋守宮"
-            loading="eager"
-            fetchpriority="high"
-            decoding="async"
-          />
-          <div class="home-hero__caption">
-            <span>GENCKO</span>
-            <span>VIEW COLLECTION</span>
+          <div class="home-hero__print">
+            <div class="home-hero__photo">
+              <img
+                :src="heroGeckoUrl"
+                alt="Gencko Studio 豹紋守宮"
+                loading="eager"
+                fetchpriority="high"
+                decoding="async"
+              />
+            </div>
+            <div class="home-hero__caption">
+              <span>GENCKO</span>
+              <span class="home-hero__collection">
+                VIEW COLLECTION
+                <span aria-hidden="true">↗</span>
+              </span>
+            </div>
           </div>
         </NuxtLink>
 
@@ -1810,7 +1817,6 @@ watch(
 }
 
 @media (hover: hover) and (pointer: fine) {
-  .home-hero__visual:hover img,
   .home-product:hover img {
     transform: scale(1.035);
   }

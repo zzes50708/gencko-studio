@@ -15,6 +15,11 @@ definePageMeta({
 })
 
 const route = useRoute()
+const formatProductPrice = (amount) =>
+  amount == null || amount === '' || !Number.isFinite(Number(amount))
+    ? '售價未登錄'
+    : `NT$ ${Number(amount).toLocaleString('zh-TW')}`
+const catalogReturn = useState('shop-catalog-return', () => '/shop/all')
 const store = useMainStore()
 const supabase = useSupabaseClient()
 
@@ -607,7 +612,7 @@ useContentResponse(currentProduct, pending, productError)
         <div class="loader" style="margin: 0 auto 20px auto"></div>
         <p>正在尋找這隻守宮的資料...</p>
         <TheBackButton
-          fallback="/shop"
+          fallback="/shop/all"
           text="返回商城列表"
           style="margin: 20px auto; justify-content: center"
         />
@@ -616,7 +621,7 @@ useContentResponse(currentProduct, pending, productError)
       <div v-else-if="productError" class="product-read-error" role="alert">
         <h2>個體資料載入失敗</h2>
         <button type="button" @click="retryProduct">重試資料</button>
-        <TheBackButton fallback="/shop" text="返回商城列表" />
+        <TheBackButton fallback="/shop/all" text="返回商城列表" />
       </div>
       <div
         v-else-if="!currentProduct"
@@ -626,7 +631,7 @@ useContentResponse(currentProduct, pending, productError)
         <h2>找不到此守宮</h2>
         <p>該商品可能已下架或不存在。</p>
         <TheBackButton
-          fallback="/shop"
+          fallback="/shop/all"
           text="返回商城列表"
           style="margin: 20px auto; justify-content: center"
         />
@@ -643,10 +648,16 @@ useContentResponse(currentProduct, pending, productError)
 
       <div v-else class="prod-container">
         <div class="prod-topbar">
-          <TheBackButton fallback="/shop" text="返回列表" />
+          <nav class="specimen-breadcrumb" aria-label="個體導覽">
+            <NuxtLink no-prefetch to="/shop">選購分類</NuxtLink>
+            <span aria-hidden="true">/</span>
+            <NuxtLink no-prefetch :to="catalogReturn">個體清單</NuxtLink>
+            <span aria-hidden="true">/</span>
+            <span>{{ productModules.identity.id }}</span>
+          </nav>
         </div>
 
-        <div class="prod-layout">
+        <div class="prod-layout specimen-layout">
           <div class="prod-img-box">
             <div v-if="productModules.transaction.status === 'Sold'" class="sold-stamp">
               SOLD OUT
@@ -656,6 +667,7 @@ useContentResponse(currentProduct, pending, productError)
                 v-for="(img, idx) in productModules.visuals.list"
                 :key="idx"
                 :src="getCleanUrl(img, 1600)"
+                fit="contain"
               >
                 <img
                   :key="`${idx}-${responsivePhoto ? 'responsive' : 'original'}`"
@@ -677,29 +689,11 @@ useContentResponse(currentProduct, pending, productError)
               <button v-if="photoFailed" type="button" @click="retryMainPhoto">重試照片</button>
             </div>
           </div>
-          <div class="prod-info-box">
-            <div class="prod-header">
-              <span class="prod-id">ID: {{ productModules.identity.id }}</span>
+          <div class="prod-info-box specimen-information">
+            <header class="prod-header">
+              <span class="prod-id">{{ productModules.identity.id }}</span>
               <h1 class="prod-title">{{ productModules.identity.morph }}</h1>
-              <div class="gene-tag-row">
-                <span v-for="g in productModules.identity.genes" :key="g" class="gene-pill">
-                  {{ g }}
-                </span>
-              </div>
-              <div class="prod-identity-notice">⚠️ {{ productModules.expectations.notice }}</div>
-              <div v-if="productModules.identity.note" class="prod-note">
-                📝 備註：{{ productModules.identity.note }}
-              </div>
-              <div class="spec-row">
-                <span :class="getSexCls(currentProduct)" class="sex-val">
-                  {{ fmtSex(currentProduct) }}
-                </span>
-                <span class="birth-val">{{ productModules.identity.birth }} 出生</span>
-              </div>
-              <div v-if="productModules.identity.uploadedAt" class="upload-row">
-                📷 照片上傳：{{ productModules.identity.uploadedAt }}
-              </div>
-            </div>
+            </header>
             <div class="prod-price-area">
               <template v-if="productModules.transaction.status === 'Sold'">
                 <div class="price">
@@ -727,16 +721,41 @@ useContentResponse(currentProduct, pending, productError)
                 <div v-if="store.isExhibitionMode" class="price exhibition-price">
                   {{ store.exhibitionNote }}
                 </div>
-                <div v-else class="price">NT$ {{ productModules.transaction.price }}</div>
+                <div v-else class="price">
+                  {{ formatProductPrice(productModules.transaction.price) }}
+                </div>
               </template>
             </div>
-
-            <div class="guarantee-icons-row">
-              <div class="g-icon-pill g-pill-green">100% 健康</div>
-              <div class="g-icon-pill g-pill-blue">基因正確</div>
-              <div class="g-icon-pill g-pill-orange">運輸賠償</div>
-            </div>
-
+            <section class="specimen-description" aria-label="個體資料">
+              <h2>個體資料</h2>
+              <dl class="specimen-facts">
+                <div>
+                  <dt>物種</dt>
+                  <dd>{{ currentProduct.Species }}</dd>
+                </div>
+                <div>
+                  <dt>性別</dt>
+                  <dd class="sex-val">{{ fmtSex(currentProduct) }}</dd>
+                </div>
+                <div>
+                  <dt>出生日期</dt>
+                  <dd class="birth-val">{{ productModules.identity.birth }}</dd>
+                </div>
+                <div v-if="productModules.identity.uploadedAt">
+                  <dt>照片更新</dt>
+                  <dd>{{ productModules.identity.uploadedAt }}</dd>
+                </div>
+              </dl>
+              <div v-if="productModules.identity.genes.length" class="gene-tag-row">
+                <span v-for="g in productModules.identity.genes" :key="g" class="gene-pill">
+                  {{ g }}
+                </span>
+              </div>
+              <p v-if="productModules.identity.note" class="prod-note">
+                {{ productModules.identity.note }}
+              </p>
+            </section>
+            <p class="prod-identity-notice">{{ productModules.expectations.notice }}</p>
             <div class="prod-actions">
               <p v-if="shareStatus" role="status">{{ shareStatus }}</p>
               <input
@@ -753,6 +772,7 @@ useContentResponse(currentProduct, pending, productError)
                 class="btn-app btn-app--primary btn-app--lg btn-buy-lg"
               >
                 {{ matchedAuctionId ? '前往競標場次' : '查看競標列表' }}
+                <span class="prod-action-arrow" aria-hidden="true">↗</span>
               </NuxtLink>
               <a
                 v-else-if="
@@ -769,6 +789,7 @@ useContentResponse(currentProduct, pending, productError)
                 rel="noopener noreferrer"
               >
                 私訊購買（Line）
+                <span class="prod-action-arrow" aria-hidden="true">↗</span>
               </a>
               <div class="action-sub-buttons">
                 <button
@@ -777,6 +798,9 @@ useContentResponse(currentProduct, pending, productError)
                   :aria-pressed="isCompared"
                   @click="toggleCompare"
                 >
+                  <span class="prod-selection-mark" aria-hidden="true">
+                    {{ isCompared ? '✓' : '+' }}
+                  </span>
                   {{ isCompared ? '移出比較' : '加入比較' }}
                 </button>
                 <button
@@ -787,6 +811,9 @@ useContentResponse(currentProduct, pending, productError)
                   :aria-label="isWishlisted ? '取消收藏此個體' : '收藏此個體'"
                   @click="toggleWishlist"
                 >
+                  <span class="prod-selection-mark" aria-hidden="true">
+                    {{ isWishlisted ? '✓' : '+' }}
+                  </span>
                   {{ isWishlisted ? '已收藏' : '收藏' }}
                 </button>
                 <button
@@ -817,6 +844,40 @@ useContentResponse(currentProduct, pending, productError)
                 {{ inquiryCopyStatus }}
               </p>
             </div>
+            <details class="specimen-policy">
+              <summary>
+                健康、運送與購買須知
+                <span aria-hidden="true">＋</span>
+              </summary>
+              <div class="guarantee-icons-row">
+                <div class="g-icon-pill g-pill-green">100% 健康</div>
+                <div class="g-icon-pill g-pill-blue">基因正確</div>
+                <div class="g-icon-pill g-pill-orange">運輸賠償</div>
+              </div>
+              <div class="prod-terms-box">
+                <div class="terms-title">取貨與購買須知</div>
+                <ul class="terms-list">
+                  <li>
+                    Gencko工作室出貨前皆確認個體100%健康，所有個體皆為負責人親自餵食，確保進食穩定且無隱憂才會上架販售。
+                  </li>
+                  <li>開箱請全程錄影，以利於後續爭議處理。</li>
+                  <li>有任何問題請於48小時內提出，逾期不候。</li>
+                  <li>請提前準備好守宮之飼養環境。</li>
+                  <li>守宮會因飼主飼養方式不當而造成問題，本工作室將不予退換貨。</li>
+                  <li>
+                    個體有缺陷且本工作室無事先告知，本方無條件退款 (需提供錄影確保個體無調包嫌疑)。
+                  </li>
+                  <li>
+                    運送過程死亡，本工作室全額退款；運送過程斷尾，本工作室退還50%款項
+                    (需提供錄影確保個體無調包嫌疑)。
+                  </li>
+                  <li>購買前請做足功課，本社群、官方皆可無償教學，請做好準備再進行購買。</li>
+                  <li style="color: var(--pri); font-weight: bold; margin-top: 10px">
+                    購買視同同意以上須知事項。
+                  </li>
+                </ul>
+              </div>
+            </details>
           </div>
         </div>
         <section v-if="relatedProducts.length > 0" class="related-section">
@@ -827,7 +888,7 @@ useContentResponse(currentProduct, pending, productError)
             <h2 class="sec-title" style="font-size: 1.2rem">相似個體推薦</h2>
             <NuxtLink
               no-prefetch
-              to="/shop"
+              to="/shop/all"
               class="sec-more"
               style="text-decoration: none; font-size: 0.85rem"
             >
@@ -879,27 +940,6 @@ useContentResponse(currentProduct, pending, productError)
             </NuxtLink>
           </div>
         </section>
-        <div class="prod-terms-box">
-          <div class="terms-title">⚠️ 取貨注意事項 & 購買須知 ⚠️</div>
-          <ul class="terms-list">
-            <li>
-              Gencko工作室出貨前皆確認個體100%健康，所有個體皆為負責人親自餵食，確保進食穩定且無隱憂才會上架販售。
-            </li>
-            <li>開箱請全程錄影，以利於後續爭議處理。</li>
-            <li>有任何問題請於48小時內提出，逾期不候。</li>
-            <li>請提前準備好守宮之飼養環境。</li>
-            <li>守宮會因飼主飼養方式不當而造成問題，本工作室將不予退換貨。</li>
-            <li>個體有缺陷且本工作室無事先告知，本方無條件退款 (需提供錄影確保個體無調包嫌疑)。</li>
-            <li>
-              運送過程死亡，本工作室全額退款；運送過程斷尾，本工作室退還50%款項
-              (需提供錄影確保個體無調包嫌疑)。
-            </li>
-            <li>購買前請做足功課，本社群、官方皆可無償教學，請做好準備再進行購買。</li>
-            <li style="color: var(--pri); font-weight: bold; margin-top: 10px">
-              購買視同同意以上須知事項。
-            </li>
-          </ul>
-        </div>
       </div>
 
       <Teleport to="body">
@@ -943,877 +983,525 @@ useContentResponse(currentProduct, pending, productError)
 </template>
 
 <style scoped>
-.related-grid .related-card {
-  border-radius: 8px;
-  padding: 5px;
-  background: var(--card-bg-solid);
+.product-root-container {
+  padding-bottom: 40px;
 }
-.related-grid .related-img-wrap {
-  border-radius: 4px;
-}
-.related-grid .related-card-arrow {
-  display: grid;
-  place-items: center;
-  width: 22px;
-  height: 22px;
-  border: 1px solid var(--bd);
-  border-radius: 50%;
-  transition: transform 160ms ease-out;
-}
-@media (min-width: 768px) and (hover: hover) and (pointer: fine) {
-  .related-grid .related-card:is(:hover, :focus-visible) .related-card-arrow {
-    transform: translate(1px, -1px);
-    background: var(--pri-btn);
-    border-color: var(--pri-btn);
-    color: white;
-  }
-}
-@media (prefers-reduced-motion: reduce) {
-  .related-grid .related-card-arrow {
-    transition: none;
-    transform: none !important;
-  }
-}
-.product-page-wrapper {
-  width: 100%;
-}
-
 .prod-container {
-  max-width: 1100px;
-  margin: 0 auto;
-  padding-top: 15px;
+  max-width: 1280px;
+  margin-inline: auto;
 }
 .prod-topbar {
-  display: flex;
-  align-items: center;
-  gap: 12px;
+  padding-block: 12px;
 }
-.prod-layout {
-  display: flex;
-  gap: 30px;
-  margin-top: 10px;
-  align-items: flex-start;
-}
-
 .prod-img-box {
-  flex: 1;
   position: relative;
-  border-radius: 10px;
-  overflow: hidden;
-  border: 1px solid var(--bd);
-  background: var(--card-bg);
 }
-.prod-main-img {
-  width: 100%;
-  height: auto;
-  max-height: none;
-  aspect-ratio: 1 / 1;
-  object-fit: cover;
-  display: block;
+.sold-stamp {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  z-index: 3;
+  padding: 7px 12px;
+  background: var(--txt);
+  color: var(--bg-dark);
+  font-size: 12px;
+  letter-spacing: 0.08em;
 }
 .prod-img-link {
-  display: block;
-  cursor: default;
+  width: 100%;
 }
-.prod-img-link:focus-visible {
-  outline: 3px solid var(--pri);
-  outline-offset: -3px;
-}
-.prod-hint {
-  text-align: center;
-  color: var(--txt);
-  opacity: 0.6;
-  font-size: 0.75rem;
-  padding: 8px;
-  background: var(--card-bg);
-  border-top: 1px solid var(--bd);
-}
-
-.prod-info-box {
-  flex: 1;
-  padding: 20px;
-  background: var(--card-bg);
-  border-radius: 12px;
-  border: 1px solid var(--bd);
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
-}
-.prod-header {
-  border-bottom: 1px solid var(--bd);
-  padding-bottom: 15px;
-  margin-bottom: 15px;
-}
-.prod-id {
-  color: var(--txt);
-  opacity: 0.6;
-  font-family: monospace;
-  font-size: 0.85rem;
-  margin-bottom: 4px;
-  display: block;
-}
-.prod-title {
-  font-size: 1.8rem;
-  color: var(--txt);
-  margin: 0 0 8px;
-  line-height: 1.2;
-}
-.prod-note {
-  margin-bottom: 15px;
-  color: var(--txt);
-  opacity: 0.8;
-  font-size: 0.95rem;
-  background: var(--card-bg);
-  padding: 10px;
-  border-radius: 6px;
-  border: 1px dashed var(--bd);
-  white-space: pre-wrap;
-}
-.prod-price-area {
-  margin-bottom: 20px;
-}
-
-.spec-row {
-  display: flex;
-  padding: 5px 0 0 0;
-  border: none;
-  align-items: center;
-}
-.sex-val {
-  font-size: 1.1rem;
-  margin-right: 15px;
-}
-.birth-val {
-  color: var(--txt);
-  opacity: 0.6;
-  font-size: 1rem;
-}
-.upload-row {
-  margin-top: 6px;
-  color: var(--txt);
-  opacity: 0.55;
-  font-size: 0.85rem;
-}
-
-.gene-tag-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin-bottom: 8px;
-}
-.gene-pill {
-  background: transparent;
-  color: var(--pri);
-  padding: 4px 12px;
-  border-radius: 15px;
-  font-size: 0.85rem;
-  font-weight: bold;
-  border: 1px solid var(--pri);
-}
-.prod-identity-notice {
-  margin-top: 2px;
-  margin-bottom: 12px;
-  color: var(--txt);
-  opacity: 0.68;
-  font-size: 0.82rem;
-  line-height: 1.5;
-}
-
-.guarantee-icons-row {
-  display: flex;
-  gap: 10px;
-  margin-bottom: 15px;
-  flex-wrap: wrap;
-}
-.g-icon-pill {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  font-size: 0.85rem;
-  padding: 5px 10px;
-  border-radius: 20px;
-  font-weight: bold;
-  background: transparent;
-  border: 1px solid var(--bd);
-}
-.g-pill-green {
-  color: var(--ok-text);
-  border-color: #4caf50;
-}
-.g-pill-blue {
-  color: #2196f3;
-  border-color: #2196f3;
-}
-.g-pill-orange {
-  color: #ff9800;
-  border-color: #ff9800;
-}
-
 .prod-actions {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  margin-bottom: 15px;
-  margin-top: 20px;
+}
+.prod-actions > p {
+  font-size: 12px;
+  line-height: 1.7;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.prod-actions > input {
+  min-width: 0;
+  min-height: 44px;
+  padding: 8px;
 }
 .btn-buy-lg {
-  width: 100%;
-  min-height: var(--control-min-height);
-  background: var(--pri);
-  color: #fff;
-  text-align: center;
-  padding: 12px;
-  font-size: 1.1rem;
-  font-weight: bold;
-  border-radius: 25px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
   text-decoration: none;
-  transition: 0.3s;
-  box-shadow: 0 4px 10px var(--pri-glow);
+}
+.prod-action-arrow {
+  display: inline-grid;
+  place-items: center;
+  flex: 0 0 28px;
+  width: 28px;
+  height: 28px;
+  border: 1px solid currentColor;
+  border-radius: 50%;
+}
+.prod-selection-mark {
+  display: inline-grid;
+  place-items: center;
+  width: 14px;
+  font-size: 12px;
+}
+.gene-tag-row {
   display: flex;
+  flex-wrap: wrap;
+}
+.status-badge {
+  font-size: 12px;
+  padding: 4px 8px;
+  border: 1px solid var(--bd);
+  color: var(--txt-muted);
+}
+.product-photo-fallback {
+  display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-}
-.action-sub-buttons {
-  display: flex;
-  gap: 10px;
+  gap: 12px;
+  aspect-ratio: 1;
   width: 100%;
-}
-.btn-wishlist,
-.btn-share,
-.btn-promo {
-  flex: 1;
-  min-height: var(--control-min-height);
   background: var(--card-bg);
-  color: var(--txt);
-  border: 1px solid var(--bd);
-  padding: 12px;
-  border-radius: 25px;
-  cursor: pointer;
-  transition: 0.2s;
-  font-weight: bold;
-  font-size: 0.95rem;
-  white-space: nowrap;
+  color: var(--txt-muted);
+  font-size: 13px;
 }
-.btn-wishlist--active {
-  border-color: var(--pri);
-  color: var(--pri);
+.product-photo-fallback button,
+.product-read-error button {
+  min-height: 44px;
+  padding: 8px 14px;
 }
-.btn-promo:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.prod-terms-box {
-  margin-top: 30px;
-  background: var(--card-bg);
-  padding: 25px;
-  border-radius: 12px;
-  border: 1px solid var(--bd);
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
-}
-.terms-title {
+.detail-read-state,
+.product-read-error {
+  padding: 40px 0;
   text-align: center;
-  color: var(--pri);
-  font-weight: 900;
-  font-size: 1.1rem;
-  margin-bottom: 15px;
-  letter-spacing: 1px;
-}
-.terms-list {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-  color: var(--txt);
-  opacity: 0.8;
-  line-height: 1.6;
-  font-size: 0.9rem;
-}
-.terms-list li {
-  margin-bottom: 8px;
-  padding-left: 12px;
-  position: relative;
-}
-.terms-list li::before {
-  content: '•';
-  position: absolute;
-  left: 0;
-  color: var(--pri);
-}
-
-.sold-stamp {
-  position: absolute;
-  top: 15px;
-  left: 15px;
-  border: 6px solid #f44336;
-  color: #f44336;
-  font-size: 3rem;
-  font-weight: 900;
-  padding: 5px 15px;
-  border-radius: 8px;
-  background: var(--card-bg);
-  opacity: 0.9;
-  pointer-events: none;
-  z-index: 10;
-  font-family: 'Black Ops One', sans-serif;
-  letter-spacing: 2px;
-  text-transform: uppercase;
-  text-shadow: 2px 2px 5px rgba(0, 0, 0, 0.2);
-}
-
-/* 🌟 圖卡彈窗 Modal 樣式 */
-.promo-modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100vh;
-  background: rgba(0, 0, 0, 0.8);
-  backdrop-filter: blur(8px);
-  z-index: 999999;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  padding: 20px;
-}
-.promo-modal-content {
-  background: var(--card-bg);
-  border: 1px solid var(--pri);
-  border-radius: 16px;
-  padding: 20px;
-  width: 100%;
-  max-width: 400px;
-  text-align: center;
-  position: relative;
-  box-shadow: 0 10px 40px rgba(255, 69, 0, 0.2);
-  animation: zoomIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-}
-.btn-close-promo {
-  position: absolute;
-  top: 10px;
-  right: 10px;
-  background: var(--card-bg-solid);
-  border: 1px solid var(--bd-solid);
-  border-radius: 2px;
-  color: var(--txt);
-  font-size: 1.4rem;
-  cursor: pointer;
-  opacity: 0.6;
-  min-width: var(--control-min-height);
-  min-height: var(--control-min-height);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-.promo-result-img {
-  width: 100%;
-  height: auto;
-  border-radius: 8px;
-  margin-top: 15px;
-  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
-  border: 1px solid var(--bd);
-}
-
-@keyframes zoomIn {
-  from {
-    opacity: 0;
-    transform: scale(0.9);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1);
-  }
-}
-
-@media (max-width: 768px) {
-  .product-page-wrapper {
-    padding-top: 0;
-    padding-bottom: 15px;
-  }
-  /* (c) 圖片區與資訊區改上下堆疊 */
-  .prod-layout {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: 12px;
-    align-items: start;
-    margin-top: 5px;
-    order: 1;
-  }
-  .prod-img-box {
-    border-radius: 8px;
-  }
-  .prod-main-img {
-    width: 100%;
-    aspect-ratio: 1 / 1;
-    object-fit: cover;
-    max-height: none;
-  }
-  .prod-hint {
-    display: none;
-  }
-  .sold-stamp {
-    font-size: 1.2rem;
-    border-width: 3px;
-    padding: 4px 8px;
-    top: 8px;
-    left: 8px;
-  }
-  .prod-info-box {
-    padding: 10px;
-    border-radius: 8px;
-  }
-  .prod-header {
-    padding-bottom: 8px;
-    margin-bottom: 8px;
-  }
-  .prod-id {
-    font-size: 0.7rem;
-    margin-bottom: 2px;
-  }
-  .prod-title {
-    font-size: 1.15rem;
-    margin-bottom: 6px;
-    padding-bottom: 0;
-    border-bottom: none;
-  }
-  .gene-pill {
-    padding: 2px 6px;
-    font-size: 0.7rem;
-  }
-  .prod-note {
-    font-size: 0.8rem;
-    padding: 8px;
-    margin-bottom: 8px;
-  }
-  .spec-row {
-    font-size: 0.85rem;
-  }
-  .sex-val {
-    font-size: 0.9rem;
-    margin-right: 8px;
-  }
-  .birth-val {
-    font-size: 0.8rem;
-  }
-  .upload-row {
-    font-size: 0.72rem;
-    margin-top: 4px;
-  }
-  .prod-price-area {
-    margin-bottom: 10px;
-  }
-  .g-icon-pill {
-    font-size: 0.65rem;
-    padding: 4px 6px;
-  }
-  /* 手機資訊依可用寬度換行，避免長基因名稱與孵化紀錄撐開版面。 */
-  .guarantee-icons-row,
-  .gene-tag-row {
-    flex-wrap: wrap;
-  }
-  .spec-row {
-    flex-wrap: wrap;
-    white-space: normal;
-    gap: 4px 12px;
-  }
-  .sex-val {
-    margin-right: 0;
-  }
-
-  /* (f) 相似個體推薦排到「取貨注意事項」之上（僅手機；桌機維持原順序） */
-  .prod-container {
-    display: flex;
-    flex-direction: column;
-  }
-  .related-section {
-    order: 2;
-  }
-  .prod-terms-box {
-    order: 3;
-  }
-
-  .prod-actions {
-    margin-top: 10px;
-    gap: 8px;
-  }
-  .btn-buy-lg {
-    padding: 10px;
-    font-size: 1rem;
-  }
-  .action-sub-buttons {
-    gap: 8px;
-  }
-  .btn-share,
-  .btn-promo,
-  .btn-wishlist {
-    padding: 10px 5px;
-    font-size: 0.85rem;
-  }
-
-  .prod-terms-box {
-    grid-column: 1 / -1;
-    padding: 15px;
-    margin-top: 5px;
-  }
-  .related-grid {
-    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
-    gap: 6px !important;
-  }
-}
-
-/* ── 相似個體推薦 ── */
-.related-section {
-  margin-top: 30px;
 }
 .related-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 12px;
-}
-@media (min-width: 769px) and (max-width: 1100px) {
-  .related-grid {
-    grid-template-columns: repeat(4, 1fr);
-  }
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 24px;
 }
 .related-card {
-  background: var(--card-bg);
-  border: 1px solid var(--bd);
-  border-radius: var(--radius-md);
-  overflow: hidden;
-  transition:
-    transform var(--transition),
-    box-shadow var(--transition),
-    border-color var(--transition);
-  cursor: pointer;
-}
-.related-card:focus-visible {
-  outline: 3px solid var(--pri);
-  outline-offset: 3px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  text-decoration: none;
+  color: var(--txt);
 }
 .related-img-wrap {
   position: relative;
-  aspect-ratio: 1 / 1;
   overflow: hidden;
-  background: var(--card-bg);
-}
-.related-img-wrap img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
-  transition: transform var(--transition);
+  border-radius: 2px;
 }
 .related-img-placeholder {
-  width: 100%;
-  height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 2rem;
-  background: rgba(0, 0, 0, 0.2);
-}
-.rel-badge {
-  position: absolute;
-  top: 6px;
-  left: 6px;
-  padding: 2px 7px;
-  border-radius: 10px;
-  font-size: 0.65rem;
-  font-weight: bold;
-  color: #fff;
-}
-.rel-sold {
-  background: #555;
-}
-.rel-auction {
-  background: var(--pri);
-  box-shadow: 0 0 6px var(--pri-glow);
-}
-.related-info {
-  padding: 8px 10px;
+  display: grid;
+  place-items: center;
+  aspect-ratio: 1;
+  color: var(--txt-muted);
+  font-size: 12px;
 }
 .related-card-heading {
   display: flex;
   align-items: start;
   justify-content: space-between;
-  gap: 4px;
-}
-.related-card-heading .related-morph {
-  min-width: 0;
-}
-.related-card-arrow {
-  flex: none;
-  color: var(--pri);
-  font-size: 0.8rem;
-  line-height: 1.25;
-}
-.related-card:focus-visible .related-card-arrow {
-  color: var(--txt);
-}
-.related-meta {
-  display: none;
+  gap: 10px;
 }
 .related-morph {
-  font-size: 0.88rem;
-  font-weight: 700;
-  color: var(--txt);
-  margin-bottom: 3px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  margin: 0;
+  font: 600 14px/1.6 var(--font-body-zh);
+  overflow-wrap: anywhere;
 }
-.related-price {
-  font-size: 0.82rem;
-  font-weight: bold;
-  color: var(--pri);
-}
-
-@media (hover: hover) and (pointer: fine) {
-  .btn-buy-lg:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 15px var(--pri-glow);
-  }
-  .btn-wishlist:hover,
-  .btn-share:hover,
-  .btn-promo:hover {
-    border-color: var(--pri);
-    color: var(--pri);
-  }
-  .related-card:hover {
-    transform: translateY(-3px);
-    border-color: var(--bd-hover);
-    box-shadow: var(--shadow-hover);
-  }
-  .related-card:hover .related-img-wrap img {
-    transform: scale(1.04);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .prod-img-link,
-  .btn-buy-lg,
-  .btn-share,
-  .btn-promo,
-  .btn-wishlist,
-  .btn-close-promo,
-  .related-card,
-  .related-img-wrap img,
-  .promo-modal-content {
-    transition: none !important;
-    animation: none !important;
-  }
-}
-
-/* Boutique detail alignment */
-.common-document-meta {
-  margin-bottom: 0;
-}
-
-.prod-container {
-  max-width: 1280px;
-  padding: 0 clamp(16px, 4vw, 56px) clamp(24px, 3vw, 40px);
-}
-
-.prod-topbar :deep(.app-back-btn) {
-  border-radius: 2px;
-}
-
-.prod-img-box,
-.prod-info-box,
-.prod-terms-box,
-.promo-modal-content {
-  border-radius: 0;
-  box-shadow: none;
-}
-
-.prod-info-box {
-  background: transparent;
-}
-
-.prod-title {
-  font-family: 'Noto Serif TC', serif;
-  font-size: clamp(2rem, 4vw, 4.4rem);
-  letter-spacing: -0.05em;
-}
-
-.gene-pill,
-.g-icon-pill,
-.btn-buy-lg,
-.btn-wishlist,
-.btn-share,
-.btn-promo {
-  border-radius: 2px;
-  box-shadow: none;
-}
-
-.prod-price-area,
-.prod-identity-notice,
-.prod-terms-box,
-.promo-result-img {
-  border-radius: 0;
-  box-shadow: none;
-}
-
-.prod-info-box,
-.prod-price-area,
-.prod-terms-box {
-  border-width: 1px 0;
-  background-image: none;
-}
-</style>
-
-<style scoped>
-.product-photo-fallback {
-  min-height: 180px;
+.related-card-arrow {
   display: grid;
   place-items: center;
-  border: 1px solid var(--bd);
+  flex: 0 0 24px;
+  width: 24px;
+  height: 24px;
+  color: var(--pri);
 }
-.product-photo-fallback button,
-.product-read-error button {
-  min-height: 44px;
-}
-.prod-actions input {
-  width: 100%;
-  min-height: 40px;
-  font-size: 16px;
-}
-.btn-compare {
-  min-height: 44px;
-}
-.action-sub-buttons {
+.related-meta {
+  display: flex;
   flex-wrap: wrap;
+  gap: 4px 8px;
+  font-size: 11px;
+  color: var(--txt-muted);
+  margin-top: 5px;
 }
-.action-sub-buttons .btn-app {
-  flex: 1 1 calc(50% - 8px);
+.related-price {
+  font-size: 14px;
+  color: var(--txt);
+  margin-top: 6px;
+  overflow-wrap: anywhere;
+  font-variant-numeric: tabular-nums;
+}
+.rel-badge {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  padding: 3px 6px;
+  background: var(--card-bg-solid);
+  color: var(--txt);
+  font-size: 11px;
+}
+.related-card:hover .related-morph {
+  color: var(--pri);
+}
+.terms-list li {
+  margin-bottom: 8px;
+  overflow-wrap: anywhere;
 }
 dialog.promo-modal-overlay {
   margin: auto;
   width: min(560px, calc(100vw - 24px));
-  height: auto;
   max-height: calc(100dvh - 24px);
-  border: 0;
-  padding: 16px;
-  overflow: auto;
-  background: var(--bg);
+  padding: 24px;
+  background: var(--card-bg-solid);
   color: var(--txt);
-}
-dialog.promo-modal-overlay:not([open]) {
-  display: none;
-}
-dialog.promo-modal-overlay[open] {
-  display: block;
+  border: 1px solid var(--bd);
+  overflow: auto;
 }
 dialog.promo-modal-overlay::backdrop {
-  background: rgba(0, 0, 0, 0.65);
+  background: rgb(0 0 0 / 65%);
 }
-@media (min-width: 768px) and (max-width: 1023px) {
-  .prod-layout {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-    gap: 20px;
-  }
-  .prod-info-box {
-    min-width: 0;
-  }
+.promo-modal-content {
+  position: relative;
+  padding-top: 24px;
+  text-align: center;
+}
+.btn-close-promo {
+  position: absolute;
+  top: -12px;
+  right: -12px;
+  min-width: 44px;
+  min-height: 44px;
+}
+.promo-result-img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin: auto;
 }
 @media (max-width: 767px) {
-  .prod-container {
-    padding-inline: 0;
-  }
-  .prod-layout {
-    display: flex;
-    flex-direction: column;
-    align-items: stretch;
-    gap: 8px;
-  }
-  .prod-header,
-  .prod-img-box,
-  .prod-actions,
-  .guarantee-icons-row {
-    min-width: 0;
-    max-width: 100%;
-  }
-  .prod-header {
-    overflow-wrap: anywhere;
-  }
-  .related-info {
-    padding: 6px 4px;
-  }
-  .related-morph,
-  .related-price {
-    font-size: 12px;
-    line-height: 1.4;
-  }
-  .related-morph {
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    height: 2.8em;
-    white-space: normal;
-    overflow-wrap: anywhere;
-  }
-  .related-meta {
-    display: grid;
-    grid-template-rows: repeat(2, 1.5em);
-    margin-bottom: 3px;
-    color: var(--txt-muted);
-    font-size: 10px;
-    line-height: 1.5;
-    font-variant-numeric: tabular-nums;
-    white-space: nowrap;
-  }
-  .related-price {
-    overflow-wrap: anywhere;
-  }
-  .prod-info-box {
-    display: contents;
-  }
-  .prod-header {
-    order: 0;
-  }
-  .prod-price-area {
-    order: 1;
-  }
-  .prod-img-box {
-    order: 2;
-  }
-  .guarantee-icons-row {
-    order: 3;
-  }
-  .prod-actions {
-    order: 4;
-  }
-  .prod-header,
-  .prod-price-area {
-    margin: 0;
-    padding: 4px 0;
+  .related-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 24px 14px;
   }
 }
-</style>
 
-<style scoped>
-.detail-read-state {
-  padding: 100px 0;
+/* 個體詳情：照片、名稱與價格優先，服務條款收在同一個開合區。 */
+.product-root-container .prod-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 0.8fr);
+  gap: clamp(28px, 5vw, 80px);
+  align-items: start;
+  margin-top: 24px;
+}
+.product-root-container .prod-img-box {
+  grid-area: auto;
+  grid-row: auto;
+  position: sticky;
+  top: 88px;
+  padding: 0;
+  border: 0;
+  border-radius: 3px;
+  background: none;
+  box-shadow: none;
+  min-width: 0;
+}
+.product-root-container .prod-img-link {
+  padding: 0;
+  border: 0;
+  background: none;
+}
+.product-root-container .prod-main-img {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 1;
+  max-height: none;
+  object-fit: contain;
+  border: 0;
+  border-radius: 3px;
+  margin: 0;
+}
+.product-root-container .prod-info-box {
+  display: block;
+  grid-area: auto;
+  padding: 0;
+  border: 0;
+  background: none;
+  box-shadow: none;
+  min-width: 0;
+}
+.product-root-container .prod-header {
+  grid-area: auto;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.product-root-container .prod-title {
+  font-family: var(--font-heading-zh);
+  font-size: clamp(24px, 2.8vw, 38px) !important;
+  line-height: 1.45;
+  letter-spacing: 0;
+  margin: 8px 0 16px;
+  overflow-wrap: anywhere;
+}
+.product-root-container .prod-id {
+  display: block;
+  background: none;
+  padding: 0;
+  border: 0;
+  color: var(--txt-muted);
+  font-size: 12px;
+  letter-spacing: 0.08em;
+}
+.product-root-container .prod-price-area {
+  grid-area: auto;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin: 0 0 28px;
+  padding: 0 0 24px;
+  border: 0;
+  border-bottom: 1px solid var(--bd);
+  background: none;
+}
+.product-root-container .prod-price-area .price {
+  color: var(--txt);
+  font: 500 24px/1.4 var(--font-body-zh);
+  overflow-wrap: anywhere;
+}
+.specimen-breadcrumb {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  font-size: 12px;
+  color: var(--txt-muted);
+}
+.specimen-breadcrumb a {
+  color: inherit;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  text-decoration: none;
+}
+.specimen-description h2 {
+  font-size: 13px;
+  font-weight: 700;
+  margin: 0 0 16px;
+}
+.specimen-facts {
+  margin: 0 0 18px;
+  display: grid;
+  gap: 8px;
+  font-size: 14px;
+}
+.specimen-facts > div {
+  display: grid;
+  grid-template-columns: 84px minmax(0, 1fr);
+  gap: 12px;
+}
+.specimen-facts dt {
+  color: var(--txt-muted);
+}
+.specimen-facts dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+  font-size: inherit;
+  font-weight: 400;
+  color: var(--txt);
+}
+.product-root-container .gene-tag-row {
+  margin: 14px 0;
+  gap: 6px;
+}
+.product-root-container .gene-pill {
+  border: 1px solid var(--bd);
+  background: none;
+  color: var(--txt-muted);
+  font: 400 12px/1.5 var(--font-body-zh);
+  padding: 3px 7px;
+  border-radius: 1px;
+}
+.product-root-container .prod-note {
+  color: var(--txt);
+  font-size: 14px;
+  line-height: 1.8;
+  padding: 0;
+  border: 0;
+  background: none;
+  margin: 16px 0;
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+.product-root-container .prod-identity-notice {
+  grid-area: auto;
+  font-size: 12px;
+  line-height: 1.8;
+  color: var(--txt-muted);
+  margin: 18px 0;
+  padding: 0;
+  border: 0;
+  background: none;
+}
+.product-root-container .prod-actions {
+  grid-area: auto;
+  padding: 0;
+  gap: 12px;
+  width: 100%;
+}
+.product-root-container .btn-buy-lg {
+  min-height: 52px;
+  padding: 14px 18px;
+  border-radius: 2px;
+  font-size: 15px;
+}
+.product-root-container .action-sub-buttons {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 12px;
+}
+.product-root-container .action-sub-buttons .btn-app {
+  min-width: 0;
+  min-height: 44px;
+  padding: 9px 4px;
+  border: 0;
+  border-bottom: 1px solid var(--bd);
+  border-radius: 0;
+  background: transparent;
+  font-size: 13px;
+  white-space: normal;
+}
+.product-root-container .action-sub-buttons .btn-app[aria-pressed='true'] {
+  color: var(--pri);
+  background: none;
+  border-bottom-color: var(--pri);
+}
+.product-root-container .prod-actions > button {
+  min-height: 44px;
+  white-space: normal;
+  max-width: 100%;
+  font-size: 12px;
+}
+.specimen-policy {
+  border-block: 1px solid var(--bd);
+  margin-top: 24px;
+}
+.specimen-policy > summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 52px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  list-style: none;
+}
+.specimen-policy > summary::-webkit-details-marker {
+  display: none;
+}
+.specimen-policy[open] > summary {
+  color: var(--pri);
+}
+.specimen-policy[open] > summary span {
+  rotate: 45deg;
+}
+.specimen-policy .guarantee-icons-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 8px 0;
+}
+.specimen-policy .g-icon-pill {
+  font-size: 11px;
+  color: var(--txt-muted);
+  padding: 4px 7px;
+  background: none;
+  border: 1px solid var(--bd);
+  border-radius: 1px;
+}
+.specimen-policy .prod-terms-box {
+  padding: 12px 0;
+  border: 0;
+  margin: 0;
+  background: none;
+  box-shadow: none;
+}
+.specimen-policy .terms-title {
+  display: none;
+}
+.specimen-policy .terms-list {
+  font-size: 12px;
+  line-height: 1.8;
+  margin: 0;
+  padding-left: 18px;
+}
+.product-root-container .related-section {
+  margin-top: 60px;
+}
+.product-root-container .related-card {
+  border: 0;
+  background: none;
+  border-radius: 0;
+  padding: 0;
+  box-shadow: none;
+}
+.product-root-container .related-img-wrap {
+  border: 0;
+  padding: 0;
+  aspect-ratio: 1;
+  background: var(--card-bg);
+}
+.product-root-container .related-img-wrap img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+.product-root-container .related-info {
+  padding: 12px 0;
+}
+.product-root-container :is(a, button, summary):focus-visible {
+  outline: 2px solid var(--pri);
+  outline-offset: 3px;
 }
 @media (max-width: 767px) {
-  /* 載入與查無資料沿用相同緊湊節奏，保留清楚的返回操作。 */
-  .detail-read-state {
-    padding: 16px 0;
-    color: var(--txt) !important;
-    opacity: 1 !important;
+  .product-root-container .prod-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 26px;
   }
-  .detail-read-state h2 {
-    font-size: 20px;
-    line-height: 1.4;
-    margin: 0 0 8px;
+  .product-root-container .prod-img-box {
+    position: static;
+    grid-column: 1;
+    grid-row: 1;
   }
-  .detail-read-state p {
-    margin: 6px 0;
+  .product-root-container .prod-info-box {
+    display: block;
+    grid-column: 1;
+    grid-row: 2;
   }
-  .detail-read-state .loader {
-    margin-bottom: 10px !important;
+  .product-root-container .prod-header,
+  .product-root-container .prod-price-area,
+  .product-root-container .prod-actions,
+  .product-root-container .prod-identity-notice {
+    grid-area: auto;
   }
-  .detail-read-state :deep(.nav-action-row),
-  .detail-read-state > button {
-    margin: 10px auto 0 !important;
+  .product-root-container .prod-title {
+    font-size: 25px !important;
+  }
+  .product-root-container .prod-price-area {
+    margin-bottom: 22px;
+    padding-bottom: 20px;
+  }
+  .product-root-container .related-section {
+    margin-top: 36px;
   }
 }
 </style>

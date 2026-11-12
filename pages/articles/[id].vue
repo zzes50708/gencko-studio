@@ -25,12 +25,29 @@ const articleId = route.params.id
 const content = ref(null)
 const outline = ref([])
 const selectedChapter = ref('')
+let chapterObserver
 const buildOutline = () => {
+  chapterObserver?.disconnect()
   if (!content.value) return
-  outline.value = Array.from(content.value.querySelectorAll('h2, h3'))
+  const headings = Array.from(content.value.querySelectorAll('h2, h3'))
+  outline.value = headings
     // v-html 重新渲染會移除事後加上的 id；以正文標題順序定位，不改寫原始 HTML。
     .map((element, index) => ({ id: String(index), label: element.textContent.trim() }))
     .filter((item) => item.label)
+  if (outline.value.length < 2) return
+  const visible = new Set()
+  chapterObserver = new IntersectionObserver(
+    (entries) => {
+      for (const entry of entries) {
+        const index = headings.indexOf(entry.target)
+        if (entry.isIntersecting) visible.add(index)
+        else visible.delete(index)
+      }
+      if (visible.size) selectedChapter.value = String(Math.min(...visible))
+    },
+    { rootMargin: '0px 0px -65% 0px', threshold: 0 }
+  )
+  headings.forEach((heading) => chapterObserver.observe(heading))
 }
 onMounted(buildOutline)
 let chapterFrame = 0
@@ -38,11 +55,10 @@ let chapterDisposed = false
 onBeforeUnmount(() => {
   chapterDisposed = true
   cancelAnimationFrame(chapterFrame)
+  chapterObserver?.disconnect()
 })
-const goToChapter = async () => {
-  const id = selectedChapter.value
-  // 這是跳轉操作，清回提示後才能再次選同一章，而非只有換選項才觸發。
-  selectedChapter.value = ''
+const goToChapter = async (id) => {
+  selectedChapter.value = id
   await nextTick()
   if (chapterDisposed) return
   cancelAnimationFrame(chapterFrame)
@@ -482,15 +498,18 @@ useHead(() => ({
           />
         </div>
         <div class="reader-reading-track" aria-hidden="true"><span /></div>
-        <label v-if="outline.length > 1" class="reader-outline">
-          <span>文章章節</span>
-          <select v-model="selectedChapter" aria-label="跳至文章章節" @change="goToChapter">
-            <option value="" disabled>選擇章節</option>
-            <option v-for="item in outline" :key="item.id" :value="item.id">
-              {{ item.label }}
-            </option>
-          </select>
-        </label>
+        <nav v-if="outline.length > 1" class="reader-outline" aria-label="文章章節">
+          <button
+            v-for="item in outline"
+            :key="item.id"
+            type="button"
+            :aria-current="selectedChapter === item.id ? 'location' : undefined"
+            :title="item.label"
+            @click="goToChapter(item.id)"
+          >
+            <span>{{ item.label }}</span>
+          </button>
+        </nav>
         <div ref="content" class="reader-content" v-html="readingArticle.Content"></div>
 
         <!-- 🌟 E-E-A-T 作者資訊卡：提升 AI 引用可信度 & 品牌識別 -->
@@ -621,7 +640,7 @@ useHead(() => ({
   position: relative;
   max-width: 900px;
   margin: 0 auto;
-  overflow: hidden;
+  overflow: clip;
   border: 1px solid var(--bd);
   border-radius: calc(var(--radius-lg) + 8px);
   background: var(--card-bg);
@@ -655,10 +674,6 @@ useHead(() => ({
 }
 /* 正文維持可讀字級，透過章節與段落節奏縮短閱讀高度。 */
 @media (max-width: 767px) {
-  .reader-outline {
-    margin-block: 6px;
-    gap: 6px;
-  }
   .reader-content {
     padding-block: 12px 6px;
   }
@@ -1225,37 +1240,78 @@ useHead(() => ({
   flex-wrap: wrap;
   gap: 8px;
 }
+/* 為底部章節列預留空間，讓頁尾操作仍可完整捲入畫面。 */
+:global(.cont:has(.reader-outline)) {
+  --article-chapter-max-height: min(32dvh, 240px);
+  overflow-x: clip;
+  padding-bottom: calc(var(--page-dock-bottom, 0px) + var(--article-chapter-max-height) + 16px);
+}
 .reader-outline {
+  position: fixed;
+  inset-inline: 0;
+  bottom: calc(var(--page-dock-bottom, 0px) + 3px);
+  z-index: 900;
   display: grid;
-  grid-template-columns: max-content minmax(0, 1fr);
-  align-items: center;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 120px), 1fr));
+  align-items: stretch;
   width: 100%;
   max-width: 100%;
   min-width: 0;
-  padding: 2px;
-  gap: 10px;
-  margin-block: 12px;
+  padding: 6px var(--site-content-gutter, 16px);
+  gap: 6px;
+  max-height: var(--article-chapter-max-height);
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
   font-size: 0.86rem;
+  background: var(--card-bg-solid);
+  border-block: 1px solid var(--bd);
 }
-.reader-outline select {
+.reader-outline button {
   width: 100%;
   max-width: 100%;
   min-width: 0;
   min-height: 44px;
-  padding: 6px 10px;
-  color: var(--txt);
-  background: var(--card-bg);
+  padding: 6px 12px;
+  color: var(--txt-muted);
+  background: transparent;
   border: 1px solid var(--bd);
-  border-radius: 2px;
+  border-radius: 4px;
   font: inherit;
-  font-size: 16px;
+  line-height: 1.4;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color var(--motion-duration-fast) var(--motion-ease-out),
+    background-color var(--motion-duration-fast) var(--motion-ease-out),
+    color var(--motion-duration-fast) var(--motion-ease-out);
 }
-.reader-outline > span {
-  white-space: nowrap;
+.reader-outline button > span {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  overflow-wrap: anywhere;
 }
-.reader-outline select:focus-visible {
+.reader-outline button[aria-current] {
+  border-color: var(--pri);
+  background: color-mix(in srgb, var(--pri) 7%, var(--card-bg-solid));
+  color: var(--pri);
+}
+.reader-outline button:focus-visible {
   outline: 2px solid var(--pri);
   outline-offset: -2px;
+}
+@media (min-width: 768px) and (hover: hover) and (pointer: fine) {
+  .reader-outline button:hover {
+    border-color: var(--pri);
+    color: var(--pri);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .reader-outline button {
+    transition: none;
+  }
 }
 .article-hero-image {
   aspect-ratio: 16 / 9;
@@ -1276,7 +1332,6 @@ useHead(() => ({
 @supports (animation-timeline: view()) and (timeline-scope: --reading-body) {
   .reader-container {
     timeline-scope: --reading-body;
-    overflow: clip;
   }
   .reader-content {
     view-timeline-name: --reading-body;
@@ -1336,11 +1391,6 @@ useHead(() => ({
   .detail-read-state :deep(.nav-action-row),
   .detail-read-state > button {
     margin: 10px auto 0 !important;
-  }
-  /* 放在章節選單基礎樣式之後，避免手機間距被覆蓋。 */
-  .reader-outline {
-    margin-block: 6px;
-    gap: 6px;
   }
   /* 這些入口已整合在手機底部導覽，正文前不再重複占一排。 */
   .reader-context-nav {

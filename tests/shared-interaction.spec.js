@@ -383,29 +383,15 @@ describe('Phase 1 共用互動元件 contract', () => {
         new RegExp(`<button[\\s\\S]*?type="button"[\\s\\S]*?class="[^"\\n]*${className}`)
       )
     }
-    expect(productDetail).toMatch(
-      /\.(btn-share|btn-promo)\s*\{[\s\S]*?min-height:\s*var\(--control-min-height\)/
-    )
-    expect(productDetail).toMatch(
-      /@media\s*\(hover:\s*hover\)\s*and\s*\(pointer:\s*fine\)\s*\{[\s\S]*?\.btn-share:hover/
-    )
-    expect(productDetail).toMatch(
-      /@media\s*\(prefers-reduced-motion:\s*reduce\)\s*\{[\s\S]*?\.promo-modal-content\s*\{[\s\S]*?animation:\s*none/
-    )
+    // 實際觸控尺寸與版面由 product-mobile-layout E2E 驗證。
   })
 
-  it('Product 詳情補齊收藏操作、mobile 四欄相關個體與 focus contract', () => {
+  it('Product 詳情保留收藏操作與鍵盤 focus', () => {
     expect(productDetail).toContain('const isWishlisted = computed(')
     expect(productDetail).toMatch(
       /<button[\s\S]*?type="button"[\s\S]*?class="[^"\n]*\bbtn-wishlist\b[^"\n]*"[\s\S]*?:aria-pressed="isWishlisted"/
     )
-    expect(productDetail).toMatch(
-      /\.btn-wishlist\s*,[\s\S]*?\.btn-share\s*,[\s\S]*?\.btn-promo\s*\{[\s\S]*?min-height:\s*var\(--control-min-height\)/
-    )
-    expect(productDetail).toMatch(/\.related-card:focus-visible\s*\{[\s\S]*?outline:/)
-    expect(productDetail).toMatch(
-      /@media\s*\(max-width:\s*768px\)\s*\{[\s\S]*?\.related-grid\s*\{[\s\S]*?grid-template-columns:\s*repeat\(4,\s*minmax\(0,\s*1fr\)\)/
-    )
+    expect(productDetail).toMatch(/:is\(a, button, summary\):focus-visible\s*\{[\s\S]*?outline:/)
   })
 
   it('Product 宣傳圖卡 Modal 具備 dialog 語意與 focus 還原', () => {
@@ -595,7 +581,7 @@ describe('Phase 1 共用互動元件 contract', () => {
   })
 
   it('購買流程與 Hero Lab 入口具備鍵盤 focus、觸控尺寸與動效降級', () => {
-    expect(buyingGuide).toContain('<Timeline :nodes="flowNodes" />')
+    expect(buyingGuide).toContain('<Timeline :nodes="flowNodes" :active-step="activeStep + 1" />')
     expect(buyingGuide).not.toContain('<NextCta')
     expect(timeline).toMatch(/\.node-link:focus-visible\s*\{[\s\S]*?outline:/)
     expect(timeline).toMatch(

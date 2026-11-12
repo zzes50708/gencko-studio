@@ -923,3 +923,32 @@ test('全螢幕清單留在側欄，改變尺寸後不覆蓋地圖', async ({ pa
   expect(canvas.height).toBeGreaterThan(100)
   expect(canvas.y + canvas.height).toBeLessThanOrEqual(651)
 })
+
+test.describe('院所開合轉場', () => {
+  test.use({
+    reducedMotion: 'no-preference',
+    viewport: { width: 390, height: 844 },
+    hasTouch: true
+  })
+  test('重複展開收合後仍能取得院所電話並收藏', async ({ page }) => {
+    await page.getByRole('button', { name: '搜尋', exact: true }).click()
+    await visibleCount(page, 2)
+    const card = page.locator('.hosp-card').filter({ hasText: '測試醫院甲' })
+    const toggle = card.locator('.hosp-header-toggle')
+    for (let cycle = 0; cycle < 2; cycle++) {
+      await toggle.click()
+      await expect(toggle).toHaveAttribute('aria-expanded', 'true')
+      await expect(card.getByRole('link', { name: '撥打電話', exact: true })).toHaveAttribute(
+        'href',
+        'tel:0212345678'
+      )
+      await toggle.click()
+      await expect(toggle).toHaveAttribute('aria-expanded', 'false')
+      await expect(card.locator('.hosp-expansion')).toBeHidden()
+    }
+    await card.getByRole('button', { name: '收藏 測試醫院甲', exact: true }).click()
+    await expect(
+      card.getByRole('button', { name: '取消收藏 測試醫院甲', exact: true })
+    ).toHaveAttribute('aria-pressed', 'true')
+  })
+})

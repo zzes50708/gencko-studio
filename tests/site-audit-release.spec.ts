@@ -56,6 +56,7 @@ describe('分析資料白名單', () => {
       '/profile',
       '/line-login-return?flow=secret',
       '/auction-management',
+      '/shop/curate',
       '/identity/S-1',
       '/%70rofile'
     ])

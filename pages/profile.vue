@@ -12,7 +12,15 @@ import { favoritesBackup, parseFavoritesBackup } from '~/utils/favorites-backup'
 
 const store = useMainStore()
 const backupStatus = ref('')
+const backupState = ref('idle')
+const backupPending = computed(() => backupState.value === 'pending')
+const backupStateLabel = computed(
+  () =>
+    ({ pending: '讀取中', success: '完成', warning: '注意', error: '未完成' })[backupState.value] ||
+    ''
+)
 function exportFavorites() {
+  if (backupPending.value) return
   try {
     const url = URL.createObjectURL(
       new Blob([favoritesBackup(store.wishlist, store.hospWishlist.map(String))], {
@@ -25,14 +33,18 @@ function exportFavorites() {
     link.click()
     setTimeout(() => URL.revokeObjectURL(url), 1000)
     backupStatus.value = '已匯出收藏；可在另一台裝置的「我的專區」匯入。'
+    backupState.value = 'success'
   } catch {
     backupStatus.value = '目前收藏資料無法匯出，請先重新整理後再試。'
+    backupState.value = 'error'
   }
 }
 async function importFavorites(event) {
   const file = event.target.files?.[0]
   event.target.value = ''
-  if (!file) return
+  if (!file || backupPending.value) return
+  backupState.value = 'pending'
+  backupStatus.value = '正在讀取收藏備份…'
   try {
     if (file.size > 300000) throw new Error('收藏檔案太大。')
     const backup = parseFavoritesBackup(await file.text())
@@ -46,10 +58,13 @@ async function importFavorites(event) {
       localStorage.setItem('gencko_wishlist', JSON.stringify(animals))
       localStorage.setItem('gencko_hosp_wishlist', JSON.stringify(hospitals))
       backupStatus.value = '已合併收藏，原有收藏會保留。'
+      backupState.value = 'success'
     } catch {
       backupStatus.value = '已合併本次收藏；裝置無法儲存，請再匯出備份。'
+      backupState.value = 'warning'
     }
   } catch (error) {
+    backupState.value = 'error'
     backupStatus.value =
       error instanceof SyntaxError ? '檔案無法讀取，請選擇 Gencko 匯出的收藏檔案。' : error.message
   }
@@ -294,6 +309,14 @@ const getMapLink = (h) => {
 
       <div class="header-actions">
         <NuxtLink
+          v-if="store.currentUser?.type === 'google' && store.currentUser?.auctionAdmin"
+          to="/shop/curate"
+          no-prefetch
+          class="btn-logout"
+        >
+          分類與封面管理
+        </NuxtLink>
+        <NuxtLink
           v-if="store.currentUser?.auctionAdmin"
           to="/auction-management"
           no-prefetch
@@ -351,18 +374,26 @@ const getMapLink = (h) => {
     </div>
 
     <div class="favorites-backup">
-      <button type="button" class="btn-outline" @click="exportFavorites">匯出收藏</button>
-      <label class="btn-outline">
+      <button type="button" class="btn-outline" :disabled="backupPending" @click="exportFavorites">
+        <span class="backup-direction" aria-hidden="true">↧</span>
+        匯出收藏
+      </button>
+      <label class="btn-outline" :class="{ 'is-pending': backupPending }">
+        <span class="backup-direction" aria-hidden="true">↥</span>
         匯入收藏
         <input
           type="file"
           accept=".json,application/json"
           aria-label="匯入 Gencko 收藏備份"
+          :disabled="backupPending"
           @change="importFavorites"
         />
       </label>
       <span>換裝置可匯入，會保留原有收藏。</span>
-      <p v-if="backupStatus" role="status">{{ backupStatus }}</p>
+      <p v-if="backupStatus" class="backup-status" :data-state="backupState" role="status">
+        <strong>{{ backupStateLabel }}</strong>
+        <span>{{ backupStatus }}</span>
+      </p>
     </div>
     <!-- 🌟 App-like 分段切換器 (新增歷史紀錄) -->
     <div
@@ -434,14 +465,17 @@ const getMapLink = (h) => {
         </div>
 
         <div v-else class="grid photo-grid">
-          <NuxtLink
-            no-prefetch
-            :to="`/product/${i.ID}`"
-            class="card slim-card"
+          <article
+            class="card slim-card profile-animal-card"
             v-for="i in wishlistItems"
             :key="i.ID"
-            style="text-decoration: none; color: inherit"
           >
+            <NuxtLink
+              no-prefetch
+              :to="`/product/${i.ID}`"
+              class="profile-card-link"
+              :aria-label="`查看 ${i.Morph}（${i.ID}）詳情`"
+            />
             <div v-if="i.Status === 'Sold'" class="sold-stamp">SOLD</div>
             <div style="position: absolute; top: 5px; right: 5px; z-index: 10">
               <button
@@ -449,11 +483,12 @@ const getMapLink = (h) => {
                 class="fav-btn active"
                 @click.stop.prevent="toggleWishlist(i.ID)"
                 aria-label="取消收藏"
+                :aria-pressed="true"
               >
-                ❤
+                <span aria-hidden="true">♥</span>
               </button>
             </div>
-            <div style="position: relative">
+            <div class="profile-card-photo">
               <!-- 🌟 核心修正：NuxtImg 替換為原生 img -->
               <ArticleImage
                 v-if="i.ImageURL"
@@ -478,7 +513,10 @@ const getMapLink = (h) => {
               </div>
             </div>
             <div class="card-body slim-body">
-              <h3 class="slim-title" style="margin: 0">{{ i.Morph }}</h3>
+              <div class="profile-card-heading">
+                <h3 class="slim-title" style="margin: 0">{{ i.Morph }}</h3>
+                <span class="profile-card-arrow" aria-hidden="true">↗</span>
+              </div>
               <div class="slim-price-row" style="margin-top: 4px">
                 <div v-if="i.Status !== 'ForSale'">
                   <span v-if="i.Status === 'Sold'" class="status-badge s-sold">已售出</span>
@@ -487,7 +525,7 @@ const getMapLink = (h) => {
                 <div v-else class="price slim-price">${{ i.ListingPrice }}</div>
               </div>
             </div>
-          </NuxtLink>
+          </article>
         </div>
       </div>
 
@@ -507,14 +545,17 @@ const getMapLink = (h) => {
         </div>
 
         <div v-else class="grid photo-grid">
-          <NuxtLink
-            no-prefetch
-            :to="`/product/${i.ID}`"
-            class="card slim-card"
+          <article
+            class="card slim-card profile-animal-card"
             v-for="i in historyItems"
             :key="`hist-${i.ID}`"
-            style="text-decoration: none; color: inherit"
           >
+            <NuxtLink
+              no-prefetch
+              :to="`/product/${i.ID}`"
+              class="profile-card-link"
+              :aria-label="`查看 ${i.Morph}（${i.ID}）詳情`"
+            />
             <div v-if="i.Status === 'Sold'" class="sold-stamp">SOLD</div>
             <div style="position: absolute; top: 5px; right: 5px; z-index: 10">
               <button
@@ -523,11 +564,12 @@ const getMapLink = (h) => {
                 :class="{ active: store.wishlist.includes(i.ID) }"
                 @click.stop.prevent="toggleWishlist(i.ID)"
                 :aria-label="store.wishlist.includes(i.ID) ? '取消收藏' : '加入收藏'"
+                :aria-pressed="store.wishlist.includes(i.ID)"
               >
-                ❤
+                <span aria-hidden="true">{{ store.wishlist.includes(i.ID) ? '♥' : '♡' }}</span>
               </button>
             </div>
-            <div style="position: relative">
+            <div class="profile-card-photo">
               <!-- 🌟 核心修正：NuxtImg 替換為原生 img -->
               <ArticleImage
                 v-if="i.ImageURL"
@@ -552,7 +594,10 @@ const getMapLink = (h) => {
               </div>
             </div>
             <div class="card-body slim-body">
-              <h3 class="slim-title" style="margin: 0">{{ i.Morph }}</h3>
+              <div class="profile-card-heading">
+                <h3 class="slim-title" style="margin: 0">{{ i.Morph }}</h3>
+                <span class="profile-card-arrow" aria-hidden="true">↗</span>
+              </div>
               <div class="slim-price-row" style="margin-top: 4px">
                 <div v-if="i.Status !== 'ForSale'">
                   <span v-if="i.Status === 'Sold'" class="status-badge s-sold">已售出</span>
@@ -561,7 +606,7 @@ const getMapLink = (h) => {
                 <div v-else class="price slim-price">${{ i.ListingPrice }}</div>
               </div>
             </div>
-          </NuxtLink>
+          </article>
         </div>
       </div>
 
@@ -840,13 +885,41 @@ const getMapLink = (h) => {
   position: relative;
   display: inline-flex;
   align-items: center;
+  gap: 8px;
+  max-width: 100%;
   min-height: 44px;
   padding: 8px 12px;
-  border: 1px solid #ccc;
+  border: 1px solid var(--bd);
   background: transparent;
   color: inherit;
   font: inherit;
   cursor: pointer;
+  transition:
+    border-color 160ms ease,
+    background-color 160ms ease;
+}
+.backup-direction {
+  color: var(--pri);
+  font-size: 16px;
+}
+.favorites-backup :is(button:disabled, .is-pending) {
+  opacity: 0.55;
+  cursor: wait;
+}
+.favorites-backup button:focus-visible {
+  outline: 2px solid var(--pri);
+  outline-offset: 2px;
+}
+@media (min-width: 768px) and (hover: hover) and (pointer: fine) {
+  .favorites-backup .btn-outline:not(:disabled):not(.is-pending):hover {
+    border-color: var(--pri);
+    background: color-mix(in srgb, var(--pri) 5%, var(--card-bg-solid));
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .favorites-backup .btn-outline {
+    transition: none;
+  }
 }
 .favorites-backup input {
   position: absolute;
@@ -863,6 +936,26 @@ const getMapLink = (h) => {
   flex-basis: 100%;
   margin: 0;
   overflow-wrap: anywhere;
+}
+.favorites-backup .backup-status {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 10px 12px;
+  border-inline-start: 2px solid var(--pri);
+  background: color-mix(in srgb, var(--pri) 5%, var(--card-bg-solid));
+  line-height: 1.6;
+}
+.backup-status strong {
+  flex-shrink: 0;
+  color: var(--pri);
+  font-size: 0.75rem;
+}
+.backup-status span {
+  min-width: 0;
+}
+.favorites-backup .backup-status[data-state='error'] {
+  border-inline-start-width: 4px;
 }
 /*[局部樣式修復] 
   已清除所有重複的宣告與不必要的 :global(body.day-mode) 覆寫。
@@ -1685,6 +1778,73 @@ const getMapLink = (h) => {
   width: 44px;
   height: 44px;
   min-height: 44px;
+  border: 1px solid var(--bd);
+  border-radius: 50%;
+  background: var(--card-bg-solid);
+  color: var(--txt-muted);
+  box-shadow: 0 2px 8px rgb(0 0 0 / 10%);
+  text-shadow: none;
+  filter: none;
+  transform: none;
+  animation: none;
+}
+.profile-page-wrapper .fav-btn.active {
+  color: var(--pri);
+  border-color: color-mix(in srgb, var(--pri) 35%, var(--bd));
+}
+.profile-card-link {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+}
+.profile-card-link:focus-visible {
+  outline: 2px solid var(--pri);
+  outline-offset: -2px;
+}
+.profile-card-photo {
+  position: relative;
+  padding: 6px;
+  overflow: hidden;
+  border-bottom: 1px solid var(--bd);
+  background: var(--card-bg-solid);
+}
+.profile-card-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+.profile-card-heading .slim-title {
+  min-width: 0;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+.profile-card-arrow {
+  display: inline-grid;
+  place-items: center;
+  flex: 0 0 24px;
+  width: 24px;
+  height: 24px;
+  border: 1px solid var(--bd);
+  border-radius: 50%;
+  color: var(--pri);
+  font-size: 14px;
+  line-height: 1;
+}
+.profile-animal-card:has(.profile-card-link:focus-visible) .profile-card-arrow {
+  background: var(--pri-btn);
+  border-color: var(--pri-btn);
+  color: #fff;
+}
+@media (min-width: 768px) and (hover: hover) and (pointer: fine) {
+  .profile-animal-card:hover .profile-card-arrow {
+    background: var(--pri-btn);
+    border-color: var(--pri-btn);
+    color: #fff;
+  }
 }
 @media (max-width: 767px) {
   .profile-page-wrapper {

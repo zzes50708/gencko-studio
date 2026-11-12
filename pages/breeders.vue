@@ -334,13 +334,23 @@ useHead({
 
 <style scoped>
 .photo-grid .breeder-photo-card {
-  border-radius: 8px;
-  box-shadow: 0 2px 6px rgb(0 0 0 / 6%);
+  border-radius: 2px;
+  box-shadow: none;
 }
 .breeder-photo-card .breeder-photo-observation {
+  aspect-ratio: 1;
+  padding: 4px;
+  border: 1px solid var(--bd);
   overflow: hidden;
-  border-radius: 4px;
-  background: var(--card-bg-solid);
+  border-radius: 1px;
+  background: var(--bg-dark);
+}
+.breeder-photo-observation :deep(.photo-lens) {
+  height: 100%;
+}
+.breeder-photo-observation .breeder-photo {
+  height: 100%;
+  aspect-ratio: auto;
 }
 .breeder-photo-card .breeder-caption {
   border-top: 1px solid var(--bd);
@@ -919,7 +929,7 @@ useHead({
   gap: 8px;
 }
 .breeder-photo--empty button {
-  min-height: 40px;
+  min-height: 44px;
   padding: 4px 8px;
 }
 .breeder-caption {

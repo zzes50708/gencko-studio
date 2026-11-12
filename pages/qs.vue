@@ -537,7 +537,7 @@ onBeforeUnmount(() => {
             aria-valuemax="100"
             :aria-valuenow="Math.round(progress)"
           >
-            <div class="qs-progress-fill" :style="{ width: progress + '%' }"></div>
+            <div class="qs-progress-fill" :style="{ transform: `scaleX(${progress / 100})` }"></div>
           </div>
         </div>
       </div>
@@ -2174,6 +2174,41 @@ onBeforeUnmount(() => {
   .qs-quiz-toolbar,
   .qs-progress-fill {
     transition: none;
+  }
+}
+</style>
+
+<style scoped>
+/* 閱讀與服務操作的回饋，保留原有資料及判斷規則。 */
+
+.qs-progress-fill {
+  width: 100%;
+  transform-origin: left;
+  transition: transform 250ms var(--motion-ease-out);
+}
+.qs-option-btn.is-selected {
+  box-shadow: inset 3px 0 var(--pri);
+}
+.qs-option-btn.is-selected .qs-option-index {
+  color: var(--pri);
+}
+.qs-option-btn.is-selected .qs-check-circle {
+  animation: readiness-confirm 220ms var(--motion-ease-out);
+}
+@keyframes readiness-confirm {
+  from {
+    transform: scale(0.82);
+  }
+  to {
+    transform: scale(1);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .qs-progress-fill {
+    transition: none;
+  }
+  .qs-option-btn.is-selected .qs-check-circle {
+    animation: none;
   }
 }
 </style>

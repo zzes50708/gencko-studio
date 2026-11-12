@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import HomeReveal from '~/components/home/HomeReveal.vue'
 import { useHead } from '#imports'
 
 const pageUrl = 'https://www.genckobreeding.com/start-here'
@@ -103,7 +104,9 @@ useHead({
       <a href="#starter-paths">下一步</a>
     </nav>
 
-    <section
+    <HomeReveal
+      as="section"
+      :lift="false"
       class="knowledge-hub"
       aria-labelledby="knowledge-hub-title"
       data-testid="newcomer-roadmap"
@@ -121,12 +124,12 @@ useHead({
           class="knowledge-card"
         >
           <h3>{{ item.label }}</h3>
-          <span aria-hidden="true">前往 →</span>
+          <span class="knowledge-direction" aria-hidden="true">↗</span>
         </NuxtLink>
       </div>
-    </section>
+    </HomeReveal>
 
-    <section id="starter-checklist" class="prep-panel">
+    <HomeReveal as="section" :lift="false" id="starter-checklist" class="prep-panel">
       <div class="panel-head">
         <div class="panel-kicker">CHECK</div>
         <h2 class="sec-title">到家準備</h2>
@@ -157,9 +160,9 @@ useHead({
         </article>
       </div>
       <ContentPreparationChecklist />
-    </section>
+    </HomeReveal>
 
-    <section id="starter-paths" class="lane-board">
+    <HomeReveal as="section" :lift="false" id="starter-paths" class="lane-board">
       <article v-for="lane in lanes" :key="lane.no" class="lane-card">
         <div class="lane-head">
           <div class="lane-badge">
@@ -194,7 +197,7 @@ useHead({
           </NuxtLink>
         </div>
       </article>
-    </section>
+    </HomeReveal>
   </div>
 </template>
 
@@ -844,6 +847,45 @@ useHead({
   }
   .prep-grid {
     row-gap: 0;
+  }
+}
+</style>
+
+<style scoped>
+/* 閱讀與服務操作的回饋，保留原有資料及判斷規則。 */
+
+.knowledge-grid .knowledge-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 30px;
+  align-items: center;
+  gap: 12px;
+  min-height: 76px;
+  padding: 14px;
+  border-radius: 2px;
+}
+.knowledge-card h3 {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.knowledge-grid .knowledge-card > .knowledge-direction {
+  display: grid;
+  place-items: center;
+  justify-self: end;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border-radius: 50%;
+  font-size: 17px;
+}
+@media (max-width: 539px) {
+  .knowledge-grid .knowledge-card {
+    padding: 12px 8px;
+    gap: 6px;
+    grid-template-columns: minmax(0, 1fr) 26px;
+  }
+  .knowledge-grid .knowledge-card > .knowledge-direction {
+    width: 26px;
+    height: 26px;
   }
 }
 </style>

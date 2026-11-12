@@ -92,6 +92,7 @@ const photos = computed(() => auctionPhotos(currentAuction.value?.images))
 const photoIndex = ref(0)
 const photoEl = ref(null)
 const photoRetry = ref(0)
+const failedThumbnails = ref(new Set())
 const selectedPhoto = computed(() => photos.value[photoIndex.value] || '')
 const photoUrl = computed(() =>
   selectedPhoto.value.startsWith('/') ? selectedPhoto.value : getCleanUrl(selectedPhoto.value)
@@ -976,7 +977,7 @@ const closePromo = () => promoModal.close()
             aria-label="競標照片切換"
           >
             <button
-              v-for="(_, index) in photos"
+              v-for="(photo, index) in photos"
               :key="index"
               type="button"
               class="btn-app btn-app--ghost btn-app--sm photo-number"
@@ -984,7 +985,15 @@ const closePromo = () => promoModal.close()
               :aria-pressed="photoIndex === index"
               @click="selectPhoto(index)"
             >
-              {{ index + 1 }}
+              <img
+                v-if="!failedThumbnails.has(photo)"
+                :src="getCleanUrl(photo, 160)"
+                alt=""
+                loading="lazy"
+                decoding="async"
+                @error="failedThumbnails.add(photo)"
+              />
+              <span>{{ index + 1 }}</span>
             </button>
             <button
               type="button"
@@ -2875,6 +2884,58 @@ dialog.promo-modal-overlay::backdrop {
 .auction-photo-controls button[aria-pressed='true'] {
   color: var(--pri);
   border-color: var(--pri);
+}
+.auction-photo-controls .photo-number {
+  position: relative;
+  flex: 0 1 72px;
+  width: 72px;
+  max-width: 100%;
+  height: 60px;
+  padding: 3px;
+  overflow: hidden;
+  border-radius: 2px;
+  background: var(--card-bg-solid);
+  transition:
+    border-color 160ms ease,
+    background-color 160ms ease;
+}
+.photo-number img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.photo-number span {
+  position: absolute;
+  inset-inline-end: 3px;
+  bottom: 3px;
+  min-width: 20px;
+  padding: 1px 4px;
+  background: var(--card-bg-solid);
+  color: var(--txt);
+  font-size: 11px;
+  line-height: 18px;
+}
+.auction-photo-controls .photo-number[aria-pressed='true'] {
+  background: var(--pri);
+}
+.photo-number[aria-pressed='true'] span {
+  background: var(--pri);
+  color: white;
+}
+.auction-photo-controls button:focus-visible {
+  outline: 2px solid var(--pri);
+  outline-offset: 2px;
+}
+@media (min-width: 769px) and (hover: hover) and (pointer: fine) {
+  .auction-photo-controls .photo-number:hover {
+    border-color: var(--pri);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .auction-photo-controls .photo-number {
+    transition: none;
+  }
 }
 .auction-gallery .auction-photo-error {
   aspect-ratio: 4 / 3;

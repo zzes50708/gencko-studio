@@ -213,6 +213,7 @@ export default defineNuxtConfig({
   sitemap: {
     sources: ['/api/_sitemap-urls'],
     exclude: [
+      '/shop/curate',
       '/hero-lab',
       '/compare',
       '/stories',
@@ -290,6 +291,12 @@ export default defineNuxtConfig({
   // Supabase / wsrv.nl 圖床 / GitHub Raw / jsDelivr）。
   // 保留必要內嵌相容性並禁止 eval；較嚴格內嵌政策先以 Report-Only 驗證。
   routeRules: {
+    '/shop/curate': {
+      headers: {
+        'Cache-Control': 'private, no-store',
+        'X-Robots-Tag': 'noindex, nofollow'
+      }
+    },
     '/line-login-return': {
       headers: {
         'Cache-Control': 'private, no-store',

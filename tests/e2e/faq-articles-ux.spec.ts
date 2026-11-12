@@ -27,15 +27,14 @@ for (const width of [320, 390, 768, 1440]) {
         await expect(p.getByRole('combobox', { name: '文章分類' })).toBeVisible()
       if (route.includes('ART-011')) {
         expect((await p.locator('h1').boundingBox())!.y).toBeLessThan(400)
-        const select = p.getByRole('combobox', { name: '跳至文章章節' })
-        await expect(select).toBeVisible()
-        const value = await select.locator('option').nth(1).getAttribute('value')
-        const chapterLabel = (await select.locator('option').nth(1).textContent())!.trim()
+        const button = p.getByRole('navigation', { name: '文章章節' }).getByRole('button').first()
+        await expect(button).toBeVisible()
+        const chapterLabel = (await button.textContent())!.trim()
         const heading = p
           .locator('.reader-content')
           .getByRole('heading', { name: chapterLabel, exact: true })
           .first()
-        await select.selectOption(value!)
+        await button.click()
         await expect
           .poll(() => heading.evaluate((e) => Math.round(e.getBoundingClientRect().top)))
           .toBeLessThan(width < 768 ? 30 : 110)

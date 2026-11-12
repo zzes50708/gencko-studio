@@ -314,7 +314,9 @@ useContentResponse(viewingGene, pending, geneError)
       <nav class="gene-tool-nav" aria-label="基因詞條工具">
         <div class="gene-tools-actions">
           <TheBackButton fallback="/genes" text="返回圖鑑" />
-          <NuxtLink no-prefetch to="/calculator" class="gene-tool-link">前往基因計算機</NuxtLink>
+          <NuxtLink no-prefetch to="/calculator" class="gene-tool-link interactive-card">
+            <HoverAction>前往基因計算機</HoverAction>
+          </NuxtLink>
         </div>
       </nav>
 
@@ -387,8 +389,8 @@ useContentResponse(viewingGene, pending, geneError)
   display: block;
   width: 100%;
   min-height: 44px;
-  padding: 0;
-  border: 0;
+  padding: 6px;
+  border: 1px solid var(--bd);
   background: var(--card-bg-solid);
   cursor: zoom-in;
 }
@@ -398,6 +400,7 @@ useContentResponse(viewingGene, pending, geneError)
   margin: 0;
   max-height: 65vh;
   object-fit: contain;
+  border: 0;
 }
 .gene-image-button:focus-visible {
   outline: 2px solid var(--pri);
@@ -431,17 +434,23 @@ useContentResponse(viewingGene, pending, geneError)
     top: calc(var(--site-nav-height, 64px) + 16px);
   }
   .gene-zoom-label {
-    transition: transform 200ms var(--motion-ease-out);
+    transition:
+      transform 200ms var(--motion-ease-out),
+      background-color 160ms ease,
+      color 160ms ease;
   }
-  .gene-image-button:hover .gene-zoom-label {
+  .gene-image-button:is(:hover, :focus-visible) .gene-zoom-label {
     transform: translateY(-3px);
+    background: var(--pri-btn);
+    color: white;
+    border-color: var(--pri-btn);
   }
 }
 @media (prefers-reduced-motion: reduce) {
   .gene-zoom-label {
     transition: none;
   }
-  .gene-image-button:hover .gene-zoom-label {
+  .gene-image-button:is(:hover, :focus-visible) .gene-zoom-label {
     transform: none;
   }
 }
@@ -853,6 +862,43 @@ p {
 }
 .gene-tools-actions .gene-tool-link {
   width: auto;
+  max-width: 100%;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  white-space: normal;
+}
+.gene-tool-link :deep(.hover-action) {
+  border-radius: 2px;
+  gap: 10px;
+  padding-inline: 14px;
+  font-size: inherit;
+}
+.gene-title-row > div {
+  flex: 1;
+  min-width: 0;
+}
+.gene-title {
+  overflow-wrap: anywhere;
+}
+.gene-facts {
+  flex: 0 1 42%;
+  min-width: 0;
+  flex-wrap: wrap;
+}
+.gene-facts > div {
+  flex: 1 1 120px;
+  min-width: 0;
+}
+.gene-facts dd {
+  overflow-wrap: anywhere;
+}
+@media (max-width: 768px) {
+  .gene-facts {
+    flex-basis: auto;
+    width: 100%;
+  }
 }
 </style>
 

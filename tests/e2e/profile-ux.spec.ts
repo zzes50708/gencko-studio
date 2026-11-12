@@ -73,7 +73,7 @@ test('競標紀錄失敗不冒充空資料，重試與LINE狀態正確', async (
   await page.goto('/profile')
   await page.waitForTimeout(1200)
   let fail = true
-  await page.route('**/rest/v1/rpc/get_my_auction_bids', (r) =>
+  await page.route('**/rest/v1/rpc/get_my_auction_bids*', (r) =>
     r.fulfill({
       status: fail ? 503 : 200,
       contentType: 'application/json',
@@ -124,7 +124,12 @@ test('收藏卡取消不誤開詳情，圖片失敗仍可操作', async ({ page 
     s.wishlist = ['ux-test-only']
   })
   await expect(page.locator('.photo-grid .article-image-fallback').first()).toBeVisible()
+  await expect(page.locator('.photo-grid a button')).toHaveCount(0)
+  await expect(page.locator('.photo-grid .profile-card-link').first()).toHaveAttribute(
+    'href',
+    '/product/ux-test-only'
+  )
   await page.getByRole('button', { name: '取消收藏', exact: true }).first().click()
   await expect(page).toHaveURL(/profile$/)
-  await expect(page.getByText('您的收藏清單空空如也，趕快去商城逛逛吧！')).toBeVisible()
+  await expect(page.getByText('尚無收藏個體。', { exact: true })).toBeVisible()
 })

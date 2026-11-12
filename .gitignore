@@ -1,6 +1,8 @@
 # Nuxt dev/build outputs
 .nuxt
 .output
+.nuxt-production-check/
+.output-production-check/
 dist
 dist-ssr
 

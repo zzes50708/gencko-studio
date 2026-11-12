@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import HomeReveal from '~/components/home/HomeReveal.vue'
 import { computed, ref, watch } from 'vue'
 import { useHead } from '#imports'
 import { SOCIAL_LINKS } from '~/utils/site-constants'
@@ -226,6 +227,7 @@ useHead({
           @click="openMobileCabinet"
         >
           開啟 3D 客製模擬系統
+          <span aria-hidden="true">↗</span>
         </button>
         <dialog
           ref="mobileCabinetDialog"
@@ -271,7 +273,13 @@ useHead({
       </details>
     </section>
 
-    <section id="cabinet-systems" class="cabinet-systems" aria-labelledby="cabinet-systems-title">
+    <HomeReveal
+      as="section"
+      :lift="false"
+      id="cabinet-systems"
+      class="cabinet-systems"
+      aria-labelledby="cabinet-systems-title"
+    >
       <div class="cabinet-section-head">
         <span>02 / DEFINE THE SYSTEM</span>
         <h2 id="cabinet-systems-title">木製爬櫃標準配置</h2>
@@ -298,7 +306,7 @@ useHead({
           <p>可先選擇外觀方向，正式花色、材質與色號需依實際樣本確認。</p>
         </article>
       </div>
-    </section>
+    </HomeReveal>
 
     <section class="cabinet-cases" aria-labelledby="cabinet-cases-title">
       <div class="cabinet-section-head">
@@ -307,7 +315,13 @@ useHead({
       </div>
     </section>
 
-    <section id="cabinet-process" class="cabinet-process" aria-labelledby="cabinet-process-title">
+    <HomeReveal
+      as="section"
+      :lift="false"
+      id="cabinet-process"
+      class="cabinet-process"
+      aria-labelledby="cabinet-process-title"
+    >
       <div class="cabinet-section-head">
         <span>04 / HOW WE PLAN</span>
         <h2 id="cabinet-process-title">預計規劃流程</h2>
@@ -334,8 +348,14 @@ useHead({
         3D
         模擬系統與案例內容將以正式標準尺寸、模組與設備規格為資料依據；示意畫面不取代正式製作圖與報價。
       </p>
-    </section>
-    <section id="cabinet-inquiry" class="cabinet-inquiry" aria-labelledby="cabinet-inquiry-title">
+    </HomeReveal>
+    <HomeReveal
+      as="section"
+      :lift="false"
+      id="cabinet-inquiry"
+      class="cabinet-inquiry"
+      aria-labelledby="cabinet-inquiry-title"
+    >
       <div class="cabinet-section-head">
         <span>05 / YOUR PROJECT</span>
         <h2 id="cabinet-inquiry-title">把想法交給我們</h2>
@@ -413,7 +433,7 @@ useHead({
           </p>
         </div>
       </div>
-    </section>
+    </HomeReveal>
     <aside class="cabinet-note">
       <strong>爬缸規劃｜後續開放</strong>
       <br />
@@ -445,9 +465,41 @@ useHead({
   padding: 0.9rem 0;
 }
 .cabinet-price-reference summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 44px;
+  padding-block: 6px;
+  list-style: none;
   cursor: pointer;
   font-weight: 700;
   color: var(--txt);
+}
+.cabinet-price-reference summary::-webkit-details-marker {
+  display: none;
+}
+.cabinet-price-reference summary::after {
+  content: '+';
+  display: grid;
+  place-items: center;
+  flex: 0 0 28px;
+  height: 28px;
+  border: 1px solid var(--bd);
+  color: var(--pri);
+  font-size: 18px;
+  font-weight: 400;
+}
+.cabinet-price-reference[open] summary {
+  color: var(--pri);
+}
+.cabinet-price-reference[open] summary::after {
+  content: '−';
+  border-color: var(--pri);
+}
+.cabinet-price-reference summary:focus-visible {
+  outline: 2px solid var(--pri);
+  outline-offset: 3px;
 }
 .cabinet-price-reference p {
   color: var(--txt-muted);
@@ -938,5 +990,44 @@ a:focus-visible {
   min-height: 0;
   border: 0;
   padding-bottom: env(safe-area-inset-bottom);
+}
+</style>
+
+<style scoped>
+/* 閱讀與服務操作的回饋，保留原有資料及判斷規則。 */
+
+.cabinet-fields label {
+  transition: color 160ms ease;
+}
+.cabinet-fields label:focus-within {
+  color: var(--pri);
+}
+.cabinet-fields :is(input, textarea):focus-visible {
+  outline: 2px solid var(--pri);
+  outline-offset: 2px;
+}
+.cabinet-inquiry-summary textarea:focus-visible {
+  outline: 2px solid var(--pri);
+  outline-offset: 2px;
+}
+.mobile-cabinet-launch {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.mobile-cabinet-launch > span[aria-hidden] {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  flex: 0 0 28px;
+  border: 1px solid currentColor;
+  border-radius: 50%;
+}
+@media (prefers-reduced-motion: reduce) {
+  .cabinet-fields label {
+    transition: none;
+  }
 }
 </style>

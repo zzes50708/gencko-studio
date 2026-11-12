@@ -1,19 +1,21 @@
 <script setup>
 import { computed, ref } from 'vue'
 import { GENES_DB } from '~/utils/genes-db'
-import { getPriceRangeError } from '~/utils/shop-catalog'
+import { getPriceRangeError, getShopGeneCategories } from '~/utils/shop-catalog'
 const props = defineProps({
   modelValue: { type: Object, required: true },
-  species: { type: String, required: true },
+  species: { type: [String, Array], required: true },
   inventory: { type: Array, default: () => [] }
 })
 const emit = defineEmits(['update:modelValue'])
 const geneSearch = ref('')
-const categories = computed(() => GENES_DB[props.species] || {})
+const categories = computed(() => getShopGeneCategories(props.species, GENES_DB))
 const available = computed(() =>
   props.inventory.filter(
     (item) =>
-      item.Species === props.species &&
+      (Array.isArray(props.species)
+        ? props.species.includes(item.Species)
+        : item.Species === props.species) &&
       ['ForSale', 'Auction', 'Reserved', ...(props.modelValue.sold ? ['Sold'] : [])].includes(
         item.Status
       )
@@ -224,6 +226,29 @@ legend {
   gap: 4px 10px;
   flex-wrap: wrap;
 }
+.choice-row > label,
+.shop-filters > fieldset > label {
+  padding: 4px 7px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  color: var(--txt-muted);
+  background: transparent;
+  transition:
+    border-color var(--motion-duration-fast) var(--motion-ease-out),
+    background-color var(--motion-duration-fast) var(--motion-ease-out),
+    color var(--motion-duration-fast) var(--motion-ease-out);
+}
+.choice-row > label:has(input:checked),
+.shop-filters > fieldset > label:has(input:checked) {
+  border-color: color-mix(in srgb, var(--pri) 35%, var(--bd));
+  color: var(--txt);
+  background: color-mix(in srgb, var(--pri) 6%, var(--card-bg-solid));
+}
+.choice-row > label:focus-within,
+.shop-filters > fieldset > label:focus-within {
+  outline: 2px solid var(--pri);
+  outline-offset: 2px;
+}
 label.choice-row {
   flex-wrap: nowrap;
 }
@@ -295,6 +320,31 @@ summary span {
   margin-left: 8px;
   color: var(--pri);
 }
+.gene-category > summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  list-style: none;
+}
+.gene-category > summary::-webkit-details-marker {
+  display: none;
+}
+.gene-category > summary::after {
+  content: '+';
+  margin-left: auto;
+  width: 20px;
+  text-align: center;
+  font-size: 18px;
+  font-weight: 400;
+  color: var(--txt-muted);
+}
+.gene-category[open] > summary::after {
+  content: '−';
+  color: var(--pri);
+}
+.gene-category[open] > summary {
+  color: var(--pri);
+}
 .gene-choices label {
   min-width: calc(50% - 10px);
 }
@@ -311,6 +361,9 @@ input:focus-visible,
 summary:focus-visible {
   outline: 2px solid var(--pri);
   outline-offset: 2px;
+}
+.shop-filters input[type='checkbox']:focus-visible {
+  outline: none;
 }
 @media (min-width: 1100px) {
   .shop-filters {
@@ -357,6 +410,10 @@ summary:focus-visible {
   .shop-filters {
     gap: 8px 12px;
   }
+  .choice-row > label,
+  .shop-filters > fieldset > label {
+    padding-inline: 1px;
+  }
   legend {
     margin-bottom: 4px;
   }
@@ -382,7 +439,6 @@ summary:focus-visible {
     min-width: 0;
   }
   .gene-category > summary {
-    display: list-item;
     padding-block: 6px;
   }
   .shop-filters > fieldset:nth-of-type(2) .choice-row {
@@ -391,6 +447,22 @@ summary:focus-visible {
   .shop-filters > fieldset:nth-of-type(2) label {
     gap: 5px;
     font-size: 13px;
+  }
+}
+@media (min-width: 768px) and (hover: hover) and (pointer: fine) {
+  .choice-row > label:hover,
+  .shop-filters > fieldset > label:hover {
+    border-color: var(--bd);
+    color: var(--txt);
+  }
+  .gene-category > summary:hover {
+    color: var(--pri);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .choice-row > label,
+  .shop-filters > fieldset > label {
+    transition: none;
   }
 }
 </style>

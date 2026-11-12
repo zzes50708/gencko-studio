@@ -334,24 +334,26 @@ const formatPrice = (value, fallback) => {
             :aria-label="`查看 ${item.morph} 競標詳情`"
           >
             <div class="card-img-box">
-              <span
-                v-if="failedPhotos.has(item.id) || !item.images?.length"
-                class="auction-photo-fallback"
-              >
-                {{ failedPhotos.has(item.id) ? '照片載入失敗，進入詳情重試' : '尚無照片' }}
-              </span>
-              <img
-                v-else
-                @error="markPhotoFailed(item.id)"
-                :src="
-                  item.images && item.images.length
-                    ? getCleanUrl(item.images[0], 400)
-                    : 'https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/placeholder.jpg'
-                "
-                :alt="item.morph"
-                loading="lazy"
-                decoding="async"
-              />
+              <div class="auction-photo-window">
+                <span
+                  v-if="failedPhotos.has(item.id) || !item.images?.length"
+                  class="auction-photo-fallback"
+                >
+                  {{ failedPhotos.has(item.id) ? '照片載入失敗，進入詳情重試' : '尚無照片' }}
+                </span>
+                <img
+                  v-else
+                  @error="markPhotoFailed(item.id)"
+                  :src="
+                    item.images && item.images.length
+                      ? getCleanUrl(item.images[0], 400)
+                      : 'https://cdn.jsdelivr.net/gh/zzes50708/gencko-assets@main/img/placeholder.jpg'
+                  "
+                  :alt="item.morph"
+                  loading="lazy"
+                  decoding="async"
+                />
+              </div>
               <ClientOnly>
                 <div
                   class="status-badge"
@@ -619,6 +621,12 @@ const formatPrice = (value, fallback) => {
   height: 100%;
   object-fit: cover;
   display: block;
+  transition: transform 480ms var(--motion-ease-out);
+}
+.auction-photo-window {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
 }
 
 .status-badge {
@@ -919,10 +927,6 @@ const formatPrice = (value, fallback) => {
     border-color: transparent;
     box-shadow: none;
   }
-
-  .auction-card:hover .card-img-box img {
-    opacity: 0.92;
-  }
 }
 
 @media (max-width: 768px) {
@@ -1015,12 +1019,49 @@ const formatPrice = (value, fallback) => {
   color: #fff;
   background: #595959;
 }
+.badge-scheduled {
+  color: var(--txt);
+  background: var(--card-bg-solid);
+  border-color: var(--bd);
+}
 
 .morph-name {
   min-width: 0;
   margin-bottom: 6px;
   font-size: clamp(1.05rem, 1.7vw, 1.3rem);
   line-height: 1.35;
+  text-decoration: underline;
+  text-decoration-color: transparent;
+  text-underline-offset: 5px;
+  transition:
+    color var(--motion-duration-fast) var(--motion-ease-out),
+    text-decoration-color var(--motion-duration-fast) var(--motion-ease-out);
+}
+.auction-card:focus-visible .morph-name {
+  color: var(--pri);
+  text-decoration-color: currentColor;
+}
+.auction-card .card-img-box {
+  padding: 6px;
+  border: 1px solid var(--bd);
+  background: color-mix(in srgb, var(--card-bg-solid) 75%, var(--bd));
+}
+@media (min-width: 768px) and (hover: hover) and (pointer: fine) {
+  .auction-card:hover .morph-name {
+    color: var(--pri);
+    text-decoration-color: currentColor;
+  }
+}
+@media (min-width: 768px) and (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  .auction-card:is(:hover, :focus-visible) .card-img-box img {
+    transform: scale(1.025);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .card-img-box img,
+  .morph-name {
+    transition: none;
+  }
 }
 
 .morph-desc {
@@ -1280,6 +1321,7 @@ const formatPrice = (value, fallback) => {
   .price-val {
     font-size: 12px !important;
     overflow-wrap: anywhere;
+    white-space: normal;
   }
   .price-divider {
     display: none;
@@ -1305,6 +1347,13 @@ const formatPrice = (value, fallback) => {
   }
   .morph-desc {
     display: none;
+  }
+  .auction-card-action {
+    gap: 8px;
+    padding-inline: 10px;
+  }
+  .auction-card-action :deep(.hover-action__text) {
+    white-space: nowrap;
   }
 }
 @media (min-width: 768px) and (max-width: 1199px) {

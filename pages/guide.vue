@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import HomeReveal from '~/components/home/HomeReveal.vue'
 import { serializeJsonLd } from '~/utils/structured-data'
 import { useHead } from '#imports'
 import { reactive, ref, onMounted } from 'vue'
@@ -185,7 +186,7 @@ useHead({
 
     <ContentChapterTrail :host="guideRoot" :chapters="guideChapters" label="守宮介紹章節" />
 
-    <section id="guide-basics" class="guide-sec">
+    <HomeReveal as="section" :lift="false" id="guide-basics" class="guide-sec">
       <h2 class="sec-title">什麼是守宮</h2>
       <dl class="definition-grid">
         <div v-for="point in definitionPoints" :key="point.label" class="definition-item">
@@ -193,9 +194,9 @@ useHead({
           <dd>{{ point.value }}</dd>
         </div>
       </dl>
-    </section>
+    </HomeReveal>
 
-    <section id="guide-ready" class="guide-sec">
+    <HomeReveal as="section" :lift="false" id="guide-ready" class="guide-sec">
       <h2 class="sec-title">新手適不適合養守宮</h2>
       <div class="readiness-grid">
         <article v-for="column in readinessColumns" :key="column.title" class="readiness-column">
@@ -212,9 +213,9 @@ useHead({
         或進行
         <NuxtLink no-prefetch to="/qs" class="guide-inline-link">飼養前評估 →</NuxtLink>
       </p>
-    </section>
+    </HomeReveal>
 
-    <section id="guide-species" class="guide-sec">
+    <HomeReveal as="section" :lift="false" id="guide-species" class="guide-sec">
       <h2 class="sec-title">豹紋守宮 vs 肥尾守宮</h2>
       <ContentSpeciesCompare :rows="compareRows">
         <template #default="{ feature }">
@@ -305,9 +306,9 @@ useHead({
         實際個體仍會有體態、食慾與行為差異。決定物種後，可以查看
         <NuxtLink no-prefetch to="/shop" class="guide-inline-link">可選個體 →</NuxtLink>
       </p>
-    </section>
+    </HomeReveal>
 
-    <section id="guide-faq" class="guide-sec">
+    <HomeReveal as="section" :lift="false" id="guide-faq" class="guide-sec">
       <div class="faq-head">
         <div class="panel-kicker">FAQ</div>
         <h2 class="sec-title">關於守宮的常見問題</h2>
@@ -318,7 +319,7 @@ useHead({
           <p class="faq-a">{{ item.a }}</p>
         </div>
       </div>
-    </section>
+    </HomeReveal>
   </div>
 </template>
 
@@ -1097,5 +1098,22 @@ useHead({
 }
 .guide-image-unavailable.is-hero {
   aspect-ratio: 16/9;
+}
+</style>
+
+<style scoped>
+/* 閱讀與服務操作的回饋，保留原有資料及判斷規則。 */
+
+.hero-visual {
+  padding: 6px;
+  border: 1px solid var(--bd);
+  background: var(--bg-dark);
+}
+.guide-inline-link {
+  border-bottom: 1px solid color-mix(in srgb, var(--pri) 35%, transparent);
+  padding-inline: 6px;
+}
+.guide-inline-link:focus-visible {
+  background: color-mix(in srgb, var(--pri) 7%, var(--card-bg-solid));
 }
 </style>

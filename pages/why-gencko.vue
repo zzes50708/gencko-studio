@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import HomeReveal from '~/components/home/HomeReveal.vue'
 import { useHead } from '#imports'
 
 const pageUrl = 'https://www.genckobreeding.com/why-gencko'
@@ -89,7 +90,7 @@ useHead({
       </nav>
     </PageHero>
 
-    <section class="overview-grid">
+    <HomeReveal as="section" :lift="false" class="overview-grid">
       <NuxtLink
         no-prefetch
         v-for="item in overviewBlocks"
@@ -108,7 +109,7 @@ useHead({
         </div>
         <HoverAction class="overview-action">{{ item.action }}</HoverAction>
       </NuxtLink>
-    </section>
+    </HomeReveal>
   </div>
 </template>
 
@@ -820,6 +821,39 @@ useHead({
   }
   .preview-image {
     max-height: 140px;
+  }
+}
+</style>
+
+<style scoped>
+/* 閱讀與服務操作的回饋，保留原有資料及判斷規則。 */
+
+.overview-grid .overview-card {
+  border-radius: 2px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+}
+.overview-grid .overview-card .preview-shell {
+  border-radius: 1px;
+  overflow: hidden;
+}
+.overview-card .overview-action {
+  margin-top: auto;
+  align-self: flex-start;
+}
+.preview-image {
+  transition: transform 400ms var(--motion-ease-out);
+}
+@media (min-width: 768px) and (hover: hover) and (pointer: fine) {
+  .overview-card:is(:hover, :focus-visible) .preview-image {
+    transform: scale(1.035);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .preview-image {
+    transition: none;
+    transform: none !important;
   }
 }
 </style>

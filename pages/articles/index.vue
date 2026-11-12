@@ -447,12 +447,14 @@ const fmtDate = (d) => {
             :to="`/articles/${item.ID}`"
           >
             <div class="article-thumb-wrap">
-              <ArticleImage
-                :src="item.ImageURL ? getCleanUrl(item.ImageURL, 600) : undefined"
-                :alt="item.Title"
-                class="article-image"
-              />
-              <div class="article-category-badge">{{ item.Category }}</div>
+              <div class="article-photo-window">
+                <ArticleImage
+                  :src="item.ImageURL ? getCleanUrl(item.ImageURL, 600) : undefined"
+                  :alt="item.Title"
+                  class="article-image"
+                />
+                <div class="article-category-badge">{{ item.Category }}</div>
+              </div>
             </div>
             <div class="article-body">
               <span v-if="item.Status === 'Draft'" class="article-draft-badge">草稿預覽</span>
@@ -473,12 +475,21 @@ const fmtDate = (d) => {
 <style scoped>
 .article-group-grid .article-entry {
   border: 1px solid var(--bd);
-  border-radius: 8px;
+  border-radius: 2px;
   padding: 8px;
   background: var(--card-bg-solid);
 }
 .article-group-grid .article-entry .article-thumb-wrap {
-  border-radius: 4px;
+  padding: 5px;
+  border: 1px solid var(--bd);
+  border-radius: 1px;
+  background: var(--bg-dark);
+  overflow: hidden;
+}
+.article-photo-window {
+  position: relative;
+  width: 100%;
+  height: 100%;
   overflow: hidden;
 }
 .article-group-grid .article-entry:focus-visible {
@@ -784,6 +795,11 @@ a:focus-visible {
   font-weight: 700;
 }
 .article-body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: flex-start;
+  min-width: 0;
   padding: 12px 0 16px;
 }
 .date-text {
@@ -804,7 +820,10 @@ a:focus-visible {
   white-space: nowrap;
 }
 .article-read-action {
-  margin-top: 16px;
+  flex-shrink: 0;
+  margin-top: auto;
+  gap: 8px;
+  padding-inline: 10px;
 }
 .article-image {
   transition: transform 500ms var(--motion-ease-out);
@@ -850,7 +869,7 @@ a:focus-visible {
   }
 }
 .art-summary {
-  margin: 0;
+  margin: 0 0 16px;
   color: var(--txt-muted);
   font-size: 0.9rem;
   line-height: 1.8;

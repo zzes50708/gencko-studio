@@ -1,15 +1,64 @@
 <script setup lang="ts">
+import HomeReveal from '~/components/home/HomeReveal.vue'
 import { useHead } from '#imports'
 import { useMainStore } from '~/stores/useMainStore'
-import { ref } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 
 const store = useMainStore()
 const flowRoot = ref<HTMLElement | null>(null)
+const activeStep = ref(0)
+let stepObserver: IntersectionObserver | undefined
+onMounted(() => {
+  if (!flowRoot.value || !('IntersectionObserver' in window)) return
+  const steps = [...flowRoot.value.querySelectorAll<HTMLElement>('.poster-node')]
+  const visible = new Set<number>()
+  stepObserver = new IntersectionObserver(
+    (entries) => {
+      for (const entry of entries) {
+        const index = steps.indexOf(entry.target as HTMLElement)
+        if (entry.isIntersecting) visible.add(index)
+        else visible.delete(index)
+      }
+      if (visible.size) {
+        // 頁尾可能無法再向上對齊；明確跳轉且仍可見的焦點步驟優先。
+        const focused = steps.findIndex((step) => step.matches(':focus'))
+        if (focused >= 0 && visible.has(focused)) {
+          activeStep.value = focused
+          return
+        }
+        const readingTop = window.innerWidth < 768 ? 14 : 102
+        const readingBottom = window.innerHeight * 0.55
+        let best = activeStep.value
+        let largest = -1
+        for (const index of visible) {
+          const rect = steps[index]?.getBoundingClientRect()
+          if (!rect) continue
+          const coverage = Math.max(
+            0,
+            Math.min(rect.bottom, readingBottom) - Math.max(rect.top, readingTop)
+          )
+          if (coverage > largest) {
+            largest = coverage
+            best = index
+          }
+        }
+        activeStep.value = best
+      }
+    },
+    {
+      rootMargin: `${window.innerWidth < 768 ? '-14px' : '-102px'} 0px -45% 0px`,
+      threshold: [0, 0.1, 0.25, 0.5, 1]
+    }
+  )
+  steps.forEach((step) => stepObserver?.observe(step))
+})
+onUnmounted(() => stepObserver?.disconnect())
 function jumpToStep(event: MouseEvent, index: number) {
   const target = flowRoot.value?.querySelector<HTMLElement>(
     `#purchase-step-${String(index + 1).padStart(2, '0')}`
   )
   if (!target) return
+  activeStep.value = index
   event.preventDefault()
   const top = Math.max(
     0,
@@ -130,6 +179,7 @@ useHead({
           <a
             class="hero-strip-item"
             :href="`#purchase-step-${String(idx + 1).padStart(2, '0')}`"
+            :aria-current="Math.min(activeStep, flowLabels.length - 1) === idx ? 'step' : undefined"
             @click="jumpToStep($event, idx)"
           >
             {{ item }}
@@ -153,9 +203,9 @@ useHead({
     </nav>
 
     <section class="content-grid">
-      <Timeline :nodes="flowNodes" />
+      <Timeline :nodes="flowNodes" :active-step="activeStep + 1" />
 
-      <section class="check-panel card">
+      <HomeReveal as="section" :lift="false" class="check-panel card">
         <div class="panel-head">
           <div class="panel-kicker">CHECKPOINT</div>
           <h2 class="sec-title">三個檢查點</h2>
@@ -183,7 +233,7 @@ useHead({
             </div>
           </article>
         </div>
-      </section>
+      </HomeReveal>
     </section>
   </div>
 </template>
@@ -716,6 +766,8 @@ useHead({
   border-radius: 0;
 }
 .flow-page :deep(.node-card) {
+  padding: 16px;
+  border-radius: 2px;
   padding: 12px 0;
   border: 0;
   border-bottom: 1px solid var(--bd);
@@ -906,6 +958,33 @@ useHead({
   .check-group,
   .check-card {
     padding-block: 10px;
+  }
+}
+</style>
+
+<style scoped>
+.hero-strip-item[aria-current='step'] {
+  color: var(--pri);
+  text-decoration: underline;
+  text-underline-offset: 6px;
+}
+.flow-page :deep(.poster-node.is-current .node-no) {
+  background: var(--pri);
+  border-color: var(--pri);
+  color: white;
+}
+.flow-page :deep(.poster-node.is-current .node-card) {
+  border-color: var(--pri);
+  box-shadow: inset 3px 0 color-mix(in srgb, var(--pri) 65%, transparent);
+}
+.flow-page :deep(.node-card) {
+  transition:
+    border-color 180ms ease,
+    box-shadow 180ms ease;
+}
+@media (prefers-reduced-motion: reduce) {
+  .flow-page :deep(.node-card) {
+    transition: none;
   }
 }
 </style>

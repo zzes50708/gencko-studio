@@ -18,7 +18,7 @@ const animal = {
 }
 
 for (const width of [320, 360, 390, 430, 1440]) {
-  test(`${width}px 個體資訊不溢出、邊界一致與四欄推薦`, async ({ page }) => {
+  test(`${width}px 個體資訊不溢出、邊界一致與推薦個體`, async ({ page }) => {
     await page.setViewportSize({ width, height: 900 })
     const inventory = [
       animal,
@@ -36,17 +36,20 @@ for (const width of [320, 360, 390, 430, 1440]) {
     )
     await page.route('**/rest/v1/site_settings**', (route) => route.fulfill({ json: null }))
     await page.route('**/rest/v1/auctions**', (route) => route.fulfill({ json: [] }))
-    await page.goto('/shop')
-    await expect(page.locator('.flip-card')).toHaveCount(9, { timeout: 30000 })
+    await page.goto('/shop/all')
+    await expect(page.locator('.catalog-card')).toHaveCount(9, { timeout: 30000 })
     await page.locator('a[href="/product/MOBILE-LAYOUT"]').first().click()
     await expect(page.locator('.prod-title')).toContainText(animal.morph, { timeout: 30000 })
+    const inquiry = page.getByRole('link', { name: '私訊購買（Line）', exact: true })
+    await expect(inquiry).toHaveAttribute('target', '_blank')
+    await expect(inquiry.locator('[aria-hidden="true"]')).toBeVisible()
     await expect(page.locator('.related-card')).toHaveCount(8)
     const measurements = await page.evaluate(() => {
       const selectors = [
         '.product-root-container',
         '.prod-header',
         '.prod-note',
-        '.spec-row',
+        '.specimen-facts',
         '.prod-img-box',
         '.prod-actions',
         '.related-grid'
@@ -104,7 +107,7 @@ for (const width of [320, 360, 390, 430, 1440]) {
       await page
         .locator('.related-grid')
         .evaluate((element) => getComputedStyle(element).gridTemplateColumns.split(' ').length)
-    ).toBe(4)
+    ).toBe(width < 768 ? 2 : 4)
     for (const price of await page.locator('.related-price').all()) {
       expect(await price.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(
         true

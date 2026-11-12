@@ -28,6 +28,9 @@ const current = computed(() => zones[selected.value]!)
       >
         <strong>{{ zone.range }}</strong>
         <span>{{ zone.label }}</span>
+        <span class="temperature-confirm" aria-hidden="true">
+          {{ selected === index ? '✓' : '' }}
+        </span>
       </button>
     </div>
     <div class="temperature-summary" role="status" aria-live="polite" aria-atomic="true">
@@ -169,6 +172,39 @@ button:focus-visible {
   .temperature-value-enter-from,
   .temperature-value-leave-to {
     transform: none;
+  }
+}
+</style>
+
+<style scoped>
+.temperature-zones button {
+  position: relative;
+  padding-top: 24px;
+  transition:
+    background-color 180ms ease,
+    border-color 180ms ease;
+}
+.temperature-zones .temperature-confirm {
+  position: absolute;
+  top: 5px;
+  right: 6px;
+  display: grid;
+  place-items: center;
+  width: 16px;
+  height: 16px;
+  border: 1px solid transparent;
+  border-radius: 50%;
+  font-size: 10px;
+  line-height: 1;
+}
+.temperature-zones button[aria-pressed='true'] .temperature-confirm {
+  background: var(--pri);
+  color: white;
+  border-color: var(--pri);
+}
+@media (prefers-reduced-motion: reduce) {
+  .temperature-zones button {
+    transition: none;
   }
 }
 </style>

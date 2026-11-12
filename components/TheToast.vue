@@ -28,13 +28,18 @@ const props = defineProps({
   padding: 12px 24px;
   border-radius: 2px;
   max-width: calc(100vw - 32px);
+  width: max-content;
+  box-sizing: border-box;
   font-family: var(--font-body-zh);
   font-weight: bold;
   font-size: 0.95rem;
   z-index: 999999;
   box-shadow: none;
   pointer-events: none; /* 不阻擋底下的點擊事件 */
-  white-space: nowrap;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  text-align: center;
+  line-height: 1.5;
 }
 
 /* 🌟 Vue Transition 動畫設定 */
@@ -58,6 +63,16 @@ const props = defineProps({
     padding: 10px 20px;
     /* 手機版稍微調低，因為底部導航列佔了空間 */
     bottom: calc(85px + env(safe-area-inset-bottom, 0px));
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .toast-anim-enter-active,
+  .toast-anim-leave-active {
+    transition: none;
+  }
+  .toast-anim-enter-from,
+  .toast-anim-leave-to {
+    transform: translateX(-50%);
   }
 }
 </style>

@@ -602,83 +602,92 @@ useHead({
                     </button>
                   </div>
 
-                  <div
-                    :id="`hosp-details-${h.id}`"
-                    v-show="isHospExpanded(h.id)"
-                    class="hosp-details"
-                  >
-                    <button
-                      type="button"
-                      class="hosp-map-focus"
-                      @click="showHospitalOnMap(h, $event)"
+                  <Transition name="hospital-panel">
+                    <div
+                      :id="`hosp-details-${h.id}`"
+                      v-show="isHospExpanded(h.id)"
+                      class="hosp-expansion"
                     >
-                      在地圖上定位 ↗
-                    </button>
-                    <dl class="hosp-record-facts">
-                      <template v-if="hospitalHours(h.hours)">
-                        <dt>看診時間</dt>
-                        <dd>{{ hospitalHours(h.hours) }}（請先致電確認）</dd>
-                      </template>
-                      <template v-if="!hospitalHours(h.hours)">
-                        <dt>看診時間</dt>
-                        <dd>尚未提供，請先致電確認</dd>
-                      </template>
-                      <template v-if="hospitalSpecies(h.acceptSpecies)">
-                        <dt>收診物種</dt>
-                        <dd>{{ hospitalSpecies(h.acceptSpecies) }}</dd>
-                      </template>
-                      <template v-if="h.hasEmergency === true">
-                        <dt>急診資訊</dt>
-                        <dd>有提供急診紀錄，出發前請致電確認</dd>
-                      </template>
-                      <template v-if="hospitalVerifiedDate(h.verifiedAt)">
-                        <dt>資料確認</dt>
-                        <dd>{{ hospitalVerifiedDate(h.verifiedAt) }}</dd>
-                      </template>
-                    </dl>
-                    <p v-if="!hasHospitalLocation(h)" class="hosp-location-note">
-                      此院所目前未顯示地圖定位點，請先致電確認地址與看診安排。
-                    </p>
-                    <a
-                      :href="getMapLink(h)"
-                      target="_blank"
-                      class="hosp-detail-row hosp-link"
-                      rel="noopener noreferrer"
-                    >
-                      <svg
-                        class="hosp-icon"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        stroke-width="2"
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                      >
-                        <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
-                        <circle cx="12" cy="10" r="3"></circle>
-                      </svg>
-                      <span>{{ h.address }}</span>
-                    </a>
+                      <div class="hosp-expansion-inner">
+                        <div class="hosp-details">
+                          <button
+                            type="button"
+                            class="hosp-map-focus"
+                            @click="showHospitalOnMap(h, $event)"
+                          >
+                            在地圖上定位 ↗
+                          </button>
+                          <dl class="hosp-record-facts">
+                            <template v-if="hospitalHours(h.hours)">
+                              <dt>看診時間</dt>
+                              <dd>{{ hospitalHours(h.hours) }}（請先致電確認）</dd>
+                            </template>
+                            <template v-if="!hospitalHours(h.hours)">
+                              <dt>看診時間</dt>
+                              <dd>尚未提供，請先致電確認</dd>
+                            </template>
+                            <template v-if="hospitalSpecies(h.acceptSpecies)">
+                              <dt>收診物種</dt>
+                              <dd>{{ hospitalSpecies(h.acceptSpecies) }}</dd>
+                            </template>
+                            <template v-if="h.hasEmergency === true">
+                              <dt>急診資訊</dt>
+                              <dd>有提供急診紀錄，出發前請致電確認</dd>
+                            </template>
+                            <template v-if="hospitalVerifiedDate(h.verifiedAt)">
+                              <dt>資料確認</dt>
+                              <dd>{{ hospitalVerifiedDate(h.verifiedAt) }}</dd>
+                            </template>
+                          </dl>
+                          <p v-if="!hasHospitalLocation(h)" class="hosp-location-note">
+                            此院所目前未顯示地圖定位點，請先致電確認地址與看診安排。
+                          </p>
+                          <a
+                            :href="getMapLink(h)"
+                            target="_blank"
+                            class="hosp-detail-row hosp-link"
+                            rel="noopener noreferrer"
+                          >
+                            <svg
+                              class="hosp-icon"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              stroke-width="2"
+                              stroke-linecap="round"
+                              stroke-linejoin="round"
+                            >
+                              <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                              <circle cx="12" cy="10" r="3"></circle>
+                            </svg>
+                            <span>{{ h.address }}</span>
+                          </a>
 
-                    <div class="hosp-detail-row">
-                      <span class="hosp-phone-label">TEL</span>
-                      <span class="hosp-phone">
-                        {{ hospitalPhone(h.phone).number || '尚未提供電話' }}
-                      </span>
-                      <span v-if="hospitalPhone(h.phone).extension" class="hosp-phone-extension">
-                        分機 {{ hospitalPhone(h.phone).extension }}
-                      </span>
+                          <div class="hosp-detail-row">
+                            <span class="hosp-phone-label">TEL</span>
+                            <span class="hosp-phone">
+                              {{ hospitalPhone(h.phone).number || '尚未提供電話' }}
+                            </span>
+                            <span
+                              v-if="hospitalPhone(h.phone).extension"
+                              class="hosp-phone-extension"
+                            >
+                              分機 {{ hospitalPhone(h.phone).extension }}
+                            </span>
+                          </div>
+
+                          <a
+                            v-if="hospitalPhone(h.phone).href"
+                            :href="hospitalPhone(h.phone).href"
+                            class="hosp-call-btn"
+                            @click.stop
+                          >
+                            撥打電話
+                          </a>
+                        </div>
+                      </div>
                     </div>
-
-                    <a
-                      v-if="hospitalPhone(h.phone).href"
-                      :href="hospitalPhone(h.phone).href"
-                      class="hosp-call-btn"
-                      @click.stop
-                    >
-                      撥打電話
-                    </a>
-                  </div>
+                  </Transition>
                 </article>
               </div>
             </section>
@@ -1907,5 +1916,40 @@ useHead({
 <style scoped>
 .hosp-sidebar-directory .hosp-card.selected {
   box-shadow: inset 3px 0 var(--pri);
+}
+</style>
+
+<style scoped>
+/* 閱讀與服務操作的回饋，保留原有資料及判斷規則。 */
+
+.hosp-expansion {
+  display: grid;
+  grid-template-rows: 1fr;
+}
+.hosp-expansion-inner {
+  min-height: 0;
+  overflow: hidden;
+}
+.hosp-expansion .hosp-details {
+  animation: none;
+}
+.hospital-panel-enter-active,
+.hospital-panel-leave-active {
+  transition: grid-template-rows 240ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+.hosp-expansion.hospital-panel-enter-from,
+.hosp-expansion.hospital-panel-leave-to {
+  grid-template-rows: 0fr;
+}
+.hosp-header-toggle[aria-expanded='true'] .hosp-toggle-icon {
+  background: var(--pri);
+  border-color: var(--pri);
+  color: white;
+}
+@media (prefers-reduced-motion: reduce) {
+  .hospital-panel-enter-active,
+  .hospital-panel-leave-active {
+    transition: none;
+  }
 }
 </style>

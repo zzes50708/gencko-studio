@@ -1,4 +1,5 @@
 <script setup>
+import HomeReveal from '~/components/home/HomeReveal.vue'
 import { TAXON_LEOPARD_GECKO, TAXON_FAT_TAIL_GECKO } from '~/utils/seo-schemas'
 import { serializeJsonLd } from '~/utils/structured-data'
 import { ref, computed } from 'vue'
@@ -256,7 +257,7 @@ const feedingWarnings = DANGERS.filter((item) => item.id === 'monoDiet')
     <div class="care-body">
       <div class="care-main">
         <ContentChapterTrail :host="careRoot" :chapters="careChapters" label="飼養章節導覽" />
-        <section id="env" class="care-section">
+        <HomeReveal as="section" :lift="false" id="env" class="care-section">
           <h2 class="care-h">環境配置</h2>
           <div class="care-env-grid">
             <div v-for="e in ENV_ITEMS" :key="e.id" class="care-env-card">
@@ -303,9 +304,9 @@ const feedingWarnings = DANGERS.filter((item) => item.id === 'monoDiet')
           </div>
 
           <CareHabitatExplorer />
-        </section>
+        </HomeReveal>
 
-        <section id="food" class="care-section">
+        <HomeReveal as="section" :lift="false" id="food" class="care-section">
           <h2 class="care-h">餵食頻率與營養</h2>
           <table class="care-data-table" aria-label="餵食頻率與份量">
             <thead>
@@ -453,9 +454,9 @@ const feedingWarnings = DANGERS.filter((item) => item.id === 'monoDiet')
               </div>
             </div>
           </section>
-        </section>
+        </HomeReveal>
 
-        <section id="breeding" class="care-section">
+        <HomeReveal as="section" :lift="false" id="breeding" class="care-section">
           <h2 class="care-h">繁殖預備</h2>
           <ul class="care-bullet-list">
             <li v-for="(b, i) in BREEDING_NOTES" :key="i">{{ b }}</li>
@@ -473,9 +474,9 @@ const feedingWarnings = DANGERS.filter((item) => item.id === 'monoDiet')
               <span v-if="article.Status === 'Draft'" class="article-draft-badge">草稿預覽</span>
             </button>
           </div>
-        </section>
+        </HomeReveal>
 
-        <section id="related" class="care-section">
+        <HomeReveal as="section" :lift="false" id="related" class="care-section">
           <h2 class="care-h">完整知識庫</h2>
           <p v-if="store.articlesError" role="alert">
             {{ store.articlesError }}
@@ -507,7 +508,7 @@ const feedingWarnings = DANGERS.filter((item) => item.id === 'monoDiet')
               </NuxtLink>
             </div>
           </div>
-        </section>
+        </HomeReveal>
       </div>
     </div>
   </div>
@@ -3255,6 +3256,24 @@ const feedingWarnings = DANGERS.filter((item) => item.id === 'monoDiet')
 }
 @media (prefers-reduced-motion: reduce) {
   .care-progress-fill {
+    transition: none;
+  }
+}
+</style>
+
+<style scoped>
+/* 閱讀與服務操作的回饋，保留原有資料及判斷規則。 */
+
+.care-data-table tbody tr {
+  transition: background-color 160ms ease;
+}
+@media (min-width: 768px) and (hover: hover) and (pointer: fine) {
+  .care-data-table tbody tr:hover {
+    background: color-mix(in srgb, var(--pri) 5%, var(--card-bg-solid));
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .care-data-table tbody tr {
     transition: none;
   }
 }
