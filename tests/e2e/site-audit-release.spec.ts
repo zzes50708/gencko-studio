@@ -71,7 +71,12 @@ test('正式網域追蹤只排入清理後頁覽，敏感頁停用 GA', async ({
   await page.route('https://www.genckobreeding.com/**', async (route) => {
     const source = new URL(route.request().url())
     const response = await route.fetch({ url: `${baseURL}${source.pathname}${source.search}` })
-    await route.fulfill({ response })
+    if (route.request().resourceType() === 'document') {
+      // CI 的伺服器關閉 GA；僅在這個隔離頁面開啟，仍攔截外部腳本避免真實上報。
+      const body = (await response.text()).replace(/(enableGa:\s*)(?:false|!1)/, '$1true')
+      expect(body).toMatch(/enableGa:\s*true/)
+      await route.fulfill({ response, body })
+    } else await route.fulfill({ response })
   })
   await page.route('https://www.googletagmanager.com/**', (route) =>
     route.fulfill({ contentType: 'application/javascript', body: '' })
