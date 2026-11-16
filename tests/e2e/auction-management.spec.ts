@@ -497,6 +497,7 @@ test('核帳已送出但狀態重讀失敗時不宣稱已查核，重試成功�
 })
 
 test('管理延期回執遺失後重新整理，沿用同筆請求確認且不重複延期', async ({ page }) => {
+  await page.clock.install()
   const requests: any[] = []
   const committed = new Set<string>()
   let extensions = 0
@@ -588,6 +589,15 @@ test('管理延期回執遺失後重新整理，沿用同筆請求確認且不�
     page.getByText('操作未成立：此狀態不能執行所選操作。請重新載入狀態。', { exact: true })
   ).toBeVisible()
   await expect(page.getByRole('button', { name: '重試同一筆管理操作', exact: true })).toHaveCount(0)
+  // 背景重新讀取不得抹除明確拒絕訊息，避免管理員誤以為操作已完成。
+  const backgroundRead = page.waitForResponse((response) =>
+    response.url().includes('/rpc/admin_auction_workflow')
+  )
+  await page.clock.runFor(16000)
+  await backgroundRead
+  await expect(
+    page.getByText('操作未成立：此狀態不能執行所選操作。請重新載入狀態。', { exact: true })
+  ).toBeVisible()
 })
 
 test('本場解封後仍有其他限制時，不再顯示本場解封按鈕', async ({ page }) => {

@@ -66,7 +66,8 @@ async function load(quiet = false) {
   readRequest?.abort()
   const scope = (readRequest = createRequestDeadline())
   loading.value = true
-  message.value = ''
+  // 背景輪詢保留操作結果；明確重新載入時才清除提示。
+  if (!quiet) message.value = ''
   if (!quiet) data.value = null
   try {
     const { data: result, error } = await scope.run((signal) =>
