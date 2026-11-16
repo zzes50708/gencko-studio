@@ -60,19 +60,43 @@ const price = computed(() => {
         <button
           type="button"
           :aria-label="isWishlisted ? '取消收藏' : '收藏'"
+          :title="isWishlisted ? '取消收藏' : '收藏此個體'"
           :aria-pressed="isWishlisted"
           @click="onToggleWishlist(item.ID)"
         >
-          <span aria-hidden="true">{{ isWishlisted ? '♥' : '♡' }}</span>
+          <svg
+            viewBox="0 0 24 24"
+            aria-hidden="true"
+            :fill="isWishlisted ? 'currentColor' : 'none'"
+            stroke="currentColor"
+            stroke-width="1.6"
+          >
+            <path
+              d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 0 0 0-7.8Z"
+            />
+          </svg>
+          <span aria-hidden="true">{{ isWishlisted ? '已收藏' : '收藏' }}</span>
         </button>
         <button
           type="button"
           :aria-label="isCompared ? '移出比較' : '加入比較'"
+          :title="isCompared ? '移出比較' : '加入比較'"
           :aria-pressed="isCompared"
           :disabled="compareDisabled"
           @click="onToggleCompare(item.ID)"
         >
-          <span aria-hidden="true">⇄</span>
+          <svg
+            viewBox="0 0 24 24"
+            aria-hidden="true"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.6"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path d="M4 7h16m-4-4 4 4-4 4M20 17H4m4-4-4 4 4 4" />
+          </svg>
+          <span aria-hidden="true">{{ isCompared ? '已比較' : '比較' }}</span>
         </button>
       </div>
     </div>
@@ -192,6 +216,36 @@ const price = computed(() => {
   .catalog-card-photo :deep(img) {
     transition: none;
     transform: none !important;
+  }
+}
+
+.catalog-card-actions {
+  gap: 6px;
+  margin-top: 2px;
+}
+.catalog-card-actions button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 0 6px;
+  border-radius: 4px;
+  font-size: 11px;
+  transition:
+    color 160ms ease,
+    background-color 160ms ease;
+}
+.catalog-card-actions svg {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 16px;
+}
+.catalog-card-actions button[aria-pressed='true'] {
+  background: color-mix(in srgb, var(--pri) 7%, transparent);
+}
+@media (prefers-reduced-motion: reduce) {
+  .catalog-card-actions button {
+    transition: none;
   }
 }
 </style>

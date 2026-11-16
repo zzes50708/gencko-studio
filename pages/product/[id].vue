@@ -818,30 +818,38 @@ useContentResponse(currentProduct, pending, productError)
                   </span>
                   {{ isWishlisted ? '已收藏' : '收藏' }}
                 </button>
-                <button
-                  type="button"
-                  class="btn-app btn-app--secondary btn-app--md btn-share"
-                  @click="shareLink"
-                >
-                  分享連結
-                </button>
-                <button
-                  type="button"
-                  ref="promoTriggerEl"
-                  class="btn-app btn-app--secondary btn-app--md btn-promo"
-                  @click="generatePromo"
-                  :disabled="isGenerating"
-                >
-                  {{ isGenerating ? '⏳ 生成中...' : '產生圖卡' }}
-                </button>
               </div>
-              <button
-                type="button"
-                class="btn-app btn-app--secondary btn-app--sm"
-                @click="copyInquiry"
-              >
-                複製詢問內容（含 ID 與連結）
-              </button>
+              <details class="specimen-tools">
+                <summary>
+                  分享與更多
+                  <span aria-hidden="true">＋</span>
+                </summary>
+                <div class="specimen-tools-actions">
+                  <button
+                    type="button"
+                    class="btn-app btn-app--secondary btn-app--md btn-share"
+                    @click="shareLink"
+                  >
+                    分享連結
+                  </button>
+                  <button
+                    type="button"
+                    ref="promoTriggerEl"
+                    class="btn-app btn-app--secondary btn-app--md btn-promo"
+                    @click="generatePromo"
+                    :disabled="isGenerating"
+                  >
+                    {{ isGenerating ? '⏳ 生成中...' : '產生圖卡' }}
+                  </button>
+                </div>
+                <button
+                  type="button"
+                  class="btn-app btn-app--secondary btn-app--sm"
+                  @click="copyInquiry"
+                >
+                  複製詢問內容（含 ID 與連結）
+                </button>
+              </details>
               <p v-if="inquiryCopyStatus" role="status" style="font-size: 12px; margin: 0">
                 {{ inquiryCopyStatus }}
               </p>
@@ -1504,6 +1512,58 @@ dialog.promo-modal-overlay::backdrop {
   }
   .product-root-container .related-section {
     margin-top: 36px;
+  }
+}
+
+/* 分享工具收合，詢購與選取操作維持直接可用。 */
+.specimen-tools {
+  border-bottom: 1px solid var(--bd);
+}
+.specimen-tools > summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 44px;
+  list-style: none;
+  font-size: 12px;
+  color: var(--txt-muted);
+  cursor: pointer;
+}
+.specimen-tools > summary::-webkit-details-marker {
+  display: none;
+}
+.specimen-tools > summary span {
+  transition: transform 160ms ease;
+}
+.specimen-tools[open] > summary span {
+  transform: rotate(45deg);
+}
+.specimen-tools-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  padding-bottom: 10px;
+}
+.specimen-tools-actions .btn-app {
+  min-width: 0;
+  min-height: 44px;
+  white-space: normal;
+  font-size: 12px;
+}
+.specimen-tools > .btn-app {
+  width: 100%;
+  min-height: 44px;
+  margin-bottom: 10px;
+  white-space: normal;
+  font-size: 12px;
+}
+.specimen-tools summary:focus-visible {
+  outline: 2px solid var(--pri);
+  outline-offset: 2px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .specimen-tools > summary span {
+    transition: none;
   }
 }
 </style>

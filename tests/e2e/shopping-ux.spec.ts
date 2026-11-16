@@ -118,6 +118,8 @@ test('手機篩選草稿、價格驗證、固定操作及返回隔離', async ({
 test('手機基因草稿提交與切物種清理，總數不只顯示載入數', async ({ browser, baseURL }) => {
   const context = await browser.newContext({
     baseURL,
+    // 隔離 PWA 更新重載，避免打斷測試用庫存注入。
+    serviceWorkers: 'block',
     viewport: { width: 390, height: 844 },
     hasTouch: true,
     isMobile: true

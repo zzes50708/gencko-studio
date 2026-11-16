@@ -516,3 +516,24 @@
     display: none;
   }
 }
+
+/* 桌機將文字與快速入口集中對齊，避免照片高度撐開左欄的內部間距。 */
+@media (min-width: 769px) {
+  .home-hero .hero-content-inner {
+    grid-template-rows: min-content 1fr;
+    row-gap: 28px;
+  }
+  .home-hero .home-hero__copy {
+    align-self: end;
+    padding-top: clamp(20px, 4vw, 64px);
+  }
+  .home-hero .home-hero__meta {
+    margin-top: clamp(24px, 3vw, 40px);
+  }
+  .home-hero .home-scenario-grid {
+    align-self: start;
+  }
+  .home-hero .home-journey-link {
+    margin-top: 4px;
+  }
+}

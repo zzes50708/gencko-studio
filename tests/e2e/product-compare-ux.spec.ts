@@ -54,6 +54,8 @@ test('手機個體加入比較、分享失敗、缺圖及原生圖卡返回隔�
       value: { writeText: () => Promise.reject(Error('測試')) }
     })
   })
+  await expect(page.locator('.btn-share')).toBeHidden()
+  await page.locator('.specimen-tools > summary').tap()
   await page.locator('.btn-share').tap()
   await expect(page.getByLabel('手動複製個體連結')).toBeVisible()
   await page.locator('.btn-promo').tap()
@@ -69,6 +71,7 @@ test('照片網址失效時製作圖卡會退回站內品牌圖', async ({ page 
   await fixtures(page, { animal: { image_url: 'https://example.invalid/broken-photo.jpg' } })
   await page.route('https://wsrv.nl/**', (route) => route.abort())
   await openProduct(page)
+  await page.locator('.specimen-tools > summary').click()
   await page.locator('.btn-promo').click()
   await expect(page.locator('dialog.promo-modal-overlay')).toBeVisible()
   await expect(page.locator('.promo-modal-content img')).toHaveAttribute('src', /^data:image\/jpeg/)

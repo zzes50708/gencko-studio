@@ -3277,4 +3277,31 @@ const feedingWarnings = DANGERS.filter((item) => item.id === 'monoDiet')
     transition: none;
   }
 }
+
+/* 一般規格採正文色，危險訊號才使用警示色；完整保留照護文字。 */
+.care-page .care-env-spec {
+  color: var(--txt);
+  font-weight: 650;
+}
+.care-page .care-subh {
+  color: var(--txt);
+}
+.care-page .care-env-warn,
+.care-page .care-temp-warn,
+.care-page .care-supp-warn {
+  border-inline-start: 2px solid #a77935;
+  padding-inline-start: 12px;
+  color: var(--txt);
+}
+.care-page .care-danger-title {
+  color: color-mix(in srgb, var(--txt) 35%, #ce3c31);
+}
+.care-page .care-danger-consequence {
+  color: var(--txt);
+  font-weight: 650;
+  border-inline-start-color: #ba352b;
+}
+.care-page .care-danger-why {
+  color: var(--txt-muted);
+}
 </style>

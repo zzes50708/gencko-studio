@@ -525,8 +525,8 @@ const showFavorites = async () => {
               :aria-current="(catalogGroup || 'all') === category.id ? 'page' : undefined"
               @click="catalogGroup = category.id === 'all' ? '' : category.id"
             >
-              {{ category.label }}
-              <span>{{ category.count }}</span>
+              <span class="catalog-category-label">{{ category.label }}</span>
+              <span class="catalog-category-count">{{ category.count }}</span>
             </button>
           </nav>
         </details>
@@ -1281,7 +1281,7 @@ a:focus-visible {
 }
 .catalog-layout {
   display: grid;
-  grid-template-columns: 160px minmax(0, 1fr);
+  grid-template-columns: 190px minmax(0, 1fr);
   gap: 20px;
   margin-top: 8px;
 }
@@ -1314,11 +1314,17 @@ a:focus-visible {
   font-size: 14px;
   cursor: pointer;
 }
-.catalog-category-nav button span {
+.catalog-category-nav button .catalog-category-count {
   font-size: 11px;
   font-variant-numeric: tabular-nums;
   flex-shrink: 0;
   white-space: nowrap;
+}
+.catalog-category-label {
+  min-width: 0;
+  overflow-wrap: normal;
+  word-break: normal;
+  line-height: 1.45;
 }
 .catalog-category-nav button[aria-current] {
   background: var(--card-bg);
@@ -1479,6 +1485,88 @@ a:focus-visible {
   .catalog-page .catalog-options,
   .catalog-page .catalog-selection {
     grid-column: 1 / -1;
+  }
+}
+
+/* 選購控制列沿用原生選單，保留鍵盤與觸控操作。 */
+.catalog-page .catalog-toolbar :is(button, select) {
+  border-color: var(--bd);
+  border-radius: 5px;
+  background-color: var(--card-bg-solid);
+  color: var(--txt);
+  font-family: var(--font-body-zh);
+  box-shadow: none;
+  transition:
+    border-color 160ms ease,
+    background-color 160ms ease;
+}
+.catalog-page .catalog-toolbar select {
+  appearance: none;
+  padding-inline: 11px 30px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23757575' stroke-width='1.5'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 9px center;
+}
+.catalog-page .catalog-search {
+  font-size: 14px;
+}
+.catalog-page .species-tabs-row {
+  border: 1px solid var(--bd);
+  border-radius: 5px;
+  padding: 2px;
+  gap: 2px;
+}
+.catalog-page .species-tabs-row button {
+  border-color: transparent;
+  border-bottom-width: 1px;
+}
+.catalog-page .catalog-toolbar button[aria-pressed='true'],
+.catalog-page .catalog-toolbar button[aria-expanded='true'] {
+  background-color: color-mix(in srgb, var(--pri) 7%, var(--card-bg-solid));
+  border-color: color-mix(in srgb, var(--pri) 38%, var(--bd));
+  color: var(--pri);
+}
+.catalog-page .catalog-toolbar :is(button, select):focus-visible {
+  outline: 2px solid var(--pri);
+  outline-offset: 2px;
+}
+@media (min-width: 768px) and (hover: hover) and (pointer: fine) {
+  .catalog-page .catalog-toolbar :is(button, select):hover {
+    border-color: var(--txt-muted);
+  }
+}
+@media (max-width: 767px) {
+  #main-content .site-document-page.catalog-page .common-document-meta,
+  #main-content .site-document-page.catalog-page .shop-intro__eyebrow {
+    display: none !important;
+  }
+  .catalog-page .catalog-breadcrumb > span {
+    display: none;
+  }
+  .catalog-page .catalog-breadcrumb {
+    margin-top: 0;
+  }
+  .catalog-page .catalog-options {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto auto;
+  }
+  .catalog-page .catalog-options select {
+    min-width: 0;
+    width: 100%;
+  }
+  .catalog-page .species-tabs-row {
+    padding: 0;
+  }
+  .catalog-page .catalog-search {
+    font-size: 16px;
+  }
+  .catalog-page .notice-icon {
+    display: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .catalog-page .catalog-toolbar :is(button, select) {
+    transition: none;
   }
 }
 </style>
